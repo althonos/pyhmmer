@@ -1,0 +1,6 @@
+[submodule "hmmer"]
+	path = hmmer
+	url = https://github.com/EddyRivasLab/hmmer
+[submodule "vendor/easel"]
+	path = vendor/easel
+	url = https://github.com/EddyRivasLab/easel
