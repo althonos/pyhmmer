@@ -26,7 +26,7 @@ cdef extern from "hmmer.h" nogil:
 
 
     ctypedef p7_hmmfile_s P7_HMMFILE
-    ctypedef struct p7_hmmfile_s:
+    cdef struct p7_hmmfile_s:
         FILE* f
         char* fname
         ESL_SSI* ssi

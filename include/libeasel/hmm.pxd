@@ -1,3 +1,10 @@
+from libc.stdint cimport uint64_t
+
+from libeasel cimport ESL_DSQ
+from libeasel.alphabet cimport ESL_ALPHABET
+from libeasel.random cimport ESL_RANDOMNESS
+
+
 cdef extern from "esl_hmm.h" nogil:
 
     ctypedef struct ESL_HMM:

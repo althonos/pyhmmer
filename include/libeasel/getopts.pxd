@@ -1,3 +1,6 @@
+from libc.stdio cimport FILE
+
+
 cdef extern from "esl_getopts.h" nogil:
 
     ctypedef struct ESL_OPTIONS:
@@ -14,7 +17,7 @@ cdef extern from "esl_getopts.h" nogil:
 
 
     ctypedef struct ESL_GETOPTS:
-        ELS_OPTIONS* opt
+        ESL_OPTIONS* opt
         int nopts
         int argc
         char** argv
