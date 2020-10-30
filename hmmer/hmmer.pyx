@@ -188,7 +188,7 @@ cpdef void hmmsearch(P7HMM hmm, Sequence seq):
     cdef P7_OPROFILE* om
     cdef P7_TOPHITS*  th
     cdef P7_PIPELINE* pli
-    cdef ESL_GETOPTS* go      = libeasel.getopts.esl_getopts_Create(options)
+    cdef ESL_GETOPTS* go      = NULL
     cdef ESL_SQ*      dbsq    = libeasel.sq.esl_sq_Create()
 
     # built the top hits list
@@ -231,5 +231,15 @@ cpdef void hmmsearch(P7HMM hmm, Sequence seq):
     # sort and print results
     libhmmer.p7_tophits.p7_tophits_SortBySortkey(th)
     libhmmer.p7_tophits.p7_tophits_Threshold(th, pli)
-    libhmmer.p7_tophits.p7_tophits_Domains(ofp, th, pli, True)
-    fprintf(stdout, "\n\n");
+
+    if th.N:
+        libhmmer.p7_tophits.p7_tophits_Domains(ofp, th, pli, True)
+        fprintf(stdout, "\n\n");
+
+    # dealloc
+    libhmmer.p7_pipeline.p7_pipeline_Destroy(pli)
+    libhmmer.p7_bg.p7_bg_Destroy(bg)
+    libhmmer.p7_profile.p7_profile_Destroy(gm)
+    libhmmer.impl_sse.p7_oprofile.p7_oprofile_Destroy(om)
+    libeasel.sq.esl_sq_Destroy(dbsq)
+    libhmmer.p7_tophits.p7_tophits_Destroy(th)
