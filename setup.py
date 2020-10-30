@@ -100,12 +100,45 @@ class build_ext(_build_ext):
         _build_ext.build_extension(self, ext)
 
 
+class clean_ext(setuptools.Command):
+
+    user_options = [
+        ("all", "a", "remove all build output, not just temporary by-products"),
+    ]
+
+    def initialize_options(self):
+        self.all = False
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        source_dir = os.path.join(os.path.dirname(__file__), "hmmer")
+
+        patterns = ["*.html"]
+        if self.all:
+            patterns.extend(["*.so", "*.c"])
+
+        for pattern in patterns:
+            for file in glob.glob(os.path.join(source_dir, pattern)):
+                self.announce("removing {!r}".format(file), level=2)
+                os.remove(file)
+
+
 extensions = [
     setuptools.Extension(
-        "hmmer._hmmer",
-        ["hmmer/__init__.pyx"],
+        "hmmer.hmmer",
+        ["hmmer/hmmer.pyx"],
         include_dirs=["vendor/hmmer/src", "vendor/easel"],
         libraries=["hmmer", "easel"],
+        library_dirs=[],
+        extra_compile_args=[],
+    ),
+    setuptools.Extension(
+        "hmmer.easel",
+        ["hmmer/easel.pyx"],
+        include_dirs=["vendor/hmmer/src", "vendor/easel"],
+        libraries=["easel"],
         library_dirs=[],
         extra_compile_args=[],
     ),
@@ -114,5 +147,5 @@ extensions = [
 
 setuptools.setup(
     ext_modules=cythonize(extensions, annotate=True, include_path=["include"]),
-    cmdclass=dict(sdist=sdist, build_ext=build_ext),
+    cmdclass=dict(sdist=sdist, build_ext=build_ext, clean_ext=clean_ext),
 )
