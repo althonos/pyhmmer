@@ -2,6 +2,7 @@ import configparser
 import glob
 import os
 import sys
+import shlex
 
 import setuptools
 from Cython.Build import cythonize
@@ -29,10 +30,20 @@ class build_ext(_build_ext):
     """A `build_ext` that disables optimizations if compiled in debug mode.
     """
 
-    def build_static(self, lib, path, libdir="."):
+    def build_static(self, lib, path, libdir=".", extra_compile_args=[]):
+        _env = os.environ.copy()
+        _cflags = " ".join(self.compiler.compiler[1:] + extra_compile_args)
+        _cwd = os.getcwd()
+
         try:
+            # pass parameters from `self.compiler` to the `configure` script
+            # using environment variables
+            os.environ["AR"] = self.compiler.archiver[0]
+            os.environ["CC"] = self.compiler.compiler[0]
+            os.environ["CFLAGS"] = _cflags
+
+            # chdir to the directory where to run autoconf
             self.announce("entering directory {!r}".format(path))
-            _cwd = os.getcwd()
             os.chdir(path)
 
             # run autoconf to generate the configure script
@@ -40,7 +51,7 @@ class build_ext(_build_ext):
             self.make_file([autoconf], "configure", self.spawn, (["autoconf"],))
 
             # run the configure script
-            configure_cmd = ["./configure"]
+            configure_cmd = ["./configure", "--enable-pic", "--enable-threads"]
             if self.debug:
                 configure_cmd.append("--enable-debugging")
             self.make_file(["configure"], "Makefile", self.spawn, (configure_cmd,))
@@ -49,10 +60,19 @@ class build_ext(_build_ext):
             self.make_file(["Makefile"], lib, self.spawn, (["make", "-C", libdir, lib],))
 
         finally:
+            os.environ.update(_env)
             os.chdir(_cwd)
 
 
     def build_extension(self, ext):
+
+        # update compile flags if compiling in debug mode
+        if self.debug:
+            if sys.platform == "linux" or sys.platform == "darwin":
+                ext.extra_compile_args.append("-O0")
+            if sys.implementation.name == "cpython":
+                ext.define_macros.append(("CYTHON_TRACE_NOGIL", 1))
+
         # use the distutils/setuptools temporary folder to build out of source
         _vendor_dir = os.path.join(os.path.dirname(__file__), "vendor")
         _build_dir = os.path.join(self.build_temp, "hmmer")
@@ -67,19 +87,15 @@ class build_ext(_build_ext):
             self.copy_tree(os.path.join(_vendor_dir, "easel"), os.path.join(_build_dir, "easel"), preserve_symlinks=1)
 
         # build the static libraries
-        self.build_static("libeasel.a", os.path.join(_build_dir, "easel"))
-        self.build_static("libhmmer.a", _build_dir, libdir="src")
+        cflags = ext.extra_compile_args
+        self.build_static("libhmmer.a", _build_dir, "src", cflags)
+        self.build_static("libeasel.a", os.path.join(_build_dir, "easel"), ".", cflags)
 
         # update the extension link flags to use the temporary build folder
         ext.library_dirs.append(os.path.join(_build_dir, "easel"))
         ext.library_dirs.append(os.path.join(_build_dir, "src"))
 
-        # update
-        if self.debug:
-            if sys.platform == "linux" or sys.platform == "darwin":
-                ext.extra_compile_args.append("-O0")
-            if sys.implementation.name == "cpython":
-                ext.define_macros.append(("CYTHON_TRACE_NOGIL", 1))
+
 
         _build_ext.build_extension(self, ext)
 
@@ -91,12 +107,12 @@ extensions = [
         include_dirs=["vendor/hmmer/src", "vendor/easel"],
         libraries=["hmmer", "easel"],
         library_dirs=[],
-        extra_compile_args=["-Wall"],
+        extra_compile_args=[],
     ),
 ]
 
 
 setuptools.setup(
-    ext_modules=cythonize(extensions, annotate=True),
+    ext_modules=cythonize(extensions, annotate=True, include_path=["include"]),
     cmdclass=dict(sdist=sdist, build_ext=build_ext),
 )
