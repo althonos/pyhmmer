@@ -291,6 +291,35 @@ cdef class SequenceFile:
     }
 
 
+    # --- Class methods ------------------------------------------------------
+
+    @classmethod
+    def parse(cls, bytes buffer):
+        cdef Sequence seq = Sequence.__new__(Sequence)
+        seq._sq = libeasel.sq.esl_sq_Create()
+        if not seq._sq:
+            raise AllocationError("ESL_SQ")
+        return cls.parseinto(seq)
+
+    @classmethod
+    def parseinto(cls, Sequence seq, bytes buffer, str format=None):
+        assert seq._sq != NULL
+
+        cdef int fmt = libeasel.sqio.eslSQFILE_UNKNOWN
+        if format is not None:
+            fmt = cls._formats.get(format.lower())
+            if fmt is None:
+                raise ValueError("Invalid sequence format: {!r}".format(format))
+
+        cdef int status = libeasel.sqio.esl_sqio_Parse(buffer, buffer.len(), seq._sq, fmt)
+        if status == libeasel.eslEFORMAT:
+            raise AllocationError("")
+        elif status == libeasel.eslOK:
+            return seq
+        else:
+            raise UnexpectedError(status, "esl_sqio_Parse")
+
+
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
