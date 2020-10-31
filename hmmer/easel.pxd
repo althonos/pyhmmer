@@ -1,9 +1,37 @@
 from libeasel.alphabet cimport ESL_ALPHABET
 from libeasel.sq cimport ESL_SQ
+from libeasel.sqio cimport ESL_SQFILE
+
 
 cdef class Alphabet:
     cdef ESL_ALPHABET* _abc
     cdef _init_default(self, int ty)
 
+
 cdef class Sequence:
     cdef ESL_SQ* _sq
+
+
+cdef class SequenceFile:
+    # The wrapped ESL_SQFILE pointer
+    cdef ESL_SQFILE* _sqfp
+    # A reference to the Alphabet used if the file is in digital mode
+    cdef Alphabet _alphabet
+
+    cpdef Sequence read(self)
+    cpdef Sequence read_info(self)
+    cpdef Sequence read_seq(self)
+    cpdef Sequence readinto(self, Sequence)
+    cpdef Sequence readinto_info(self, Sequence)
+    cpdef Sequence readinto_seq(self, Sequence)
+
+    cpdef Sequence fetch(self, bytes)
+    cpdef Sequence fetch_info(self, bytes)
+    cpdef Sequence fetch_seq(self, bytes)
+    cpdef Sequence fetchinto(self, bytes, Sequence)
+    cpdef Sequence fetchinto_info(self, bytes, Sequence)
+    cpdef Sequence fetchinto_seq(self, bytes, Sequence)
+
+    cpdef void close(self)
+    cpdef Alphabet guess_alphabet(self)
+    cpdef void set_digital(self, Alphabet)
