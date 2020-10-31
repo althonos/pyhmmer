@@ -28,9 +28,9 @@ cdef class SequenceFile:
     cpdef Sequence fetch(self, bytes)
     cpdef Sequence fetch_info(self, bytes)
     cpdef Sequence fetch_seq(self, bytes)
-    cpdef Sequence fetchinto(self, bytes, Sequence)
-    cpdef Sequence fetchinto_info(self, bytes, Sequence)
-    cpdef Sequence fetchinto_seq(self, bytes, Sequence)
+    cpdef Sequence fetchinto(self, Sequence, bytes)
+    cpdef Sequence fetchinto_info(self, Sequence, bytes)
+    cpdef Sequence fetchinto_seq(self, Sequence, bytes)
 
     cpdef void close(self)
     cpdef Alphabet guess_alphabet(self)

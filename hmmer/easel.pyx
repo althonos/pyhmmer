@@ -484,19 +484,19 @@ cdef class SequenceFile:
     cpdef Sequence fetch(self, bytes key):
         raise NotImplementedError("TODO SequenceFile.fetch")
 
-    cpdef Sequence fetchinto(self, bytes key, Sequence seq):
+    cpdef Sequence fetchinto(self, Sequence seq, bytes key):
         raise NotImplementedError("TODO SequenceFile.fetchinto")
 
     cpdef Sequence fetch_info(self, bytes key):
         raise NotImplementedError("TODO SequenceFile.fetchinto")
 
-    cpdef Sequence fetchinto_info(self, bytes key, Sequence seq):
+    cpdef Sequence fetchinto_info(self, Sequence seq, bytes key):
         raise NotImplementedError("TODO SequenceFile.fetchinto")
 
     cpdef Sequence fetch_seq(self, bytes key):
         raise NotImplementedError("TODO SequenceFile.fetchinto")
 
-    cpdef Sequence fetchinto_seq(self, bytes key, Sequence seq):
+    cpdef Sequence fetchinto_seq(self, Sequence seq, bytes key):
         raise NotImplementedError("TODO SequenceFile.fetchinto")
 
 
