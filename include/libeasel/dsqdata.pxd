@@ -2,8 +2,13 @@ from libc.stdint cimport uint32_t, int32_t, int64_t
 
 cdef extern from "esl_dsqdata.h" nogil:
 
+    cdef size_t eslDSQDATA_CHUNK_MAXSEQ
+    cdef size_t eslDSQDATA_CHUNK_MAXPACKET
+    cdef size_t eslDSQDATA_UNPACKERS
+    cdef size_t eslDSQDATA_UMAX
+
     ctypedef esl_dsqdata_chunk_s ESL_DSQDATA_CHUNK
-    ctypedef struct esl_dsqdata_chunk_s:
+    cdef struct esl_dsqdata_chunk_s:
         int64_t i0
         int N
 
@@ -23,13 +28,13 @@ cdef extern from "esl_dsqdata.h" nogil:
 
 
     ctypedef esl_dsqdata_record_s ESL_DSQDATA_RECORD
-    ctypedef struct esl_dsqdata_record_s:
+    cdef struct esl_dsqdata_record_s:
         int64_t metadata_end
         int64_t psq_end
 
 
     ctypedef esl_dsqdata_s ESL_DSQDATA
-    ctypedef esl_dsqdata_s:
+    cdef esl_dsqdata_s:
         char* basename
         FILE* stubfp
         FILE* ifp

@@ -1,6 +1,6 @@
 cdef extern from "esl_distance.h" nogil:
 
-    cdef enum esl_dmatrix_type:
+    cdef enum:
         eslGENERAL
         eslUPPER
 
@@ -8,7 +8,7 @@ cdef extern from "esl_distance.h" nogil:
         double** mx
         int n
         int m
-        esl_dmatrix_type type
+        int type
         int ncells
 
     ctypedef struct ESL_PERMUTATION:

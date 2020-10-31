@@ -1,7 +1,11 @@
 cdef extern from "esl_heap.h" nogil:
 
+    cdef size_t eslHEAP_INITALLOC
+    cdef int eslHEAP_MIN
+    cdef int eslHEAP_MAX
+
     ctypedef esl_heap_s ESL_HEAP
-    ctypedef struct esl_heap_s:
+    cdef struct esl_heap_s:
         int* idata
         int n
         int nalloc

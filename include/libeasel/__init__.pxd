@@ -1,6 +1,5 @@
 from libc.stdint cimport uint8_t, int64_t
 
-
 cdef extern from "easel.h" nogil:
 
     cdef size_t eslERRBUFSIZE

@@ -10,13 +10,14 @@ from libeasel.random cimport ESL_RANDOMNESS
 
 cdef extern from "esl_msa.h":
 
-    DEF eslMSA_TC1 = 0
-    DEF eslMSA_TC2 = 1
-    DEF eslMSA_GA1 = 2
-    DEF eslMSA_GA2 = 3
-    DEF eslMSA_NC1 = 4
-    DEF eslMSA_NC2 = 5
-    DEF eslMSA_NCUTS = 6
+    cdef enum:
+        eslMSA_TC1 = 0
+        eslMSA_TC2 = 1
+        eslMSA_GA1 = 2
+        eslMSA_GA2 = 3
+        eslMSA_NC1 = 4
+        eslMSA_NC2 = 5
+        eslMSA_NCUTS = 6
 
 
     ctypedef struct ESL_MSA:

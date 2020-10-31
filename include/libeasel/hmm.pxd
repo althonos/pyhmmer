@@ -14,7 +14,7 @@ cdef extern from "esl_hmm.h" nogil:
         float** t
         float** e
         float** eo
-        ESL_ALPHABET* abc
+        const ESL_ALPHABET* abc
 
 
     ctypedef struct ESL_HMX:

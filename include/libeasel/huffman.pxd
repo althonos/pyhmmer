@@ -1,5 +1,7 @@
 cdef extern from "esl_huffman.h" nogil:
 
+    cdef size_t eslHUFFMAN_MAXCODE
+
     ctypedef huffman_s ESL_HUFFMAN
     cdef struct huffman_s:
         int* len
@@ -12,9 +14,6 @@ cdef extern from "esl_huffman.h" nogil:
         int* dt_rank
         int D
         int Lmax
-
-
-    DEF eslHUFFMAN_MAXCODE = 32
 
 
     int  esl_huffman_Build(const float *fq, int K, ESL_HUFFMAN **ret_hc)

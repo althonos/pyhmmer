@@ -6,7 +6,6 @@ from libeasel cimport esl_pos_t
 
 cdef extern from "esl_keyhash.h":
 
-
     ctypedef struct ESL_KEYHASH:
         int* hashtable
         uint32_t hashsize
@@ -18,7 +17,6 @@ cdef extern from "esl_keyhash.h":
         char* smem
         int salloc
         int sn
-
 
     ESL_KEYHASH *esl_keyhash_Create()
     ESL_KEYHASH *esl_keyhash_CreateCustom(uint32_t hashsize, int kalloc, int salloc)

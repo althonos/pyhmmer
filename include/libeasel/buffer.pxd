@@ -1,4 +1,16 @@
+from libc.stdio cimport FILE
+
+from libeasel cimport esl_pos_t
+
+
+cdef extern from "easel.h" nogil:
+    DEF eslERRBUFSIZE = 128
+
+
 cdef extern from "esl_buffer.h" nogil:
+
+    cdef size_t eslBUFFER_PAGESIZE
+    cdef size_t eslBUFFER_SLURPSIZE
 
     cdef enum esl_buffer_mode_e:
         eslBUFFER_UNSET   = 0
