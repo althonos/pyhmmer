@@ -16,75 +16,7 @@ cimport libeasel.sqio
 import os
 import warnings
 
-
-# --- Python exception -------------------------------------------------------
-
-_statuscodes = {
-    libeasel.eslOK: "eslOK",
-    libeasel.eslFAIL: "eslFAIL",
-    libeasel.eslEOL: "eslEOL",
-    libeasel.eslEOF: "eslEOF",
-    libeasel.eslEOD: "eslEOD",
-    libeasel.eslEMEM: "eslEMEM",
-    libeasel.eslENOTFOUND: "eslENOTFOUND",
-    libeasel.eslEFORMAT: "eslEFORMAT",
-    libeasel.eslEAMBIGUOUS: "eslEAMBIGUOUS",
-    libeasel.eslEINCOMPAT: "eslEINCOMPAT",
-    libeasel.eslEINVAL: "eslEINVAL",
-    libeasel.eslESYS: "eslESYS",
-    libeasel.eslECORRUPT: "eslECORRUPT",
-    libeasel.eslEINCONCEIVABLE: "eslEINCONCEIVABLE",
-    libeasel.eslESYNTAX: "eslESYNTAX",
-    libeasel.eslERANGE: "eslERANGE",
-    libeasel.eslEDUP: "eslEDUP",
-    libeasel.eslENORESULT: "eslENORESULT",
-    libeasel.eslETYPE: "eslETYPE",
-    libeasel.eslEOVERWRITE: "eslEOVERWRITE",
-    libeasel.eslENOSPACE: "eslENOSPACE",
-    libeasel.eslEUNIMPLEMENTED: "eslEUNIMPLEMENTED",
-    libeasel.eslENOFORMAT: "eslENOFORMAT",
-    libeasel.eslENOALPHABET: "eslENOALPHABET",
-    libeasel.eslEWRITE: "eslEWRITE",
-    libeasel.eslEINACCURATE: "eslEINACCURATE",
-}
-
-
-class UnexpectedError(RuntimeError):
-    """An unexpected error that happened in the C code.
-
-    As an library user, you should not see this exception being raised. If you
-    do, please open an issue on the bug tracker with steps to reproduce, so
-    that proper error handling can be added to the relevant part of the code.
-
-    """
-
-    def __init__(self, code, function):
-        self.code = code
-        self.function = function
-
-    def __repr__(self):
-        return "{}({!r}, {!r})".format(type(self).__name__, self.code, self.function)
-
-    def __str__(self):
-        return "Unexpected error occurred in {!r}: {} (status code {}).".format(
-            _statuscodes.get(self.code, "<unknown>"),
-            self.code,
-            self.function,
-        )
-
-
-class AllocationError(MemoryError):
-    """A memory error that is caused by an unsuccessful allocation.
-    """
-
-    def __init__(self, ctype):
-        self.ctype = ctype
-
-    def __repr__(self):
-        return "{}({!r})".format(type(self).__name__, self.ctype)
-
-    def __str__(self):
-        return "Could not allocate {}.".format(self.ctype)
+from .errors import AllocationError, UnexpectedError
 
 
 # --- Cython classes ---------------------------------------------------------
@@ -154,26 +86,37 @@ cdef class Alphabet:
 
 cdef class Sequence:
     """A biological sequence with some associated metadata.
+
+    Todo:
+        Make `TextSequence` and `DigitalSequence` subclasses that expose the
+        right parts of the API without confusing the user.
     """
-
-    # --- Default constructor ------------------------------------------------
-
-    @classmethod
-    def empty(cls):
-        cdef Sequence seq = Sequence.__new__(cls)
-        seq._sq = libeasel.sq.esl_sq_Create()
-        if not seq._sq:
-            raise AllocationError("ESL_SQ")
-        return seq
 
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
         self._sq = NULL
 
-    def __init__(self, name, seq, description=None, accession=None, secondary_structure=None):
-        # FIXME
-        self._sq = libeasel.sq.esl_sq_CreateFrom(name, seq, NULL, NULL, NULL)
+    def __init__(self, name=None, sequence=None, description=None, accession=None, secondary_structure=None):
+
+        cdef char* name_ptr = b""
+        cdef char* seq_ptr  = b""
+        cdef char* desc_ptr = NULL
+        cdef char* acc_ptr  = NULL
+        cdef char* ss_ptr   = NULL
+
+        if name is not None:
+            name_ptr = <char*> name
+        if description is not None:
+            desc_ptr = <char*> description
+        if accession is not None:
+            acc_ptr = <char*> accession
+        if sequence is not None:
+            seq_ptr = <char*> sequence
+        if secondary_structure is not None:
+            ss_ptr = <char*> secondary_structure
+
+        self._sq = libeasel.sq.esl_sq_CreateFrom(name_ptr, seq_ptr, desc_ptr, acc_ptr, ss_ptr)
         if not self._sq:
             raise AllocationError("ESL_SQ")
 
@@ -204,15 +147,12 @@ cdef class Sequence:
 
     @property
     def name(self):
-        """`str` or `None`: The name of the sequence, if any.
+        """`bytes`: The name of the sequence.
         """
-        name = <bytes> self._sq.name
-        return name or None
+        return <bytes> self._sq.name
 
     @name.setter
-    def name(self, name):
-        if name is None:
-            name = b""
+    def name(self, bytes name):
         cdef int status = libeasel.sq.esl_sq_SetName(self._sq, <const char*> name)
         if status == libeasel.eslEMEM:
             raise AllocationError("char*")
@@ -221,15 +161,12 @@ cdef class Sequence:
 
     @property
     def description(self):
-        """`str` or `None`: The description of the sequence, if any.
+        """`bytes`: The description of the sequence.
         """
-        desc = <bytes> self._sq.desc
-        return desc or None
+        return <bytes> self._sq.desc
 
     @description.setter
     def description(self, desc):
-        if desc is None:
-            desc = b""
         cdef int status = libeasel.sq.esl_sq_SetDesc(self._sq, <const char*> desc)
         if status == libeasel.eslEMEM:
             raise AllocationError("char*")
@@ -238,10 +175,9 @@ cdef class Sequence:
 
     @property
     def source(self):
-        """`str` or `None`: The source of the sequence, if any.
+        """`bytes`: The source of the sequence, if any.
         """
-        desc = <bytes> self._sq.source
-        return desc or None
+        return <bytes> self._sq.source
 
     @source.setter
     def source(self, src):
@@ -256,7 +192,7 @@ cdef class Sequence:
     # --- Methods ------------------------------------------------------------
 
     def checksum(self):
-        """Calculate a 32-bit checksum for a sequence.
+        """Calculate a 32-bit checksum for the sequence.
         """
         cdef uint32_t checksum = 0
         cdef int status = libeasel.sq.esl_sq_Checksum(self._sq, &checksum)
@@ -294,15 +230,15 @@ cdef class SequenceFile:
     # --- Class methods ------------------------------------------------------
 
     @classmethod
-    def parse(cls, bytes buffer):
+    def parse(cls, bytes buffer, str format):
         cdef Sequence seq = Sequence.__new__(Sequence)
         seq._sq = libeasel.sq.esl_sq_Create()
         if not seq._sq:
             raise AllocationError("ESL_SQ")
-        return cls.parseinto(seq)
+        return cls.parseinto(seq, buffer, format)
 
     @classmethod
-    def parseinto(cls, Sequence seq, bytes buffer, str format=None):
+    def parseinto(cls, Sequence seq, bytes buffer, str format):
         assert seq._sq != NULL
 
         cdef int fmt = libeasel.sqio.eslSQFILE_UNKNOWN
@@ -311,7 +247,7 @@ cdef class SequenceFile:
             if fmt is None:
                 raise ValueError("Invalid sequence format: {!r}".format(format))
 
-        cdef int status = libeasel.sqio.esl_sqio_Parse(buffer, buffer.len(), seq._sq, fmt)
+        cdef int status = libeasel.sqio.esl_sqio_Parse(buffer, len(buffer), seq._sq, fmt)
         if status == libeasel.eslEFORMAT:
             raise AllocationError("")
         elif status == libeasel.eslOK:
@@ -416,13 +352,15 @@ cdef class SequenceFile:
             left in the file.
 
         Example:
-            Use `iter` to loop over the sequences of a file while recycling
-            the same sequence buffer:
+            Use `SequenceFile.readinto` to loop over the sequences in a file
+            while recycling the same `Sequence` buffer:
 
-            >>> with SequenceFile("/path/to/seq.fa", "fasta") as sf:
-            ...     seq = Sequence.empty()
-            ...     for s in iter(lambda: sf.readinto(seq), None):
-            ...         # ... process s ... #
+            >>> with SequenceFile("tests/data/seqs/ecori.fa") as sf:
+            ...     seq = Sequence()
+            ...     while sf.readinto(seq) is not None:
+            ...         # ... process seq here ... #
+            ...         seq.clear()
+
         """
         assert seq._sq != NULL
 

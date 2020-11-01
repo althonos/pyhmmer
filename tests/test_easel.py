@@ -33,7 +33,7 @@ class TestSequenceFile(unittest.TestCase):
         self.assertEqual(seq2.name, b"SNRPA_HUMAN")
 
     def test_parse(self):
-        seq = easel.SequenceFile.parse(b"> EcoRI\nGAATTC\n")
+        seq = easel.SequenceFile.parse(b"> EcoRI\nGAATTC\n", format="fasta")
         self.assertEqual(seq.name, b"EcoRI")
 
     def test_read_fasta(self):
