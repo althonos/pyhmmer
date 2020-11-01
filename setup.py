@@ -127,10 +127,10 @@ class clean_ext(setuptools.Command):
 
 extensions = [
     setuptools.Extension(
-        "hmmer.hmmer",
-        ["hmmer/hmmer.pyx"],
-        include_dirs=["vendor/hmmer/src", "vendor/easel"],
-        libraries=["hmmer", "easel"],
+        "hmmer.errors",
+        ["hmmer/errors.pyx"],
+        include_dirs=["vendor/easel"],
+        libraries=["easel"],
         library_dirs=[],
         extra_compile_args=[],
     ),
@@ -139,6 +139,14 @@ extensions = [
         ["hmmer/easel.pyx"],
         include_dirs=["vendor/hmmer/src", "vendor/easel"],
         libraries=["easel"],
+        library_dirs=[],
+        extra_compile_args=[],
+    ),
+    setuptools.Extension(
+        "hmmer.hmmer",
+        ["hmmer/hmmer.pyx"],
+        include_dirs=["vendor/hmmer/src", "vendor/easel"],
+        libraries=["hmmer", "easel"],
         library_dirs=[],
         extra_compile_args=[],
     ),
