@@ -82,6 +82,11 @@ cdef class Alphabet:
                 self._abc.Kp
             )
 
+    def __eq__(self, Alphabet other):
+        if other is None:
+            return False
+        return self._abc.type == other._abc.type   # FIXME
+
 
 
 cdef class Sequence:
@@ -291,7 +296,7 @@ cdef class SequenceFile:
 
     def __dealloc__(self):
         if self._sqfp:
-            warnings.warn("unclosed sequence file")
+            warnings.warn("unclosed sequence file", ResourceWarning)
             self.close()
 
     def __iter__(self):
