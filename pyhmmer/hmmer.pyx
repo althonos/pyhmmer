@@ -53,8 +53,8 @@ cdef class P7Profile:
     def __cinit__(self):
         self._gm = NULL
 
-    # def __dealloc__(self):
-    #     libhmmer.p7_profile.p7_profile_Destroy(self._gm)
+    def __dealloc__(self):
+        libhmmer.p7_profile.p7_profile_Destroy(self._gm)
 
 
 cdef class P7HMM:
@@ -77,8 +77,8 @@ cdef class P7HMM:
         self.alphabet = None
         self._hmm = NULL
 
-    # def __dealloc__(self):
-    #     libhmmer.p7_hmm.p7_hmm_Destroy(self._hmm)
+    def __dealloc__(self):
+        libhmmer.p7_hmm.p7_hmm_Destroy(self._hmm)
 
     # --- Properties ---------------------------------------------------------
 
@@ -174,28 +174,33 @@ cdef class P7HMMFile:
         return self
 
     def __next__(self):
+
+        cdef int status
         cdef P7HMM py_hmm
         cdef P7_HMM* hmm = NULL
 
-        cdef int err = libhmmer.p7_hmmfile.p7_hmmfile_Read(self._hfp, &self._alphabet._abc, &hmm)
-        if err == libeasel.eslOK:
+
+        with nogil:
+            status = libhmmer.p7_hmmfile.p7_hmmfile_Read(self._hfp, &self._alphabet._abc, &hmm)
+
+        if status == libeasel.eslOK:
             py_hmm = P7HMM.__new__(P7HMM)
             py_hmm.alphabet = self._alphabet # keep a reference to the alphabet
             py_hmm._hmm = hmm
             return py_hmm
-        elif err == libeasel.eslEOF:
+        elif status == libeasel.eslEOF:
             raise StopIteration()
-        elif err == libeasel.eslEMEM:
-            raise MemoryError("could not allocate C object")
-        elif err == libeasel.eslESYS:
+        elif status == libeasel.eslEMEM:
+            raise AllocationError("P7_HMM")
+        elif status == libeasel.eslESYS:
             raise OSError(self._hfp.errbuf.decode('ascii'))
-        elif err == libeasel.eslEFORMAT:
-            raise ValueError("invalid format in file: {}".format(self._hfp.errbuf.decode('ascii')))
-        elif err == libeasel.eslEINCOMPAT:
+        elif status == libeasel.eslEFORMAT:
+            raise ValueError("Invalid format in file: {}".format(self._hfp.errbuf.decode('ascii')))
+        elif status == libeasel.eslEINCOMPAT:
             alphabet = libeasel.alphabet.esl_abc_DecodeType(self._alphabet.type)
             raise ValueError("HMM is not in the expected {} alphabet".format(alphabet))
         else:
-            raise RuntimeError("unexpected error ({}): {}".format(err, self._hfp.errbuf.decode('ascii')))
+            raise UnexpectedError(status, "p7_hmmfile_Read")
 
 
     # --- Utils --------------------------------------------------------------
