@@ -1,7 +1,8 @@
 from libc.stdint cimport uint8_t, uint32_t, int64_t
 
-from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libeasel.rand64 cimport ESL_RAND64
+from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
+
 
 
 cdef extern from "hmmer.h" nogil:

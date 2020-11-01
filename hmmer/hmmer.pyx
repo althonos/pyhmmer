@@ -2,6 +2,7 @@
 # cython: language_level=3, linetrace=True
 
 from libc.stdio cimport fprintf, FILE, stdout
+from libc.math cimport exp
 
 cimport libeasel
 cimport libeasel.sq
@@ -20,19 +21,25 @@ from libeasel.alphabet cimport ESL_ALPHABET, esl_alphabet_Create, esl_abc_Valida
 from libeasel.getopts cimport ESL_GETOPTS, ESL_OPTIONS
 from libeasel.sq cimport ESL_SQ
 from libhmmer cimport p7_LOCAL
+from libhmmer.logsum cimport p7_FLogsumInit
+from libhmmer.impl_sse cimport impl_Init
 from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 from libhmmer.p7_bg cimport P7_BG
+from libhmmer.p7_domain cimport P7_DOMAIN
 from libhmmer.p7_hmm cimport P7_HMM
 from libhmmer.p7_hmmfile cimport P7_HMMFILE
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e
 from libhmmer.p7_profile cimport P7_PROFILE
-from libhmmer.p7_tophits cimport P7_TOPHITS
+from libhmmer.p7_tophits cimport P7_TOPHITS, P7_HIT
 
 from .easel cimport Alphabet, Sequence
 
 import errno
 import os
 import io
+import warnings
+
+from .errors import AllocationError, UnexpectedError
 
 
 cdef extern from "hmmsearch.c":
@@ -46,8 +53,8 @@ cdef class P7Profile:
     def __cinit__(self):
         self._gm = NULL
 
-    def __dealloc__(self):
-        libhmmer.p7_profile.p7_profile_Destroy(self._gm)
+    # def __dealloc__(self):
+    #     libhmmer.p7_profile.p7_profile_Destroy(self._gm)
 
 
 cdef class P7HMM:
@@ -70,8 +77,8 @@ cdef class P7HMM:
         self.alphabet = None
         self._hmm = NULL
 
-    def __dealloc__(self):
-        libhmmer.p7_hmm.p7_hmm_Destroy(self._hmm)
+    # def __dealloc__(self):
+    #     libhmmer.p7_hmm.p7_hmm_Destroy(self._hmm)
 
     # --- Properties ---------------------------------------------------------
 
@@ -132,7 +139,11 @@ cdef class P7HMMFile:
 
     # --- Magic methods ------------------------------------------------------
 
-    def __cinit__(self, str filename):
+    def __cinit__(self):
+        self._alphabet = None
+        self._hfp = NULL
+
+    def __init__(self, str filename):
         cdef bytes fspath = os.fsencode(filename)
         cdef errbuf = bytearray(eslERRBUFSIZE)
 
@@ -146,7 +157,15 @@ cdef class P7HMMFile:
         self._alphabet._abc = NULL
 
     def __dealloc__(self):
-        libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
+        if self._hfp:
+            warnings.warn("unclosed HMM file", ResourceWarning)
+            self.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
 
     def __iter__(self):
         # cdef int err = p7_hmmfile.p7_hmmfile_Position(self._hfp, 0)
@@ -179,67 +198,396 @@ cdef class P7HMMFile:
             raise RuntimeError("unexpected error ({}): {}".format(err, self._hfp.errbuf.decode('ascii')))
 
 
-cpdef void hmmsearch(P7HMM hmm, Sequence seq):
+    # --- Utils --------------------------------------------------------------
 
-    cdef int          status
-    cdef FILE*        ofp     = stdout
-    cdef P7_BG*       bg
-    cdef P7_PROFILE*  gm
-    cdef P7_OPROFILE* om
-    cdef P7_TOPHITS*  th
-    cdef P7_PIPELINE* pli
-    cdef ESL_GETOPTS* go      = NULL
-    cdef ESL_SQ*      dbsq    = libeasel.sq.esl_sq_Create()
+    cpdef void close(self):
+        libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
+        self._hfp = NULL
 
-    # built the top hits list
-    th = libhmmer.p7_tophits.p7_tophits_Create();
 
-    # copy and then digitize the sequence
-    if libeasel.sq.esl_sq_Copy(seq._sq, dbsq):
-        raise RuntimeError()
-    if libeasel.sq.esl_sq_Digitize(hmm.alphabet._abc, dbsq):
-        raise RuntimeError()
+cdef class P7Alignment:
+    pass
 
-    # configure the profile and the background for the sequence
-    # create the background model from the HMM alphabet
-    bg = libhmmer.p7_bg.p7_bg_Create(hmm.alphabet._abc);
-    if libhmmer.p7_bg.p7_bg_SetLength(bg, dbsq.n):
-        raise RuntimeError()
 
-    # build optimized model
-    gm = libhmmer.p7_profile.p7_profile_Create(hmm._hmm.M, hmm.alphabet._abc)
-    om = libhmmer.impl_sse.p7_oprofile.p7_oprofile_Create(hmm._hmm.M, hmm.alphabet._abc)
-    if libhmmer.modelconfig.p7_ProfileConfig(hmm._hmm, bg, gm, 100, p7_LOCAL):
-        raise RuntimeError()
-    if libhmmer.impl_sse.p7_oprofile.p7_oprofile_Convert(gm, om):
-        raise RuntimeError()
-    if libhmmer.impl_sse.p7_oprofile.p7_oprofile_ReconfigLength(om, dbsq.n):
-        raise RuntimeError()
+cdef class P7Domain:
 
-    # build the processing pipeline
-    pli = libhmmer.p7_pipeline.p7_pipeline_Create(go, om.M, 100, False, p7_pipemodes_e.p7_SEARCH_SEQS) # use same dummy as `hmmseach.c` code
-    if libhmmer.p7_pipeline.p7_pli_NewSeq(pli, dbsq):
-        raise RuntimeError()
-    if libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg):
-        raise RuntimeError()
+    cdef P7Hit _hit
+    cdef P7_DOMAIN* _dom
 
-    # run the pipeline
-    status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, dbsq, NULL, th);
-    if status != libeasel.eslOK:
-        raise RuntimeError()
+    def __cinit__(self):
+        self._hit = None
+        self._dom = NULL
 
-    # sort and print results
-    libhmmer.p7_tophits.p7_tophits_SortBySortkey(th)
-    libhmmer.p7_tophits.p7_tophits_Threshold(th, pli)
+    @property
+    def ienv(self):
+        assert self._dom != NULL
+        return self._dom.ienv
 
-    if th.N:
-        libhmmer.p7_tophits.p7_tophits_Domains(ofp, th, pli, True)
-        fprintf(stdout, "\n\n");
+    @property
+    def jenv(self):
+        assert self._dom != NULL
+        return self._dom.jenv
 
-    # dealloc
-    libhmmer.p7_pipeline.p7_pipeline_Destroy(pli)
-    libhmmer.p7_bg.p7_bg_Destroy(bg)
-    libhmmer.p7_profile.p7_profile_Destroy(gm)
-    libhmmer.impl_sse.p7_oprofile.p7_oprofile_Destroy(om)
-    libeasel.sq.esl_sq_Destroy(dbsq)
-    libhmmer.p7_tophits.p7_tophits_Destroy(th)
+    @property
+    def iali(self):
+        assert self._dom != NULL
+        return self._dom.iali
+
+    @property
+    def jali(self):
+        assert self._dom != NULL
+        return self._dom.jali
+
+
+    # @property
+    # def c_evalue(self):
+    #     assert self._dom != NULL
+    #     return exp(self._dom.lnP) * pli->domZ,
+    #
+    # @property
+    # def i_evalue(self):
+    #     assert self._dom != NULL
+    #     exp(th->hit[h]->dcl[d].lnP) * pli->Z,
+
+
+cdef class P7Hit:
+
+    # a reference to the P7TopHits that owns this P7Hit, kept so that the
+    # internal data is never deallocated before the Python class.
+    cdef P7TopHits _hits
+
+    # a pointer to the P7_HIT
+    cdef P7_HIT* _hit
+
+    def __cinit__(self, P7TopHits hits, size_t index):
+        assert hits._th != NULL
+        assert index < hits._th.N
+
+        self._hits = hits
+        self._hit = hits._th.hit[index]
+
+    @property
+    def name(self):
+        assert self._hit != NULL
+        assert self._hit.name != NULL
+        return <bytes> self._hit.name
+
+    @property
+    def accession(self):
+        assert self._hit != NULL
+        if self._hit.acc == NULL:
+            return None
+        return <bytes> self._hit.acc
+
+    @property
+    def description(self):
+        assert self._hit != NULL
+        if self._hit.desc == NULL:
+            return None
+        return <bytes> self._hit.acc
+
+    @property
+    def score(self):
+        assert self._hit != NULL
+        return self._hit.score
+
+    @property
+    def bias(self):
+        assert self._hit != NULL
+        return self._hit.pre_score - self._hit.score
+
+    @property
+    def lnP(self):
+        assert self._hit != NULL
+        return self._hit.lnP
+
+    # @property
+    # def domain(self):
+
+
+cdef class P7TopHits:
+
+    cdef P7_TOPHITS* _th
+
+    def __init__(self):
+        assert self._th == NULL, "called P7TopHits.__init__ more than once"
+        self._th = libhmmer.p7_tophits.p7_tophits_Create()
+        if self._th == NULL:
+            raise AllocationError("P7_TOPHITS")
+
+    def __cinit__(self):
+        self._th = NULL
+
+    def __dealloc__(self):
+        libhmmer.p7_tophits.p7_tophits_Destroy(self._th)
+
+    def __bool__(self):
+        return len(self) > 0
+
+    def __len__(self):
+        assert self._th != NULL
+        return self._th.N
+
+    def __getitem__(self, index):
+        cdef size_t index_
+        if index < 0:
+            index += self._th.N
+        if index >= self._th.N or index < 0:
+            raise IndexError("list index out of range")
+        return P7Hit(self, index)
+
+
+    cpdef void sort_by_sortkey(self):
+        assert self._th != NULL
+        libhmmer.p7_tophits.p7_tophits_SortBySortkey(self._th)
+
+    cpdef void threshold(self, P7Pipeline pipeline):
+        assert self._th != NULL
+        libhmmer.p7_tophits.p7_tophits_Threshold(self._th, pipeline._pli)
+
+
+    cpdef void clear(self):
+        assert self._th != NULL
+        cdef int status = libhmmer.p7_tophits.p7_tophits_Reuse(self._th)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_tophits_Reuse")
+
+
+    cpdef void print_targets(self, P7Pipeline pipeline):
+        assert self._th != NULL
+        libhmmer.p7_tophits.p7_tophits_Targets(stdout, self._th, pipeline._pli, 0)
+
+    cpdef void print_domains(self, P7Pipeline pipeline):
+        assert self._th != NULL
+        libhmmer.p7_tophits.p7_tophits_Domains(stdout, self._th, pipeline._pli, 0)
+
+
+cdef class P7Pipeline:
+
+    cdef readonly Alphabet alphabet
+
+    cdef P7_PIPELINE* _pli
+    cdef P7_BG* _bg
+
+
+    def __cinit__(self):
+        self._pli = NULL
+
+
+    def __init__(self, Alphabet alphabet):
+
+        M_hint = 100
+        L_hint = 400
+        long_targets = False
+
+        self.alphabet = alphabet
+
+        self._pli = libhmmer.p7_pipeline.p7_pipeline_Create(NULL, M_hint, L_hint, long_targets, p7_pipemodes_e.p7_SEARCH_SEQS)
+        if self._pli == NULL:
+            raise AllocationError("P7_PIPELINE")
+
+        self._bg = libhmmer.p7_bg.p7_bg_Create(alphabet._abc)
+        if self._bg == NULL:
+            raise AllocationError("P7_BG")
+
+
+    def __dealloc__(self):
+        libhmmer.p7_pipeline.p7_pipeline_Destroy(self._pli)
+        libhmmer.p7_bg.p7_bg_Destroy(self._bg)
+
+
+    cpdef P7TopHits search(self, P7HMM hmm, object seqs, P7TopHits hits = None):
+        cdef int           status
+        cdef Sequence      seq
+        cdef ESL_ALPHABET* abc     = self.alphabet._abc
+        cdef P7_BG*        bg      = self._bg
+        cdef P7_HMM*       hm      = hmm._hmm
+        cdef P7_PROFILE*   gm
+        cdef P7_OPROFILE*  om
+        cdef P7_TOPHITS*   th
+        cdef P7_PIPELINE*  pli     = self._pli
+        cdef ESL_SQ*       sq      = NULL
+
+        assert self._pli != NULL
+
+        # check the pipeline was configure with the same alphabet
+        if hmm.alphabet != self.alphabet:
+            raise ValueError("Wrong alphabet in input HMM: expected {!r}, found {!r}".format(
+              self.alphabet,
+              hmm.alphabet
+            ))
+
+        # make sure the pipeline is set to search mode
+        self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
+
+        # get a pointer to the P7_TOPHITS struct to use
+        hits = P7TopHits() if hits is None else hits
+        th = hits._th
+
+        # get an iterator over the input sequences, with an early return if
+        # no sequences were given, and extract the raw pointer to the sequence
+        # from the Python object
+        seqs_iter = iter(seqs)
+        seq = next(seqs_iter, None)
+        if seq is None:
+            return hits
+        sq = seq._sq
+
+        # release the GIL for as long as possible
+        with nogil:
+
+            # build the profile from the HMM, using the first sequence length
+            # as a hint for the model configuraiton
+            gm = libhmmer.p7_profile.p7_profile_Create(hm.M, abc)
+            if libhmmer.modelconfig.p7_ProfileConfig(hm, bg, gm, sq.L, p7_LOCAL):
+                raise RuntimeError()
+
+            # build the optimized model from the HMM
+            om = libhmmer.impl_sse.p7_oprofile.p7_oprofile_Create(hm.M, abc)
+            if libhmmer.impl_sse.p7_oprofile.p7_oprofile_Convert(gm, om):
+                raise RuntimeError()
+
+            # configure the pipeline for the current HMM
+            if libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg):
+                raise RuntimeError()
+
+            # run the inner loop on all sequences
+            while sq != NULL:
+
+                # digitize the sequence if needed
+                # if libeasel.sq.esl_sq_Copy(seq._sq, dbsq):
+                #     raise RuntimeError()
+                if not libeasel.sq.esl_sq_IsDigital(sq):
+                    if libeasel.sq.esl_sq_Digitize(abc, sq):
+                        raise RuntimeError()
+
+                # configure the profile, background and pipeline for the new sequence
+                if libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq):
+                    raise RuntimeError()
+                if libhmmer.p7_bg.p7_bg_SetLength(bg, sq.n):
+                    raise RuntimeError()
+                if libhmmer.impl_sse.p7_oprofile.p7_oprofile_ReconfigLength(om, sq.n):
+                    raise RuntimeError()
+
+                # run the pipeline on the sequence
+                status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, sq, NULL, th);
+                if status != libeasel.eslOK:
+                    raise RuntimeError()
+
+                # clear pipeline for reuse for next target
+                libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
+
+                # acquire the GIL just long enough to get the next sequence
+                with gil:
+                    seq = next(seqs_iter, None)
+                    sq = NULL if seq is None else seq._sq
+
+            # deallocate the profile and optimized model
+            libhmmer.p7_profile.p7_profile_Destroy(gm)
+            libhmmer.impl_sse.p7_oprofile.p7_oprofile_Destroy(om)
+
+        #
+        return hits
+
+
+
+
+impl_Init()
+p7_FLogsumInit()
+
+
+
+
+
+
+
+
+#
+#
+#
+# cpdef P7TopHits hmmsearch(P7HMM hmm, object seqs, P7TopHits hits = None):
+#
+#     cdef int          status
+#     cdef Sequence     seq
+#     cdef FILE*        ofp     = stdout
+#     cdef P7_BG*       bg
+#     cdef P7_PROFILE*  gm
+#     cdef P7_OPROFILE* om
+#     cdef P7_TOPHITS*  th
+#     cdef P7_PIPELINE* pli
+#     cdef ESL_GETOPTS* go      = NULL
+#     cdef ESL_SQ*      dbsq    = NULL # libeasel.sq.esl_sq_Create()
+#
+#
+#     # get an iterator over the input sequences
+#     seqs_iter = iter(seqs)
+#     hits = P7TopHits() if hits is None else hits
+#
+#     # get the top
+#     th = hits._th
+#
+#     # release the GIL for as long as possible
+#     with nogil:
+#
+#         # create the background model for the HMM alphabet
+#         bg = libhmmer.p7_bg.p7_bg_Create(hmm.alphabet._abc)
+#
+#         # build optimized model
+#         gm = libhmmer.p7_profile.p7_profile_Create(hmm._hmm.M, hmm.alphabet._abc)
+#         om = libhmmer.impl_sse.p7_oprofile.p7_oprofile_Create(hmm._hmm.M, hmm.alphabet._abc)
+#         if libhmmer.modelconfig.p7_ProfileConfig(hmm._hmm, bg, gm, 100, p7_LOCAL):
+#             raise RuntimeError()
+#         if libhmmer.impl_sse.p7_oprofile.p7_oprofile_Convert(gm, om):
+#             raise RuntimeError()
+#
+#         # build the processing pipeline and configure it for the current HMM
+#         pli = libhmmer.p7_pipeline.p7_pipeline_Create(go, hmm.M, 100, False, p7_pipemodes_e.p7_SEARCH_SEQS) # use same dummy as `hmmseach.c` code
+#         if libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg):
+#             raise RuntimeError()
+#
+#         # run the inner loop on all sequences
+#         while True:
+#
+#             # acquire the GIL to get the next sequence
+#             with gil:
+#                 seq = next(seqs_iter, None)
+#                 if seq is None:
+#                     break
+#                 dbsq = seq._sq
+#
+#             # digitize the sequence
+#             # if libeasel.sq.esl_sq_Copy(seq._sq, dbsq):
+#             #     raise RuntimeError()
+#             if not libeasel.sq.esl_sq_IsDigital(dbsq):
+#                 if libeasel.sq.esl_sq_Digitize(hmm.alphabet._abc, dbsq):
+#                     raise RuntimeError()
+#
+#             # configure the profile, background and pipeline for the new sequence
+#             if libhmmer.p7_pipeline.p7_pli_NewSeq(pli, dbsq):
+#                 raise RuntimeError()
+#             if libhmmer.p7_bg.p7_bg_SetLength(bg, dbsq.n):
+#                 raise RuntimeError()
+#             if libhmmer.impl_sse.p7_oprofile.p7_oprofile_ReconfigLength(om, dbsq.n):
+#                 raise RuntimeError()
+#
+#             # run the pipeline
+#             status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, dbsq, seq._sq, th);
+#             if status != libeasel.eslOK:
+#                 raise RuntimeError()
+#
+#             # clear dbsq
+#             # if libeasel.sq.esl_sq_Reuse(dbsq):
+#             #     raise RuntimeError()
+#
+#             # clear pipeline
+#             libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
+#
+#         # dealloc
+#         libhmmer.p7_pipeline.p7_pipeline_Destroy(pli)
+#         libhmmer.p7_bg.p7_bg_Destroy(bg)
+#         libhmmer.p7_profile.p7_profile_Destroy(gm)
+#         libhmmer.impl_sse.p7_oprofile.p7_oprofile_Destroy(om)
+#         # libeasel.sq.esl_sq_Destroy(dbsq)
+#
+#     #
+#     return hits

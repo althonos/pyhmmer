@@ -100,3 +100,7 @@ cdef extern from "hmmer.h" nogil:
     int p7_tophits_TabularTail(FILE *ofp, const char *progname, p7_pipemodes_e pipemode,
     				  const char *qfile, const char *tfile, const ESL_GETOPTS *go)
     int p7_tophits_AliScores(FILE *ofp, char *qname, P7_TOPHITS *th )
+
+    # NB: This function is not declared in `hmmer.h` but it is defined in
+    #     `p7_tophits.c`, and we want to use it to implement `P7TopHits.clear`
+    int         p7_tophits_Reuse(P7_TOPHITS* h)

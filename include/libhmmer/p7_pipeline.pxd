@@ -8,6 +8,12 @@ from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 from libhmmer.p7_bg cimport P7_BG
 from libhmmer.p7_domaindef cimport P7_DOMAINDEF
 from libhmmer.p7_tophits cimport P7_TOPHITS
+from libhmmer.p7_hmmfile cimport P7_HMMFILE
+
+
+cdef extern from "easel.h" nogil:
+
+    DEF eslERRBUFSIZE = 128
 
 
 cdef extern from "hmmer.h" nogil:
@@ -82,6 +88,17 @@ cdef extern from "hmmer.h" nogil:
         uint64_t pos_past_fwd
         uint64_t pos_output
 
+        p7_pipemodes_e mode
+        bint long_targets
+        int strands
+        int W
+        int block_length
+
+        bint show_accessions
+        bint show_alignments
+
+        P7_HMMFILE   *hfp
+        char          errbuf[eslERRBUFSIZE];
 
 
     P7_PIPELINE *p7_pipeline_Create(const ESL_GETOPTS *go, int M_hint, int L_hint, int long_targets, p7_pipemodes_e mode)
