@@ -7,7 +7,7 @@ from libeasel.msa cimport ESL_MSA
 from libeasel.random cimport ESL_RANDOMNESS
 
 
-cdef extern from "esl_sq.h":
+cdef extern from "esl_sq.h" nogil:
 
     ctypedef struct ESL_SQ:
         char* name
