@@ -113,7 +113,7 @@ class clean_ext(setuptools.Command):
         pass
 
     def run(self):
-        source_dir = os.path.join(os.path.dirname(__file__), "hmmer")
+        source_dir = os.path.join(os.path.dirname(__file__), "pyhmmer")
 
         patterns = ["*.html"]
         if self.all:
@@ -127,24 +127,24 @@ class clean_ext(setuptools.Command):
 
 extensions = [
     setuptools.Extension(
-        "hmmer.errors",
-        ["hmmer/errors.pyx"],
+        "pyhmmer.errors",
+        ["pyhmmer/errors.pyx"],
         include_dirs=["vendor/easel"],
         libraries=["easel"],
         library_dirs=[],
         extra_compile_args=[],
     ),
     setuptools.Extension(
-        "hmmer.easel",
-        ["hmmer/easel.pyx"],
+        "pyhmmer.easel",
+        ["pyhmmer/easel.pyx"],
         include_dirs=["vendor/hmmer/src", "vendor/easel"],
         libraries=["easel"],
         library_dirs=[],
         extra_compile_args=[],
     ),
     setuptools.Extension(
-        "hmmer.hmmer",
-        ["hmmer/hmmer.pyx"],
+        "pyhmmer.hmmer",
+        ["pyhmmer/hmmer.pyx"],
         include_dirs=["vendor/hmmer/src", "vendor/easel"],
         libraries=["hmmer", "easel"],
         library_dirs=[],

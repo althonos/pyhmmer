@@ -14,8 +14,8 @@ import types
 import warnings
 from unittest import mock
 
-import hmmer.easel
-import hmmer.hmmer
+import pyhmmer.easel
+import pyhmmer.hmmer
 
 
 def _load_tests_from_module(tests, module, globs, setUp=None, tearDown=None):
@@ -50,7 +50,7 @@ def load_tests(loader, tests, ignore):
         return tests
 
     # recursively traverse all library submodules and load tests from them
-    packages = [None, hmmer]
+    packages = [None, pyhmmer]
 
     for pkg in iter(packages.pop, None):
         for subpkg in pkgutil.walk_packages(pkg.__path__):

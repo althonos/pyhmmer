@@ -360,7 +360,7 @@ cdef class SequenceFile:
             Use `SequenceFile.readinto` to loop over the sequences in a file
             while recycling the same `Sequence` buffer:
 
-            >>> with SequenceFile("tests/data/seqs/ecori.fa") as sf:
+            >>> with SequenceFile("vendor/hmmer/testsuite/ecori.fa") as sf:
             ...     seq = Sequence()
             ...     while sf.readinto(seq) is not None:
             ...         # ... process seq here ... #

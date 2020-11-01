@@ -2,7 +2,7 @@ import os
 import unittest
 import tempfile
 
-from hmmer import easel
+from pyhmmer import easel
 
 
 class TestSequenceFile(unittest.TestCase):

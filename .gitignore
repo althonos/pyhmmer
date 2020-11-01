@@ -2,8 +2,8 @@
 # Added manually
 
 ### Cython ###
-hmmer/*.c
-hmmer/*.html
+pyhmmer/*.c
+pyhmmer/*.html
 
 # Created by https://www.gitignore.io/api/python,c
 # Edit at https://www.gitignore.io/?templates=python,c
