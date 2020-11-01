@@ -196,7 +196,7 @@ cdef class Sequence:
 
     # --- Methods ------------------------------------------------------------
 
-    def checksum(self):
+    cpdef uint32_t checksum(self):
         """Calculate a 32-bit checksum for the sequence.
         """
         cdef uint32_t checksum = 0
@@ -206,7 +206,7 @@ cdef class Sequence:
         else:
             raise UnexpectedError(status, "esl_sq_Checksum")
 
-    def clear(self):
+    cpdef void clear(self):
         """Reinitialize the sequence for re-use.
         """
         assert self._sq != NULL
@@ -214,6 +214,9 @@ cdef class Sequence:
         cdef int status = libeasel.sq.esl_sq_Reuse(self._sq)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_Reuse")
+
+    cpdef void digitize(self, Alphabet alphabet):
+        libeasel.sq.esl_sq_Digitize(alphabet._abc, self._sq)
 
 
 

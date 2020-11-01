@@ -1,3 +1,6 @@
+from libc.stdint cimport uint32_t
+
+cimport libeasel.sq
 from libeasel.alphabet cimport ESL_ALPHABET
 from libeasel.sq cimport ESL_SQ
 from libeasel.sqio cimport ESL_SQFILE
@@ -10,6 +13,10 @@ cdef class Alphabet:
 
 cdef class Sequence:
     cdef ESL_SQ* _sq
+
+    cpdef void digitize(self, Alphabet alphabet)
+    cpdef void clear(self)
+    cpdef uint32_t checksum(self)
 
 
 cdef class SequenceFile:
