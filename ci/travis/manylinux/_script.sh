@@ -11,7 +11,7 @@ cd /io
 $PYTHON_SYS_EXECUTABLE setup.py build_clib --debug
 $PYTHON_SYS_EXECUTABLE setup.py build_ext --debug --inplace
 
-if [ "$TRAVIS_PYTHON_VERSION" = "pypy3"]; then
+if [ "$TRAVIS_PYTHON_VERSION" = "pypy3" ]; then
     $PYTHON_SYS_EXECUTABLE -m unittest discover -v
 else
     $PYTHON_SYS_EXECUTABLE -m coverage run -m unittest discover -v

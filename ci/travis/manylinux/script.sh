@@ -10,8 +10,6 @@ case $TRAVIS_PYTHON_VERSION in
 esac
 
 log Running test with $TAG
-docker exec -it manylinux sh /io/ci/travis/manylinux/_script.sh $TAG
-
 docker exec \
   -e TRAVIS_PYTHON_VERSION=$TRAVIS_PYTHON_VERSION \
   -it manylinux sh /io/ci/travis/manylinux/_script.sh $TAG
