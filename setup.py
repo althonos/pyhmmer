@@ -33,48 +33,14 @@ class build_ext(_build_ext):
     """A `build_ext` that disables optimizations if compiled in debug mode.
     """
 
-    def build_static(self, lib, path, libdir=".", extra_compile_args=[]):
-        _env = os.environ.copy()
-        _cflags = " ".join(self.compiler.compiler[1:] + extra_compile_args)
-        _cwd = os.getcwd()
-
-        try:
-            # pass parameters from `self.compiler` to the `configure` script
-            # using environment variables
-            os.environ["AR"] = self.compiler.archiver[0]
-            os.environ["CC"] = self.compiler.compiler[0]
-            os.environ["CFLAGS"] = _cflags
-
-            # chdir to the directory where to run autoconf
-            self.announce("entering directory {!r}".format(path))
-            os.chdir(path)
-
-            # run autoconf to generate the configure script
-            autoconf = "autoconf.ac" if os.path.isfile("autoconf.ac") else "configure.ac"
-            self.make_file([autoconf], "configure", self.spawn, (["autoconf"],))
-
-            # run the configure script
-            configure_cmd = ["./configure", "--enable-pic", "--enable-threads"]
-            if self.debug:
-                configure_cmd.append("--enable-debugging")
-            self.make_file(["configure"], "Makefile", self.spawn, (configure_cmd,))
-
-            # use the makefile to build the static library
-            self.make_file(["Makefile"], lib, self.spawn, (["make", "-C", libdir, lib],))
-
-        finally:
-            os.environ.update(_env)
-            os.chdir(_cwd)
-
-
     def build_extension(self, ext):
-        # ensure the required libraries have been built
-        cmd = self.get_finalized_command("build_clib")
-        cmd.run()
+        #
+        self.run_command("build_clib")
 
         # update the extension C flags to use the temporary build folder
-        ext.library_dirs.extend(cmd.library_dirs)
-        ext.include_dirs.extend(cmd.include_dirs)
+        for lib, info in self.distribution.libraries:
+            ext.library_dirs.append(os.path.join(self.build_temp, info["makedir"]))
+            ext.include_dirs.append(os.path.join(self.build_temp, info["makedir"]))
 
         # update compile flags if compiling in debug mode
         if self.debug:
@@ -207,7 +173,7 @@ libraries = {
         "sources": [],
         "vendordir": os.path.join("vendor", "hmmer"),
         "builddir": "hmmer",
-        "makedir": os.path.join("hmmer", "src"),    #
+        "makedir": os.path.join("hmmer", "src"),
     },
 }
 
