@@ -91,11 +91,11 @@ class build_ext(_build_ext):
         self.build_static("libhmmer.a", _build_dir, "src", cflags)
         self.build_static("libeasel.a", os.path.join(_build_dir, "easel"), ".", cflags)
 
-        # update the extension link flags to use the temporary build folder
+        # update the extension C flags to use the temporary build folder
         ext.library_dirs.append(os.path.join(_build_dir, "easel"))
         ext.library_dirs.append(os.path.join(_build_dir, "src"))
-
-
+        ext.include_dirs.append(os.path.join(_build_dir, "easel"))
+        ext.include_dirs.append(os.path.join(_build_dir, "src"))
 
         _build_ext.build_extension(self, ext)
 
@@ -129,26 +129,17 @@ extensions = [
     setuptools.Extension(
         "pyhmmer.errors",
         ["pyhmmer/errors.pyx"],
-        include_dirs=["vendor/easel"],
         libraries=["easel"],
-        library_dirs=[],
-        extra_compile_args=[],
     ),
     setuptools.Extension(
         "pyhmmer.easel",
         ["pyhmmer/easel.pyx"],
-        include_dirs=["vendor/hmmer/src", "vendor/easel"],
         libraries=["easel"],
-        library_dirs=[],
-        extra_compile_args=[],
     ),
     setuptools.Extension(
         "pyhmmer.hmmer",
         ["pyhmmer/hmmer.pyx"],
-        include_dirs=["vendor/hmmer/src", "vendor/easel"],
         libraries=["hmmer", "easel"],
-        library_dirs=[],
-        extra_compile_args=[],
     ),
 ]
 
