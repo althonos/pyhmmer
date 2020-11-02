@@ -1,3 +1,5 @@
+# coding: utf-8
+# cython: language_level=3, linetrace=True
 from libc.stdint cimport uint32_t
 
 cimport libeasel.sq
