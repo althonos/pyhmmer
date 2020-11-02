@@ -99,10 +99,17 @@ class build_clib(_build_clib):
                 os.chdir(_cwd)
 
     def make(self, libraries):
-        for lib, info in libraries:
-            makedir = os.path.join(self.build_temp, info["makedir"])
-            libname = self.compiler.library_filename(lib)
-            self.spawn(["make", "-C", makedir, libname])
+        _env = os.environ.copy()
+
+        try:
+            if self.verbose:
+                os.environ["V"] = "1"
+            for lib, info in libraries:
+                makedir = os.path.join(self.build_temp, info["makedir"])
+                libname = self.compiler.library_filename(lib)
+                self.spawn(["make", "-C", makedir, libname])
+        finally:
+            os.environ = _env
 
     def build_libraries(self, libraries):
         # copy sources and build libraries using autoconf/configure/make
