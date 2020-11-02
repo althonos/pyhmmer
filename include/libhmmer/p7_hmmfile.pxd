@@ -1,5 +1,5 @@
 from libc.stdio cimport FILE
-from posix.stat cimport off_t
+from posix.types cimport off_t
 
 from libeasel.alphabet cimport ESL_ALPHABET
 from libeasel.fileparser cimport ESL_FILEPARSER

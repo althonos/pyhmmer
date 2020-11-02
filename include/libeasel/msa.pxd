@@ -1,5 +1,5 @@
 from libc.stdint cimport int64_t, uint32_t
-from posix.stat cimport off_t
+from posix.types cimport off_t
 
 from libeasel cimport ESL_DSQ, esl_pos_t
 from libeasel.alphabet cimport ESL_ALPHABET

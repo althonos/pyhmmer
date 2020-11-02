@@ -1,5 +1,5 @@
 from libc.stdint cimport uint8_t, int16_t
-from posix.stat cimport off_t
+from posix.types cimport off_t
 
 from libeasel.alphabet cimport ESL_ALPHABET
 from libhmmer.p7_profile cimport P7_PROFILE

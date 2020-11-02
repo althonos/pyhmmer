@@ -1,6 +1,6 @@
 from libc.stdio cimport FILE
 from libc.stdint cimport int16_t, int32_t, int64_t, uint16_t, uint32_t, uint64_t
-from posix.stat cimport off_t
+from posix.types cimport off_t
 
 
 cdef extern from "easel.h":

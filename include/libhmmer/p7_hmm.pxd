@@ -1,6 +1,6 @@
 from libc.stdint cimport uint32_t
 from libc.stdio cimport FILE
-from posix.stat cimport off_t
+from posix.types cimport off_t
 
 from libeasel cimport ESL_DSQ
 from libeasel.sq cimport ESL_SQ
