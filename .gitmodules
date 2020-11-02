@@ -1,5 +1,5 @@
-[submodule "hmmer"]
-	path = hmmer
+[submodule "vendor/hmmer"]
+	path = vendor/hmmer
 	url = https://github.com/EddyRivasLab/hmmer
 [submodule "vendor/easel"]
 	path = vendor/easel
