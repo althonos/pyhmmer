@@ -1,0 +1,6 @@
+coverage ~=5.0
+codecov ~=2.0
+auditwheel
+twine
+setuptools >=46.4
+cython ~=0.29.16
