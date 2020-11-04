@@ -16,7 +16,7 @@ cimport libhmmer.p7_hmmfile
 cimport libhmmer.p7_pipeline
 cimport libhmmer.p7_profile
 cimport libhmmer.p7_tophits
-from libeasel cimport eslERRBUFSIZE
+from libeasel cimport eslERRBUFSIZE, eslCONST_LOG2R
 from libeasel.alphabet cimport ESL_ALPHABET, esl_alphabet_Create, esl_abc_ValidateType
 from libeasel.getopts cimport ESL_GETOPTS, ESL_OPTIONS
 from libeasel.sq cimport ESL_SQ
@@ -40,10 +40,6 @@ import io
 import warnings
 
 from .errors import AllocationError, UnexpectedError
-
-
-cdef extern from "hmmsearch.c":
-    cdef ESL_OPTIONS* options
 
 
 cdef class P7Profile:
@@ -216,33 +212,67 @@ cdef class P7Alignment:
 
 cdef class P7Domain:
 
-    cdef P7Hit _hit
+    cdef P7Hit hit
     cdef P7_DOMAIN* _dom
 
     def __cinit__(self):
-        self._hit = None
+        self.hit = None
         self._dom = NULL
 
     @property
-    def ienv(self):
+    def env_from(self):
         assert self._dom != NULL
         return self._dom.ienv
 
     @property
-    def jenv(self):
+    def env_to(self):
         assert self._dom != NULL
         return self._dom.jenv
 
     @property
-    def iali(self):
+    def ali_from(self):
         assert self._dom != NULL
         return self._dom.iali
 
     @property
-    def jali(self):
+    def ali_to(self):
         assert self._dom != NULL
         return self._dom.jali
 
+    @property
+    def hmm_from(self):
+        assert self._dom != NULL
+        return self._dom.iorf
+
+    @property
+    def hmm_to(self):
+        assert self._dom != NULL
+        return self._dom.jorf
+
+    @property
+    def score(self):
+        assert self._dom != NULL
+        return self._dom.bitscore
+
+    @property
+    def bias(self):
+        assert self._dom != NULL
+        return self._dom.dombias * libeasel.eslCONST_LOG2R
+
+    @property
+    def correction(self):
+        assert self._dom != NULL
+        return self._dom.domcorrection * libeasel.eslCONST_LOG2R
+
+    @property
+    def envelope_score(self):
+        assert self._dom != NULL
+        return self._dom.envsc * libeasel.eslCONST_LOG2R
+
+    @property
+    def c_evalue(self):
+        assert self._dom != NULL
+        return exp(self._dom.lnP)
 
     # @property
     # def c_evalue(self):
@@ -253,6 +283,30 @@ cdef class P7Domain:
     # def i_evalue(self):
     #     assert self._dom != NULL
     #     exp(th->hit[h]->dcl[d].lnP) * pli->Z,
+
+
+cdef class P7Domains:
+
+    cdef P7Hit hit
+
+    def __cinit__(self, P7Hit hit):
+        self.hit = hit
+
+    def __len__(self):
+        return self.hit._hit.ndom
+
+    def __getitem__(self, index):
+        cdef size_t index_
+        if index < 0:
+            index += self.hit._hit.ndom
+        if index >= self.hit._hit.ndom or index < 0:
+            raise IndexError("list index out of range")
+
+        cdef P7Domain dom = P7Domain.__new__(P7Domain)
+        dom.hit = self.hit
+        dom._dom = &self.hit._hit.dcl[index]
+
+        return dom
 
 
 cdef class P7Hit:
@@ -306,8 +360,9 @@ cdef class P7Hit:
         assert self._hit != NULL
         return self._hit.lnP
 
-    # @property
-    # def domain(self):
+    @property
+    def domains(self):
+        return P7Domains(self)
 
 
 cdef class P7TopHits:
@@ -340,7 +395,6 @@ cdef class P7TopHits:
         if index >= self._th.N or index < 0:
             raise IndexError("list index out of range")
         return P7Hit(self, index)
-
 
     cpdef void sort_by_sortkey(self):
         assert self._th != NULL
