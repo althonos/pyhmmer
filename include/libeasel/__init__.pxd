@@ -4,6 +4,13 @@ cdef extern from "easel.h" nogil:
 
     cdef size_t eslERRBUFSIZE
 
+    cdef double eslCONST_E
+    cdef double eslCONST_PI
+    cdef double eslCONST_EULER
+    cdef double eslCONST_GOLD
+    cdef double eslCONST_LOG2
+    cdef double eslCONST_LOG2R
+
     ctypedef uint8_t ESL_DSQ
     ctypedef int64_t esl_pos_t
 
