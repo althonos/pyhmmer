@@ -10,7 +10,6 @@ cimport libeasel.alphabet
 cimport libeasel.sq
 cimport libeasel.sqio
 
-
 # --- Python imports ---------------------------------------------------------
 
 import os
@@ -86,7 +85,6 @@ cdef class Alphabet:
         if other is None:
             return False
         return self._abc.type == other._abc.type   # FIXME
-
 
 
 cdef class Sequence:
@@ -219,7 +217,6 @@ cdef class Sequence:
         libeasel.sq.esl_sq_Digitize(alphabet._abc, self._sq)
 
 
-
 cdef class SequenceFile:
 
     _formats = {
@@ -257,7 +254,7 @@ cdef class SequenceFile:
 
         cdef int status = libeasel.sqio.esl_sqio_Parse(buffer, len(buffer), seq._sq, fmt)
         if status == libeasel.eslEFORMAT:
-            raise AllocationError("")
+            raise AllocationError("ESL_SQFILE")
         elif status == libeasel.eslOK:
             return seq
         else:

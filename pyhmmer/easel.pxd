@@ -1,5 +1,8 @@
 # coding: utf-8
 # cython: language_level=3, linetrace=True
+
+# --- C imports --------------------------------------------------------------
+
 from libc.stdint cimport uint32_t
 
 cimport libeasel.sq
@@ -7,6 +10,8 @@ from libeasel.alphabet cimport ESL_ALPHABET
 from libeasel.sq cimport ESL_SQ
 from libeasel.sqio cimport ESL_SQFILE
 
+
+# --- Cython classes ---------------------------------------------------------
 
 cdef class Alphabet:
     cdef ESL_ALPHABET* _abc
