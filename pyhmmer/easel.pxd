@@ -8,6 +8,7 @@ from libc.stdint cimport uint32_t
 cimport libeasel.sq
 from libeasel.alphabet cimport ESL_ALPHABET
 from libeasel.bitfield cimport ESL_BITFIELD
+from libeasel.keyhash cimport ESL_KEYHASH
 from libeasel.sq cimport ESL_SQ
 from libeasel.sqio cimport ESL_SQFILE
 
@@ -27,6 +28,12 @@ cdef class Bitfield:
     cpdef size_t count(self)
     cpdef void toggle(self, int index)
 
+
+cdef class KeyHash:
+    cdef ESL_KEYHASH* _kh
+
+    cpdef void clear(self)
+    cpdef KeyHash copy(self)
 
 cdef class Sequence:
     cdef ESL_SQ* _sq

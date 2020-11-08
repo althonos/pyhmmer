@@ -8,6 +8,7 @@ from libc.stdint cimport uint32_t
 cimport libeasel
 cimport libeasel.alphabet
 cimport libeasel.bitfield
+cimport libeasel.keyhash
 cimport libeasel.sq
 cimport libeasel.sqio
 
@@ -101,7 +102,7 @@ cdef class Bitfield:
         if not self._b:
             raise AllocationError("ESL_BITFIELD")
 
-    def __length__(self):
+    def __len__(self):
         assert self._b != NULL
         return self._b.nb
 
@@ -133,6 +134,54 @@ cdef class Bitfield:
         assert self._b != NULL
         cdef size_t index_ = self._wrap_index(index)
         libeasel.bitfield.esl_bitfield_Toggle(self._b, index_)
+
+
+cdef class KeyHash:
+
+    def __cinit__(self):
+        self._kh = NULL
+
+    def __dealloc__(self):
+        libeasel.keyhash.esl_keyhash_Destroy(self._kh)
+
+    def __init__(self):
+        self._kh = libeasel.keyhash.esl_keyhash_Create()
+        if not self._kh:
+            raise AllocationError("ESL_KEYHASH")
+
+    def __copy__(self):
+        return self.copy()
+
+    def __len__(self):
+        assert self._kh != NULL
+        return libeasel.keyhash.esl_keyhash_GetNumber(self._kh)
+
+    def __contains__(self, value):
+        assert self._kh != NULL
+        if isinstance(bytes, value):
+            status = libeasel.keyhash.esl_keyhash_Lookup(self._kh, <const char*> value, len(value), NULL)
+            if status == libeasel.eslOK:
+                return True
+            elif status == libeasel.eslENOTFOUND:
+                return False
+            else:
+                raise UnexpectedError(status, "esl_keyhash_Lookup")
+        else:
+            ty = type(value).__name__
+            raise TypeError("'in <KeyHash>' requires string as left operand, not {}".format(ty))
+
+    cpdef void clear(self):
+        cdef int status = libeasel.keyhash.esl_keyhash_Reuse(self._kh)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_keyhash_Reuse")
+
+    cpdef KeyHash copy(self):
+        assert self._kh != NULL
+        cdef KeyHash new = KeyHash.__new__(KeyHash)
+        new._kh = libeasel.keyhash.esl_keyhash_Clone(self._kh)
+        if not new._kh:
+            raise AllocationError("ESL_KEYHASH")
+        return new
 
 
 cdef class Sequence:
