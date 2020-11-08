@@ -52,8 +52,11 @@ cdef class Profile:
     cdef readonly Alphabet alphabet
     cdef P7_PROFILE* _gm
 
+    cpdef void clear(self)
     cpdef Profile copy(self)
-    
+    cpdef bint is_local(self)
+    cpdef bint is_multihit(self)
+
 
 cdef class TopHits:
     cdef P7_TOPHITS* _th
