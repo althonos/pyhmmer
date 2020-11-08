@@ -42,7 +42,7 @@ import warnings
 from .errors import AllocationError, UnexpectedError
 
 
-cdef class P7Profile:
+cdef class Profile:
 
     cdef P7_PROFILE* _gm
 
@@ -53,7 +53,7 @@ cdef class P7Profile:
         libhmmer.p7_profile.p7_profile_Destroy(self._gm)
 
 
-cdef class P7HMM:
+cdef class HMM:
 
     # keep a reference to the Alphabet Python object to avoid deallocation of
     # the inner ESL_ALPHABET; the Python object provides reference counting
@@ -122,13 +122,13 @@ cdef class P7HMM:
 
     # --- Methods ------------------------------------------------------------
 
-    cpdef zero(self):
+    cpdef void zero(self):
         """Set all parameters to zero (including model composition).
         """
         libhmmer.p7_hmm.p7_hmm_Zero(self._hmm)
 
 
-cdef class P7HMMFile:
+cdef class HMMFile:
 
     cdef P7_HMMFILE* _hfp
     cdef Alphabet _alphabet
@@ -172,7 +172,7 @@ cdef class P7HMMFile:
     def __next__(self):
 
         cdef int status
-        cdef P7HMM py_hmm
+        cdef HMM py_hmm
         cdef P7_HMM* hmm = NULL
 
 
@@ -180,7 +180,7 @@ cdef class P7HMMFile:
             status = libhmmer.p7_hmmfile.p7_hmmfile_Read(self._hfp, &self._alphabet._abc, &hmm)
 
         if status == libeasel.eslOK:
-            py_hmm = P7HMM.__new__(P7HMM)
+            py_hmm = HMM.__new__(HMM)
             py_hmm.alphabet = self._alphabet # keep a reference to the alphabet
             py_hmm._hmm = hmm
             return py_hmm
@@ -206,13 +206,13 @@ cdef class P7HMMFile:
         self._hfp = NULL
 
 
-cdef class P7Alignment:
+cdef class Alignment:
     pass
 
 
-cdef class P7Domain:
+cdef class Domain:
 
-    cdef P7Hit hit
+    cdef Hit hit
     cdef P7_DOMAIN* _dom
 
     def __cinit__(self):
@@ -285,11 +285,11 @@ cdef class P7Domain:
     #     exp(th->hit[h]->dcl[d].lnP) * pli->Z,
 
 
-cdef class P7Domains:
+cdef class Domains:
 
-    cdef P7Hit hit
+    cdef Hit hit
 
-    def __cinit__(self, P7Hit hit):
+    def __cinit__(self, Hit hit):
         self.hit = hit
 
     def __len__(self):
@@ -301,23 +301,23 @@ cdef class P7Domains:
         if index >= self.hit._hit.ndom or index < 0:
             raise IndexError("list index out of range")
 
-        cdef P7Domain dom = P7Domain.__new__(P7Domain)
+        cdef Domain dom = Domain.__new__(Domain)
         dom.hit = self.hit
         dom._dom = &self.hit._hit.dcl[<size_t> index]
 
         return dom
 
 
-cdef class P7Hit:
+cdef class Hit:
 
-    # a reference to the P7TopHits that owns this P7Hit, kept so that the
+    # a reference to the TopHits that owns this Hit, kept so that the
     # internal data is never deallocated before the Python class.
-    cdef P7TopHits _hits
+    cdef TopHits _hits
 
     # a pointer to the P7_HIT
     cdef P7_HIT* _hit
 
-    def __cinit__(self, P7TopHits hits, size_t index):
+    def __cinit__(self, TopHits hits, size_t index):
         assert hits._th != NULL
         assert index < hits._th.N
 
@@ -361,15 +361,15 @@ cdef class P7Hit:
 
     @property
     def domains(self):
-        return P7Domains(self)
+        return Domains(self)
 
 
-cdef class P7TopHits:
+cdef class TopHits:
 
     cdef P7_TOPHITS* _th
 
     def __init__(self):
-        assert self._th == NULL, "called P7TopHits.__init__ more than once"
+        assert self._th == NULL, "called TopHits.__init__ more than once"
         self._th = libhmmer.p7_tophits.p7_tophits_Create()
         if self._th == NULL:
             raise AllocationError("P7_TOPHITS")
@@ -393,19 +393,19 @@ cdef class P7TopHits:
             index += self._th.N
         if index >= self._th.N or index < 0:
             raise IndexError("list index out of range")
-        return P7Hit(self, index)
+        return Hit(self, index)
 
     def __iadd__(self, other):
         assert self._th != NULL
 
-        if not isinstance(other, P7TopHits):
+        if not isinstance(other, TopHits):
             self_ty = type(self).__name__
             other_ty = type(other).__name__
             return TypeError("Cannot merge {!r} object into a {!r} instance".format(other_ty, self_ty))
 
-        cdef int status = libhmmer.p7_tophits.p7_tophits_Merge(self._th, (<P7TopHits> other)._th)
+        cdef int status = libhmmer.p7_tophits.p7_tophits_Merge(self._th, (<TopHits> other)._th)
         if status == libeasel.eslOK:
-            libhmmer.p7_tophits.p7_tophits_Reuse((<P7TopHits> other)._th)
+            libhmmer.p7_tophits.p7_tophits_Reuse((<TopHits> other)._th)
             return self
         elif status == libeasel.eslEMEM:
             raise AllocationError("P7_TOPHITS")
@@ -419,7 +419,7 @@ cdef class P7TopHits:
         assert self._th != NULL
         libhmmer.p7_tophits.p7_tophits_SortBySortkey(self._th)
 
-    cpdef void threshold(self, P7Pipeline pipeline):
+    cpdef void threshold(self, Pipeline pipeline):
         assert self._th != NULL
         libhmmer.p7_tophits.p7_tophits_Threshold(self._th, pipeline._pli)
 
@@ -462,16 +462,16 @@ cdef class P7TopHits:
 
 
 
-    # cpdef void print_targets(self, P7Pipeline pipeline):
+    # cpdef void print_targets(self, Pipeline pipeline):
     #     assert self._th != NULL
     #     libhmmer.p7_tophits.p7_tophits_Targets(stdout, self._th, pipeline._pli, 0)
     #
-    # cpdef void print_domains(self, P7Pipeline pipeline):
+    # cpdef void print_domains(self, Pipeline pipeline):
     #     assert self._th != NULL
     #     libhmmer.p7_tophits.p7_tophits_Domains(stdout, self._th, pipeline._pli, 0)
 
 
-cdef class P7Pipeline:
+cdef class Pipeline:
 
     cdef readonly Alphabet alphabet
 
@@ -505,7 +505,7 @@ cdef class P7Pipeline:
         libhmmer.p7_bg.p7_bg_Destroy(self._bg)
 
 
-    cpdef P7TopHits search(self, P7HMM hmm, object seqs, P7TopHits hits = None):
+    cpdef TopHits search(self, HMM hmm, object seqs, TopHits hits = None):
         cdef int           status
         cdef Sequence      seq
         cdef ESL_ALPHABET* abc     = self.alphabet._abc
@@ -530,7 +530,7 @@ cdef class P7Pipeline:
         self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
 
         # get a pointer to the P7_TOPHITS struct to use
-        hits = P7TopHits() if hits is None else hits
+        hits = TopHits() if hits is None else hits
         th = hits._th
 
         # get an iterator over the input sequences, with an early return if

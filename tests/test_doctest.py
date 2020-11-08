@@ -15,7 +15,7 @@ import warnings
 from unittest import mock
 
 import pyhmmer.easel
-import pyhmmer.hmmer
+import pyhmmer.plan7
 
 
 def _load_tests_from_module(tests, module, globs, setUp=None, tearDown=None):

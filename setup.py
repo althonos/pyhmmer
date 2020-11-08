@@ -192,8 +192,8 @@ extensions = [
         libraries=["easel"],
     ),
     Extension(
-        "pyhmmer.hmmer",
-        ["pyhmmer/hmmer.pyx"],
+        "pyhmmer.plan7",
+        ["pyhmmer/plan7.pyx"],
         libraries=["hmmer", "easel"],
     ),
 ]
