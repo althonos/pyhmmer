@@ -35,9 +35,10 @@ statuscode = {
 class UnexpectedError(RuntimeError):
     """An unexpected error that happened in the C code.
 
-    As an library user, you should not see this exception being raised. If you
-    do, please open an issue on the bug tracker with steps to reproduce, so
-    that proper error handling can be added to the relevant part of the code.
+    As a user of this library user, you should never see this exception being
+    raised. If you do, please open an issue on the bug tracker with steps to
+    reproduce, so that proper error handling can be added to the relevant part
+    of the bindings.
 
     """
 
@@ -50,9 +51,9 @@ class UnexpectedError(RuntimeError):
 
     def __str__(self):
         return "Unexpected error occurred in {!r}: {} (status code {}).".format(
+            self.function,
             statuscode.get(self.code, "<unknown>"),
             self.code,
-            self.function,
         )
 
 
