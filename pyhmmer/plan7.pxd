@@ -49,8 +49,11 @@ cdef class HMMFile:
 
 
 cdef class Profile:
+    cdef readonly Alphabet alphabet
     cdef P7_PROFILE* _gm
 
+    cpdef Profile copy(self)
+    
 
 cdef class TopHits:
     cdef P7_TOPHITS* _th
