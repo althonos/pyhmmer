@@ -24,13 +24,7 @@ from libhmmer cimport p7_LOCAL
 from libhmmer.logsum cimport p7_FLogsumInit
 from libhmmer.impl_sse cimport impl_Init
 from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
-from libhmmer.p7_bg cimport P7_BG
-from libhmmer.p7_domain cimport P7_DOMAIN
-from libhmmer.p7_hmm cimport P7_HMM
-from libhmmer.p7_hmmfile cimport P7_HMMFILE
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e
-from libhmmer.p7_profile cimport P7_PROFILE
-from libhmmer.p7_tophits cimport P7_TOPHITS, P7_HIT
 
 from .easel cimport Alphabet, Sequence
 
@@ -44,8 +38,6 @@ from .errors import AllocationError, UnexpectedError
 
 cdef class Profile:
 
-    cdef P7_PROFILE* _gm
-
     def __cinit__(self):
         self._gm = NULL
 
@@ -54,12 +46,6 @@ cdef class Profile:
 
 
 cdef class HMM:
-
-    # keep a reference to the Alphabet Python object to avoid deallocation of
-    # the inner ESL_ALPHABET; the Python object provides reference counting
-    # for free.
-    cdef readonly Alphabet alphabet
-    cdef P7_HMM* _hmm
 
     # --- Magic methods ------------------------------------------------------
 
@@ -130,9 +116,6 @@ cdef class HMM:
 
 cdef class HMMFile:
 
-    cdef P7_HMMFILE* _hfp
-    cdef Alphabet _alphabet
-
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
@@ -164,9 +147,6 @@ cdef class HMMFile:
         self.close()
 
     def __iter__(self):
-        # cdef int err = p7_hmmfile.p7_hmmfile_Position(self._hfp, 0)
-        # if err == libeasel.eslEINVAL:
-        #     raise io.UnsupportedOperation("file is not seekable")
         return self
 
     def __next__(self):
@@ -206,14 +186,7 @@ cdef class HMMFile:
         self._hfp = NULL
 
 
-cdef class Alignment:
-    pass
-
-
 cdef class Domain:
-
-    cdef Hit hit
-    cdef P7_DOMAIN* _dom
 
     def __cinit__(self):
         self.hit = None
@@ -287,8 +260,6 @@ cdef class Domain:
 
 cdef class Domains:
 
-    cdef Hit hit
-
     def __cinit__(self, Hit hit):
         self.hit = hit
 
@@ -310,18 +281,11 @@ cdef class Domains:
 
 cdef class Hit:
 
-    # a reference to the TopHits that owns this Hit, kept so that the
-    # internal data is never deallocated before the Python class.
-    cdef TopHits _hits
-
-    # a pointer to the P7_HIT
-    cdef P7_HIT* _hit
-
     def __cinit__(self, TopHits hits, size_t index):
         assert hits._th != NULL
         assert index < hits._th.N
 
-        self._hits = hits
+        self.hits = hits
         self._hit = hits._th.hit[index]
 
     @property
@@ -365,8 +329,6 @@ cdef class Hit:
 
 
 cdef class TopHits:
-
-    cdef P7_TOPHITS* _th
 
     def __init__(self):
         assert self._th == NULL, "called TopHits.__init__ more than once"
@@ -473,15 +435,8 @@ cdef class TopHits:
 
 cdef class Pipeline:
 
-    cdef readonly Alphabet alphabet
-
-    cdef P7_PIPELINE* _pli
-    cdef P7_BG* _bg
-
-
     def __cinit__(self):
         self._pli = NULL
-
 
     def __init__(self, Alphabet alphabet):
 
@@ -499,11 +454,9 @@ cdef class Pipeline:
         if self._bg == NULL:
             raise AllocationError("P7_BG")
 
-
     def __dealloc__(self):
         libhmmer.p7_pipeline.p7_pipeline_Destroy(self._pli)
         libhmmer.p7_bg.p7_bg_Destroy(self._bg)
-
 
     cpdef TopHits search(self, HMM hmm, object seqs, TopHits hits = None):
         cdef int           status
