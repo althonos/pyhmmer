@@ -296,7 +296,6 @@ cdef class P7Domains:
         return self.hit._hit.ndom
 
     def __getitem__(self, index):
-        cdef size_t index_
         if index < 0:
             index += self.hit._hit.ndom
         if index >= self.hit._hit.ndom or index < 0:
@@ -304,7 +303,7 @@ cdef class P7Domains:
 
         cdef P7Domain dom = P7Domain.__new__(P7Domain)
         dom.hit = self.hit
-        dom._dom = &self.hit._hit.dcl[index]
+        dom._dom = &self.hit._hit.dcl[<size_t> index]
 
         return dom
 
@@ -396,6 +395,26 @@ cdef class P7TopHits:
             raise IndexError("list index out of range")
         return P7Hit(self, index)
 
+    def __iadd__(self, other):
+        assert self._th != NULL
+
+        if not isinstance(other, P7TopHits):
+            self_ty = type(self).__name__
+            other_ty = type(other).__name__
+            return TypeError("Cannot merge {!r} object into a {!r} instance".format(other_ty, self_ty))
+
+        cdef int status = libhmmer.p7_tophits.p7_tophits_Merge(self._th, (<P7TopHits> other)._th)
+        if status == libeasel.eslOK:
+            libhmmer.p7_tophits.p7_tophits_Reuse((<P7TopHits> other)._th)
+            return self
+        elif status == libeasel.eslEMEM:
+            raise AllocationError("P7_TOPHITS")
+        else:
+            raise UnexpectedError(status, "p7_tophits_Merge")
+
+
+
+
     cpdef void sort_by_sortkey(self):
         assert self._th != NULL
         libhmmer.p7_tophits.p7_tophits_SortBySortkey(self._th)
@@ -404,21 +423,52 @@ cdef class P7TopHits:
         assert self._th != NULL
         libhmmer.p7_tophits.p7_tophits_Threshold(self._th, pipeline._pli)
 
-
     cpdef void clear(self):
+        """Free internals to allow reusing the top hits for something else.
+        """
         assert self._th != NULL
         cdef int status = libhmmer.p7_tophits.p7_tophits_Reuse(self._th)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tophits_Reuse")
 
-
-    cpdef void print_targets(self, P7Pipeline pipeline):
+    cpdef void sort(self, str by="key"):
         assert self._th != NULL
-        libhmmer.p7_tophits.p7_tophits_Targets(stdout, self._th, pipeline._pli, 0)
 
-    cpdef void print_domains(self, P7Pipeline pipeline):
+        if by == "key":
+            status = libhmmer.p7_tophits.p7_tophits_SortBySortkey(self._th)
+            function = "p7_tophits_SortBySortkey"
+        elif by == "seqidx":
+            status = libhmmer.p7_tophits.p7_tophits_SortBySeqidxAndAlipos(self._th)
+            function = "p7_tophits_SortBySeqidxAndAlipos"
+        # elif by == "modelname"
+        #     status = libhmmer.p7_tophits.p7_tophits_SortByModelnameAndAlipos(self._th)
+        #     function = "p7_tophits_SortByModelnameAndAlipos"
+        else:
+            raise ValueError("Invalid value for `by` argument: {!r}".format(by))
+
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, function)
+
+    cpdef bint is_sorted(self, str by="key"):
         assert self._th != NULL
-        libhmmer.p7_tophits.p7_tophits_Domains(stdout, self._th, pipeline._pli, 0)
+
+        if by == "key":
+            return self._th.is_sorted_by_sortkey
+        elif by == "seqidx":
+            return self._th.is_sorted_by_seqidx
+
+        raise ValueError("Invalid value for `by` argument: {!r}".format(by))
+
+
+
+
+    # cpdef void print_targets(self, P7Pipeline pipeline):
+    #     assert self._th != NULL
+    #     libhmmer.p7_tophits.p7_tophits_Targets(stdout, self._th, pipeline._pli, 0)
+    #
+    # cpdef void print_domains(self, P7Pipeline pipeline):
+    #     assert self._th != NULL
+    #     libhmmer.p7_tophits.p7_tophits_Domains(stdout, self._th, pipeline._pli, 0)
 
 
 cdef class P7Pipeline:
