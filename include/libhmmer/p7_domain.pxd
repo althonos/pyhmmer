@@ -1,11 +1,14 @@
 from libc.stdint cimport uint8_t, uint32_t, int64_t
 
 from libeasel.rand64 cimport ESL_RAND64
-from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
-
 
 
 cdef extern from "hmmer.h" nogil:
+
+    # forward declaration of P7_ALIDISPLAY to avoid circular imports
+    ctypedef p7_alidisplay_s P7_ALIDISPLAY
+    cdef struct p7_alidisplay_s:
+        pass
 
     ctypedef p7_dom_s P7_DOMAIN
     cdef struct p7_dom_s:
