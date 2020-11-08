@@ -85,7 +85,7 @@ cdef class Domain:
 
     @property
     def score(self):
-        """`float`: The overall score in BITS, null-corrected.
+        """`float`: The overall score in bits, null-corrected.
         """
         assert self._dom != NULL
         return self._dom.bitscore
