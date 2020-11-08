@@ -7,6 +7,7 @@ from libc.stdint cimport uint32_t
 
 cimport libeasel.sq
 from libeasel.alphabet cimport ESL_ALPHABET
+from libeasel.bitfield cimport ESL_BITFIELD
 from libeasel.sq cimport ESL_SQ
 from libeasel.sqio cimport ESL_SQFILE
 
@@ -15,7 +16,16 @@ from libeasel.sqio cimport ESL_SQFILE
 
 cdef class Alphabet:
     cdef ESL_ALPHABET* _abc
+
     cdef _init_default(self, int ty)
+
+
+cdef class Bitfield:
+    cdef ESL_BITFIELD* _b
+
+    cdef size_t _wrap_index(self, int index)
+    cpdef size_t count(self)
+    cpdef void toggle(self, int index)
 
 
 cdef class Sequence:
@@ -27,9 +37,7 @@ cdef class Sequence:
 
 
 cdef class SequenceFile:
-    # The wrapped ESL_SQFILE pointer
     cdef ESL_SQFILE* _sqfp
-    # A reference to the Alphabet used if the file is in digital mode
     cdef Alphabet _alphabet
 
     cpdef Sequence read(self)

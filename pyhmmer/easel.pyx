@@ -7,6 +7,7 @@ from libc.stdint cimport uint32_t
 
 cimport libeasel
 cimport libeasel.alphabet
+cimport libeasel.bitfield
 cimport libeasel.sq
 cimport libeasel.sqio
 
@@ -85,6 +86,53 @@ cdef class Alphabet:
         if other is None:
             return False
         return self._abc.type == other._abc.type   # FIXME
+
+
+cdef class Bitfield:
+
+    def __cinit__(self):
+        self._b = NULL
+
+    def __dealloc__(self):
+        libeasel.bitfield.esl_bitfield_Destroy(self._b)
+
+    def __init__(self, size_t length):
+        self._b = libeasel.bitfield.esl_bitfield_Create(length)
+        if not self._b:
+            raise AllocationError("ESL_BITFIELD")
+
+    def __length__(self):
+        assert self._b != NULL
+        return self._b.nb
+
+    def __getitem__(self, index):
+        assert self._b != NULL
+        cdef size_t index_ = self._wrap_index(index)
+        return libeasel.bitfield.esl_bitfield_IsSet(self._b, index_)
+
+    def __setitem__(self, index, value):
+        assert self._b != NULL
+        cdef size_t index_ = self._wrap_index(index)
+        if value:
+            libeasel.bitfield.esl_bitfield_Set(self._b, index_)
+        else:
+            libeasel.bitfield.esl_bitfield_Clear(self._b, index_)
+
+    cdef size_t _wrap_index(self, int index):
+        if index < 0:
+            index += self._b.nb
+        if index >= self._b.nb or index < 0:
+            raise IndexError("bitfield index out of range")
+        return <size_t> index
+
+    cpdef size_t count(self):
+        assert self._b != NULL
+        return libeasel.bitfield.esl_bitfield_Count(self._b)
+
+    cpdef void toggle(self, int index):
+        assert self._b != NULL
+        cdef size_t index_ = self._wrap_index(index)
+        libeasel.bitfield.esl_bitfield_Toggle(self._b, index_)
 
 
 cdef class Sequence:

@@ -10,7 +10,7 @@ cdef extern from "esl_bitfield.h" nogil:
     void esl_bitfield_Set(ESL_BITFIELD *b, int i)
     void esl_bitfield_Clear(ESL_BITFIELD *b, int i)
     void esl_bitfield_Toggle(ESL_BITFIELD *b, int i)
-    void esl_bitfield_IsSet(const ESL_BITFIELD *b, int i)
+    bint esl_bitfield_IsSet(const ESL_BITFIELD *b, int i)
 
     ESL_BITFIELD* esl_bitfield_Create(int nb)
     int esl_bitfield_Count(const ESL_BITFIELD *b)
