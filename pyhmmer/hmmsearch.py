@@ -21,6 +21,7 @@ class _PipelineThread(threading.Thread):
         while True:
             hmm = self.hmm_queue.get()
             if hmm is None:
+                self.hmm_queue.task_done()
                 return
             self.pipeline.search(hmm, self.sequences, hits=self.hits)
             self.hmm_queue.task_done()
@@ -38,7 +39,7 @@ def hmmsearch(hmms, sequences, cpus=0) -> TopHits:
     for _ in range(_cpus):
         thread = _PipelineThread(sequences, hmm_queue)
         thread.start()
-        threads.append(w)
+        threads.append(thread)
 
     # queue the HMMs passed as arguments
     for hmm in hmms:
