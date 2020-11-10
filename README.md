@@ -35,19 +35,20 @@ HMMER internals, which has the following advantages over CLI wrappers
   setup on the end-user machine.
 - **no intermediate files**: Everything happens in memory, in Python objects
   you have control on, making it easier to format your inputs to pass to
-  HMMER without needing to write to an FASTA formatted file. Output retrieval
-  is also done in memory, through the `pyhmmer.plan7.TopHits` class.
+  HMMER without needing to write them to a file. Output retrieval is also
+  done in memory, through instances of the `pyhmmer.plan7.TopHits` class.
 - **no input formatting**: The Easel object model is exposed in the `pyhmmer.easel`
   module, and you have the possibility to build a `Sequence` object yourself
   to pass to the HMMER pipeline. This is useful if your sequences are already
   loaded in memory, for instance because you obtained them from another
-  Python library (such as [Pyrodigal](https://github.com/althonos/pyrodigal)).
+  Python library (such as [Pyrodigal](https://github.com/althonos/pyrodigal)
+  or [Biopython](https://biopython.org/)).
 - **no output formatting**: HMMER3 is notorious for its numerous output files
   and its fixed-width tabular output, which is hard to parse (even Biopython
   is struggling on sequences with a description).
 - **no performance penalty**: Using `pyhmmer` to launch `hmmsearch` on sequences
-  and HMMs in disk storage is not slower than directly using the `hmmsearch`
-  binary.
+  and HMMs in disk storage is typically not slower than directly using the
+  `hmmsearch` binary (see the [Benchmarks section](#%EF%B8%8F-benchmarks)).
 
 
 ## 🔧 Installing
@@ -59,6 +60,14 @@ as well as the code required to compile from source with Cython:
 $ pip install pyhmmer
 ```
 
+## 📖 Documentation
+
+A complete [API reference] can be found in the [online documentation], or
+directly from the command line using [`pydoc`](https://docs.python.org/3/library/pydoc.html):
+```console
+$ pydoc pyhmmer.easel
+$ pydoc pyhmmer.plan7
+```
 
 ## 💡 Example
 
