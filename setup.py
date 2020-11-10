@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# coding: utf-8
+
 import configparser
 import glob
 import os
@@ -5,13 +8,17 @@ import sys
 import shlex
 
 import setuptools
-from Cython.Build import cythonize
 from distutils import log
 from distutils.command.clean import clean as _clean
 from setuptools.command.build_ext import build_ext as _build_ext
 from setuptools.command.build_clib import build_clib as _build_clib
 from setuptools.command.sdist import sdist as _sdist
 from setuptools.extension import Extension, Library
+
+try:
+    from Cython.Build import cythonize
+except ImportError as err:
+    cythonize = err
 
 
 class sdist(_sdist):
@@ -34,8 +41,38 @@ class build_ext(_build_ext):
     """A `build_ext` that disables optimizations if compiled in debug mode.
     """
 
+    def run(self):
+
+        # check `cythonize` is available
+        if isinstance(cythonize, ImportError):
+            raise RuntimeError("Cython is required to run `build_ext` command") from cythonize
+
+        # use debug directives with Cython if building in debug mode
+        cython_args = {"include_path": ["include"], "compiler_directives": {}}
+        if self.force:
+            cython_args["force"] = True
+        if self.debug:
+            cython_args["annotate"] = True
+            cython_args["compiler_directives"]["warn.undeclared"] = True
+            cython_args["compiler_directives"]["warn.unreachable"] = True
+            cython_args["compiler_directives"]["warn.maybe_uninitialized"] = True
+            cython_args["compiler_directives"]["warn.unused"] = True
+            cython_args["compiler_directives"]["warn.unused_arg"] = True
+            cython_args["compiler_directives"]["warn.unused_result"] = True
+            cython_args["compiler_directives"]["warn.multiple_declarators"] = True
+
+        # cythonize the extensions
+        self.extensions = cythonize(self.extensions, **cython_args)
+
+        # patch extensions (needed for `_build_ext.run` to work)
+        for ext in self.extensions:
+            ext._needs_stub = False
+
+        # build the extensions as normal
+        _build_ext.run(self)
+
     def build_extension(self, ext):
-        #
+        # make sure the C libraries have been built
         self.run_command("build_clib")
 
         # update the extension C flags to use the temporary build folder
@@ -202,7 +239,7 @@ extensions = [
 # --- Setup ------------------------------------------------------------------
 
 setuptools.setup(
-    ext_modules=cythonize(extensions, annotate=True, include_path=["include"]),
+    ext_modules=extensions,
     libraries=libraries,
     cmdclass=dict(sdist=sdist, build_ext=build_ext, clean=clean, build_clib=build_clib),
 )
