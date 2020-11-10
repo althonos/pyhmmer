@@ -60,6 +60,11 @@ class build_ext(_build_ext):
             cython_args["compiler_directives"]["warn.unused_arg"] = True
             cython_args["compiler_directives"]["warn.unused_result"] = True
             cython_args["compiler_directives"]["warn.multiple_declarators"] = True
+        else:
+            cython_args["compiler_directives"]["boundscheck"] = False
+            cython_args["compiler_directives"]["wraparound"] = False
+            cython_args["compiler_directives"]["cdivision"] = True
+
 
         # cythonize the extensions
         self.extensions = cythonize(self.extensions, **cython_args)
