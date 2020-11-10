@@ -127,15 +127,16 @@ class build_clib(_build_clib):
             # update environ to invoke `./configure`, which will involve an
             # `os.chdir` eventually.
             _env = os.environ.copy()
-            _cflags = " ".join(self.compiler.compiler[1:])
             _cwd = os.getcwd()
 
             try:
                 # pass parameters from `self.compiler` to the `configure` script
                 # using environment variables
-                os.environ["AR"] = self.compiler.archiver[0]
-                os.environ["CC"] = self.compiler.compiler[0]
-                os.environ["CFLAGS"] = _cflags
+                if hasattr(self.compiler, "archiver"):
+                    os.environ["AR"] = self.compiler.archiver[0]
+                if hasattr(self.compiler, "compiler"):
+                    os.environ["CC"] = self.compiler.compiler[0]
+                    os.environ["CFLAGS"] = " ".join(self.compiler.compiler[1:])
 
                 # chdir to the directory where to run autoconf
                 build_dir = os.path.join(self.build_clib, os.path.dirname(lib.depends[0]))
