@@ -6,7 +6,9 @@ Installation
     Most platforms, such as Linux x86-64, OSX and Windows x86-64 provide
     precompiled wheels, but other less frequent platforms will require building
     the wheel yourself. Building ``pyhmmer`` involves compiling HMMER3 and Easel
-    from source, which requires a C compiler to be available on the machine.
+    from source, which requires a C compiler to be available on the machine,
+    as well as GNU `make <https://www.gnu.org/s/make/>` and
+    `autotools <https://www.gnu.org/s/automake>`.
 
 
 PyPi
