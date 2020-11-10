@@ -1,6 +1,6 @@
 # 🐍🟡♦️🟦 pyHMMER [![Stars](https://img.shields.io/github/stars/althonos/pyhmmer.svg?style=social&maxAge=3600&label=Star)](https://github.com/althonos/pyhmmer/stargazers)
 
-*Cython bindings and Python interface to [HMMER3](https://hmmer.org/).*
+*[Cython](https://cython.org/) bindings and Python interface to [HMMER3](http://hmmer.org/).*
 
 [![TravisCI](https://img.shields.io/travis/com/althonos/pyhmmer/master.svg?logo=travis&maxAge=600&style=flat-square)](https://travis-ci.com/althonos/pyhmmer/branches)
 [![Coverage](https://img.shields.io/codecov/c/gh/althonos/pyhmmer?style=flat-square&maxAge=3600)](https://codecov.io/gh/althonos/pyhmmer/)
@@ -24,9 +24,10 @@ HMMER is a biological sequence analysis tool that uses profile hidden Markov
 models to search for sequence homologs. HMMER3 is maintained by members of the
 the [Eddy/Rivas Laboratory](http://eddylab.org/) at Harvard University.
 
-`pyhmmer` is a Python module, implemented using the Cython language, that
-provides bindings to HMMER3. It directly interacts with the HMMER internals,
-which has the following advantages:
+`pyhmmer` is a Python module, implemented using the [Cython](https://cython.org/)
+language, that provides bindings to HMMER3. It directly interacts with the
+HMMER internals, which has the following advantages over CLI wrappers
+(like [`hmmer-py`](https://pypi.org/project/hmmer/)):
 
 - **single dependency**: If your software or your analysis pipeline is
   distributed as a Python package, you can add `pyhmmer` as a dependency to
@@ -62,21 +63,32 @@ $ pip install pyhmmer
 ## 💡 Example
 
 Use `pyhmmer` to run `hmmsearch`, and display domain hits:
+
 ```python
 import pyhmmer
 
 # load sequences from the FASTA file
+# (HMMER normally rewinds the file containing the sequences and reads it
+# again for every HMM, but we can save some time by loading them ahead of
+# time, provided the machine has enough memory)
 with pyhmmer.easel.SequenceFile("938293.PRJEB85.HG003687.faa") as file:
     sequences = list(file)
 
 # open the HMM file and use it to run `hmmsearch`
-with pyhmmer.plan7.HMMFile("tests/data/hmm/Thioesterase.hmm") as hmms:
+# (we don't need to collect ahead of time here, we can just pass an iterator
+# to `pyhmmer.hmmsearch`).
+with pyhmmer.plan7.HMMFile("Pfam.hmm") as hmms:
     hits = pyhmmer.hmmsearch(hmms, sequences_file)
 
-# process the hits
+# find hit domains where the alignment is longer than 30 letters and the
+# domain score is higher than 9, then print the aligned sequences
 for hit in hits:
-    for domain in filter(lambda dom: dom.i_evalue < 1e-5, hit.domains):
-        print(hit.name, "has a thioestherase domain!")
+    for domain in hit.domains:
+        if domain.score > 9 and len(domain.alignment) > 30:
+            print(hit.name, domain.alignment.hmm_name)
+            print(domain.alignment.hmm_sequence)
+            print(domain.alignment.identity_sequence)
+            print(domain.alignment.target_sequence)
 ```
 
 ## ⏱️ Benchmarks
