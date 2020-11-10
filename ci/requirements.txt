@@ -1,6 +1,11 @@
-coverage ~=4.0
-codecov ~=2.0
-auditwheel
-twine
+# build dependencies
 setuptools >=46.4
 cython ~=0.29.16
+
+# coverage dependencies
+coverage ~=4.0
+codecov ~=2.0
+
+# deployment dependencies
+auditwheel
+twine
