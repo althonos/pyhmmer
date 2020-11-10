@@ -7,6 +7,10 @@ Plan7
 .. automodule:: pyhmmer.plan7
 
 
+.. autoclass:: pyhmmer.plan7.Alignment
+   :members:
+
+
 .. autoclass:: pyhmmer.plan7.Domain
    :members:
 

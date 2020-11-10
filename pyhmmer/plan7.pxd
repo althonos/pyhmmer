@@ -3,6 +3,7 @@
 
 # --- C imports --------------------------------------------------------------
 
+from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_bg cimport P7_BG
 from libhmmer.p7_domain cimport P7_DOMAIN
 from libhmmer.p7_hmm cimport P7_HMM
@@ -14,6 +15,11 @@ from libhmmer.p7_tophits cimport P7_TOPHITS, P7_HIT
 from pyhmmer.easel cimport Alphabet
 
 # --- Cython classes ---------------------------------------------------------
+
+
+cdef class Alignment:
+    cdef readonly Domain domain
+    cdef P7_ALIDISPLAY* _ad
 
 
 cdef class Domain:

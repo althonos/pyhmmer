@@ -32,6 +32,7 @@ from libeasel.alphabet cimport ESL_ALPHABET, esl_alphabet_Create, esl_abc_Valida
 from libeasel.getopts cimport ESL_GETOPTS, ESL_OPTIONS
 from libeasel.sq cimport ESL_SQ
 from libhmmer cimport p7_LOCAL
+from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.logsum cimport p7_FLogsumInit
 from libhmmer.impl_sse cimport impl_Init
 from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
@@ -46,21 +47,78 @@ import errno
 import os
 import io
 import warnings
+import collections.abc
 
 from .errors import AllocationError, UnexpectedError
 
 
 # --- Cython classes ---------------------------------------------------------
 
+
+cdef class Alignment:
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __cinit__(self, Domain domain):
+        self.domain = domain
+        self._ad = domain._dom.ad
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def hmm_from(self):
+        return self._ad.hmmfrom
+
+    @property
+    def hmm_to(self):
+        return self._ad.hmmto
+
+    @property
+    def hmm_name(self):
+        return <bytes> self._ad.hmmname
+
+    @property
+    def hmm_sequence(self):
+        return self._ad.model.decode('ascii')
+
+    @property
+    def hmm_to(self):
+        return self._ad.hmmto
+
+    @property
+    def target_from(self):
+        return self._ad.sqfrom
+
+    @property
+    def target_name(self):
+        return <bytes> self._ad.sqname
+
+    @property
+    def target_sequence(self):
+        return self._ad.aseq.decode('ascii')
+
+    @property
+    def target_to(self):
+        return self._ad.sqto
+
+    @property
+    def identity_sequence(self):
+        return self._ad.mline.decode('ascii')
+
+
 cdef class Domain:
 
     # --- Magic methods ------------------------------------------------------
 
-    def __cinit__(self):
-        self.hit = None
-        self._dom = NULL
+    def __cinit__(self, Hit hit, size_t index):
+        self.hit = hit
+        self._dom = &hit._hit.dcl[index]
 
     # --- Properties ---------------------------------------------------------
+
+    @property
+    def alignment(self):
+        return Alignment(self)
 
     @property
     def env_from(self):
@@ -120,14 +178,9 @@ cdef class Domain:
         return exp(self._dom.lnP)
 
     # @property
-    # def c_evalue(self):
-    #     assert self._dom != NULL
-    #     return exp(self._dom.lnP) * pli->domZ,
-    #
-    # @property
     # def i_evalue(self):
     #     assert self._dom != NULL
-    #     exp(th->hit[h]->dcl[d].lnP) * pli->Z,
+    #     return exp(self._dom.lnP) * pli->domZ,
 
 
 cdef class Domains:
@@ -143,12 +196,7 @@ cdef class Domains:
             index += self.hit._hit.ndom
         if index >= self.hit._hit.ndom or index < 0:
             raise IndexError("list index out of range")
-
-        cdef Domain dom = Domain.__new__(Domain)
-        dom.hit = self.hit
-        dom._dom = &self.hit._hit.dcl[<size_t> index]
-
-        return dom
+        return Domain(self.hit, <size_t> index)
 
 
 cdef class Hit:

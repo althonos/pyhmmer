@@ -33,6 +33,7 @@ Plan7
 .. autosummary::
     :nosignatures:
 
+    pyhmmer.plan7.Alignment
     pyhmmer.plan7.Domain
     pyhmmer.plan7.Domains
     pyhmmer.plan7.Hit
