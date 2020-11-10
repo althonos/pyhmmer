@@ -1,9 +1,17 @@
 # coding: utf-8
 # cython: language_level=3, linetrace=True
+"""High-level interface to the Easel C library.
+
+Easel is a library developed by the `Eddy/Rivas Lab <http://eddylab.org/>`_
+to facilitate the development of biological software in C. It is used by
+`HMMER <http://hmmer.org/>_` and `Infernal <http://eddylab.org/infernal/>`_.
+
+"""
 
 # --- C imports --------------------------------------------------------------
 
 from libc.stdint cimport uint32_t
+from cpython.unicode cimport PyUnicode_FromUnicode
 
 cimport libeasel
 cimport libeasel.alphabet
@@ -23,6 +31,8 @@ from .errors import AllocationError, UnexpectedError
 # --- Cython classes ---------------------------------------------------------
 
 cdef class Alphabet:
+    """A biological alphabet, including additional marker symbols.
+    """
 
     # --- Default constructors -----------------------------------------------
 
@@ -33,7 +43,7 @@ cdef class Alphabet:
 
     @classmethod
     def amino(cls):
-        """Create a default Aminoacid alphabet.
+        """Create a default amino-acid alphabet.
         """
         cdef Alphabet alphabet = Alphabet.__new__(Alphabet)
         alphabet._init_default(libeasel.alphabet.eslAMINO)
@@ -88,8 +98,54 @@ cdef class Alphabet:
             return False
         return self._abc.type == other._abc.type   # FIXME
 
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def K(self):
+        """`int`: The alphabet size, counting only actual alphabet symbols.
+
+        Example:
+            >>> Alphabet.dna().K
+            4
+            >>> Alphabet.amino().K
+            20
+
+        """
+        return self._abc.K
+
+    @property
+    def Kp(self):
+        """`int`: The complete alphabet size, including marker symbols.
+
+        Example:
+            >>> Alphabet.dna().Kp
+            18
+            >>> Alphabet.amino().Kp
+            29
+
+        """
+        return self._abc.Kp
+
+    @property
+    def symbols(self):
+        """`str`: The symbols composing the alphabet.
+
+        Example:
+            >>> Alphabet.dna().symbols
+            'ACGT-RYMKSWHBVDN*~'
+            >>> Alphabet.rna().symbols
+            'ACGU-RYMKSWHBVDN*~'
+
+        """
+        cdef bytes symbols = self._abc.sym[:self._abc.Kp]
+        return symbols.decode("ascii")
+
 
 cdef class Bitfield:
+    """A statically sized sequence of booleans stored as a packed bitfield.
+    """
+
+    # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
         self._b = NULL
@@ -127,16 +183,43 @@ cdef class Bitfield:
         return <size_t> index
 
     cpdef size_t count(self):
+        """Count the number of `True` values in the bitfield.
+
+        Example:
+            >>> bitfield = Bitfield(8)
+            >>> bitfield.count()
+            0
+            >>> bitfield[0] = bitfield[1] = True
+            >>> bitfield.count()
+            2
+
+        """
         assert self._b != NULL
         return libeasel.bitfield.esl_bitfield_Count(self._b)
 
     cpdef void toggle(self, int index):
+        """Switch the value of one single bit.
+
+        Example:
+            >>> bitfield = Bitfield(8)
+            >>> bitfield[0]
+            False
+            >>> bitfield.toggle(0)
+            >>> bitfield[0]
+            True
+            >>> bitfield.toggle(0)
+            >>> bitfield[0]
+            False
+
+        """
         assert self._b != NULL
         cdef size_t index_ = self._wrap_index(index)
         libeasel.bitfield.esl_bitfield_Toggle(self._b, index_)
 
 
 cdef class KeyHash:
+    """A dynamically resized container to store string keys using a hash table.
+    """
 
     def __cinit__(self):
         self._kh = NULL
@@ -315,6 +398,14 @@ cdef class Sequence:
 
 
 cdef class SequenceFile:
+    """A wrapper around a sequence file, containing unaligned sequences.
+
+    This class supports reading sequences stored in different formats, such
+    as FASTA, GenBank or EMBL. The format of each file can be automatically
+    detected, but it is also possible to pass an explicit format specifier
+    when the `SequenceFile` is instantiated.
+
+    """
 
     _formats = {
         "fasta": libeasel.sqio.eslSQFILE_FASTA,
@@ -554,9 +645,9 @@ cdef class SequenceFile:
         or `None` if the file alphabet cannot be reliably guessed.
 
         Raises:
-            EOFError: if the file is empty.
-            OSError: if a parse error occurred.
-            ValueError: if this methods is called after the file was closed.
+            `EOFError`: if the file is empty.
+            `OSError`: if a parse error occurred.
+            `ValueError`: if this methods is called after the file was closed.
 
         """
 

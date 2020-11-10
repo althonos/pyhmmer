@@ -18,7 +18,7 @@ $(document).ready(function() {
           );
           $("#apitoc").append(html);
         });
-    } else if (window.location.href.match("/api/errors*") !== null) {
+    } else if (window.location.href.match("/api/errors.html") !== null) {
       $(".nav-list")
         .children()
         .filter("li")

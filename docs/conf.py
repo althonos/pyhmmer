@@ -29,7 +29,7 @@ sys.path.insert(0, project_dir)
 
 def setup(app):
     # Add custom stylesheet
-    # app.add_css_file("css/main.css")
+    app.add_css_file("css/main.css")
     # app.add_js_file("js/apitoc.js")
     # app.add_js_file("js/example-admonition.js")
     # Copy `CHANGELOG.md` from project directory
@@ -145,6 +145,7 @@ html_theme_options = {
 #
 html_sidebars = {
     "*": ["localtoc.html"],
+    "api/*": ["localtoc.html"],
 }
 
 
@@ -173,8 +174,8 @@ napoleon_use_rtype = False
 # -- Options for autodoc extension -------------------------------------------
 
 autoclass_content = "class"
-autodoc_member_order = 'bysource'
-autosummary_generate = ['api']
+autodoc_member_order = 'groupwise'
+autosummary_generate = []
 
 # -- Options for intersphinx extension ---------------------------------------
 

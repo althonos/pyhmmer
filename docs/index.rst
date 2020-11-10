@@ -64,7 +64,7 @@ Library
    :maxdepth: 2
 
    Installation <install>
-   API Reference <api>
+   API Reference <api/index>
    Changelog <changes>
 
 

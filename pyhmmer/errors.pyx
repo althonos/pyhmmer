@@ -32,13 +32,14 @@ statuscode = {
     libeasel.eslEINACCURATE: "eslEINACCURATE",
 }
 
+
 class UnexpectedError(RuntimeError):
     """An unexpected error that happened in the C code.
 
-    As a user of this library user, you should never see this exception being
-    raised. If you do, please open an issue on the bug tracker with steps to
-    reproduce, so that proper error handling can be added to the relevant part
-    of the bindings.
+    As a user of this library, you should never see this exception being
+    raised. If you do, please open an issue with steps to reproduce on the
+    `bug tracker <https://github.com/althonos/pyhmmer/issues>`_, so that
+    proper error handling can be added to the relevant part of the bindings.
 
     """
 

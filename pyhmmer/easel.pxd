@@ -35,6 +35,7 @@ cdef class KeyHash:
     cpdef void clear(self)
     cpdef KeyHash copy(self)
 
+
 cdef class Sequence:
     cdef ESL_SQ* _sq
 

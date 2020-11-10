@@ -1,6 +1,14 @@
 API Reference
 ==============
 
+.. toctree::
+   :hidden:
+
+   errors <errors>
+   easel <easel>
+   plan7 <plan7>
+
+
 .. currentmodule:: pyhmmer
 
 .. automodule:: pyhmmer
@@ -11,8 +19,6 @@ Easel
 
 .. autosummary::
    :nosignatures:
-   :template: summary.rst
-   :toctree: api/
 
    pyhmmer.easel.Alphabet
    pyhmmer.easel.Bitfield
@@ -26,8 +32,6 @@ Plan7
 
 .. autosummary::
     :nosignatures:
-    :template: summary.rst
-    :toctree: api/
 
     pyhmmer.plan7.Domain
     pyhmmer.plan7.Domains
@@ -41,11 +45,6 @@ Plan7
 
 Errors
 ------
-
-.. toctree::
-   :hidden:
-
-   errors <api/errors>
 
 .. autosummary::
    :nosignatures:

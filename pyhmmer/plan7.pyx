@@ -1,5 +1,14 @@
 # coding: utf-8
 # cython: language_level=3, linetrace=True
+"""High-level interface to the Plan7 data model.
+
+Plan7 is the model architecture used by HMMER since HMMER2.
+
+See Also:
+    Details about the Plan 7 architecture in the `HMMER documentation
+    <http://www.csb.yale.edu/userguides/seq/hmmer/docs/node11.html>`_.
+
+"""
 
 # --- C imports --------------------------------------------------------------
 
