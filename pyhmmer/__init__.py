@@ -1,17 +1,20 @@
 """Cython bindings and Python interface to HMMER3.
 """
 
-__author__ = "Martin Larralde <martin.larralde@embl.de>"
-__license__ = "MIT"
-__version__ = "0.1.0"
-
 import collections.abc as _collections_abc
 import contextlib as _contextlib
 
+from . import errors
 from . import easel
 from . import plan7
 
-from .hmmsearch import hmmsearch
+from .hmmer import hmmsearch
+
+
+__author__ = "Martin Larralde <martin.larralde@embl.de>"
+__license__ = "MIT"
+__version__ = "0.1.0"
+__all__ = [errors.__name__, easel.__name__, plan7.__name__, hmmsearch.__name__]
 
 
 # Register collections using the `collections.abc` module (this is probably
