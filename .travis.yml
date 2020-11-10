@@ -26,6 +26,7 @@ env:
 
 .test-osx: &test-osx
   os: osx
+  osx_image: xcode7.3
   stage: Test (OSX)
   language: generic
   cache:
