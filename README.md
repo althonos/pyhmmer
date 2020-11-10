@@ -3,17 +3,18 @@
 *[Cython](https://cython.org/) bindings and Python interface to [HMMER3](http://hmmer.org/).*
 
 [![TravisCI](https://img.shields.io/travis/com/althonos/pyhmmer/master.svg?logo=travis&maxAge=600&style=flat-square)](https://travis-ci.com/althonos/pyhmmer/branches)
+[![AppVeyor](https://img.shields.io/appveyor/build/althonos/pyhmmer/master.svg?logo=appveyor&maxAge=600&style=flat-square)](https://ci.appveyor.com/project/althonos/pyhmmer/history)
 [![Coverage](https://img.shields.io/codecov/c/gh/althonos/pyhmmer?style=flat-square&maxAge=3600)](https://codecov.io/gh/althonos/pyhmmer/)
+[![PyPI](https://img.shields.io/pypi/v/pyhmmer.svg?style=flat-square&maxAge=3600)](https://pypi.org/project/pyhmmer)
+[![Wheel](https://img.shields.io/pypi/wheel/pyhmmer.svg?style=flat-square&maxAge=3600)](https://pypi.org/project/pyhmmer/#files)
+[![Python Versions](https://img.shields.io/pypi/pyversions/pyhmmer.svg?style=flat-square&maxAge=3600)](https://pypi.org/project/pyhmmer/#files)
+[![Python Implementations](https://img.shields.io/pypi/implementation/pyhmmer.svg?style=flat-square&maxAge=3600)](https://pypi.org/project/pyhmmer/#files)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square&maxAge=2678400)](https://choosealicense.com/licenses/mit/)
 [![Source](https://img.shields.io/badge/source-GitHub-303030.svg?maxAge=2678400&style=flat-square)](https://github.com/althonos/pyhmmer/)
 [![GitHub issues](https://img.shields.io/github/issues/althonos/pyhmmer.svg?style=flat-square&maxAge=600)](https://github.com/althonos/pyhmmer/issues)
+![Docs](https://img.shields.io/readthedocs/pyhmmer/latest?style=flat-square&maxAge=600)
 [![Changelog](https://img.shields.io/badge/keep%20a-changelog-8A0707.svg?maxAge=2678400&style=flat-square)](https://github.com/althonos/pyhmmer.py/blob/master/CHANGELOG.md)
 
-<!-- [![AppVeyor](https://img.shields.io/appveyor/build/althonos/pyhmmer/master.svg?logo=appveyor&maxAge=600&style=flat-square)](https://ci.appveyor.com/project/althonos/pyhmmer/history) -->
-<!-- [![PyPI](https://img.shields.io/pypi/v/pyhmmer.svg?style=flat-square&maxAge=3600)](https://pypi.org/project/pyhmmer) -->
-<!-- [![Wheel](https://img.shields.io/pypi/wheel/pyhmmer.svg?style=flat-square&maxAge=3600)](https://pypi.org/project/pyhmmer/#files) -->
-<!-- [![Python Versions](https://img.shields.io/pypi/pyversions/pyhmmer.svg?style=flat-square&maxAge=600)](https://pypi.org/project/pyhmmer/#files) -->
-<!-- [![Python Implementations](https://img.shields.io/pypi/implementation/pyhmmer.svg?style=flat-square&maxAge=600)](https://pypi.org/project/pyhmmer/#files) -->
 <!-- [![Downloads](https://img.shields.io/badge/dynamic/json?style=flat-square&color=303f9f&maxAge=86400&label=downloads&query=%24.total_downloads&url=https%3A%2F%2Fapi.pepy.tech%2Fapi%2Fprojects%2Fpyhmmer)](https://pepy.tech/project/pyhmmer) -->
 <!-- [![Bioconda](https://img.shields.io/conda/vn/bioconda/pyhmmer?style=flat-square&maxAge=3600)](https://anaconda.org/bioconda/pyhmmer) -->
 
