@@ -12,7 +12,12 @@ cd /io
 # Clean previous debug files
 $PYTHON_SYS_EXECUTABLE setup.py clean --all
 
-# Compile wheels in release mode
+# Compile and test in release mode
+$PYTHON_SYS_EXECUTABLE setup.py build_clib
+$PYTHON_SYS_EXECUTABLE setup.py build_ext --inplace
+$PYTHON_SYS_EXECUTABLE -m unittest discover -v
+
+# Build wheels with release library
 $PYTHON_SYS_EXECUTABLE setup.py sdist bdist_wheel
 
 # Bundle external shared libraries into the wheels

@@ -15,6 +15,13 @@ pyenv shell $(pyenv versions --bare)
 log Cleaning previous build files
 $PYTHON setup.py clean --all
 
+log Building extensions in release mode
+$PYTHON setup.py build_clib
+$PYTHON setup.py build_ext --inplace
+
+log Testing extensions in release mode
+$PYTHON -m unittest discover -v
+
 log Building wheel with \`$PYTHON\`
 $PYTHON setup.py sdist bdist_wheel
 
