@@ -25,5 +25,7 @@ _collections_abc.Sized.register(plan7.Alignment)
 _collections_abc.Sequence.register(easel.Bitfield)
 _collections_abc.Sequence.register(plan7.Domains)
 _collections_abc.Sequence.register(plan7.TopHits)
-_contextlib.AbstractContextManager.register(easel.SequenceFile)
-_contextlib.AbstractContextManager.register(plan7.HMMFile)
+
+if hasattr(_contextlib, "AbstractContextManager"):
+    _contextlib.AbstractContextManager.register(easel.SequenceFile)
+    _contextlib.AbstractContextManager.register(plan7.HMMFile)
