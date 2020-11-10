@@ -63,6 +63,9 @@ cdef class Alignment:
         self.domain = domain
         self._ad = domain._dom.ad
 
+    def __len__(self):
+        return self.hmm_to - self.hmm_from
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -660,9 +663,6 @@ cdef class TopHits:
             return self._th.is_sorted_by_seqidx
 
         raise ValueError("Invalid value for `by` argument: {!r}".format(by))
-
-
-
 
     # cpdef void print_targets(self, Pipeline pipeline):
     #     assert self._th != NULL
