@@ -7,13 +7,17 @@ from libeasel.getopts cimport ESL_GETOPTS
 from libeasel.keyhash cimport ESL_KEYHASH
 from libeasel.msa cimport ESL_MSA
 from libeasel.sq cimport ESL_SQ
-from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_domain cimport P7_DOMAIN
 from libhmmer.p7_pipeline cimport p7_pipemodes_e, P7_PIPELINE
 from libhmmer.p7_trace cimport P7_TRACE
 
 
 cdef extern from "hmmer.h" nogil:
+
+    # forward declaration of P7_ALIDISPLAY to avoid circular imports
+    ctypedef p7_alidisplay_s P7_ALIDISPLAY
+    cdef struct p7_alidisplay_s:
+        pass
 
     ctypedef p7_hit_s P7_HIT
     cdef struct p7_hit_s:
