@@ -63,8 +63,10 @@ $ pip install pyhmmer
 
 ## 📖 Documentation
 
-A complete [API reference] can be found in the [online documentation], or
-directly from the command line using [`pydoc`](https://docs.python.org/3/library/pydoc.html):
+A complete [API reference](https://pyhmmer.readthedocs.io/en/stable/api/) can
+be found in the [online documentation]((https://pyhmmer.readthedocs.io/), or
+directly from the command line using 
+[`pydoc`](https://docs.python.org/3/library/pydoc.html):
 ```console
 $ pydoc pyhmmer.easel
 $ pydoc pyhmmer.plan7
