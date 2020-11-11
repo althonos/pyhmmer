@@ -6,6 +6,7 @@ import configparser
 import glob
 import os
 import platform
+import re
 import sys
 import shlex
 import shutil
@@ -13,6 +14,7 @@ import shutil
 import setuptools
 from distutils import log
 from distutils.command.clean import clean as _clean
+from distutils.errors import CompileError
 from setuptools.command.build_ext import build_ext as _build_ext
 from setuptools.command.build_clib import build_clib as _build_clib
 from setuptools.command.sdist import sdist as _sdist
@@ -22,6 +24,11 @@ try:
     from Cython.Build import cythonize
 except ImportError as err:
     cythonize = err
+
+try:
+    import pycparser
+except ImportError as err:
+    pycparser = err
 
 
 class sdist(_sdist):
@@ -97,6 +104,17 @@ class build_ext(_build_ext):
         _build_ext.build_extension(self, ext)
 
 
+class configure(setuptools.Command):
+
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+
 class build_clib(_build_clib):
     """A custom `build_clib` that compiles out of source.
     """
@@ -107,7 +125,39 @@ class build_clib(_build_clib):
         return True  # FIXME
 
     def _has_header(self, headername, **kwargs):
-        return True  # FIXME
+
+        slug = re.sub("[./-]", "_", headername)
+        testfile = os.path.join(self.build_temp, "have_{}.c".format(slug))
+        objects = []
+
+        with open(testfile, "w") as f:
+            f.write('#include "{}"\n'.format(headername))
+
+        try:
+            objects = self.compiler.compile(
+                [testfile],
+                output_dir=self.build_temp,
+                debug=self.debug,
+            )
+            # self.compiler.compile(
+            #     library.sources,
+            #     output_dir=self.build_temp,
+            #     include_dirs=library.include_dirs + [self.build_clib],
+            #     debug=self.debug,
+            #     depends=library.depends,
+            #     extra_preargs=library.extra_compile_args,
+            # )
+
+        except CompileError as err:
+            log.warn('could not find header "{}"'.format(headername))
+            return False
+        else:
+            log.info('found header "{}"'.format(headername))
+            return True
+        finally:
+            os.remove(testfile)
+            for obj in filter(os.path.isfile, objects):
+                os.remove(obj)
 
     def _has_function(self, funcname, **kwargs):
         return True  # FIXME
@@ -153,7 +203,6 @@ class build_clib(_build_clib):
             debug=self.debug,
             depends=library.depends,
             extra_preargs=library.extra_compile_args,
-
         )
         self.compiler.create_static_lib(
             objects,
@@ -341,5 +390,11 @@ extensions = [
 setuptools.setup(
     ext_modules=extensions,
     libraries=libraries,
-    cmdclass=dict(sdist=sdist, build_ext=build_ext, clean=clean, build_clib=build_clib),
+    cmdclass=dict(
+        build_ext=build_ext,
+        build_clib=build_clib,
+        clean=clean,
+        configure=configure,
+        sdist=sdist,
+    ),
 )
