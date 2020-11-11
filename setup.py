@@ -15,7 +15,6 @@ import setuptools
 from distutils import log
 from distutils.command.clean import clean as _clean
 from distutils.errors import CompileError
-from distutils.spawn import spawn
 from setuptools.command.build_ext import build_ext as _build_ext
 from setuptools.command.build_clib import build_clib as _build_clib
 from setuptools.command.sdist import sdist as _sdist
