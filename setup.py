@@ -320,65 +320,6 @@ class build_clib(_build_clib):
             debug=self.debug,
         )
 
-    # def _configure_easel(self):
-    #
-    #     defines = collections.OrderedDict()
-    #
-    #     defines["EASEL_DATE"] = '"Jul 2020"'
-    #     defines["EASEL_COPYRIGHT"] = '"Copyright (C) 2020 Howard Hughes Medical Institute"'
-    #     defines["EASEL_LICENSE"] = '"Freely distributed under the BSD open source license."'
-    #     defines["EASEL_VERSION"] = '"0.47"'
-    #     defines["EASEL_URL"] = '"http://bioeasel.org/"'
-    #
-    #     defines["eslSTOPWATCH_HIGHRES"] = ''
-    #     defines["eslENABLE_SSE"] = ''
-    #
-    #     #
-    #     if self._has_function("aligned_alloc", includes=["stdlib.h"]):
-    #         defines["HAVE_ALIGNED_ALLOC"] = 1
-    #     if self._has_function("erfc", includes=["math.h"]):
-    #         defines["HAVE_ERFC"] = 1
-    #     if self._has_function("getpid", includes=["unistd.h"]):
-    #         defines["HAVE_GETPID"] = 1
-    #     # if self._has_function("_mm_malloc", includes=["xmmintrin.h"]):
-    #     #     defines["HAVE__MM_MALLOC"] = 1
-    #     if self._has_function("popen", includes=["stdio.h"]):
-    #         defines["HAVE_POPEN"] = 1
-    #     if self._has_function("posix_memalign", includes=["stdlib.h"]):
-    #         defines["HAVE_POSIX_MEMALIGN"] = 1
-    #     if self._has_function("strcasecmp", includes=["strings.h"]):
-    #         defines["HAVE_STRCASECMP"] = 1
-    #     if self._has_function("strsep", includes=["string.h"]):
-    #         defines["HAVE_STRSEP"] = 1
-    #     if self._has_function("sysconf", includes=["unistd.h"]):
-    #         defines["HAVE_SYSCONF"] = 1
-    #     # if self._has_function("sysctl"):
-    #     #     defines["HAVE_SYSCTL"] = 1
-    #     if self._has_function("times", includes=["sys/times.h"]):
-    #         defines["HAVE_TIMES"] = 1
-    #
-    #
-    #     with open(os.path.join(self.build_clib, "esl_config.h"), "w") as f:
-    #         f.write("#ifndef eslCONFIG_INCLUDED\n")
-    #         f.write("#define eslCONFIG_INCLUDED\n")
-    #         for k, v in defines.items():
-    #             f.write("#define {} {}\n".format(k, v))
-    #         f.write("#endif  /*eslCONFIG_INCLUDED*/\n")
-    #
-    # def _configure_plan7(self):
-    #
-    #     defines = collections.OrderedDict()
-    #
-    #     defines["eslENABLE_SSE"] = ''
-    #
-    #
-    #     with open(os.path.join(self.build_clib, "p7_config.h"), "w") as f:
-    #         f.write("#ifndef P7_CONFIGH_INCLUDED\n")
-    #         f.write("#define P7_CONFIGH_INCLUDED\n")
-    #         for k, v in defines.items():
-    #             f.write("#define {} {}\n".format(k, v))
-    #         f.write("#endif  /*P7_CONFIGH_INCLUDED*/\n")
-
 
 class clean(_clean):
 
@@ -423,30 +364,39 @@ hmmer_sources = [
 ]
 
 if platform.machine().startswith('ppc'):
-    hmmer_sources.extend(glob.glob("vendor/hmmer/src/impl_vmx/*.c"))
+    hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_vmx", "*.c")))
+    platform_defines = [("eslENABLE_VMX", 1)]
+    platform_compile_args = ["-maltivec"]
 else:
     # just assume we are running on x86-64, but should be checked to be sure
     # (platform.machine doesn't work on Windows though)
-    hmmer_sources.extend(glob.glob("vendor/hmmer/src/impl_sse/*.c"))
+    hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_sse", "*.c")))
     hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_sse", "vitscore.c"))
+    platform_define_macros = [("eslENABLE_SSE", 1)]
+    platform_compile_args = ["-msse3"]
 
 libraries = [
     Library(
         "divsufsort",
-        sources=["vendor/hmmer/libdivsufsort/divsufsort.c"],
+        sources=[os.path.join("vendor", "hmmer", "libdivsufsort", "divsufsort.c")],
     ),
     Library(
         "easel",
-        sources=glob.glob("vendor/easel/*.c"),
-        include_dirs=["vendor/easel"],
-        define_macros=[("eslENABLE_SSE", 1)],
+        sources=glob.glob(os.path.join("vendor", "easel", "*.c")),
+        include_dirs=[os.path.join("vendor", "easel")],
+        define_macros=platform_define_macros,
+        extra_compile_args=platform_compile_args,
     ),
     Library(
         "hmmer",
         sources=hmmer_sources,
-        include_dirs=["vendor/easel", "vendor/hmmer/src", "vendor/hmmer/libdivsufsort"],
-        extra_compile_args=["-msse3"],
-        define_macros=[("eslENABLE_SSE", 1)],
+        extra_compile_args=platform_compile_args,
+        define_macros=platform_define_macros,
+        include_dirs=[
+            os.path.join("vendor", "easel"),
+            os.path.join("vendor", "hmmer", "src"),
+            os.path.join("vendor", "hmmer", "libdivsufsort"),
+        ],
     ),
 ]
 
@@ -456,23 +406,28 @@ libraries = [
 extensions = [
     Extension(
         "pyhmmer.errors",
-        ["pyhmmer/errors.pyx"],
+        [os.path.join("pyhmmer", "errors.pyx")],
         libraries=["easel"],
-        include_dirs=["vendor/easel"]
+        include_dirs=[os.path.join("vendor", "easel")]
     ),
     Extension(
         "pyhmmer.easel",
-        ["pyhmmer/easel.pyx"],
+        [os.path.join("pyhmmer", "easel.pyx")],
         libraries=["easel"],
-        include_dirs=["vendor/easel"],
-        define_macros=[("eslENABLE_SSE", 1)],
+        include_dirs=[os.path.join("vendor", "easel")],
+        define_macros=platform_define_macros,
+        extra_compile_args=platform_compile_args,
     ),
     Extension(
         "pyhmmer.plan7",
         ["pyhmmer/plan7.pyx"],
         libraries=["hmmer", "easel", "divsufsort"],
-        include_dirs=["vendor/easel", "vendor/hmmer/src"],
-        define_macros=[("eslENABLE_SSE", 1)],
+        define_macros=platform_define_macros,
+        extra_compile_args=platform_compile_args,
+        include_dirs=[
+            os.path.join("vendor", "easel"),
+            os.path.join("vendor", "hmmer", "src")
+        ],
     ),
 ]
 
