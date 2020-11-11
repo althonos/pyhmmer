@@ -364,7 +364,8 @@ hmmer_sources = [
 
 if platform.machine().startswith('ppc'):
     hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_vmx", "*.c")))
-    platform_defines = [("eslENABLE_VMX", 1)]
+    hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_vmx", "vitscore.c"))
+    platform_define_macros = [("eslENABLE_VMX", 1)]
     platform_compile_args = ["-maltivec"]
 else:
     # just assume we are running on x86-64, but should be checked to be sure

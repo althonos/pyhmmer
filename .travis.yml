@@ -13,6 +13,7 @@ env:
 
 .test-linux: &test-linux
   os: linux
+  arch: amd64
   dist: bionic
   stage: Test (Linux)
   language: python
@@ -27,6 +28,7 @@ env:
 .test-osx: &test-osx
   os: osx
   osx_image: xcode7.3
+  arch: amd64
   stage: Test (OSX)
   language: generic
   cache:
@@ -40,6 +42,15 @@ env:
   before_cache: ci/travis/osx/before_cache.sh
   before_deploy: ci/travis/osx/before_deploy.sh
   after_success: ci/travis/osx/after_success.sh
+
+.test-powerpc: &test-powerpc
+  os: linux
+  arch: ppc64le
+  state: Test (Linux PowerPC)
+  language: python
+  cache: pip
+  install: pip install -r ci/requirements.txt
+  script: python setup.py build_ext --inplace --debug test
 
 jobs:
   include:
@@ -73,6 +84,9 @@ jobs:
     - env: PYTHON=python3.8
       name: "Python: 3.8"
       <<: *test-osx
+    # Linux (PowerPC)
+    - python: 3.8
+      <<: *test-powerpc
 
 deploy:
   provider: script
