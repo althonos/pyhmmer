@@ -25,12 +25,20 @@ try:
 except ImportError as err:
     cythonize = err
 
+# --- Constants --------------------------------------------------------------
+
+PLATFORM_MACHINE = platform.machine()
+
+
+# --- Utils ------------------------------------------------------------------
 
 def _split_multiline(value):
     value = value.strip()
     sep = max('\n,;', key=value.count)
     return list(filter(None, map(lambda x: x.strip(), value.split(sep))))
 
+
+# --- `setup.py` commands ----------------------------------------------------
 
 class sdist(_sdist):
     """A `sdist` that generates a `pyproject.toml` on the fly.
@@ -57,8 +65,17 @@ class build_ext(_build_ext):
         if isinstance(cythonize, ImportError):
             raise RuntimeError("Cython is required to run `build_ext` command") from cythonize
 
+        # show architecture
+        machine = platform.machine()
+        if machine is None:
+            log.warn('cannot detect CPU architecture, build will default to SSE backend')
+        else:
+            log.info('building extensions for "{}" architecture'.format(platform.machine()))
+
         # use debug directives with Cython if building in debug mode
         cython_args = {"include_path": ["include"], "compiler_directives": {}}
+        if machine is not None:
+            cython_args["compile_time_env"] = { "PLATFORM_MACHINE": machine }
         if self.force:
             cython_args["force"] = True
         if self.debug:
@@ -97,8 +114,10 @@ class build_ext(_build_ext):
 
         # update compile flags if compiling in debug mode
         if self.debug:
-            if sys.platform == "linux" or sys.platform == "darwin":
+            if self.compiler.compiler_type in {"unix", "cygwin", "mingw32"}:
                 ext.extra_compile_args.append("-O0")
+            elif self.compiler.compiler_type == "msvc":
+                ext.extra_compile_args.append("/Od")
             if sys.implementation.name == "cpython":
                 ext.define_macros.append(("CYTHON_TRACE_NOGIL", 1))
 

@@ -34,9 +34,14 @@ from libeasel.sq cimport ESL_SQ
 from libhmmer cimport p7_LOCAL
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.logsum cimport p7_FLogsumInit
-from libhmmer.impl_sse cimport impl_Init
-from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e
+
+IF PLATFORM_MACHINE.startswith("ppc"):
+    from libhmmer.impl_vmx cimport impl_Init
+    from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
+ELIF PLATFORM_MACHINE.startswith(("x86", "amd")):
+    from libhmmer.impl_sse cimport impl_Init
+    from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
 from .easel cimport Alphabet, Sequence
 
