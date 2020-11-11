@@ -8,13 +8,14 @@ import os
 import platform
 import re
 import sys
-import shlex
-import shutil
+import subprocess
+from unittest import mock
 
 import setuptools
 from distutils import log
 from distutils.command.clean import clean as _clean
 from distutils.errors import CompileError
+from distutils.spawn import spawn
 from setuptools.command.build_ext import build_ext as _build_ext
 from setuptools.command.build_clib import build_clib as _build_clib
 from setuptools.command.sdist import sdist as _sdist
@@ -25,10 +26,11 @@ try:
 except ImportError as err:
     cythonize = err
 
-try:
-    import pycparser
-except ImportError as err:
-    pycparser = err
+
+def _split_multiline(value):
+    value = value.strip()
+    sep = max('\n,;', key=value.count)
+    return list(filter(None, map(lambda x: x.strip(), value.split(sep))))
 
 
 class sdist(_sdist):
@@ -90,6 +92,7 @@ class build_ext(_build_ext):
         _clib_cmd = self.get_finalized_command("build_clib")
 
         # update the extension C flags to use the temporary build folder
+        # so that the platform-specific headers and static libs can be found
         ext.include_dirs.append(_clib_cmd.build_clib)
         ext.library_dirs.append(_clib_cmd.build_clib)
 
@@ -104,69 +107,170 @@ class build_ext(_build_ext):
         _build_ext.build_extension(self, ext)
 
 
-class configure(setuptools.Command):
+class configure(_build_clib):
+    """A `./configure`-style command to generate a platform-specific C header.
 
-    user_options = []
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-
-class build_clib(_build_clib):
-    """A custom `build_clib` that compiles out of source.
+    Derives from the `build_clib` command from setuptools to be able to use
+    the same configuration values (`self.build_temp`, `self.build_clib`, etc).
     """
 
-    # --- Autotools-like helpers
+    # --- Compatibility with base `build_clib` command ---
 
-    def _has_type(self, typename, **kwargs):
-        return True  # FIXME
+    def check_library_list(self, libraries):
+        pass
 
-    def _has_header(self, headername, **kwargs):
+    def get_library_names(self):
+        return [ lib.name for lib in self.libraries ]
 
+    def get_source_files(self):
+        return [ source for lib in self.libraries for source in lib.sources ]
+
+    # --- Autotools-like helpers ---
+
+    def _silent_spawn(self, cmd):
+        try:
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as err:
+            raise CompileError(err.stderr)
+
+    def _has_header(self, headername):
         slug = re.sub("[./-]", "_", headername)
         testfile = os.path.join(self.build_temp, "have_{}.c".format(slug))
         objects = []
 
         with open(testfile, "w") as f:
             f.write('#include "{}"\n'.format(headername))
-
         try:
-            objects = self.compiler.compile(
-                [testfile],
-                output_dir=self.build_temp,
-                debug=self.debug,
-            )
-            # self.compiler.compile(
-            #     library.sources,
-            #     output_dir=self.build_temp,
-            #     include_dirs=library.include_dirs + [self.build_clib],
-            #     debug=self.debug,
-            #     depends=library.depends,
-            #     extra_preargs=library.extra_compile_args,
-            # )
-
+            with mock.patch.object(self.compiler, "spawn", new=self._silent_spawn):
+                objects = self.compiler.compile([testfile], debug=self.debug)
         except CompileError as err:
             log.warn('could not find header "{}"'.format(headername))
             return False
         else:
-            log.info('found header "{}"'.format(headername))
+            log.debug('found header "{}"'.format(headername))
             return True
         finally:
             os.remove(testfile)
             for obj in filter(os.path.isfile, objects):
                 os.remove(obj)
 
-    def _has_function(self, funcname, **kwargs):
-        return True  # FIXME
+    def _has_function(self, funcname):
+        testfile = os.path.join(self.build_temp, "have_{}.c".format(funcname))
+        binfile = os.path.join(self.build_temp, "have_{}.bin".format(funcname))
+        objects = []
+
+        with open(testfile, "w") as f:
+            f.write('int main() {{return {}(); return 0;}}\n'.format(funcname))
+        try:
+            with mock.patch.object(self.compiler, "spawn", new=self._silent_spawn):
+                objects = self.compiler.compile([testfile], debug=self.debug)
+                self.compiler.link_executable(objects, binfile)
+        except CompileError:
+            log.warn('could not link to function "{}"'.format(funcname))
+            return False
+        else:
+            log.debug('found function "{}"'.format(funcname))
+            return True
+        finally:
+            os.remove(testfile)
+            for obj in filter(os.path.isfile, objects):
+                os.remove(obj)
+            if os.path.isfile(binfile):
+                os.remove(binfile)
 
     def _check_sse(self):
         pass
 
     def _check_vmx(self):
         pass
+
+    # --- Required interface for `setuptools.Command` ---
+
+    def build_libraries(self, libraries):
+        # read `setup.cfg`, which should be next to this file, so we can
+        # use the `__file__` magic variable to locate it
+        _cfg = configparser.ConfigParser()
+        _cfg.read([__file__.replace(".py", ".cfg")])
+
+        # ensure the output directory exists, otherwise create it
+        self.mkpath(self.build_clib)
+
+        # run the `configure_library` method sequentially on each library,
+        # unless the header already exists and the configuration has not
+        # been edited
+        for library in self.distribution.libraries:
+            section = "configure.{}".format(library.name)
+            config = dict(_cfg.items(section))
+
+            headers = _split_multiline(config.get("headers", ""))
+            functions = _split_multiline(config.get("functions", ""))
+            constants = dict(
+                map(str.strip, line.split("="))
+                for line in _split_multiline(config.get("constants", ""))
+            )
+
+            self.make_file(
+                [__file__.replace(".py", ".cfg")],
+                os.path.join(self.build_clib, config["filename"]),
+                self.configure_library,
+                (
+                    library,
+                    config["filename"],
+                    config.get("copy"),
+                    constants,
+                    headers,
+                    functions,
+                ),
+                exec_msg='generating "{}" for {} library'.format(
+                    config["filename"], library.name
+                )
+            )
+
+    def configure_library(self, library, filename, copy=None, constants=None, headers=None, functions=None):
+        # if we only need to copy the header (e.g. for divsufsort) then just
+        # do that and then exit
+        if copy is not None:
+            self.copy_file(copy, os.path.join(self.build_clib, filename))
+            return
+
+        # create a mapping to store the defines, and make sure it is ordered
+        # (this is to keep compatibility with Python 3.5, a dict would do fine)
+        defines = collections.OrderedDict()
+
+        # fill the defines with the constants
+        constants = constants or {}
+        for k, v in constants.items():
+            defines[k] = v
+
+        # fill the defines if headers are found
+        headers = headers or []
+        for header in headers:
+            log.info('checking whether or not "{}" can be included'.format(header))
+            if self._has_header(header):
+                slug = re.sub("[./-]", "_", header).upper()
+                defines["HAVE_{}".format(slug)] = 1
+
+        # fill the defines if functions are found
+        functions = functions or []
+        for func in functions:
+            log.info('checking whether or not function "{}" is available'.format(func))
+            if self._has_function(func):
+                defines["HAVE_{}".format(func.upper())] = 1
+
+
+        # write the header file
+        slug = re.sub("[./-]", "_", filename).upper()
+        with open(os.path.join(self.build_clib, filename), "w") as f:
+            f.write("#ifndef {}_INCLUDED\n".format(slug))
+            f.write("#define {}_INCLUDED\n".format(slug))
+            for k, v in defines.items():
+                f.write("#define {} {}\n".format(k, '' if v is None else v))
+            f.write("#endif\n".format(slug))
+
+
+class build_clib(_build_clib):
+    """A custom `build_clib` that compiles out of source.
+    """
 
     # --- Compatibility with base `build_clib` command ---
 
@@ -181,11 +285,15 @@ class build_clib(_build_clib):
 
     # --- Build code ---
 
+    def run(self):
+        self.run_command("configure")
+        _build_clib.run(self)
+
     def build_libraries(self, libraries):
 
         self.mkpath(self.build_clib)
-        self._configure_easel()
-        self._configure_plan7()
+        # self._configure_easel()
+        # self._configure_plan7()
 
         for library in libraries:
             self.make_file(
@@ -200,6 +308,7 @@ class build_clib(_build_clib):
             library.sources,
             output_dir=self.build_temp,
             include_dirs=library.include_dirs + [self.build_clib],
+            macros=library.define_macros,
             debug=self.debug,
             depends=library.depends,
             extra_preargs=library.extra_compile_args,
@@ -211,107 +320,64 @@ class build_clib(_build_clib):
             debug=self.debug,
         )
 
-    def _configure_easel(self):
-
-        defines = collections.OrderedDict()
-
-        defines["EASEL_DATE"] = '"Jul 2020"'
-        defines["EASEL_COPYRIGHT"] = '"Copyright (C) 2020 Howard Hughes Medical Institute"'
-        defines["EASEL_LICENSE"] = '"Freely distributed under the BSD open source license."'
-        defines["EASEL_VERSION"] = '"0.47"'
-        defines["EASEL_URL"] = '"http://bioeasel.org/"'
-
-        defines["eslSTOPWATCH_HIGHRES"] = ''
-        defines["eslENABLE_SSE"] = ''
-
-        #
-        if self._has_function("aligned_alloc", includes=["stdlib.h"]):
-            defines["HAVE_ALIGNED_ALLOC"] = 1
-        if self._has_function("erfc", includes=["math.h"]):
-            defines["HAVE_ERFC"] = 1
-        if self._has_function("getpid", includes=["unistd.h"]):
-            defines["HAVE_GETPID"] = 1
-        # if self._has_function("_mm_malloc", includes=["xmmintrin.h"]):
-        #     defines["HAVE__MM_MALLOC"] = 1
-        if self._has_function("popen", includes=["stdio.h"]):
-            defines["HAVE_POPEN"] = 1
-        if self._has_function("posix_memalign", includes=["stdlib.h"]):
-            defines["HAVE_POSIX_MEMALIGN"] = 1
-        if self._has_function("strcasecmp", includes=["strings.h"]):
-            defines["HAVE_STRCASECMP"] = 1
-        if self._has_function("strsep", includes=["string.h"]):
-            defines["HAVE_STRSEP"] = 1
-        if self._has_function("sysconf", includes=["unistd.h"]):
-            defines["HAVE_SYSCONF"] = 1
-        # if self._has_function("sysctl"):
-        #     defines["HAVE_SYSCTL"] = 1
-        if self._has_function("times", includes=["sys/times.h"]):
-            defines["HAVE_TIMES"] = 1
-
-
-        #
-        if self._has_header("endian.h"):
-            defines["HAVE_ENDIAN_H"] = 1
-        if self._has_header("inttypes.h"):
-            defines["HAVE_INTTYPES_H"] = 1
-        if self._has_header("stdint.h"):
-            defines["HAVE_STDINT_H"] = 1
-        if self._has_header("unistd.h"):
-            defines["HAVE_UNISTD_H"] = 1
-        if self._has_header("strings.h"):
-            defines["HAVE_STRINGS_H"] = 1
-        if self._has_header("netinet/in.h"):
-            defines["HAVE_NETINET_IN_H"] = 1
-
-        if self._has_header("sys/types.h"):
-            defines["HAVE_SYS_TYPES_H"] = 1
-        if self._has_header("sys/param.h"):
-            defines["HAVE_SYS_PARAM_H"] = 1
-        if self._has_header("sys/sysctl.h"):
-            defines["HAVE_SYS_SYSCTL_H"] = 1
-
-        with open(os.path.join(self.build_clib, "esl_config.h"), "w") as f:
-            f.write("#ifndef eslCONFIG_INCLUDED\n")
-            f.write("#define eslCONFIG_INCLUDED\n")
-            for k, v in defines.items():
-                f.write("#define {} {}\n".format(k, v))
-            f.write("#endif  /*eslCONFIG_INCLUDED*/\n")
-
-    def _configure_plan7(self):
-
-        defines = collections.OrderedDict()
-
-        defines["p7_MAXABET"] = 20
-        defines["p7_MAXCODE"] = 29
-        defines["p7_MAX_SC_TXTLEN"] = 11
-        defines["p7_MAXDCHLET"] = 20
-        defines["p7_SEQDBENV"] = '"BLASTDB"'
-        defines["p7_HMMDBENV"] = '"PFAMDB"'
-
-        defines["p7_ETARGET_AMINO"] = 0.59
-        defines["p7_ETARGET_DNA"] = 0.62
-        defines["p7_ETARGET_OTHER"] = 1.0
-
-        defines["HMMER_VERSION"] = '"3.3.1"'
-        defines["HMMER_DATE"] = '"Jul 2020"'
-        defines["HMMER_LICENSE"] = '"Freely distributed under the BSD open source license."'
-        defines["HMMER_URL"] = '"http://hmmer.org/"'
-        defines["HMMER_COPYRIGHT"] = '"Copyright (C) 2020 Howard Hughes Medical Institute."'
-
-        defines["eslENABLE_SSE"] = ''
-
-
-        with open(os.path.join(self.build_clib, "p7_config.h"), "w") as f:
-            f.write("#ifndef P7_CONFIGH_INCLUDED\n")
-            f.write("#define P7_CONFIGH_INCLUDED\n")
-            for k, v in defines.items():
-                f.write("#define {} {}\n".format(k, v))
-            f.write("#endif  /*P7_CONFIGH_INCLUDED*/\n")
-
-        shutil.copy(
-            "vendor/hmmer/libdivsufsort/divsufsort.h.in",
-            os.path.join(self.build_clib, "divsufsort.h"),
-        )
+    # def _configure_easel(self):
+    #
+    #     defines = collections.OrderedDict()
+    #
+    #     defines["EASEL_DATE"] = '"Jul 2020"'
+    #     defines["EASEL_COPYRIGHT"] = '"Copyright (C) 2020 Howard Hughes Medical Institute"'
+    #     defines["EASEL_LICENSE"] = '"Freely distributed under the BSD open source license."'
+    #     defines["EASEL_VERSION"] = '"0.47"'
+    #     defines["EASEL_URL"] = '"http://bioeasel.org/"'
+    #
+    #     defines["eslSTOPWATCH_HIGHRES"] = ''
+    #     defines["eslENABLE_SSE"] = ''
+    #
+    #     #
+    #     if self._has_function("aligned_alloc", includes=["stdlib.h"]):
+    #         defines["HAVE_ALIGNED_ALLOC"] = 1
+    #     if self._has_function("erfc", includes=["math.h"]):
+    #         defines["HAVE_ERFC"] = 1
+    #     if self._has_function("getpid", includes=["unistd.h"]):
+    #         defines["HAVE_GETPID"] = 1
+    #     # if self._has_function("_mm_malloc", includes=["xmmintrin.h"]):
+    #     #     defines["HAVE__MM_MALLOC"] = 1
+    #     if self._has_function("popen", includes=["stdio.h"]):
+    #         defines["HAVE_POPEN"] = 1
+    #     if self._has_function("posix_memalign", includes=["stdlib.h"]):
+    #         defines["HAVE_POSIX_MEMALIGN"] = 1
+    #     if self._has_function("strcasecmp", includes=["strings.h"]):
+    #         defines["HAVE_STRCASECMP"] = 1
+    #     if self._has_function("strsep", includes=["string.h"]):
+    #         defines["HAVE_STRSEP"] = 1
+    #     if self._has_function("sysconf", includes=["unistd.h"]):
+    #         defines["HAVE_SYSCONF"] = 1
+    #     # if self._has_function("sysctl"):
+    #     #     defines["HAVE_SYSCTL"] = 1
+    #     if self._has_function("times", includes=["sys/times.h"]):
+    #         defines["HAVE_TIMES"] = 1
+    #
+    #
+    #     with open(os.path.join(self.build_clib, "esl_config.h"), "w") as f:
+    #         f.write("#ifndef eslCONFIG_INCLUDED\n")
+    #         f.write("#define eslCONFIG_INCLUDED\n")
+    #         for k, v in defines.items():
+    #             f.write("#define {} {}\n".format(k, v))
+    #         f.write("#endif  /*eslCONFIG_INCLUDED*/\n")
+    #
+    # def _configure_plan7(self):
+    #
+    #     defines = collections.OrderedDict()
+    #
+    #     defines["eslENABLE_SSE"] = ''
+    #
+    #
+    #     with open(os.path.join(self.build_clib, "p7_config.h"), "w") as f:
+    #         f.write("#ifndef P7_CONFIGH_INCLUDED\n")
+    #         f.write("#define P7_CONFIGH_INCLUDED\n")
+    #         for k, v in defines.items():
+    #             f.write("#define {} {}\n".format(k, v))
+    #         f.write("#endif  /*P7_CONFIGH_INCLUDED*/\n")
 
 
 class clean(_clean):
@@ -334,13 +400,35 @@ class clean(_clean):
 
 # --- C static libraries -----------------------------------------------------
 
+# fmt: off
+hmmer_sources = [
+    os.path.join("vendor", "hmmer", "src", basename)
+    for basename in [
+        "build.c", "cachedb.c", "cachedb_shard.c", "emit.c", "errors.c",
+    	"evalues.c", "eweight.c", "generic_decoding.c", "generic_fwdback.c",
+    	"generic_fwdback_chk.c", "generic_fwdback_banded.c", "generic_null2.c",
+    	"generic_msv.c", "generic_optacc.c", "generic_stotrace.c",
+        "generic_viterbi.c", "generic_vtrace.c", "h2_io.c", "heatmap.c",
+    	"hmmlogo.c", "hmmdmstr.c", "hmmdmstr_shard.c", "hmmd_search_status.c",
+        "hmmdwrkr.c", "hmmdwrkr_shard.c", "hmmdutils.c", "hmmer.c", "logsum.c",
+        "modelconfig.c", "modelstats.c", "mpisupport.c", "seqmodel.c",
+        "tracealign.c", "p7_alidisplay.c", "p7_bg.c", "p7_builder.c",
+        "p7_domain.c", "p7_domaindef.c", "p7_gbands.c", "p7_gmx.c",
+        "p7_gmxb.c", "p7_gmxchk.c", "p7_hit.c", "p7_hmm.c", "p7_hmmcache.c",
+    	"p7_hmmd_search_stats.c", "p7_hmmfile.c", "p7_hmmwindow.c",
+    	"p7_pipeline.c", "p7_prior.c", "p7_profile.c", "p7_spensemble.c",
+    	"p7_tophits.c", "p7_trace.c", "p7_scoredata.c", "hmmpgmd2msa.c",
+    	"fm_alphabet.c", "fm_general.c", "fm_sse.c", "fm_ssv.c",
+    ]
+]
+
 if platform.machine().startswith('ppc'):
-    hmmer_platform_sources = glob.glob("vendor/hmmer/src/impl_vmx/*.c")
+    hmmer_sources.extend(glob.glob("vendor/hmmer/src/impl_vmx/*.c"))
 else:
     # just assume we are running on x86-64, but should be checked to be sure
     # (platform.machine doesn't work on Windows though)
-    hmmer_platform_sources = glob.glob(os.path.join("vendor", "hmmer", "src", "impl_sse", "*.c"))
-    hmmer_platform_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_sse", "vitscore.c"))
+    hmmer_sources.extend(glob.glob("vendor/hmmer/src/impl_sse/*.c"))
+    hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_sse", "vitscore.c"))
 
 libraries = [
     Library(
@@ -351,12 +439,14 @@ libraries = [
         "easel",
         sources=glob.glob("vendor/easel/*.c"),
         include_dirs=["vendor/easel"],
+        define_macros=[("eslENABLE_SSE", 1)],
     ),
     Library(
         "hmmer",
-        sources=glob.glob("vendor/hmmer/src/*.c") + hmmer_platform_sources,
+        sources=hmmer_sources,
         include_dirs=["vendor/easel", "vendor/hmmer/src", "vendor/hmmer/libdivsufsort"],
-        extra_compile_args=["-msse3"]
+        extra_compile_args=["-msse3"],
+        define_macros=[("eslENABLE_SSE", 1)],
     ),
 ]
 
@@ -374,13 +464,15 @@ extensions = [
         "pyhmmer.easel",
         ["pyhmmer/easel.pyx"],
         libraries=["easel"],
-        include_dirs=["vendor/easel"]
+        include_dirs=["vendor/easel"],
+        define_macros=[("eslENABLE_SSE", 1)],
     ),
     Extension(
         "pyhmmer.plan7",
         ["pyhmmer/plan7.pyx"],
         libraries=["hmmer", "easel", "divsufsort"],
-        include_dirs=["vendor/easel", "vendor/hmmer/src"]
+        include_dirs=["vendor/easel", "vendor/hmmer/src"],
+        define_macros=[("eslENABLE_SSE", 1)],
     ),
 ]
 
