@@ -45,14 +45,18 @@ HMMER internals, which has the following advantages over CLI wrappers
   Python library (such as [Pyrodigal](https://github.com/althonos/pyrodigal)
   or [Biopython](https://biopython.org/)).
 - **no output formatting**: HMMER3 is notorious for its numerous output files
-  and its fixed-width tabular output, which is hard to parse (even Biopython
-  is struggling on sequences with a description).
+  and its fixed-width tabular output, which is hard to parse (even
+  [`Bio.SearchIO.HmmerIO`](https://biopython.org/docs/dev/api/Bio.SearchIO.HmmerIO.html)
+  is struggling on some sequences).
 - **no performance penalty**: Using `pyhmmer` to launch `hmmsearch` on sequences
   and HMMs in disk storage is typically not slower than directly using the
   `hmmsearch` binary (see the [Benchmarks section](#%EF%B8%8F-benchmarks)).
+  If you already have everything in memory, saving the writing/reading step
+  possibly gives you a slight boost!
 
 *This library is still a work-in-progress, and in a very experimental stage,
-but it should already pack enough features to run simple biological analyses.*
+but it should already pack enough features to run simple biological analyses
+involving `hmmsearch`.*
 
 
 ## 🔧 Installing
@@ -118,8 +122,8 @@ for hit in hits:
 
 Benchmarks were run on a i7-8550U CPU running at 1.80GHz, using a FASTA file
 containing 2100 protein sequences (`tests/data/seqs/938293.PRJEB85.HG003687.faa`)
-and a subset of the PFam HMM library containing 2873 domains. Both commands
-were set to use 8 threads, and were run 20 times.
+and a subset of the [Pfam](https://pfam.xfam.org/) HMM library containing
+2873 domains. Both commands were set to use 8 threads, and were run 20 times.
 
 | Command                     | mean (s) | σ (ms) | min (s) | max (s) |
 |-----------------------------|----------|--------|---------|---------|
