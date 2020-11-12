@@ -19,7 +19,6 @@ cimport libeasel
 cimport libeasel.sq
 cimport libeasel.alphabet
 cimport libeasel.getopts
-cimport libhmmer.impl_sse.p7_oprofile
 cimport libhmmer.modelconfig
 cimport libhmmer.p7_hmm
 cimport libhmmer.p7_bg
@@ -36,10 +35,12 @@ from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.logsum cimport p7_FLogsumInit
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e
 
-IF PLATFORM_MACHINE.startswith("ppc"):
+IF UNAME_MACHINE.startswith("ppc"):
+    from libhmmer.impl_vmx cimport p7_oprofile
     from libhmmer.impl_vmx cimport impl_Init
     from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
-ELIF PLATFORM_MACHINE.startswith(("x86", "amd")):
+ELIF UNAME_MACHINE.startswith(("x86", "amd")):
+    from libhmmer.impl_sse cimport p7_oprofile
     from libhmmer.impl_sse cimport impl_Init
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
@@ -481,8 +482,8 @@ cdef class Pipeline:
                 raise RuntimeError()
 
             # build the optimized model from the HMM
-            om = libhmmer.impl_sse.p7_oprofile.p7_oprofile_Create(hm.M, abc)
-            if libhmmer.impl_sse.p7_oprofile.p7_oprofile_Convert(gm, om):
+            om = p7_oprofile.p7_oprofile_Create(hm.M, abc)
+            if p7_oprofile.p7_oprofile_Convert(gm, om):
                 raise RuntimeError()
 
             # configure the pipeline for the current HMM
@@ -504,7 +505,7 @@ cdef class Pipeline:
                     raise RuntimeError()
                 if libhmmer.p7_bg.p7_bg_SetLength(bg, sq.n):
                     raise RuntimeError()
-                if libhmmer.impl_sse.p7_oprofile.p7_oprofile_ReconfigLength(om, sq.n):
+                if p7_oprofile.p7_oprofile_ReconfigLength(om, sq.n):
                     raise RuntimeError()
 
                 # run the pipeline on the sequence
@@ -522,7 +523,7 @@ cdef class Pipeline:
 
             # deallocate the profile and optimized model
             libhmmer.p7_profile.p7_profile_Destroy(gm)
-            libhmmer.impl_sse.p7_oprofile.p7_oprofile_Destroy(om)
+            p7_oprofile.p7_oprofile_Destroy(om)
 
         #
         return hits

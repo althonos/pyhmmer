@@ -74,8 +74,6 @@ class build_ext(_build_ext):
 
         # use debug directives with Cython if building in debug mode
         cython_args = {"include_path": ["include"], "compiler_directives": {}}
-        if machine is not None:
-            cython_args["compile_time_env"] = { "PLATFORM_MACHINE": machine }
         if self.force:
             cython_args["force"] = True
         if self.debug:
