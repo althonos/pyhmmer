@@ -1,4 +1,15 @@
+# coding: utf-8
 """Cython bindings and Python interface to HMMER3.
+
+HMMER is a biological sequence analysis tool that uses profile hidden Markov
+models to search for sequence homologs. HMMER3 is maintained by members of the
+the `Eddy/Rivas Laboratory <http://eddylab.org/>`_ at Harvard University.
+
+``pyhmmer`` is a module, implemented using the `Cython <https://cython.org/>`_
+language, that provides bindings to HMMER3. It directly interacts with the
+HMMER internals, which has several advantages over CLI wrappers like
+`hmmer-py <https://pypi.org/project/hmmer/>`_.
+
 """
 
 import collections.abc as _collections_abc
@@ -15,7 +26,12 @@ __author__ = "Martin Larralde <martin.larralde@embl.de>"
 __license__ = "MIT"
 __version__ = "0.1.0-a2"
 __all__ = [errors.__name__, easel.__name__, plan7.__name__, hmmsearch.__name__]
+if __doc__ is not None:
+    __doc__ += """See Also:
+    An online rendered version of the documentation for this version of the
+    library on `Read The Docs <https://pyhmmer.readthedocs.io/en/v{}/>`_.
 
+    """.format(__version__)
 
 # Register collections using the `collections.abc` module (this is probably
 # not required with later versions of Python)
