@@ -96,10 +96,6 @@ cdef class Alignment:
         return self._ad.model.decode('ascii')
 
     @property
-    def hmm_to(self):
-        return self._ad.hmmto
-
-    @property
     def target_from(self):
         return self._ad.sqfrom
 

@@ -182,15 +182,15 @@ cdef class Bitfield:
             raise IndexError("bitfield index out of range")
         return <size_t> index
 
-    cpdef size_t count(self):
-        """Count the number of `True` values in the bitfield.
+    cpdef size_t count(self, bint value):
+        """Count the number occurrences of ``value`` in the bitfield.
 
         Example:
             >>> bitfield = Bitfield(8)
-            >>> bitfield.count()
-            0
+            >>> bitfield.count(False)
+            8
             >>> bitfield[0] = bitfield[1] = True
-            >>> bitfield.count()
+            >>> bitfield.count(True)
             2
 
         """
