@@ -35,11 +35,11 @@ from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.logsum cimport p7_FLogsumInit
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e
 
-IF UNAME_MACHINE.startswith("ppc"):
+IF UNAME_MACHINE.startswith("ppc") and not UNAME_MACHINE.endswith("le"):
     from libhmmer.impl_vmx cimport p7_oprofile
     from libhmmer.impl_vmx cimport impl_Init
     from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
-ELIF UNAME_MACHINE.startswith(("x86", "amd")):
+ELIF UNAME_MACHINE.startswith(("x86", "i386", "i686")):
     from libhmmer.impl_sse cimport p7_oprofile
     from libhmmer.impl_sse cimport impl_Init
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE

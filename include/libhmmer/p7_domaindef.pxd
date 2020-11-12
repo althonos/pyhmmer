@@ -6,10 +6,10 @@ from libhmmer.p7_domain cimport P7_DOMAIN
 from libhmmer.p7_spensemble cimport P7_SPENSEMBLE
 from libhmmer.p7_trace cimport P7_TRACE
 
-IF UNAME_MACHINE.startswith("ppc"):
+IF UNAME_MACHINE.startswith("ppc") and not UNAME_MACHINE.endswith("le"):
     from libhmmer.impl_vmx.p7_omx cimport P7_OMX
     from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
-ELIF UNAME_MACHINE.startswith(("x86", "amd")):
+ELIF UNAME_MACHINE.startswith(("x86", "i386", "i686")):
     from libhmmer.impl_sse.p7_omx cimport P7_OMX
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 

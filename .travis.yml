@@ -43,15 +43,6 @@ env:
   before_deploy: ci/travis/osx/before_deploy.sh
   after_success: ci/travis/osx/after_success.sh
 
-.test-powerpc: &test-powerpc
-  os: linux
-  arch: ppc64le
-  state: Test (Linux PowerPC)
-  language: python
-  cache: pip
-  install: pip install -r ci/requirements.txt
-  script: python setup.py build_ext --inplace --debug test
-
 jobs:
   include:
     # Linux
@@ -84,9 +75,6 @@ jobs:
     - env: PYTHON=python3.8
       name: "Python: 3.8"
       <<: *test-osx
-    # Linux (PowerPC)
-    - python: 3.8
-      <<: *test-powerpc
 
 deploy:
   provider: script

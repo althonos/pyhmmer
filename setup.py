@@ -379,18 +379,21 @@ hmmer_sources = [
     ]
 ]
 
-if platform.machine().startswith('ppc'):
+# HMMER3 is only supported on x86 CPUs with SSE, and big endian PowerPC
+# (see https://github.com/EddyRivasLab/hmmer/issues/142)
+machine = platform.machine()
+if machine.startswith('ppc') and not machine.endswith('le'):
     hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_vmx", "*.c")))
     hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_vmx", "vitscore.c"))
     platform_define_macros = [("eslENABLE_VMX", 1)]
     platform_compile_args = ["-maltivec"]
-else:
-    # just assume we are running on x86-64, but should be checked to be sure
-    # (platform.machine doesn't work on Windows though)
+elif machine.startswith(("x86", "i386", "i686")):
     hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_sse", "*.c")))
     hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_sse", "vitscore.c"))
     platform_define_macros = [("eslENABLE_SSE", 1)]
     platform_compile_args = ["-msse3"]
+else:
+    log.warn('pyHMMER is not supported on CPU architecture: "{}"'.format(machine))
 
 libraries = [
     Library(
