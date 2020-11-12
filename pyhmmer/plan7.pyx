@@ -12,16 +12,19 @@ See Also:
 
 # --- C imports --------------------------------------------------------------
 
+from libc.stdint cimport uint32_t
 from libc.stdio cimport fprintf, FILE, stdout
 from libc.math cimport exp
 
 cimport libeasel
 cimport libeasel.sq
 cimport libeasel.alphabet
+cimport libeasel.random
 cimport libeasel.getopts
 cimport libhmmer.modelconfig
 cimport libhmmer.p7_hmm
 cimport libhmmer.p7_bg
+cimport libhmmer.p7_domaindef
 cimport libhmmer.p7_hmmfile
 cimport libhmmer.p7_pipeline
 cimport libhmmer.p7_profile
@@ -62,6 +65,8 @@ from .errors import AllocationError, UnexpectedError
 
 
 cdef class Alignment:
+    """A single alignment of a sequence to a profile.
+    """
 
     # --- Magic methods ------------------------------------------------------
 
@@ -116,18 +121,17 @@ cdef class Alignment:
 
 
 cdef class Domain:
+    """A single domain in a query `~pyhmmer.plan7.Hit`.
+    """
 
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self, Hit hit, size_t index):
-        self.hit = hit
         self._dom = &hit._hit.dcl[index]
+        self.hit = hit
+        self.alignment = Alignment(self)
 
     # --- Properties ---------------------------------------------------------
-
-    @property
-    def alignment(self):
-        return Alignment(self)
 
     @property
     def env_from(self):
@@ -193,6 +197,8 @@ cdef class Domain:
 
 
 cdef class Domains:
+    """A sequence of domains corresponding to a single `~pyhmmer.plan7.Hit`.
+    """
 
     def __cinit__(self, Hit hit):
         self.hit = hit
@@ -209,6 +215,8 @@ cdef class Domains:
 
 
 cdef class Hit:
+    """A high-scoring database hit found by the comparison pipeline.
+    """
 
     # --- Magic methods ------------------------------------------------------
 
@@ -271,6 +279,8 @@ cdef class Hit:
 
 
 cdef class HMM:
+    """A data structure storing the Plan7 Hidden Markov Model.
+    """
 
     # --- Magic methods ------------------------------------------------------
 
@@ -340,6 +350,8 @@ cdef class HMM:
 
 
 cdef class HMMFile:
+    """A wrapper around a file (or database), storing serialized HMMs.
+    """
 
     # --- Magic methods ------------------------------------------------------
 
@@ -380,6 +392,9 @@ cdef class HMMFile:
         cdef HMM py_hmm
         cdef P7_HMM* hmm = NULL
 
+        if self._hfp == NULL:
+            raise ValueError("I/O operation on closed file.")
+
         with nogil:
             status = libhmmer.p7_hmmfile.p7_hmmfile_Read(self._hfp, &self._alphabet._abc, &hmm)
 
@@ -406,36 +421,117 @@ cdef class HMMFile:
     # --- Utils --------------------------------------------------------------
 
     cpdef void close(self):
+        """Close the HMM file and free resources.
+
+        This method has no effect if the file is already closed.
+        """
         libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
         self._hfp = NULL
 
 
 cdef class Pipeline:
+    """An HMMER3 accelerated sequence/profile comparison pipeline.
+    """
+
+    M_HINT = 100         # default model size
+    L_HINT = 400         # default sequence size
+    LONG_TARGETS = False
 
     def __cinit__(self):
         self._pli = NULL
 
-    def __init__(self, Alphabet alphabet):
+    def __init__(
+        self,
+        Alphabet alphabet,
+        *,
+        bint bias_filter=True,
+        float report_e=10.0,
+        bint null2=True,
+        object seed=None,
+    ):
+        """Instantiate and configure a new accelerated comparison pipeline.
 
-        M_hint = 100
-        L_hint = 400
-        long_targets = False
+        Arguments:
+            alphabet (`~pyhmmer.easel.Alphabet`): The biological alphabet the
+                of the HMMs and sequences that are going to be compared. Used
+                to build the background model.
 
+        Keyword Arguments:
+            bias_filter (`bool`): Whether or not to enable composition bias
+                filter. Defaults to ``True``.
+            null2 (`bool`): Whether or not to compute biased composition score
+                corrections. Defaults to ``True``.
+            report_e (`float`): Report hits with e-value lower than or
+                equal to this threshold in output. Defaults to ``10.0``.
+            seed (`int`, optional): The seed to use with the random number
+                generator. Pass *0* to use a one-time arbitrary seed, or
+                `None` to keep the default seed from HMMER.
+
+        """
+        # store a reference to the alphabet to avoid deallocation
         self.alphabet = alphabet
 
-        self._pli = libhmmer.p7_pipeline.p7_pipeline_Create(NULL, M_hint, L_hint, long_targets, p7_pipemodes_e.p7_SEARCH_SEQS)
-        if self._pli == NULL:
-            raise AllocationError("P7_PIPELINE")
-
+        # create the background model and the pipeline
         self._bg = libhmmer.p7_bg.p7_bg_Create(alphabet._abc)
         if self._bg == NULL:
             raise AllocationError("P7_BG")
+        self._pli = libhmmer.p7_pipeline.p7_pipeline_Create(
+            NULL,
+            self.M_HINT,
+            self.L_HINT,
+            self.LONG_TARGETS,
+            p7_pipemodes_e.p7_SEARCH_SEQS
+        )
+        if self._pli == NULL:
+            raise AllocationError("P7_PIPELINE")
+
+        # configure the pipeline with the additional keyword arguments
+        self._pli.do_null2 = null2
+        self._pli.do_biasfilter = bias_filter
+        self._pli.E = report_e
+        if seed is not None:  # we need to destroy and reallocate if given a seed
+            libeasel.random.esl_randomness_Destroy(self._pli.r)
+            self._pli.r = libeasel.random.esl_randomness_Create(<uint32_t> seed)
+            if self._pli.r == NULL:
+                raise AllocationError("ESL_RANDOMNESS")
+            libhmmer.p7_domaindef.p7_domaindef_Destroy(self._pli.ddef)
+            self._pli.ddef = libhmmer.p7_domaindef.p7_domaindef_Create(self._pli.r)
+            if self._pli.ddef == NULL:
+                raise AllocationError("P7_DOMAINDEF")
+            self._pli.do_reseeding = self._pli.ddef.do_reseeding = seed == 0
+
 
     def __dealloc__(self):
         libhmmer.p7_pipeline.p7_pipeline_Destroy(self._pli)
         libhmmer.p7_bg.p7_bg_Destroy(self._bg)
 
-    cpdef TopHits search(self, HMM hmm, object seqs, TopHits hits = None):
+    cpdef TopHits search(self, HMM hmm, object sequences, TopHits hits = None):
+        """Run the pipeline using a query HMM against a sequence database.
+
+        Arguments:
+            hmm (`~pyhmmer.plan7.HMM`): The HMM object to use to query the
+                sequence database.
+            sequences (`Iterable` of `~pyhmmer.easel.Sequence`): The sequences
+                to query with the HMMs. Pass a `~pyhmmer.easel.SequenceFile`
+                instance to iteratively read from disk.
+            hits (`~pyhmmer.plan7.TopHits`, optional): A hit collection to
+                store results in, if any. If `None`, a new collection will
+                be allocated. Use a non-`None` value if you are running
+                several HMMs sequentially and want to aggregate the results,
+                or if you are able to recycle a `~pyhmmer.plan7.TopHits`
+                instance with `TopHits.clear`.
+
+        Returns:
+            `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
+            If an instance was passed via the ``hits`` argument, it is safe
+            to ignore the return value and to access it by reference.
+
+        Raises:
+            `ValueError`: When the alphabet of the current pipeline does not
+                match the alphabet of the given HMM.
+
+        """
+
         cdef int           status
         cdef Sequence      seq
         cdef ESL_ALPHABET* abc     = self.alphabet._abc
@@ -466,13 +562,14 @@ cdef class Pipeline:
         # get an iterator over the input sequences, with an early return if
         # no sequences were given, and extract the raw pointer to the sequence
         # from the Python object
-        seqs_iter = iter(seqs)
+        seqs_iter = iter(sequences)
         seq = next(seqs_iter, None)
         if seq is None:
             return hits
         sq = seq._sq
 
-        # release the GIL for as long as possible
+        # release the GIL for as long as possible to allow several search
+        # pipelines to run in true parallel mode even in Python threads
         with nogil:
 
             # build the profile from the HMM, using the first sequence length
@@ -525,11 +622,13 @@ cdef class Pipeline:
             libhmmer.p7_profile.p7_profile_Destroy(gm)
             p7_oprofile.p7_oprofile_Destroy(om)
 
-        #
+        # return the hits
         return hits
 
 
 cdef class Profile:
+    """A Plan7 search profile.
+    """
 
     def __cinit__(self):
         self._gm = NULL
@@ -547,6 +646,8 @@ cdef class Profile:
         return self.copy()
 
     cpdef void clear(self):
+        """Clear internal buffers to reuse the profile without reallocation.
+        """
         assert self._gm != NULL
         cdef int status = libhmmer.p7_profile.p7_profile_Reuse(self._gm)
         if status != libeasel.eslOK:
@@ -581,6 +682,8 @@ cdef class Profile:
 
 
 cdef class TopHits:
+    """A ranked list of top-scoring hits.
+    """
 
     def __init__(self):
         assert self._th == NULL, "called TopHits.__init__ more than once"
@@ -626,16 +729,19 @@ cdef class TopHits:
         else:
             raise UnexpectedError(status, "p7_tophits_Merge")
 
-    cpdef void sort_by_sortkey(self):
-        assert self._th != NULL
-        libhmmer.p7_tophits.p7_tophits_SortBySortkey(self._th)
-
     cpdef void threshold(self, Pipeline pipeline):
+        """Apply score and e-value thresholds using ``pipeline`` parameters.
+
+        This function will mark the targets and domains satisfying the
+        reporting thresholds set for ``pipeline`` as significant, and update
+        the total number of reported and included targets.
+
+        """
         assert self._th != NULL
         libhmmer.p7_tophits.p7_tophits_Threshold(self._th, pipeline._pli)
 
     cpdef void clear(self):
-        """Free internals to allow reusing the top hits for something else.
+        """Free internals to allow reusing for a new pipeline run.
         """
         assert self._th != NULL
         cdef int status = libhmmer.p7_tophits.p7_tophits_Reuse(self._th)

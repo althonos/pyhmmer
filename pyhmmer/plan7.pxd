@@ -23,6 +23,7 @@ cdef class Alignment:
 
 
 cdef class Domain:
+    cdef readonly Alignment alignment
     cdef readonly Hit hit
     cdef P7_DOMAIN* _dom
 
@@ -67,7 +68,6 @@ cdef class Profile:
 cdef class TopHits:
     cdef P7_TOPHITS* _th
 
-    cpdef void sort_by_sortkey(self)
     cpdef void threshold(self, Pipeline pipeline)
     cpdef void clear(self)
     cpdef void sort(self, str by=*)
