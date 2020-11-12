@@ -19,23 +19,14 @@ cdef extern from "hmmer.h" nogil:
     DEF p7_NOFFSETS = 3
 
 
-cdef extern from "emmintrin.h":
-
-    ctypedef struct __m128i:
-        pass
-
-    ctypedef struct __m128:
-        pass
-
-
-cdef extern from "impl_sse/impl_sse.h" nogil:
+cdef extern from "impl_vmx/impl_vmx.h" nogil:
 
     DEF p7O_NXSTATES = 4
     cdef enum p7o_xstates_e:
-        p7O_E  = 0
-        p7O_N  = 1
-        p7O_J  = 2
-        p7O_C  = 3
+        p7O_E = 0
+        p7O_N = 1
+        p7O_J = 2
+        p7O_C = 3
 
     DEF p7O_NXTRANS = 2
     cdef enum p7o_xtransitions_e:
@@ -44,61 +35,58 @@ cdef extern from "impl_sse/impl_sse.h" nogil:
 
     DEF p7O_NTRANS = 8
     cdef enum p7o_tsc_e:
-        p7O_BM = 0
-        p7O_MM = 1
-        p7O_IM = 2
-        p7O_DM = 3
-        p7O_MD = 4
-        p7O_MI = 5
-        p7O_II = 6
-        p7O_DD = 7
-
+        p7O_BM   = 0
+        p7O_MM   = 1
+        p7O_IM   = 2
+        p7O_DM   = 3
+        p7O_MD   = 4
+        p7O_MI   = 5
+        p7O_II   = 6
+        p7O_DD   = 7
 
     ctypedef p7_oprofile_s P7_OPROFILE
     cdef struct p7_oprofile_s:
-        __m128i** rbv
-        __m128i** sbv
-        uint8_t tbm_b
-        uint8_t tec_b
-        uint8_t tjb_b
-        float scale_b
-        uint8_t base_b
-        uint8_t bias_b
+        # vector unsigned char** rbv
+        uint8_t   tbm_b
+        uint8_t   tec_b
+        uint8_t   tjb_b
+        float     scale_b
+        uint8_t   base_b
+        uint8_t   bias_b
 
-        __m128i** rwv
-        __m128i*  twv
-        int16_t[p7O_NXSTATES][p7O_NXTRANS] xw
-        float scale_w
-        int16_t base_w
-        int16_t ddbound_w
-        float ncj_roundoff
+        # vector signed short **rwv
+        # vector signed short  *twv
+        int16_t[p7O_NXSTATES][p7O_NXTRANS]   xw
+        float     scale_w
+        int16_t   base_w
+        int16_t   ddbound_w
+        float     ncj_roundoff
 
-        __m128** rfv
-        __m128* tfv
-        int16_t[p7O_NXSTATES][p7O_NXTRANS] xf
+        # vector float **rfv
+        # vector float  *tfv
+        float[p7O_NXSTATES][p7O_NXTRANS]    xf
 
-        __m128i  *rbv_mem
-        __m128i  *sbv_mem
-        __m128i  *rwv_mem
-        __m128i  *twv_mem
-        __m128   *tfv_mem
-        __m128   *rfv_mem
+        # vector unsigned char  *rbv_mem
+        # vector signed short   *rwv_mem
+        # vector signed short   *twv_mem
+        # vector float          *tfv_mem
+        # vector float          *rfv_mem
 
         off_t[p7_NOFFSETS]  offs
         off_t  roff
         off_t  eoff
 
-        char* name
-        char* acc
-        char* desc
-        char* rf
-        char* mm
-        char* cs
-        char* consensus
-        float[p7_NEVPARAM] evparam
-        float[p7_NCUTOFFS] cutoff
-        float[p7_MAXABET] compo
-        const ESL_ALPHABET* abc
+        char  *name
+        char  *acc
+        char  *desc
+        char  *rf
+        char  *mm
+        char  *cs
+        char  *consensus
+        float[p7_NEVPARAM]  evparam
+        float[p7_NCUTOFFS]  cutoff
+        float[p7_MAXABET]  compo
+        const ESL_ALPHABET *abc
 
         int L
         int M
@@ -111,6 +99,11 @@ cdef extern from "impl_sse/impl_sse.h" nogil:
         float nj
 
         int clone
+
+    ctypedef struct P7_OM_BLOCK:
+        int count
+        int listSize
+        P7_OPROFILE** list
 
 
     P7_OPROFILE *p7_oprofile_Create(int M, const ESL_ALPHABET *abc)
@@ -132,7 +125,7 @@ cdef extern from "impl_sse/impl_sse.h" nogil:
 
     int          p7_oprofile_Dump(FILE *fp, const P7_OPROFILE *om)
     int          p7_oprofile_Sample(ESL_RANDOMNESS *r, const ESL_ALPHABET *abc, const P7_BG *bg, int M, int L,
-                   P7_HMM **opt_hmm, P7_PROFILE **opt_gm, P7_OPROFILE **ret_om)
+    				       P7_HMM **opt_hmm, P7_PROFILE **opt_gm, P7_OPROFILE **ret_om)
     int          p7_oprofile_Compare(const P7_OPROFILE *om1, const P7_OPROFILE *om2, float tol, char *errmsg)
     int          p7_profile_SameAsMF(const P7_OPROFILE *om, P7_PROFILE *gm)
     int          p7_profile_SameAsVF(const P7_OPROFILE *om, P7_PROFILE *gm)

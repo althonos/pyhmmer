@@ -3,7 +3,6 @@
 *[Cython](https://cython.org/) bindings and Python interface to [HMMER3](http://hmmer.org/).*
 
 [![TravisCI](https://img.shields.io/travis/com/althonos/pyhmmer/master.svg?logo=travis&maxAge=600&style=flat-square)](https://travis-ci.com/althonos/pyhmmer/branches)
-[![AppVeyor](https://img.shields.io/appveyor/build/althonos/pyhmmer/master.svg?logo=appveyor&maxAge=600&style=flat-square)](https://ci.appveyor.com/project/althonos/pyhmmer/history)
 [![Coverage](https://img.shields.io/codecov/c/gh/althonos/pyhmmer?style=flat-square&maxAge=3600)](https://codecov.io/gh/althonos/pyhmmer/)
 [![PyPI](https://img.shields.io/pypi/v/pyhmmer.svg?style=flat-square&maxAge=3600)](https://pypi.org/project/pyhmmer)
 [![Wheel](https://img.shields.io/pypi/wheel/pyhmmer.svg?style=flat-square&maxAge=3600)](https://pypi.org/project/pyhmmer/#files)
@@ -12,10 +11,11 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square&maxAge=2678400)](https://choosealicense.com/licenses/mit/)
 [![Source](https://img.shields.io/badge/source-GitHub-303030.svg?maxAge=2678400&style=flat-square)](https://github.com/althonos/pyhmmer/)
 [![GitHub issues](https://img.shields.io/github/issues/althonos/pyhmmer.svg?style=flat-square&maxAge=600)](https://github.com/althonos/pyhmmer/issues)
-![Docs](https://img.shields.io/readthedocs/pyhmmer/latest?style=flat-square&maxAge=600)
+[![Docs](https://img.shields.io/readthedocs/pyhmmer/latest?style=flat-square&maxAge=600)](https://pyhmmer.readthedocs.io)
 [![Changelog](https://img.shields.io/badge/keep%20a-changelog-8A0707.svg?maxAge=2678400&style=flat-square)](https://github.com/althonos/pyhmmer/blob/master/CHANGELOG.md)
+[![Downloads](https://img.shields.io/badge/dynamic/json?style=flat-square&color=303f9f&maxAge=86400&label=downloads&query=%24.total_downloads&url=https%3A%2F%2Fapi.pepy.tech%2Fapi%2Fprojects%2Fpyhmmer)](https://pepy.tech/project/pyhmmer)
 
-<!-- [![Downloads](https://img.shields.io/badge/dynamic/json?style=flat-square&color=303f9f&maxAge=86400&label=downloads&query=%24.total_downloads&url=https%3A%2F%2Fapi.pepy.tech%2Fapi%2Fprojects%2Fpyhmmer)](https://pepy.tech/project/pyhmmer) -->
+<!-- [![AppVeyor](https://img.shields.io/appveyor/build/althonos/pyhmmer/master.svg?logo=appveyor&maxAge=600&style=flat-square)](https://ci.appveyor.com/project/althonos/pyhmmer/history) -->
 <!-- [![Bioconda](https://img.shields.io/conda/vn/bioconda/pyhmmer?style=flat-square&maxAge=3600)](https://anaconda.org/bioconda/pyhmmer) -->
 
 
@@ -51,28 +51,40 @@ HMMER internals, which has the following advantages over CLI wrappers
   and HMMs in disk storage is typically not slower than directly using the
   `hmmsearch` binary (see the [Benchmarks section](#%EF%B8%8F-benchmarks)).
 
+*This library is still a work-in-progress, and in a very experimental stage,
+but it should already pack enough features to run simple biological analyses.*
+
 
 ## 🔧 Installing
 
 ``pyhmmer`` can be installed from [PyPI](https://pypi.org/project/pyhmmer/),
-which hosts some pre-built CPython wheels for x86-64 Unix and Windows platforms,
+which hosts some pre-built CPython wheels for x86-64 Linux and OSX,
 as well as the code required to compile from source with Cython:
 ```console
 $ pip install pyhmmer
 ```
 
+Compilation for UNIX PowerPC is not tested in CI, but should work out of the
+box. Other architectures (e.g. Arm) and OSes (e.g. Windows) are not
+supported by HMMER.
+
+
 ## 📖 Documentation
 
-A complete [API reference] can be found in the [online documentation], or
-directly from the command line using [`pydoc`](https://docs.python.org/3/library/pydoc.html):
+A complete [API reference](https://pyhmmer.readthedocs.io/en/stable/api/) can
+be found in the [online documentation](https://pyhmmer.readthedocs.io/), or
+directly from the command line using
+[`pydoc`](https://docs.python.org/3/library/pydoc.html):
 ```console
 $ pydoc pyhmmer.easel
 $ pydoc pyhmmer.plan7
 ```
 
+
 ## 💡 Example
 
-Use `pyhmmer` to run `hmmsearch`, and display domain hits:
+Use `pyhmmer` to run `hmmsearch`, and display alignments for hits with
+domains longer than 30 letters :
 
 ```python
 import pyhmmer
@@ -101,6 +113,7 @@ for hit in hits:
             print(domain.alignment.target_sequence)
 ```
 
+
 ## ⏱️ Benchmarks
 
 Benchmarks were run on a i7-8550U CPU running at 1.80GHz, using a FASTA file
@@ -114,7 +127,7 @@ were set to use 8 threads, and were run 20 times.
 | `python -m hmmer.hmmsearch` | 40.128   | 946    | 37.706  | 42.457  |
 
 
-## 📜 License
+## ⚖️ License
 
 This library is provided under the [MIT License](https://choosealicense.com/licenses/mit/).
 The HMMER3 and Easel code is available under the BSD 3-clause license. See

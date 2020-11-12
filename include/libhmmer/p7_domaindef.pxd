@@ -2,11 +2,16 @@ from libc.stdio cimport FILE
 
 from libeasel.random cimport ESL_RANDOMNESS
 from libeasel.sq cimport ESL_SQ
-from libhmmer.impl_sse.p7_omx cimport P7_OMX
-from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 from libhmmer.p7_domain cimport P7_DOMAIN
 from libhmmer.p7_spensemble cimport P7_SPENSEMBLE
 from libhmmer.p7_trace cimport P7_TRACE
+
+IF HMMER_IMPL == "VMX":
+    from libhmmer.impl_vmx.p7_omx cimport P7_OMX
+    from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
+ELIF HMMER_IMPL == "SSE":
+    from libhmmer.impl_sse.p7_omx cimport P7_OMX
+    from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
 
 cdef extern from "hmmer.h" nogil:

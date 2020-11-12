@@ -9,10 +9,16 @@ prune             tests
 
 recursive-include vendor                      *
 recursive-exclude vendor/hmmer                *.ai
-#prune             vendor/easel/documentation
-#prune             vendor/easel/miniapps 
-#prune             vendor/easel/demotic
-#prune             vendor/hmmer/documentation
-#prune             vendor/hmmer/contrib
-#prune             vendor/hmmer/testsuite
-#prune             vendor/hmmer/tutorial
+recursive-exclude vendor                      *.pl
+prune             vendor/easel/demotic
+prune             vendor/easel/documentation
+prune             vendor/easel/esl_msa_testfiles
+prune             vendor/easel/miniapps
+prune             vendor/easel/testsuite
+prune             vendor/hmmer/autobuild
+prune             vendor/hmmer/documentation
+prune             vendor/hmmer/contrib
+prune             vendor/hmmer/profmark
+prune             vendor/hmmer/testsuite
+prune             vendor/hmmer/test-speed
+prune             vendor/hmmer/tutorial

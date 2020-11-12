@@ -4,9 +4,13 @@ from libc.stdio cimport FILE
 from libeasel.alphabet cimport ESL_ALPHABET
 from libeasel.random cimport ESL_RANDOMNESS
 from libeasel.sq cimport ESL_SQ
-from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 from libhmmer.p7_trace cimport P7_TRACE
 from libhmmer.p7_pipeline cimport P7_PIPELINE
+
+IF HMMER_IMPL == "VMX":
+    from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
+ELIF HMMER_IMPL == "SSE":
+    from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
 
 cdef extern from "hmmer.h" nogil:

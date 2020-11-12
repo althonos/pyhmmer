@@ -3,12 +3,17 @@ from libc.stdint cimport uint64_t
 from libeasel.sq cimport ESL_SQ
 from libeasel.getopts cimport ESL_GETOPTS
 from libeasel.random cimport ESL_RANDOMNESS
-from libhmmer.impl_sse.p7_omx cimport P7_OMX
-from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 from libhmmer.p7_bg cimport P7_BG
 from libhmmer.p7_domaindef cimport P7_DOMAINDEF
 from libhmmer.p7_tophits cimport P7_TOPHITS
 from libhmmer.p7_hmmfile cimport P7_HMMFILE
+
+IF HMMER_IMPL == "VMX":
+    from libhmmer.impl_vmx.p7_omx cimport P7_OMX
+    from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
+ELIF HMMER_IMPL == "SSE":
+    from libhmmer.impl_sse.p7_omx cimport P7_OMX
+    from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
 
 cdef extern from "easel.h" nogil:
