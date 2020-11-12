@@ -8,14 +8,11 @@ pyHMMER |Stars|
 *Cython bindings and Python interface to* `HMMER3 <http://hmmer.org/>`_.
 
 
-|TravisCI| |AppVeyor| |Coverage| |PyPI| |Wheel| |Versions| |Implementations| |License| |Source| |Issues| |Docs| |Changelog|
+|TravisCI| |Coverage| |PyPI| |Wheel| |Versions| |Implementations| |License| |Source| |Issues| |Docs| |Changelog| |Downloads|
 
 
 .. |TravisCI| image:: https://img.shields.io/travis/althonos/pyhmmer/master.svg?&maxAge=600&style=flat-square
    :target: https://travis-ci.org/althonos/pyhmmer/branches
-
-.. |AppVeyor| image:: https://img.shields.io/appveyor/build/althonos/pyhmmer/master.svg?logo=appveyor&maxAge=600&style=flat-square
-   :target: https://ci.appveyor.com/project/althonos/pyhmmer/history
 
 .. |Coverage| image:: https://img.shields.io/codecov/c/gh/althonos/pyhmmer?style=flat-square&maxAge=3600
    :target: https://www.codecov.com/gh/althonos/pyhmmer/
@@ -47,6 +44,8 @@ pyHMMER |Stars|
 .. |Changelog| image:: https://img.shields.io/badge/keep%20a-changelog-8A0707.svg?maxAge=2678400&style=flat-square
    :target: https://github.com/althonos/pyhmmer/blob/master/CHANGELOG.md
 
+.. |Downloads| image:: https://img.shields.io/badge/dynamic/json?style=flat-square&color=303f9f&maxAge=86400&label=downloads&query=%24.total_downloads&url=https%3A%2F%2Fapi.pepy.tech%2Fapi%2Fprojects%2Fpyhmmer
+   :target: https://pepy.tech/project/pyhmmer
 
 
 

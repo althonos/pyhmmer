@@ -4,7 +4,7 @@
 
 Easel is a library developed by the `Eddy/Rivas Lab <http://eddylab.org/>`_
 to facilitate the development of biological software in C. It is used by
-`HMMER <http://hmmer.org/>_` and `Infernal <http://eddylab.org/infernal/>`_.
+`HMMER <http://hmmer.org/>`_ and `Infernal <http://eddylab.org/infernal/>`_.
 
 """
 
