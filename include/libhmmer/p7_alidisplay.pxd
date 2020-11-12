@@ -7,9 +7,9 @@ from libeasel.sq cimport ESL_SQ
 from libhmmer.p7_trace cimport P7_TRACE
 from libhmmer.p7_pipeline cimport P7_PIPELINE
 
-IF UNAME_MACHINE.startswith("ppc") and not UNAME_MACHINE.endswith("le"):
+IF HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
-ELIF UNAME_MACHINE.startswith(("x86", "i386", "i686")):
+ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
 

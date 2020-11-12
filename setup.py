@@ -65,15 +65,23 @@ class build_ext(_build_ext):
         if isinstance(cythonize, ImportError):
             raise RuntimeError("Cython is required to run `build_ext` command") from cythonize
 
-        # show architecture
-        machine = platform.machine()
+        # check the CPU architecture could be detected
+        global machine
         if machine is None:
-            log.warn('cannot detect CPU architecture, build will default to SSE backend')
+            raise RuntimeError("Could not detect CPU architecture with `platform.machine`")
+
+        # check a platform-specific implementation of HMMER was selected
+        # depending on the detected machine
+        global hmmer_impl
+        if hmmer_impl is None:
+            raise RuntimeError('Could not select implementation for CPU architecture: "{}"'.format(machine))
         else:
-            log.info('building extensions for "{}" architecture'.format(platform.machine()))
+            log.info('Building HMMER with {} for CPU architecture: "{}"'.format(hmmer_impl, machine))
 
         # use debug directives with Cython if building in debug mode
         cython_args = {"include_path": ["include"], "compiler_directives": {}}
+        if hmmer_impl is not None:
+            cython_args["compile_time_env"] = {"HMMER_IMPL": hmmer_impl}
         if self.force:
             cython_args["force"] = True
         if self.debug:
@@ -381,19 +389,24 @@ hmmer_sources = [
 
 # HMMER3 is only supported on x86 CPUs with SSE, and big endian PowerPC
 # (see https://github.com/EddyRivasLab/hmmer/issues/142)
-machine = platform.machine()
+machine = platform.machine().lower()
 if machine.startswith('ppc') and not machine.endswith('le'):
     hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_vmx", "*.c")))
     hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_vmx", "vitscore.c"))
+    hmmer_impl = "VMX"
     platform_define_macros = [("eslENABLE_VMX", 1)]
     platform_compile_args = ["-maltivec"]
-elif machine.startswith(("x86", "i386", "i686")):
+elif machine.startswith(("x86", "amd", "i386", "i686")):
     hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_sse", "*.c")))
     hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_sse", "vitscore.c"))
+    hmmer_impl = "SSE"
     platform_define_macros = [("eslENABLE_SSE", 1)]
     platform_compile_args = ["-msse3"]
 else:
     log.warn('pyHMMER is not supported on CPU architecture: "{}"'.format(machine))
+    platform_define_macros = []
+    platform_compile_args = []
+    hmmer_impl = None
 
 libraries = [
     Library(
