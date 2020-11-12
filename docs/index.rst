@@ -11,10 +11,10 @@ pyHMMER |Stars|
 |TravisCI| |Coverage| |PyPI| |Wheel| |Versions| |Implementations| |License| |Source| |Issues| |Docs| |Changelog| |Downloads|
 
 
-.. |TravisCI| image:: https://img.shields.io/travis/althonos/pyhmmer/master.svg?&maxAge=600&style=flat-square
-   :target: https://travis-ci.org/althonos/pyhmmer/branches
+.. |TravisCI| image:: https://img.shields.io/travis/com/althonos/pyhmmer/master.svg?&maxAge=600&style=flat-square
+   :target: https://travis-ci.com/althonos/pyhmmer/branches
 
-.. |Coverage| image:: https://img.shields.io/codecov/c/gh/althonos/pyhmmer?style=flat-square&maxAge=3600
+.. |Coverage| image:: https://img.shields.io/codecov/c/gh/althonos/pyhmmer?style=flat-square&maxAge=600
    :target: https://www.codecov.com/gh/althonos/pyhmmer/
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/pyhmmer.svg?style=flat-square&maxAge=3600
