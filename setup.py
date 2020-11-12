@@ -266,6 +266,10 @@ class configure(_build_clib):
         for k, v in constants.items():
             defines[k] = v
 
+        # check endianness
+        if sys.byteorder == "big":
+            defines["WORDS_BIGENDIAN"] = 1
+
         # fill the defines if headers are found
         headers = headers or []
         for header in headers:
