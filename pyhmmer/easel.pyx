@@ -195,7 +195,9 @@ cdef class Bitfield:
 
         """
         assert self._b != NULL
-        return libeasel.bitfield.esl_bitfield_Count(self._b)
+
+        cdef size_t count_ = libeasel.bitfield.esl_bitfield_Count(self._b)
+        return count_ if value else self._b.nb - count_
 
     cpdef void toggle(self, int index):
         """Switch the value of one single bit.
