@@ -53,12 +53,12 @@ def load_tests(loader, tests, ignore):
     packages = [None, pyhmmer]
 
     for pkg in iter(packages.pop, None):
-        for subpkg in pkgutil.walk_packages(pkg.__path__):
+        for (_, subpkgname, subispkg) in pkgutil.walk_packages(pkg.__path__):
             # do not import __main__ module to avoid side effects!
-            if subpkg.name == "__main__":
+            if subpkgname == "__main__":
                 continue
             # import the submodule and add it to the tests
-            module = importlib.import_module(".".join([pkg.__name__, subpkg.name]))
+            module = importlib.import_module(".".join([pkg.__name__, subpkgname]))
             globs = dict(_=None, **module.__dict__)
             tests.addTests(
                 doctest.DocTestSuite(
@@ -71,7 +71,7 @@ def load_tests(loader, tests, ignore):
             )
             # if the submodule is a package, we need to process its submodules
             # as well, so we add it to the package queue
-            if subpkg.ispkg:
+            if subispkg:
                 packages.append(module)
 
     return tests
