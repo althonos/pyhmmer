@@ -25,7 +25,7 @@ cdef class Bitfield:
     cdef ESL_BITFIELD* _b
 
     cdef size_t _wrap_index(self, int index)
-    cpdef size_t count(self, bint value)
+    cpdef size_t count(self, bint value=*)
     cpdef void toggle(self, int index)
 
 
