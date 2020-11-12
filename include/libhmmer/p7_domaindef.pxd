@@ -55,13 +55,13 @@ cdef extern from "hmmer.h" nogil:
         int nenvelopes
 
 
-    # P7_DOMAINDEF *p7_domaindef_Create (ESL_RANDOMNESS *r)
+    P7_DOMAINDEF *p7_domaindef_Create (ESL_RANDOMNESS *r)
     # int           p7_domaindef_Fetch  (P7_DOMAINDEF *ddef, int which, int *opt_i, int *opt_j, float *opt_sc, P7_ALIDISPLAY **opt_ad)
     # int           p7_domaindef_GrowTo (P7_DOMAINDEF *ddef, int L)
-    # int           p7_domaindef_Reuse  (P7_DOMAINDEF *ddef)
+    int           p7_domaindef_Reuse  (P7_DOMAINDEF *ddef)
     # int           p7_domaindef_DumpPosteriors(FILE *ofp, P7_DOMAINDEF *ddef)
-    # void          p7_domaindef_Destroy(P7_DOMAINDEF *ddef)
-    #
+    void          p7_domaindef_Destroy(P7_DOMAINDEF *ddef)
+
     # int p7_domaindef_ByViterbi            (P7_PROFILE *gm, const ESL_SQ *sq, const ESL_SQ *ntsq, P7_GMX *gx1, P7_GMX *gx2, P7_DOMAINDEF *ddef)
     # int p7_domaindef_ByPosteriorHeuristics(const ESL_SQ *sq, const ESL_SQ *ntsq, P7_OPROFILE *om, P7_OMX *oxf, P7_OMX *oxb, P7_OMX *fwd, P7_OMX *bck,
     # 				                                  P7_DOMAINDEF *ddef, P7_BG *bg, int long_target,
