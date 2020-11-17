@@ -66,6 +66,9 @@ def hmmsearch(
     hits = threads[0].hits
     for thread in threads[1:]:
         hits += thread.hits
+
+    # return thresholded hits
+    hits.threshold()
     return hits
 
 
