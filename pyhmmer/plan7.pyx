@@ -747,7 +747,20 @@ cdef class TopHits:
 
         """
         assert self._th != NULL
-        libhmmer.p7_tophits.p7_tophits_Threshold(self._th, self.pipeline._pli)
+        assert self.pipeline is not None
+        assert self.pipeline._pli != NULL
+
+        # cdef size_t i
+        cdef P7_PIPELINE* pli = self.pipeline._pli
+        cdef P7_TOPHITS* th = self._th
+
+        with nogil:
+            # this is a patch to avoid a segmentation fault if `threshold`
+            # is called before `sort`, as in this case the `th.unsrt` array
+            # contains garbage pointers past the first element.
+            if not (th.is_sorted_by_sortkey or th.is_sorted_by_seqidx):
+                for i in range(th.N): th.hit[i] = &th.unsrt[i]
+            libhmmer.p7_tophits.p7_tophits_Threshold(th, pli)
 
     cpdef void clear(self):
         """Free internals to allow reusing for a new pipeline run.
