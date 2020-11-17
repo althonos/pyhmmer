@@ -7,6 +7,8 @@ from .easel import Alphabet, Sequence
 
 
 class Alignment(collections.abc.Sized):
+    domain: Domain
+
     def __len__(self) -> int: ...
 
     @property
@@ -32,6 +34,9 @@ class Alignment(collections.abc.Sized):
 
 
 class Domain(object):
+    alignment: Alignment
+    hit: Hit
+
     @property
     def env_from(self) -> int: ...
     @property
@@ -54,9 +59,13 @@ class Domain(object):
     def envelope_score(self) -> float: ...
     @property
     def c_evalue(self) -> float: ...
+    @property
+    def i_evalue(self) -> float: ...
 
 
 class Domains(typing.Sequence[Domain]):
+    hit: Hit
+
     def __len__(self) -> int: ...
 
     @typing.overload
@@ -66,6 +75,8 @@ class Domains(typing.Sequence[Domain]):
 
 
 class Hit(object):
+    hits: TopHits
+
     @property
     def name(self) -> bytes: ...
     @property
@@ -79,12 +90,14 @@ class Hit(object):
     @property
     def bias(self) -> float: ...
     @property
-    def lnP(self) -> float: ...
+    def evalue(self) -> float: ...
     @property
     def domains(self) -> Domains: ...
 
 
 class HMM(object):
+    alphabet: Alphabet
+
     def __init__(self, m: int, alphabet: Alphabet) -> None: ...
 
     @property
@@ -119,6 +132,8 @@ class HMMFile(typing.ContextManager[HMMFile], typing.Iterator[HMM]):
 
 
 class Pipeline(object):
+    alphabet: Alphabet
+
     def __init__(
         self,
         alphabet: Alphabet,
@@ -138,6 +153,8 @@ class Pipeline(object):
 
 
 class Profile(object):
+    alphabet: Alphabet
+
     def __init__(self, m: int, alphabet: Alphabet) -> None: ...
     def __copy__(self) -> Profile: ...
 
@@ -149,6 +166,8 @@ class Profile(object):
 
 
 class TopHits(typing.Sequence[Hit]):
+    pipeline: typing.Optional[Pipeline]
+
     def __init__(self) -> None: ...
     def __bool__(self) -> bool: ...
     def __len__(self) -> int: ...
@@ -158,7 +177,7 @@ class TopHits(typing.Sequence[Hit]):
     def __getitem__(self, index: slice) -> typing.Sequence[Hit]: ...
     def __iadd__(self, other: TopHits) -> TopHits: ...
 
-    def threshold(self, pipeline: Pipeline) -> None: ...
+    def threshold(self) -> None: ...
     def clear(self) -> None: ...
     def sort(self, by: str = "key") -> None: ...
     def is_sorted(self, by: str = "key") -> bool: ...

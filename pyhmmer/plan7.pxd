@@ -55,6 +55,14 @@ cdef class HMMFile:
     cpdef void close(self)
 
 
+cdef class Pipeline:
+    cdef readonly Alphabet alphabet
+    cdef P7_PIPELINE* _pli
+    cdef P7_BG* _bg
+
+    cpdef TopHits search(self, HMM hmm, object seqs, TopHits hits=?)
+
+
 cdef class Profile:
     cdef readonly Alphabet alphabet
     cdef P7_PROFILE* _gm
@@ -73,11 +81,3 @@ cdef class TopHits:
     cpdef void clear(self)
     cpdef void sort(self, str by=*)
     cpdef bint is_sorted(self, str by=*)
-
-
-cdef class Pipeline:
-    cdef readonly Alphabet alphabet
-    cdef P7_PIPELINE* _pli
-    cdef P7_BG* _bg
-
-    cpdef TopHits search(self, HMM hmm, object seqs, TopHits hits=?)
