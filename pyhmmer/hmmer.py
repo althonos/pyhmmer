@@ -35,7 +35,7 @@ class _PipelineThread(threading.Thread):
 
 def hmmsearch(
     hmms: typing.Iterable[HMM],
-    sequences: typing.List[Sequence],
+    sequences: typing.Sequence[Sequence],
     cpus: int = 0,
     **options: typing.Any,
 ) -> TopHits:
