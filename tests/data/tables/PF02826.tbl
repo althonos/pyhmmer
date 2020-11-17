@@ -1,0 +1,29 @@
+#                                                                      --- full sequence ---- --- best 1 domain ---- --- domain number estimation ----
+# target name               accession  query name           accession    E-value  score  bias   E-value  score  bias   exp reg clu  ov env dom rep inc description of target
+#       ------------------- ---------- -------------------- ---------- --------- ------ ----- --------- ------ -----   --- --- --- --- --- --- --- --- ---------------------
+938293.PRJEB85.HG003685_328 -          2-Hacid_dh_C         PF02826.20   5.6e-54  179.1   0.0     1e-53  178.3   0.0   1.4   2   0   0   2   2   2   1 # 362674 # 363609 # 1 # ID=6_328;partial=00;start_type=TTG;rbs_motif=GGAGG;rbs_spacer=5-10bp;gc_cont=0.312
+938293.PRJEB85.HG003686_519 -          2-Hacid_dh_C         PF02826.20   7.5e-53  175.5   0.0   1.9e-52  174.2   0.0   1.6   2   0   0   2   2   2   1 # 557293 # 558261 # 1 # ID=7_519;partial=00;start_type=ATG;rbs_motif=GGAGG;rbs_spacer=5-10bp;gc_cont=0.314
+938293.PRJEB85.HG003689_19  -          2-Hacid_dh_C         PF02826.20   6.3e-52  172.4   0.0   1.1e-51  171.6   0.0   1.4   1   0   0   1   1   1   1 # 15870 # 16853 # 1 # ID=3_19;partial=00;start_type=ATG;rbs_motif=AGGAG;rbs_spacer=5-10bp;gc_cont=0.369
+938293.PRJEB85.HG003686_258 -          2-Hacid_dh_C         PF02826.20   4.1e-42  140.5   0.0   8.8e-42  139.4   0.0   1.5   2   0   0   2   2   2   1 # 267195 # 268181 # 1 # ID=7_258;partial=00;start_type=ATG;rbs_motif=GGAG/GAGG;rbs_spacer=5-10bp;gc_cont=0.313
+938293.PRJEB85.HG003685_432 -          2-Hacid_dh_C         PF02826.20   7.6e-09   32.1   0.1   3.1e-08   30.1   0.1   2.0   2   1   0   2   2   2   1 # 463876 # 464982 # 1 # ID=6_432;partial=00;start_type=ATG;rbs_motif=AGGAG;rbs_spacer=5-10bp;gc_cont=0.398
+938293.PRJEB85.HG003691_27  -          2-Hacid_dh_C         PF02826.20     3e-08   30.2   0.0     7e-08   29.0   0.0   1.6   1   0   0   1   1   1   1 # 28424 # 29518 # 1 # ID=5_27;partial=00;start_type=ATG;rbs_motif=AGxAGG/AGGxGG;rbs_spacer=5-10bp;gc_cont=0.374
+938293.PRJEB85.HG003688_14  -          2-Hacid_dh_C         PF02826.20   4.5e-07   26.4   0.0    0.0021   14.4   0.0   2.3   2   0   0   2   2   2   2 # 20242 # 21648 # -1 # ID=1_14;partial=00;start_type=ATG;rbs_motif=AGGAG;rbs_spacer=5-10bp;gc_cont=0.405
+938293.PRJEB85.HG003685_133 -          2-Hacid_dh_C         PF02826.20   1.7e-05   21.2   0.2   5.4e-05   19.6   0.0   1.9   2   0   0   2   2   2   1 # 139958 # 142408 # 1 # ID=6_133;partial=00;start_type=ATG;rbs_motif=GGA/GAG/AGG;rbs_spacer=11-12bp;gc_cont=0.340
+938293.PRJEB85.HG003685_255 -          2-Hacid_dh_C         PF02826.20   0.00016   18.0   0.6     0.048   10.0   0.0   2.7   2   1   0   2   2   2   2 # 285508 # 287457 # 1 # ID=6_255;partial=00;start_type=ATG;rbs_motif=GGAGG;rbs_spacer=5-10bp;gc_cont=0.359
+938293.PRJEB85.HG003686_664 -          2-Hacid_dh_C         PF02826.20   0.00017   17.9   0.2   0.00088   15.6   0.0   2.2   2   1   1   3   3   3   1 # 720021 # 720749 # 1 # ID=7_664;partial=00;start_type=TTG;rbs_motif=None;rbs_spacer=None;gc_cont=0.339
+938293.PRJEB85.HG003686_169 -          2-Hacid_dh_C         PF02826.20    0.0003   17.1   0.8   0.00072   15.9   0.8   1.8   1   1   0   1   1   1   1 # 163743 # 164600 # 1 # ID=7_169;partial=00;start_type=ATG;rbs_motif=AGGAG;rbs_spacer=5-10bp;gc_cont=0.374
+938293.PRJEB85.HG003686_375 -          2-Hacid_dh_C         PF02826.20   0.00043   16.6   0.1   0.00079   15.8   0.1   1.5   1   0   0   1   1   1   1 # 398598 # 399251 # 1 # ID=7_375;partial=00;start_type=ATG;rbs_motif=GGAGG;rbs_spacer=5-10bp;gc_cont=0.369
+938293.PRJEB85.HG003691_51  -          2-Hacid_dh_C         PF02826.20    0.0006   16.2   0.1     0.001   15.4   0.1   1.3   1   0   0   1   1   1   1 # 48856 # 49788 # 1 # ID=5_51;partial=00;start_type=ATG;rbs_motif=GGAGG;rbs_spacer=5-10bp;gc_cont=0.295
+938293.PRJEB85.HG003687_15  -          2-Hacid_dh_C         PF02826.20    0.0021   14.4   0.4     0.017   11.5   0.0   2.5   3   1   1   4   4   4   1 # 13514 # 15154 # 1 # ID=8_15;partial=00;start_type=ATG;rbs_motif=GGA/GAG/AGG;rbs_spacer=5-10bp;gc_cont=0.366
+938293.PRJEB85.HG003685_113 -          2-Hacid_dh_C         PF02826.20     0.003   13.9   1.8      0.22    7.8   0.1   2.3   2   0   0   2   2   2   2 # 118599 # 119552 # 1 # ID=6_113;partial=00;start_type=ATG;rbs_motif=GGAGG;rbs_spacer=5-10bp;gc_cont=0.357
+938293.PRJEB85.HG003687_154 -          2-Hacid_dh_C         PF02826.20     0.031   10.6   1.1     0.055    9.8   0.1   1.9   3   0   0   3   3   3   0 # 152530 # 153789 # 1 # ID=8_154;partial=00;start_type=ATG;rbs_motif=AGGAG;rbs_spacer=5-10bp;gc_cont=0.384
+#
+# Program:         hmmsearch
+# Version:         3.3 (Nov 2019)
+# Pipeline mode:   SEARCH
+# Query file:      tests/data/hmm/PF02826.hmm
+# Target file:     tests/data/seqs/938293.PRJEB85.HG003687.faa
+# Option settings: hmmsearch --tblout x.out tests/data/hmm/PF02826.hmm tests/data/seqs/938293.PRJEB85.HG003687.faa 
+# Current dir:     /home/althonos/Code/pyhmmer
+# Date:            Tue Nov 17 03:06:23 2020
+# [ok]

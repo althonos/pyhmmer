@@ -1,13 +1,31 @@
+import io
+import itertools
 import os
 import unittest
 import tempfile
 import pkg_resources
 
+import pyhmmer
 from pyhmmer.plan7 import Pipeline, HMMFile, TopHits
 from pyhmmer.easel import Alphabet, SequenceFile
 
 
 class TestHmmsearch(unittest.TestCase):
+
+    @staticmethod
+    def table(name):
+        bin_stream = pkg_resources.resource_stream(__name__, "data/tables/{}".format(name))
+        return io.TextIOWrapper(bin_stream)
+
+    @staticmethod
+    def hmm_file(name):
+        path = pkg_resources.resource_filename(__name__, "data/hmm/{}.hmm".format(name))
+        return HMMFile(path)
+
+    @staticmethod
+    def seqs_file(name):
+        seqs_path = pkg_resources.resource_filename(__name__, "data/seqs/{}.faa".format(name))
+        return SequenceFile(seqs_path)
 
     def test_thioestherase(self):
         # $ hmmsearch data/hmm/Thioesterase.hmm data/seqs/938293.PRJEB85.HG003687.faa
@@ -32,19 +50,17 @@ class TestHmmsearch(unittest.TestCase):
         #                                   G+S+GG +A ++A++
         #   938293.PRJEB85.HG003687_113 115 GHSMGGSVAVAIAHE 129
         #                                   9************96 PP
-
-        hmm_path = pkg_resources.resource_filename(__name__, "data/hmm/Thioesterase.hmm")
-        with HMMFile(hmm_path) as hmm_file:
+        with self.hmm_file("Thioesterase") as hmm_file:
             hmm = next(hmm_file)
-
-        seqs_path = pkg_resources.resource_filename(__name__, "data/seqs/938293.PRJEB85.HG003687.faa")
-        with SequenceFile(seqs_path) as seqs_file:
+        with self.seqs_file("938293.PRJEB85.HG003687") as seqs_file:
             seqs = list(seqs_file)
 
-        pipeline = Pipeline(hmm.alphabet)
+        pipeline = Pipeline(alphabet=hmm.alphabet)
         hits = pipeline.search(hmm, seqs)
-        hits.threshold()
         self.assertEqual(len(hits), 1)
+
+        hits.sort()
+        hits.threshold()
 
         hit = hits[0]
         self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_113")
@@ -62,3 +78,29 @@ class TestHmmsearch(unittest.TestCase):
         self.assertEqual(domain.ali_to, 129)
         self.assertEqual(domain.env_from, 115)
         self.assertEqual(domain.env_to, 129)
+
+    def test_pf02826(self):
+        with self.hmm_file("PF02826") as hmm_file:
+            hmm = next(hmm_file)
+        with self.seqs_file("938293.PRJEB85.HG003687") as seqs_file:
+            seqs = list(seqs_file)
+
+        pipeline = Pipeline(alphabet=hmm.alphabet)
+        hits = pipeline.search(hmm, seqs)
+        self.assertEqual(len(hits), 16)
+
+        hits.sort()
+        hits.threshold()
+
+        with self.table("PF02826.tbl") as table:
+            lines = filter(lambda line: not line.startswith("#"), table)
+
+            for line, hit in itertools.zip_longest(lines, hits):
+
+                fields = list(filter(None, line.strip().split(" ")))
+                self.assertIsNot(line, None)
+                self.assertIsNot(hit, None)
+                self.assertEqual(hit.name.decode(), fields[0])
+                self.assertAlmostEqual(hit.score, float(fields[5]), delta=0.1)
+                self.assertAlmostEqual(hit.bias, float(fields[6]), delta=0.1)
+                self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
