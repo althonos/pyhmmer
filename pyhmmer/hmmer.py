@@ -14,10 +14,11 @@ class _PipelineThread(threading.Thread):
     def __init__(
         self,
         sequences: typing.Iterable[Sequence],
-        hmm_queue: "queue.Queue[typing.Optional[HMM]]"
+        hmm_queue: "queue.Queue[typing.Optional[HMM]]",
+        options: typing.Dict[str, typing.Any],
     ) -> None:
         super().__init__()
-        self.pipeline = Pipeline(alphabet=Alphabet.amino())
+        self.pipeline = Pipeline(alphabet=Alphabet.amino(), **options)
         self.hits = TopHits()
         self.sequences = sequences
         self.hmm_queue = hmm_queue
@@ -35,7 +36,8 @@ class _PipelineThread(threading.Thread):
 def hmmsearch(
     hmms: typing.Iterable[HMM],
     sequences: typing.List[Sequence],
-    cpus: int = 0
+    cpus: int = 0,
+    **options: typing.Any,
 ) -> TopHits:
     # count the number of CPUs to use
     _cpus = cpus if cpus > 0 else multiprocessing.cpu_count()
@@ -46,7 +48,7 @@ def hmmsearch(
     # create and launch one pipeline thread per CPU
     threads = []
     for _ in range(_cpus):
-        thread = _PipelineThread(sequences, hmm_queue)
+        thread = _PipelineThread(sequences, hmm_queue, options)
         thread.start()
         threads.append(thread)
 
