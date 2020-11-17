@@ -225,7 +225,6 @@ cdef class Hit:
     def __cinit__(self, TopHits hits, size_t index):
         assert hits._th != NULL
         assert index < hits._th.N
-
         self.hits = hits
         self._hit = hits._th.hit[index]
 
@@ -714,7 +713,8 @@ cdef class TopHits:
         return self._th.N
 
     def __getitem__(self, index):
-        cdef size_t index_
+        if not (self._th.is_sorted_by_sortkey or self._th.is_sorted_by_seqidx):
+            for i in range(self._th.N): self._th.hit[i] = &self._th.unsrt[i]
         if index < 0:
             index += self._th.N
         if index >= self._th.N or index < 0:
