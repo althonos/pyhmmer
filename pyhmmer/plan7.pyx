@@ -631,7 +631,7 @@ cdef class Pipeline:
         hits.pipeline = self
 
         # return the hits
-        hits._patch()
+        hits._on_edit()
         return hits
 
 
@@ -694,7 +694,7 @@ cdef class TopHits:
     """A ranked list of top-scoring hits.
     """
 
-    cdef void _patch(self):
+    cdef void _on_edit(self):
         """Patch the internal ``P7_TOPHITS`` after a modification.
 
         In the HMMER library, the ``hits`` array is only filled when the
@@ -704,6 +704,7 @@ cdef class TopHits:
         whenever the object is modified.
 
         """
+        self._thresholded = False
         for i in range(self._th.N):
             self._th.hit[i] = &self._th.unsrt[i]
         if self._th.N > 1:
@@ -718,6 +719,7 @@ cdef class TopHits:
 
     def __cinit__(self):
         self._th = NULL
+        self._thresholded = False
 
     def __dealloc__(self):
         libhmmer.p7_tophits.p7_tophits_Destroy(self._th)
@@ -749,7 +751,7 @@ cdef class TopHits:
         cdef int status = libhmmer.p7_tophits.p7_tophits_Merge(self._th, (<TopHits> other)._th)
         if status == libeasel.eslOK:
             libhmmer.p7_tophits.p7_tophits_Reuse((<TopHits> other)._th)
-            self._patch()
+            self._on_edit()
             return self
         elif status == libeasel.eslEMEM:
             raise AllocationError("P7_TOPHITS")
@@ -768,17 +770,13 @@ cdef class TopHits:
         assert self.pipeline is not None
         assert self.pipeline._pli != NULL
 
-        # cdef size_t i
         cdef P7_PIPELINE* pli = self.pipeline._pli
         cdef P7_TOPHITS* th = self._th
 
         with nogil:
-            # this is a patch to avoid a segmentation fault if `threshold`
-            # is called before `sort`, as in this case the `th.unsrt` array
-            # contains garbage pointers past the first element.
-            if not (th.is_sorted_by_sortkey or th.is_sorted_by_seqidx):
-                for i in range(th.N): th.hit[i] = &th.unsrt[i]
             libhmmer.p7_tophits.p7_tophits_Threshold(th, pli)
+
+        self._thresholded = True
 
     cpdef void clear(self):
         """Free internals to allow reusing for a new pipeline run.
@@ -791,12 +789,16 @@ cdef class TopHits:
     cpdef void sort(self, str by="key"):
         assert self._th != NULL
 
+        cdef P7_TOPHITS* th = self._th
+
         if by == "key":
-            status = libhmmer.p7_tophits.p7_tophits_SortBySortkey(self._th)
             function = "p7_tophits_SortBySortkey"
+            with nogil:
+                status = libhmmer.p7_tophits.p7_tophits_SortBySortkey(th)
         elif by == "seqidx":
-            status = libhmmer.p7_tophits.p7_tophits_SortBySeqidxAndAlipos(self._th)
             function = "p7_tophits_SortBySeqidxAndAlipos"
+            with nogil:
+                status = libhmmer.p7_tophits.p7_tophits_SortBySeqidxAndAlipos(th)
         # elif by == "modelname"
         #     status = libhmmer.p7_tophits.p7_tophits_SortByModelnameAndAlipos(self._th)
         #     function = "p7_tophits_SortByModelnameAndAlipos"
@@ -815,6 +817,14 @@ cdef class TopHits:
             return self._th.is_sorted_by_seqidx
 
         raise ValueError("Invalid value for `by` argument: {!r}".format(by))
+
+    @property
+    def reported(self):
+        return self._th.nreported if self._thresholded else self._th.N
+
+    @property
+    def included(self):
+        return self._th.nincluded if self._thresholded else self._th.N
 
     # cpdef void print_targets(self, Pipeline pipeline):
     #     assert self._th != NULL

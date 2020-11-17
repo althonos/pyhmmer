@@ -57,3 +57,29 @@ class TestTopHits(unittest.TestCase):
         dom = self.hits[len(self.hits) - 1]
         dom_last = self.hits[-1]
         self.assertEqual(dom.name, dom_last.name)
+
+    def test_sort(self):
+        # check the hits are not sorted by default
+        self.assertFalse(self.hits.is_sorted())
+
+        # check sorting
+        self.hits.sort()
+        self.assertTrue(self.hits.is_sorted())
+        self.assertFalse(self.hits.is_sorted(by="seqidx"))
+
+        # check sorting using a different key
+        self.hits.sort(by="seqidx")
+        self.assertTrue(self.hits.is_sorted(by="seqidx"))
+        self.assertFalse(self.hits.is_sorted(by="key"))
+
+    def test_threshold(self):
+        # before thresholding, all hits are reported / included
+        self.assertEqual(self.hits.included, len(self.hits))
+        self.assertEqual(self.hits.reported, len(self.hits))
+
+        # thresholding should not segfault, even without sorting
+        self.hits.threshold()
+
+        # after thresholding, one of the htis will not be included.
+        self.assertEqual(self.hits.included, 15)
+        self.assertEqual(self.hits.reported, 16)

@@ -76,8 +76,9 @@ cdef class Profile:
 cdef class TopHits:
     cdef readonly Pipeline pipeline
     cdef P7_TOPHITS* _th
+    cdef bint _thresholded
 
-    cdef void _patch(self)
+    cdef void _on_edit(self)
 
     cpdef void threshold(self)
     cpdef void clear(self)
