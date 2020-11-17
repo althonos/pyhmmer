@@ -184,12 +184,18 @@ cdef class Domain:
     @property
     def c_evalue(self):
         assert self._dom != NULL
-        return exp(self._dom.lnP)
+        if self.hit.hits.pipeline._pli.long_targets:
+            return exp(self._dom.lnP)
+        else:
+            return exp(self._dom.lnP) * self.hit.hits.pipeline._pli.domZ
 
-    # @property
-    # def i_evalue(self):
-    #     assert self._dom != NULL
-    #     return exp(self._dom.lnP) * pli->domZ,
+    @property
+    def i_evalue(self):
+        assert self._dom != NULL
+        if self.hit.hits.pipeline._pli.long_targets:
+            return exp(self._dom.lnP)
+        else:
+            return exp(self._dom.lnP) * self.hit.hits.pipeline._pli.Z
 
 
 cdef class Domains:
@@ -265,13 +271,16 @@ cdef class Hit:
         return self._hit.pre_score - self._hit.score
 
     @property
-    def lnP(self):
-        assert self._hit != NULL
-        return self._hit.lnP
-
-    @property
     def domains(self):
         return Domains(self)
+
+    @property
+    def evalue(self):
+        assert self._hit != NULL
+        if self.hits.pipeline._pli.long_targets:
+            return exp(self._hit.lnP)
+        else:
+            return exp(self._hit.lnP) * self.hits.pipeline._pli.Z
 
 
 cdef class HMM:
@@ -496,7 +505,6 @@ cdef class Pipeline:
                 raise AllocationError("P7_DOMAINDEF")
             self._pli.do_reseeding = self._pli.ddef.do_reseeding = seed == 0
 
-
     def __dealloc__(self):
         libhmmer.p7_pipeline.p7_pipeline_Destroy(self._pli)
         libhmmer.p7_bg.p7_bg_Destroy(self._bg)
@@ -618,6 +626,11 @@ cdef class Pipeline:
             libhmmer.p7_profile.p7_profile_Destroy(gm)
             p7_oprofile.p7_oprofile_Destroy(om)
 
+        # store this pipeline as the pipeline that parameterizes the top hits;
+        # TODO: check if any previous pipeline was stored, and check its
+        #       parameters are compatible if so
+        hits.pipeline = self
+
         # return the hits
         return hits
 
@@ -725,8 +738,8 @@ cdef class TopHits:
         else:
             raise UnexpectedError(status, "p7_tophits_Merge")
 
-    cpdef void threshold(self, Pipeline pipeline):
-        """Apply score and e-value thresholds using ``pipeline`` parameters.
+    cpdef void threshold(self):
+        """Apply score and e-value thresholds using pipeline parameters.
 
         This function will mark the targets and domains satisfying the
         reporting thresholds set for ``pipeline`` as significant, and update
@@ -734,7 +747,7 @@ cdef class TopHits:
 
         """
         assert self._th != NULL
-        libhmmer.p7_tophits.p7_tophits_Threshold(self._th, pipeline._pli)
+        libhmmer.p7_tophits.p7_tophits_Threshold(self._th, self.pipeline._pli)
 
     cpdef void clear(self):
         """Free internals to allow reusing for a new pipeline run.

@@ -66,9 +66,10 @@ cdef class Profile:
 
 
 cdef class TopHits:
+    cdef readonly Pipeline pipeline
     cdef P7_TOPHITS* _th
 
-    cpdef void threshold(self, Pipeline pipeline)
+    cpdef void threshold(self)
     cpdef void clear(self)
     cpdef void sort(self, str by=*)
     cpdef bint is_sorted(self, str by=*)

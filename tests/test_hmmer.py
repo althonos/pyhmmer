@@ -43,20 +43,21 @@ class TestHmmsearch(unittest.TestCase):
 
         pipeline = Pipeline(hmm.alphabet)
         hits = pipeline.search(hmm, seqs)
+        hits.threshold()
         self.assertEqual(len(hits), 1)
 
         hit = hits[0]
         self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_113")
         self.assertAlmostEqual(hit.score, 8.6, delta=0.1)      # printed with %6.1f
         self.assertAlmostEqual(hit.bias, 1.5, delta=0.1)       # printed with  %5.1f
-        # self.assertAlmostEqual(hit.i_evalue, 0.096, delta=0.01)  # printed with %9.2g
+        self.assertAlmostEqual(hit.evalue, 0.096, delta=0.01)  # printed with %9.2g
         self.assertEqual(len(hit.domains), 1)
 
         domain = hit.domains[0]
         self.assertAlmostEqual(domain.score, 8.1, delta=0.1)
         self.assertAlmostEqual(domain.bias, 1.5, delta=0.1)
-        # self.assertAlmostEqual(hit.i_evalue, 0.14, delta=0.01)  # printed with %9.2g
-        self.assertAlmostEqual(domain.c_evalue, 6.5e-05, delta=0.01)  # printed with %9.2g
+        self.assertAlmostEqual(domain.i_evalue, 0.14, delta=0.01)  # printed with %9.2g
+        self.assertAlmostEqual(domain.c_evalue, 6.5e-05, delta=0.1e-5)  # printed with %9.2g
         self.assertEqual(domain.ali_from, 115)
         self.assertEqual(domain.ali_to, 129)
         self.assertEqual(domain.env_from, 115)
