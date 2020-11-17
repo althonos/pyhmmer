@@ -56,7 +56,7 @@ cdef extern from "hmmer.h" nogil:
     ctypedef p7_tophits_s P7_TOPHITS
     cdef struct p7_tophits_s:
         P7_HIT** hit
-        P7_HIT* unsrts
+        P7_HIT* unsrt
         uint64_t Nalloc
         uint64_t N
         uint64_t nreport
