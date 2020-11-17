@@ -72,6 +72,15 @@ class TestTopHits(unittest.TestCase):
         self.assertTrue(self.hits.is_sorted(by="seqidx"))
         self.assertFalse(self.hits.is_sorted(by="key"))
 
+    def test_sort_while_hit(self):
+        # check sorting while a Hit instance exists does not crash, and that
+        # the Hit still points to the right data
+        hit = self.hits[0]
+        self.assertEqual(hit.name, b"938293.PRJEB85.HG003688_14")
+        self.hits.sort()
+        self.assertNotEqual(self.hits[0].name, b"938293.PRJEB85.HG003688_14")
+        self.assertEqual(hit.name, b"938293.PRJEB85.HG003688_14")
+
     def test_threshold(self):
         # before thresholding, all hits are reported / included
         self.assertEqual(self.hits.included, len(self.hits))
