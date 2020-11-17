@@ -38,6 +38,12 @@ cdef class Hit:
     cdef readonly TopHits hits
     cdef P7_HIT* _hit
 
+    cpdef bint is_included(self)
+    cpdef bint is_reported(self)
+    cpdef bint is_new(self)
+    cpdef bint is_dropped(self)
+    cpdef bint is_duplicate(self)
+    
 
 cdef class HMM:
     # a reference to the Alphabet Python object to avoid deallocation of the

@@ -19,6 +19,15 @@ cdef extern from "hmmer.h" nogil:
     cdef struct p7_alidisplay_s:
         pass
 
+    # P7_HIT flags
+    cdef enum p7_hitflags_e:
+        p7_HITFLAGS_DEFAULT = 0b00000
+        p7_IS_INCLUDED      = 0b00001
+        p7_IS_REPORTED      = 0b00010
+        p7_IS_NEW           = 0b00100
+        p7_IS_DROPPED       = 0b01000
+        p7_IS_DUPLICATE     = 0b10000
+
     ctypedef p7_hit_s P7_HIT
     cdef struct p7_hit_s:
         char* name

@@ -34,8 +34,9 @@ from libeasel.alphabet cimport ESL_ALPHABET, esl_alphabet_Create, esl_abc_Valida
 from libeasel.getopts cimport ESL_GETOPTS, ESL_OPTIONS
 from libeasel.sq cimport ESL_SQ
 from libhmmer cimport p7_LOCAL
-from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.logsum cimport p7_FLogsumInit
+from libhmmer.p7_tophits cimport p7_hitflags_e
+from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e
 
 IF HMMER_IMPL == "VMX":
@@ -280,6 +281,24 @@ cdef class Hit:
             return exp(self._hit.lnP)
         else:
             return exp(self._hit.lnP) * self.hits.pipeline._pli.Z
+
+    # --- Methods ------------------------------------------------------------
+
+    cpdef bint is_included(self):
+        return (not self.hits._thresholded) or self._hit.flags & p7_hitflags_e.p7_IS_INCLUDED != 0
+
+    cpdef bint is_reported(self):
+        return (not self.hits._thresholded) or (self._hit.flags & p7_hitflags_e.p7_IS_REPORTED != 0)
+
+    cpdef bint is_new(self):
+        return self._hit.flags & p7_hitflags_e.p7_IS_NEW != 0
+
+    cpdef bint is_dropped(self):
+        return self._hit.flags & p7_hitflags_e.p7_IS_DROPPED != 0
+
+    cpdef bint is_duplicate(self):
+        return self._hit.flags & p7_hitflags_e.p7_IS_DUPLICATE
+
 
 
 cdef class HMM:
@@ -692,6 +711,13 @@ cdef class Profile:
 
 cdef class TopHits:
     """A ranked list of top-scoring hits.
+
+    `TopHits` can be thresholded using the parameters from the pipeline, but
+    it is also possible to manually filter them using Python code. Therefore,
+    contrary to the HMMER code, all hits are considered included & reported
+    when a `TopHits` instance is created, until the `~TopHits.threshold`
+    method is called.
+
     """
 
     cdef void _on_edit(self):
