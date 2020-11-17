@@ -1,3 +1,4 @@
+import abc
 import io
 import itertools
 import os
@@ -10,7 +11,11 @@ from pyhmmer.plan7 import Pipeline, HMMFile, TopHits
 from pyhmmer.easel import Alphabet, SequenceFile
 
 
-class TestHmmsearch(unittest.TestCase):
+class _TestSearch(metaclass=abc.ABCMeta):
+
+    @abc.abstractmethod
+    def get_hits(self, hmm, sequences):
+        return NotImplemented
 
     @staticmethod
     def table(name):
@@ -55,8 +60,7 @@ class TestHmmsearch(unittest.TestCase):
         with self.seqs_file("938293.PRJEB85.HG003687") as seqs_file:
             seqs = list(seqs_file)
 
-        pipeline = Pipeline(alphabet=hmm.alphabet)
-        hits = pipeline.search(hmm, seqs)
+        hits = self.get_hits(hmm, seqs)
         self.assertEqual(len(hits), 1)
 
         hits.sort()
@@ -104,3 +108,24 @@ class TestHmmsearch(unittest.TestCase):
                 self.assertAlmostEqual(hit.score, float(fields[5]), delta=0.1)
                 self.assertAlmostEqual(hit.bias, float(fields[6]), delta=0.1)
                 self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
+
+
+
+class TestHmmsearch(_TestSearch, unittest.TestCase):
+
+    def get_hits(self, hmm, seqs):
+        return pyhmmer.hmmsearch([hmm], seqs)
+
+
+class TestHmmsearchSingle(_TestSearch, unittest.TestCase):
+
+    def get_hits(self, hmm, seqs):
+        return pyhmmer.hmmsearch([hmm], seqs, cpus=1)
+
+
+class TestPipelinesearch(_TestSearch, unittest.TestCase):
+
+    def get_hits(self, hmm, seqs):
+        pipeline = Pipeline(alphabet=hmm.alphabet)
+        hits = pipeline.search(hmm, seqs)
+        return hits

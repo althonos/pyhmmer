@@ -71,7 +71,8 @@ def hmmsearch(
     for thread in threads[1:]:
         hits += thread.hits
 
-    # extract the first pipeline from the thread so that the TopHits can use it
+    # extract the first pipeline from the thread so that the TopHits can use it,
+    # and patch the Z value using either the options or the sequences count
     with threads[0].pipeline_lock:
         hits.pipeline, threads[0].pipeline = threads[0].pipeline, None
         hits.pipeline.Z = options.get("Z", len(sequences))
