@@ -527,6 +527,15 @@ cdef class Pipeline:
         libhmmer.p7_pipeline.p7_pipeline_Destroy(self._pli)
         libhmmer.p7_bg.p7_bg_Destroy(self._bg)
 
+    @property
+    def Z(self):
+        return self._pli.Z
+
+    @Z.setter
+    def Z(self, double Z):
+        assert self._pli != NULL
+        self._pli.Z = Z
+
     cpdef TopHits search(self, HMM hmm, object sequences, TopHits hits = None):
         """Run the pipeline using a query HMM against a sequence database.
 

@@ -43,7 +43,7 @@ cdef class Hit:
     cpdef bint is_new(self)
     cpdef bint is_dropped(self)
     cpdef bint is_duplicate(self)
-    
+
 
 cdef class HMM:
     # a reference to the Alphabet Python object to avoid deallocation of the
@@ -80,7 +80,7 @@ cdef class Profile:
 
 
 cdef class TopHits:
-    cdef readonly Pipeline pipeline
+    cdef public Pipeline pipeline
     cdef P7_TOPHITS* _th
     cdef bint _thresholded
 

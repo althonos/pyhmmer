@@ -19,6 +19,7 @@ class _PipelineThread(threading.Thread):
     ) -> None:
         super().__init__()
         self.pipeline = Pipeline(alphabet=Alphabet.amino(), **options)
+        self.pipeline_lock = threading.Lock()
         self.hits = TopHits()
         self.sequences = sequences
         self.hmm_queue = hmm_queue
@@ -29,7 +30,8 @@ class _PipelineThread(threading.Thread):
             if hmm is None:
                 self.hmm_queue.task_done()
                 return
-            self.pipeline.search(hmm, self.sequences, hits=self.hits)
+            with self.pipeline_lock:
+                self.pipeline.search(hmm, self.sequences, hits=self.hits)
             self.hmm_queue.task_done()
 
 
@@ -68,6 +70,11 @@ def hmmsearch(
     hits = threads[0].hits
     for thread in threads[1:]:
         hits += thread.hits
+
+    # extract the first pipeline from the thread so that the TopHits can use it
+    with threads[0].pipeline_lock:
+        hits.pipeline, threads[0].pipeline = threads[0].pipeline, None
+        hits.pipeline.Z = options.get("Z", len(sequences))
 
     # return thresholded hits
     hits.threshold()
