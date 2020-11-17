@@ -631,6 +631,7 @@ cdef class Pipeline:
         hits.pipeline = self
 
         # return the hits
+        hits._patch()
         return hits
 
 
@@ -693,6 +694,22 @@ cdef class TopHits:
     """A ranked list of top-scoring hits.
     """
 
+    cdef void _patch(self):
+        """Patch the internal ``P7_TOPHITS`` after a modification.
+
+        In the HMMER library, the ``hits`` array is only filled when the
+        top hits are sorted, but we way wish to index the hits directly
+        without sorting when using this class. To avoid this, we manually
+        patch the ``hits`` array using the same order as the ``unsrt`` array
+        whenever the object is modified.
+
+        """
+        for i in range(self._th.N):
+            self._th.hit[i] = &self._th.unsrt[i]
+        if self._th.N > 1:
+            self._th.is_sorted_by_sortkey = False
+            self._th.is_sorted_by_seqidx = False
+
     def __init__(self):
         assert self._th == NULL, "called TopHits.__init__ more than once"
         self._th = libhmmer.p7_tophits.p7_tophits_Create()
@@ -732,6 +749,7 @@ cdef class TopHits:
         cdef int status = libhmmer.p7_tophits.p7_tophits_Merge(self._th, (<TopHits> other)._th)
         if status == libeasel.eslOK:
             libhmmer.p7_tophits.p7_tophits_Reuse((<TopHits> other)._th)
+            self._patch()
             return self
         elif status == libeasel.eslEMEM:
             raise AllocationError("P7_TOPHITS")

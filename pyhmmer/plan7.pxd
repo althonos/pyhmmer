@@ -77,6 +77,8 @@ cdef class TopHits:
     cdef readonly Pipeline pipeline
     cdef P7_TOPHITS* _th
 
+    cdef void _patch(self)
+
     cpdef void threshold(self)
     cpdef void clear(self)
     cpdef void sort(self, str by=*)
