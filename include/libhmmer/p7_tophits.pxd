@@ -59,7 +59,7 @@ cdef extern from "hmmer.h" nogil:
         P7_HIT* unsrt
         uint64_t Nalloc
         uint64_t N
-        uint64_t nreport
+        uint64_t nreported
         uint64_t nincluded
         bint is_sorted_by_sortkey
         bint is_sorted_by_seqidx
