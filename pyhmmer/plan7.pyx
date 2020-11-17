@@ -334,7 +334,7 @@ cdef class HMM:
         if err == libeasel.eslEMEM:
             raise MemoryError("could not allocate C string")
         elif err != libeasel.eslOK:
-            raise RuntimeError("unexpected error in p7_hmm_SetName: {}".format(err))
+            raise UnexpectedError(err, "p7_hmm_SetName")
 
     @property
     def accession(self):
@@ -348,7 +348,7 @@ cdef class HMM:
         if err == libeasel.eslEMEM:
             raise MemoryError("could not allocate C string")
         elif err != libeasel.eslOK:
-            raise RuntimeError("unexpected error in p7_hmm_SetAccession: {}".format(err))
+            raise UnexpectedError(err, "p7_hmm_SetAccession")
 
     @property
     def description(self):
@@ -362,7 +362,7 @@ cdef class HMM:
         if err == libeasel.eslEMEM:
             raise MemoryError("could not allocate C string")
         elif err != libeasel.eslOK:
-            raise RuntimeError("unexpected error in p7_hmm_SetDescription: {}".format(err))
+            raise UnexpectedError(err, "p7_hmm_SetDescription")
 
     # --- Methods ------------------------------------------------------------
 
@@ -597,40 +597,61 @@ cdef class Pipeline:
             # build the profile from the HMM, using the first sequence length
             # as a hint for the model configuraiton
             gm = libhmmer.p7_profile.p7_profile_Create(hm.M, abc)
-            if libhmmer.modelconfig.p7_ProfileConfig(hm, bg, gm, sq.L, p7_LOCAL):
-                raise RuntimeError()
+            if gm == NULL:
+                raise AllocationError("P7_PROFILE")
+            status = libhmmer.modelconfig.p7_ProfileConfig(hm, bg, gm, sq.L, p7_LOCAL)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_ProfileEmit")
 
             # build the optimized model from the HMM
             om = p7_oprofile.p7_oprofile_Create(hm.M, abc)
-            if p7_oprofile.p7_oprofile_Convert(gm, om):
-                raise RuntimeError()
+            if om == NULL:
+                raise AllocationError("P7_OPROFILE")
+            status = p7_oprofile.p7_oprofile_Convert(gm, om)
+            if status == libeasel.eslEINVAL:
+                raise ValueError("standard and optimized profiles are not compatible")
+            elif status == libeasel.eslEMEM:
+                raise AllocationError("P7_OPROFILE")
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_oprofile_Convert")
 
             # configure the pipeline for the current HMM
-            if libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg):
-                raise RuntimeError()
+            status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
+            if status == libeasel.eslEINVAL:
+                raise ValueError("model does not have bit score thresholds expected by the pipeline")
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_pli_NewModel")
 
             # run the inner loop on all sequences
             while sq != NULL:
 
                 # digitize the sequence if needed
-                # if libeasel.sq.esl_sq_Copy(seq._sq, dbsq):
-                #     raise RuntimeError()
+                # TODO: give user control of digitization, and make it take
+                #       place on the user's side
                 if not libeasel.sq.esl_sq_IsDigital(sq):
-                    if libeasel.sq.esl_sq_Digitize(abc, sq):
-                        raise RuntimeError()
+                  status = libeasel.sq.esl_sq_Digitize(abc, sq)
+                  if status != libeasel.eslOK:
+                      raise UnexpectedError(status, "esl_sq_Digitize")
 
                 # configure the profile, background and pipeline for the new sequence
-                if libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq):
-                    raise RuntimeError()
-                if libhmmer.p7_bg.p7_bg_SetLength(bg, sq.n):
-                    raise RuntimeError()
-                if p7_oprofile.p7_oprofile_ReconfigLength(om, sq.n):
-                    raise RuntimeError()
+                status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_pli_NewSeq")
+                status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq.n)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_bg_SetLength")
+                status = p7_oprofile.p7_oprofile_ReconfigLength(om, sq.n)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
 
                 # run the pipeline on the sequence
-                status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, sq, NULL, th);
-                if status != libeasel.eslOK:
-                    raise RuntimeError()
+                status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, sq, NULL, th)
+                if status == libeasel.eslEINVAL:
+                    raise ValueError("model does not have bit score thresholds expected by the pipeline")
+                elif status == libeasel.eslERANGE:
+                    raise OverflowError("numerical overflow in the optimized vector implementation")
+                elif status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_Pipeline")
 
                 # clear pipeline for reuse for next target
                 libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
@@ -641,6 +662,8 @@ cdef class Pipeline:
                     sq = NULL if seq is None else seq._sq
 
             # deallocate the profile and optimized model
+            # TODO: also properly deallocate if an exception is thrown to
+            #       avoid memory leaks
             libhmmer.p7_profile.p7_profile_Destroy(gm)
             p7_oprofile.p7_oprofile_Destroy(om)
 
