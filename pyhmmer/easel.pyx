@@ -11,6 +11,8 @@ to facilitate the development of biological software in C. It is used by
 # --- C imports --------------------------------------------------------------
 
 from libc.stdint cimport uint32_t
+from libc.stdlib cimport malloc
+from libc.string cimport memmove, strdup, strlen
 from cpython.unicode cimport PyUnicode_FromUnicode
 
 cimport libeasel
@@ -19,6 +21,9 @@ cimport libeasel.bitfield
 cimport libeasel.keyhash
 cimport libeasel.sq
 cimport libeasel.sqio
+from libeasel cimport ESL_DSQ
+
+DEF eslERRBUFSIZE = 128
 
 # --- Python imports ---------------------------------------------------------
 
@@ -272,11 +277,20 @@ cdef class KeyHash:
 
 
 cdef class Sequence:
-    """A biological sequence with some associated metadata.
+    """An abstract biological sequence with some associated metadata.
 
-    Todo:
-        Make `TextSequence` and `DigitalSequence` subclasses that expose the
-        right parts of the API without confusing the user.
+    Easel provides two different ways of storing a sequence: text, or digital.
+    In the HMMER code, changing from one mode to another mode is done in place,
+    which allows recycling memory. However, doing so can be confusing since
+    there is no way to know statically the representation of a sequence.
+
+    To avoid this, ``pyhmmer`` provides two subclasses of the `Sequence`
+    abstract class to maintain the storage contract: `TextSequence` and
+    `DigitalSequence`. Functions expecting sequences in digital format, like
+    `pyhmmer.plan7.Pipeline.search`, can then explicitly declare the type of
+    their arguments. This allows type checkers such as ``mypy`` to detect
+    potential contract breaches at compile-time.
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -284,28 +298,8 @@ cdef class Sequence:
     def __cinit__(self):
         self._sq = NULL
 
-    def __init__(self, name=None, sequence=None, description=None, accession=None, secondary_structure=None):
-
-        cdef char* name_ptr = b""
-        cdef char* seq_ptr  = b""
-        cdef char* desc_ptr = NULL
-        cdef char* acc_ptr  = NULL
-        cdef char* ss_ptr   = NULL
-
-        if name is not None:
-            name_ptr = <char*> name
-        if description is not None:
-            desc_ptr = <char*> description
-        if accession is not None:
-            acc_ptr = <char*> accession
-        if sequence is not None:
-            seq_ptr = <char*> sequence
-        if secondary_structure is not None:
-            ss_ptr = <char*> secondary_structure
-
-        self._sq = libeasel.sq.esl_sq_CreateFrom(name_ptr, seq_ptr, desc_ptr, acc_ptr, ss_ptr)
-        if not self._sq:
-            raise AllocationError("ESL_SQ")
+    def __init__(self):
+        raise TypeError("Can't instantiate abstract class 'Sequence'")
 
     def __dealloc__(self):
         libeasel.sq.esl_sq_Destroy(self._sq)
@@ -397,8 +391,61 @@ cdef class Sequence:
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_Reuse")
 
-    cpdef void digitize(self, Alphabet alphabet):
-        libeasel.sq.esl_sq_Digitize(alphabet._abc, self._sq)
+
+cdef class TextSequence(Sequence):
+
+    def __init__(
+        self,
+        bytes name=None,
+        bytes description=None,
+        bytes accession=None,
+        bytes sequence=None,
+        bytes secondary_structure=None
+    ):
+        cdef char* name_ptr = b""
+        cdef char* seq_ptr  = b""
+        cdef char* desc_ptr = NULL
+        cdef char* acc_ptr  = NULL
+        cdef char* ss_ptr   = NULL
+
+        if name is not None:
+            name_ptr = <char*> name
+        if description is not None:
+            desc_ptr = <char*> description
+        if accession is not None:
+            acc_ptr = <char*> accession
+        if sequence is not None:
+            seq_ptr = <char*> sequence
+        if secondary_structure is not None:
+            ss_ptr = <char*> secondary_structure
+
+        self._sq = libeasel.sq.esl_sq_CreateFrom(name_ptr, seq_ptr, desc_ptr, acc_ptr, ss_ptr)
+        if not self._sq:
+            raise AllocationError("ESL_SQ")
+
+    cpdef DigitalSequence digitize(self, Alphabet alphabet):
+        """Convert the text sequence to a digital sequence using ``alphabet``.
+        """
+        cdef int status
+        cdef DigitalSequence new
+
+        new = DigitalSequence.__new__(DigitalSequence, alphabet)
+        new._sq = libeasel.sq.esl_sq_CreateDigital(alphabet._abc)
+        if new._sq == NULL:
+            raise AllocationError("ESL_SQ")
+
+        status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_sq_Copy")
+
+        assert libeasel.sq.esl_sq_IsDigital(new._sq)
+        return new
+
+
+cdef class DigitalSequence(Sequence):
+
+    def __cinit__(self, Alphabet alphabet):
+        self.alphabet = alphabet
 
 
 cdef class SequenceFile:
@@ -428,7 +475,7 @@ cdef class SequenceFile:
 
     @classmethod
     def parse(cls, bytes buffer, str format):
-        cdef Sequence seq = Sequence.__new__(Sequence)
+        cdef Sequence seq = TextSequence.__new__(TextSequence)
         seq._sq = libeasel.sq.esl_sq_Create()
         if not seq._sq:
             raise AllocationError("ESL_SQ")
@@ -531,7 +578,7 @@ cdef class SequenceFile:
             if you can to recycle the internal buffers.
 
         """
-        cdef Sequence seq = Sequence.__new__(Sequence)
+        cdef Sequence seq = TextSequence.__new__(TextSequence)
         seq._sq = libeasel.sq.esl_sq_Create()
         if not seq._sq:
             raise AllocationError("ESL_SQ")
@@ -565,7 +612,7 @@ cdef class SequenceFile:
             while recycling the same `Sequence` buffer:
 
             >>> with SequenceFile("vendor/hmmer/testsuite/ecori.fa") as sf:
-            ...     seq = Sequence()
+            ...     seq = TextSequence()
             ...     while sf.readinto(seq) is not None:
             ...         # ... process seq here ... #
             ...         seq.clear()
@@ -609,7 +656,7 @@ cdef class SequenceFile:
     # --- Fetch methods ------------------------------------------------------
 
     cpdef Sequence fetch(self, bytes key, bint skip_info=False, bint skip_sequence=False):
-        cdef Sequence seq = Sequence.__new__(Sequence)
+        cdef Sequence seq = TextSequence.__new__(TextSequence)
         seq._sq = libeasel.sq.esl_sq_Create()
         if not seq._sq:
             raise AllocationError("ESL_SQ")

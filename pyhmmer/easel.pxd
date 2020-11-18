@@ -39,9 +39,16 @@ cdef class KeyHash:
 cdef class Sequence:
     cdef ESL_SQ* _sq
 
-    cpdef void digitize(self, Alphabet alphabet)
     cpdef void clear(self)
     cpdef uint32_t checksum(self)
+
+
+cdef class TextSequence(Sequence):
+    cpdef DigitalSequence digitize(self, Alphabet alphabet)
+
+
+cdef class DigitalSequence(Sequence):
+    cdef Alphabet alphabet
 
 
 cdef class SequenceFile:

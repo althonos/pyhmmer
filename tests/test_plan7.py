@@ -40,7 +40,7 @@ class TestTopHits(unittest.TestCase):
         with HMMFile(hmm_path) as hmm_file:
             self.hmm = next(hmm_file)
         with SequenceFile(seqs_path) as seqs_file:
-            self.seqs = list(seqs_file)
+            self.seqs = [seq.digitize(self.hmm.alphabet) for seq in seqs_file]
 
         self.pipeline = Pipeline(alphabet=self.hmm.alphabet)
         self.hits = self.pipeline.search(self.hmm, self.seqs)

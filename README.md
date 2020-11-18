@@ -88,34 +88,18 @@ $ pydoc pyhmmer.plan7
 
 ## 💡 Example
 
-Use `pyhmmer` to run `hmmsearch`, and display alignments for hits with
-domains longer than 30 letters :
+Use `pyhmmer` to run `hmmsearch`, and obtain a ``TopHits`` instance that
+can be used for further sorting/querying in Python:
 
 ```python
 import pyhmmer
 
-# load sequences from the FASTA file
-# (HMMER normally rewinds the file containing the sequences and reads it
-# again for every HMM, but we can save some time by loading them ahead of
-# time, provided the machine has enough memory)
 with pyhmmer.easel.SequenceFile("938293.PRJEB85.HG003687.faa") as file:
-    sequences = list(file)
+    alphabet = file.guess_alphabet()
+    sequences = [seq.digitize(alphabet) for seq in file]
 
-# open the HMM file and use it to run `hmmsearch`
-# (we don't need to collect ahead of time here, we can just pass an iterator
-# to `pyhmmer.hmmsearch`).
 with pyhmmer.plan7.HMMFile("Pfam.hmm") as hmms:
     hits = pyhmmer.hmmsearch(hmms, sequences_file)
-
-# find hit domains where the alignment is longer than 30 letters and the
-# domain score is higher than 9, then print the aligned sequences
-for hit in hits:
-    for domain in hit.domains:
-        if domain.score > 9 and len(domain.alignment) > 30:
-            print(hit.name, domain.alignment.hmm_name)
-            print(domain.alignment.hmm_sequence)
-            print(domain.alignment.identity_sequence)
-            print(domain.alignment.target_sequence)
 ```
 
 

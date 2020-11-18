@@ -44,7 +44,18 @@ class TestSequenceFile(unittest.TestCase):
         with self.assertRaises(ValueError):
             _file = easel.SequenceFile.parse(b"> EcoRI\nGAATTC\n", format="nonsense")
 
-    def test_read_fasta(self):
+    def test_read_skip_info(self):
+        fasta = os.path.join(self.formats_folder, "fasta")
+
+        with easel.SequenceFile(fasta) as f:
+            seq = f.read()
+            self.assertEqual(seq.name, b"SNRPA_DROME")
+
+        with easel.SequenceFile(fasta) as f:
+            seq = f.read(skip_info=True)
+            self.assertEqual(seq.name, b"")
+
+    def test_readformat_fasta(self):
         for filename in ["fasta", "fasta.2", "fasta.odd.1"]:
             fasta = os.path.join(self.formats_folder, filename)
 
@@ -62,7 +73,12 @@ class TestSequenceFile(unittest.TestCase):
             with easel.SequenceFile(fasta, "embl") as f:
                 self.assertRaises(ValueError, f.read)
 
-    def test_read_embl(self):
+    def test_readformat_fasta_error(self):
+        fasta = os.path.join(self.formats_folder, "fasta.bad.1")
+        with easel.SequenceFile(fasta, "fasta") as f:
+            self.assertRaises(ValueError, f.read)
+
+    def test_readformat_embl(self):
         embl = os.path.join(self.formats_folder, "embl")
 
         # check reading an EMBL file works
@@ -77,9 +93,4 @@ class TestSequenceFile(unittest.TestCase):
 
         # check reading an EMBL file while giving another format fails
         with easel.SequenceFile(embl, "fasta") as f:
-            self.assertRaises(ValueError, f.read)
-
-    def test_read_fasta_error(self):
-        fasta = os.path.join(self.formats_folder, "fasta.bad.1")
-        with easel.SequenceFile(fasta, "fasta") as f:
             self.assertRaises(ValueError, f.read)

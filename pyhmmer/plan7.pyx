@@ -48,7 +48,7 @@ ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse cimport impl_Init
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
-from .easel cimport Alphabet, Sequence
+from .easel cimport Alphabet, Sequence, DigitalSequence
 
 
 # --- Python imports ---------------------------------------------------------
@@ -300,7 +300,6 @@ cdef class Hit:
         return self._hit.flags & p7_hitflags_e.p7_IS_DUPLICATE
 
 
-
 cdef class HMM:
     """A data structure storing the Plan7 Hidden Markov Model.
     """
@@ -542,9 +541,9 @@ cdef class Pipeline:
         Arguments:
             hmm (`~pyhmmer.plan7.HMM`): The HMM object to use to query the
                 sequence database.
-            sequences (`Iterable` of `~pyhmmer.easel.Sequence`): The sequences
-                to query with the HMMs. Pass a `~pyhmmer.easel.SequenceFile`
-                instance to iteratively read from disk.
+            sequences (`Iterable` of `~pyhmmer.easel.DigitalSequence`): The
+                sequences to query with the HMMs. Pass a `~SequenceFile`
+                instance in digital mode to iteratively read from disk.
             hits (`~pyhmmer.plan7.TopHits`, optional): A hit collection to
                 store results in, if any. If `None`, a new collection will
                 be allocated. Use a non-`None` value if you are running
@@ -563,16 +562,16 @@ cdef class Pipeline:
 
         """
 
-        cdef int           status
-        cdef Sequence      seq
-        cdef ESL_ALPHABET* abc     = self.alphabet._abc
-        cdef P7_BG*        bg      = self._bg
-        cdef P7_HMM*       hm      = hmm._hmm
-        cdef P7_PROFILE*   gm
-        cdef P7_OPROFILE*  om
-        cdef P7_TOPHITS*   th
-        cdef P7_PIPELINE*  pli     = self._pli
-        cdef ESL_SQ*       sq      = NULL
+        cdef int                  status
+        cdef DigitalSequence      seq
+        cdef ESL_ALPHABET*        abc     = self.alphabet._abc
+        cdef P7_BG*               bg      = self._bg
+        cdef P7_HMM*              hm      = hmm._hmm
+        cdef P7_PROFILE*          gm
+        cdef P7_OPROFILE*         om
+        cdef P7_TOPHITS*          th
+        cdef P7_PIPELINE*         pli     = self._pli
+        cdef ESL_SQ*              sq      = NULL
 
         assert self._pli != NULL
 
@@ -637,10 +636,10 @@ cdef class Pipeline:
                 # digitize the sequence if needed
                 # TODO: give user control of digitization, and make it take
                 #       place on the user's side
-                if not libeasel.sq.esl_sq_IsDigital(sq):
-                  status = libeasel.sq.esl_sq_Digitize(abc, sq)
-                  if status != libeasel.eslOK:
-                      raise UnexpectedError(status, "esl_sq_Digitize")
+                # if not libeasel.sq.esl_sq_IsDigital(sq):
+                #   status = libeasel.sq.esl_sq_Digitize(abc, sq)
+                #   if status != libeasel.eslOK:
+                #       raise UnexpectedError(status, "esl_sq_Digitize")
 
                 # configure the profile, background and pipeline for the new sequence
                 status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq)

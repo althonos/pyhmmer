@@ -24,6 +24,8 @@ Easel
    pyhmmer.easel.Bitfield
    pyhmmer.easel.KeyHash
    pyhmmer.easel.Sequence
+   pyhmmer.easel.TextSequence
+   pyhmmer.easel.DigitalSequence
    pyhmmer.easel.SequenceFile
 
 

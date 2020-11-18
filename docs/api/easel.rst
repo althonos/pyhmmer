@@ -22,6 +22,12 @@ Easel
 .. autoclass:: pyhmmer.easel.Sequence
    :members:
 
+.. autoclass:: pyhmmer.easel.TextSequence(Sequence)
+   :members:
+
+.. autoclass:: pyhmmer.easel.DigitalSequence(Sequence)
+   :members:
+
 
 .. autoclass:: pyhmmer.easel.SequenceFile
    :members:

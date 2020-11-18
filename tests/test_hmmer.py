@@ -58,7 +58,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
         with self.hmm_file("Thioesterase") as hmm_file:
             hmm = next(hmm_file)
         with self.seqs_file("938293.PRJEB85.HG003687") as seqs_file:
-            seqs = list(seqs_file)
+            seqs = [seq.digitize(hmm.alphabet) for seq in seqs_file]
 
         hits = self.get_hits(hmm, seqs)
         self.assertEqual(len(hits), 1)
@@ -87,7 +87,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
         with self.hmm_file("PF02826") as hmm_file:
             hmm = next(hmm_file)
         with self.seqs_file("938293.PRJEB85.HG003687") as seqs_file:
-            seqs = list(seqs_file)
+            seqs = [seq.digitize(hmm.alphabet) for seq in seqs_file]
 
         pipeline = Pipeline(alphabet=hmm.alphabet)
         hits = pipeline.search(hmm, seqs)
@@ -98,9 +98,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
 
         with self.table("PF02826.tbl") as table:
             lines = filter(lambda line: not line.startswith("#"), table)
-
             for line, hit in itertools.zip_longest(lines, hits):
-
                 fields = list(filter(None, line.strip().split(" ")))
                 self.assertIsNot(line, None)
                 self.assertIsNot(hit, None)
@@ -108,7 +106,6 @@ class _TestSearch(metaclass=abc.ABCMeta):
                 self.assertAlmostEqual(hit.score, float(fields[5]), delta=0.1)
                 self.assertAlmostEqual(hit.bias, float(fields[6]), delta=0.1)
                 self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
-
 
 
 class TestHmmsearch(_TestSearch, unittest.TestCase):
