@@ -103,6 +103,13 @@ cdef class Alphabet:
             return False
         return self._abc.type == other._abc.type   # FIXME
 
+    def __getstate__(self):
+        return {"type": self._abc.type}
+
+    def __setstate__(self, state):
+        self._init_default(state["type"])
+
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -279,16 +286,16 @@ cdef class KeyHash:
 cdef class Sequence:
     """An abstract biological sequence with some associated metadata.
 
-    Easel provides two different ways of storing a sequence: text, or digital.
+    Easel provides two different mode to store a sequence: text, or digital.
     In the HMMER code, changing from one mode to another mode is done in
     place, which allows recycling memory. However, doing so can be confusing
     since there is no way to know statically the representation of a sequence.
 
     To avoid this, ``pyhmmer`` provides two subclasses of the `Sequence`
-    abstract class to maintain the storage contract: `TextSequence` and
+    abstract class to maintain the mode contract: `TextSequence` and
     `DigitalSequence`. Functions expecting sequences in digital format, like
     `pyhmmer.hmmsearch`, can then use Python type system to make sure they
-    receive sequences in the right format. This allows type checkers such as
+    receive sequences in the right mode. This allows type checkers such as
     ``mypy`` to detect potential contract breaches at compile-time.
 
     """
@@ -393,6 +400,8 @@ cdef class Sequence:
 
 
 cdef class TextSequence(Sequence):
+    """A biological sequence stored in text mode.
+    """
 
     def __init__(
         self,
@@ -433,6 +442,13 @@ cdef class TextSequence(Sequence):
 
 
 cdef class DigitalSequence(Sequence):
+    """A biological sequence stored in digital mode.
+
+    Attributes:
+        alphabet (`Alphabet`, *readonly*): The biological alphabet used to
+            encode this sequence to digits.
+
+    """
 
     def __cinit__(self, Alphabet alphabet):
         self.alphabet = alphabet
