@@ -440,9 +440,10 @@ cdef class SequenceFile:
 
         cdef int fmt = libeasel.sqio.eslSQFILE_UNKNOWN
         if format is not None:
-            fmt = cls._formats.get(format.lower())
-            if fmt is None:
+            format_ = format.lower()
+            if format_ not in cls._formats:
                 raise ValueError("Invalid sequence format: {!r}".format(format))
+            fmt = cls._formats[format_]
 
         cdef int status = libeasel.sqio.esl_sqio_Parse(buffer, len(buffer), seq._sq, fmt)
         if status == libeasel.eslEFORMAT:
@@ -462,9 +463,10 @@ cdef class SequenceFile:
     def __init__(self, str file, str format=None):
         cdef int fmt = libeasel.sqio.eslSQFILE_UNKNOWN
         if format is not None:
-            fmt = self._formats.get(format.lower())
-            if fmt is None:
+            format_ = format.lower()
+            if format_ not in self._formats:
                 raise ValueError("Invalid sequence format: {!r}".format(format))
+            fmt = self._formats[format_]
 
         cdef bytes fspath = os.fsencode(file)
         cdef int status = libeasel.sqio.esl_sqfile_Open(fspath, fmt, NULL, &self._sqfp)
@@ -535,24 +537,6 @@ cdef class SequenceFile:
             raise AllocationError("ESL_SQ")
         return self.readinto(seq, skip_info=skip_info, skip_sequence=skip_sequence)
 
-    # cpdef Sequence read_info(self):
-    #     """Read info from the next sequence in the file.
-    #     """
-    #     cdef Sequence seq = Sequence.__new__(Sequence)
-    #     seq._sq = libeasel.sq.esl_sq_Create()
-    #     if not seq._sq:
-    #         raise AllocationError("ESL_SQ")
-    #     return self.readinto_info(seq)
-    #
-    # cpdef Sequence read_seq(self):
-    #     """Read the next sequence from the file, without loading metadata.
-    #     """
-    #     cdef Sequence seq = Sequence.__new__(Sequence)
-    #     seq._sq = libeasel.sq.esl_sq_Create()
-    #     if not seq._sq:
-    #         raise AllocationError("ESL_SQ")
-    #     return self.readinto_seq(seq)
-
     cpdef Sequence readinto(self, Sequence seq, bint skip_info=False, bint skip_sequence=False):
         """Read the next sequence from the file, using ``seq`` to store data.
 
@@ -620,44 +604,6 @@ cdef class SequenceFile:
             raise ValueError("Could not parse file: {}".format(msg.decode()))
         else:
             raise UnexpectedError(status, function)
-
-    # cpdef Sequence readinto_info(self, Sequence seq):
-    #     """Read info from the next sequence, using ``seq`` to store metadata.
-    #     """
-    #     assert seq._sq != NULL
-    #
-    #     if self._sqfp == NULL:
-    #         raise ValueError("I/O operation on closed file.")
-    #
-    #     cdef int status = libeasel.sqio.esl_sqio_ReadInfo(self._sqfp, seq._sq)
-    #     if status == libeasel.eslOK:
-    #         return seq
-    #     elif status == libeasel.eslEOF:
-    #         return None
-    #     elif status == libeasel.eslEFORMAT:
-    #         msg = <bytes> libeasel.sqio.esl_sqfile_GetErrorBuf(self._sqfp)
-    #         raise ValueError("Could not parse file: {}".format(msg.decode()))
-    #     else:
-    #         raise UnexpectedError(status, "esl_sqio_ReadInfo")
-    #
-    # cpdef Sequence readinto_seq(self, Sequence seq):
-    #     """Read the next sequence into ``seq``, without loading metadata.
-    #     """
-    #     assert seq._sq != NULL
-    #
-    #     if self._sqfp == NULL:
-    #         raise ValueError("I/O operation on closed file.")
-    #
-    #     cdef int status = libeasel.sqio.esl_sqio_ReadSequence(self._sqfp, seq._sq)
-    #     if status == libeasel.eslOK:
-    #         return seq
-    #     elif status == libeasel.eslEOF:
-    #         return None
-    #     elif status == libeasel.eslEFORMAT:
-    #         msg = <bytes> libeasel.sqio.esl_sqfile_GetErrorBuf(self._sqfp)
-    #         raise ValueError("Could not parse file: {}".format(msg.decode()))
-    #     else:
-    #         raise UnexpectedError(status, "esl_sqio_ReadSequence")
 
 
     # --- Fetch methods ------------------------------------------------------

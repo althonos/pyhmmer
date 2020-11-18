@@ -13,6 +13,10 @@ class TestSequenceFile(unittest.TestCase):
             __file__, os.pardir, os.pardir, "vendor", "easel", "formats"
         ))
 
+    def test_init_error_unknownformat(self):
+        with self.assertRaises(ValueError):
+            _file = easel.SequenceFile("file.x", format="nonsense")
+
     def test_init_error_empty(self):
         with tempfile.NamedTemporaryFile() as empty:
             # without a format argument, we can't determine the file format
@@ -35,6 +39,10 @@ class TestSequenceFile(unittest.TestCase):
     def test_parse(self):
         seq = easel.SequenceFile.parse(b"> EcoRI\nGAATTC\n", format="fasta")
         self.assertEqual(seq.name, b"EcoRI")
+
+    def test_parse_error_unknownformat(self):
+        with self.assertRaises(ValueError):
+            _file = easel.SequenceFile.parse(b"> EcoRI\nGAATTC\n", format="nonsense")
 
     def test_read_fasta(self):
         for filename in ["fasta", "fasta.2", "fasta.odd.1"]:
