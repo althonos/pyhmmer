@@ -280,16 +280,16 @@ cdef class Sequence:
     """An abstract biological sequence with some associated metadata.
 
     Easel provides two different ways of storing a sequence: text, or digital.
-    In the HMMER code, changing from one mode to another mode is done in place,
-    which allows recycling memory. However, doing so can be confusing since
-    there is no way to know statically the representation of a sequence.
+    In the HMMER code, changing from one mode to another mode is done in
+    place, which allows recycling memory. However, doing so can be confusing
+    since there is no way to know statically the representation of a sequence.
 
     To avoid this, ``pyhmmer`` provides two subclasses of the `Sequence`
     abstract class to maintain the storage contract: `TextSequence` and
     `DigitalSequence`. Functions expecting sequences in digital format, like
-    `pyhmmer.plan7.Pipeline.search`, can then explicitly declare the type of
-    their arguments. This allows type checkers such as ``mypy`` to detect
-    potential contract breaches at compile-time.
+    `pyhmmer.hmmsearch`, can then use Python type system to make sure they
+    receive sequences in the right format. This allows type checkers such as
+    ``mypy`` to detect potential contract breaches at compile-time.
 
     """
 
@@ -402,26 +402,16 @@ cdef class TextSequence(Sequence):
         bytes sequence=None,
         bytes secondary_structure=None
     ):
-        cdef char* name_ptr = b""
-        cdef char* seq_ptr  = b""
-        cdef char* desc_ptr = NULL
-        cdef char* acc_ptr  = NULL
-        cdef char* ss_ptr   = NULL
-
-        if name is not None:
-            name_ptr = <char*> name
-        if description is not None:
-            desc_ptr = <char*> description
-        if accession is not None:
-            acc_ptr = <char*> accession
-        if sequence is not None:
-            seq_ptr = <char*> sequence
-        if secondary_structure is not None:
-            ss_ptr = <char*> secondary_structure
-
-        self._sq = libeasel.sq.esl_sq_CreateFrom(name_ptr, seq_ptr, desc_ptr, acc_ptr, ss_ptr)
+        self._sq = libeasel.sq.esl_sq_Create()
         if not self._sq:
             raise AllocationError("ESL_SQ")
+
+        if name is not None:
+            self.name = name
+        if accession is not None:
+            self.accession = accession
+        if description is not None:
+            self.description = description
 
     cpdef DigitalSequence digitize(self, Alphabet alphabet):
         """Convert the text sequence to a digital sequence using ``alphabet``.
@@ -686,11 +676,14 @@ cdef class SequenceFile:
 
         """
 
+        cdef int ty
+        cdef int status
+        cdef Alphabet alphabet
+
         if self._sqfp == NULL:
             raise ValueError("I/O operation on closed file.")
 
-        cdef int ty = 0
-        cdef int status = libeasel.sqio.esl_sqfile_GuessAlphabet(self._sqfp, &ty)
+        status = libeasel.sqio.esl_sqfile_GuessAlphabet(self._sqfp, &ty)
         if status == libeasel.eslOK:
             alphabet = Alphabet.__new__(Alphabet)
             alphabet._init_default(ty)

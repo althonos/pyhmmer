@@ -5,7 +5,7 @@ import threading
 import typing
 import multiprocessing
 
-from .easel import Alphabet, Sequence, SequenceFile
+from .easel import Alphabet, DigitalSequence, TextSequence, SequenceFile
 from .plan7 import Pipeline, TopHits, HMM, HMMFile
 
 
@@ -13,7 +13,7 @@ class _PipelineThread(threading.Thread):
 
     def __init__(
         self,
-        sequences: typing.Iterable[Sequence],
+        sequences: typing.Iterable[DigitalSequence],
         hmm_queue: "queue.Queue[typing.Optional[HMM]]",
         options: typing.Dict[str, typing.Any],
     ) -> None:
@@ -37,7 +37,7 @@ class _PipelineThread(threading.Thread):
 
 def hmmsearch(
     hmms: typing.Iterable[HMM],
-    sequences: typing.Sequence[Sequence],
+    sequences: typing.Sequence[DigitalSequence],
     cpus: int = 0,
     **options: typing.Any,
 ) -> TopHits:
@@ -95,8 +95,13 @@ if __name__ == "__main__":
     parser.add_argument("seqdb")
     args = parser.parse_args()
 
-    with SequenceFile(args.seqdb) as seqs:
-        sequences = list(seqs)
+    with SequenceFile(args.seqdb) as seqfile:
+        alphabet = seqfile.guess_alphabet()
+        seq = TextSequence()
+        sequences = []
+        while seqfile.readinto(seq) is not None:
+            sequences.append(seq.digitize(alphabet))
+            seq.clear()
 
     with HMMFile(args.hmmfile) as hmms:
         hmmsearch(hmms, sequences, cpus=args.jobs)
