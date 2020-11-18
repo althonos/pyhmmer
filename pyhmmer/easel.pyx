@@ -503,50 +503,78 @@ cdef class SequenceFile:
 
     # --- Read methods -------------------------------------------------------
 
-    cpdef Sequence read(self):
+    cpdef Sequence read(self, bint skip_info=False, bint skip_sequence=False):
         """Read the next sequence from the file.
+
+        Arguments:
+            skip_info (`bool`): Pass `True` to disable reading the sequence
+                *metadata*, and only read the sequence *letters*. Defaults to
+                False`.
+            skip_sequence (`bool`): Pass `True` to disable reading the
+                sequence *letters*, and only read the sequence *metadata*.
+                Defaults to `False`.
 
         Returns:
             `Sequence`: The next sequence in the file, or `None` if all
             sequences were read from the file.
 
+        Raises:
+            `ValueError`: When attempting to read a sequence from a closed
+                file, or when the file could not be parsed.
+
         Hint:
             This method allocates a new sequence, which is not efficient in
             case the sequences are being read within a tight loop. Use
-            `readinto` with an already initialized `Sequence` if you wish to
-            recycle the buffers
+            `SequenceFile.readinto` with an already initialized `Sequence`
+            if you can to recycle the internal buffers.
 
         """
         cdef Sequence seq = Sequence.__new__(Sequence)
         seq._sq = libeasel.sq.esl_sq_Create()
         if not seq._sq:
             raise AllocationError("ESL_SQ")
-        return self.readinto(seq)
+        return self.readinto(seq, skip_info=skip_info, skip_sequence=skip_sequence)
 
-    cpdef Sequence read_info(self):
-        """Read info from the next sequence in the file.
-        """
-        cdef Sequence seq = Sequence.__new__(Sequence)
-        seq._sq = libeasel.sq.esl_sq_Create()
-        if not seq._sq:
-            raise AllocationError("ESL_SQ")
-        return self.readinto_info(seq)
+    # cpdef Sequence read_info(self):
+    #     """Read info from the next sequence in the file.
+    #     """
+    #     cdef Sequence seq = Sequence.__new__(Sequence)
+    #     seq._sq = libeasel.sq.esl_sq_Create()
+    #     if not seq._sq:
+    #         raise AllocationError("ESL_SQ")
+    #     return self.readinto_info(seq)
+    #
+    # cpdef Sequence read_seq(self):
+    #     """Read the next sequence from the file, without loading metadata.
+    #     """
+    #     cdef Sequence seq = Sequence.__new__(Sequence)
+    #     seq._sq = libeasel.sq.esl_sq_Create()
+    #     if not seq._sq:
+    #         raise AllocationError("ESL_SQ")
+    #     return self.readinto_seq(seq)
 
-    cpdef Sequence read_seq(self):
-        """Read the next sequence from the file, without loading metadata.
-        """
-        cdef Sequence seq = Sequence.__new__(Sequence)
-        seq._sq = libeasel.sq.esl_sq_Create()
-        if not seq._sq:
-            raise AllocationError("ESL_SQ")
-        return self.readinto_seq(seq)
-
-    cpdef Sequence readinto(self, Sequence seq):
+    cpdef Sequence readinto(self, Sequence seq, bint skip_info=False, bint skip_sequence=False):
         """Read the next sequence from the file, using ``seq`` to store data.
 
+        Arguments:
+            seq (`~pyhmmer.easel.Sequence`): A sequence object to use to store
+                the next entry in the file. If this sequence was used before,
+                it must be properly reset (using the `Sequence.clear` method)
+                before using it again with `readinto`.
+            skip_info (`bool`): Pass `True` to disable reading the sequence
+                *metadata*, and only read the sequence *letters*. Defaults to
+                False`.
+            skip_sequence (`bool`): Pass `True` to disable reading the
+                sequence *letters*, and only read the sequence *metadata*.
+                Defaults to `False`.
+
         Returns:
-            `Sequence`: A reference to ``seq``, or `None` if no sequences are
-            left in the file.
+            `~pyhmmer.easel.Sequence`: A reference to ``seq`` that was passed
+            as an input, or `None` if no sequences are left in the file.
+
+        Raises:
+            `ValueError`: When attempting to read a sequence from a closed
+                file, or when the file could not be parsed.
 
         Example:
             Use `SequenceFile.readinto` to loop over the sequences in a file
@@ -561,77 +589,87 @@ cdef class SequenceFile:
         """
         assert seq._sq != NULL
 
-        if self._sqfp == NULL:
+        cdef int status
+        cdef str function
+        cdef ESL_SQFILE* sqfp = self._sqfp
+
+        if sqfp == NULL:
             raise ValueError("I/O operation on closed file.")
 
-        cdef int status = libeasel.sqio.esl_sqio_Read(self._sqfp, seq._sq)
+        if not skip_info and not skip_sequence:
+            function = "esl_sqio_Read"
+            with nogil:
+                status = libeasel.sqio.esl_sqio_Read(sqfp, seq._sq)
+        elif not skip_info:
+            function = "esl_sqio_ReadInfo"
+            with nogil:
+                status = libeasel.sqio.esl_sqio_ReadInfo(sqfp, seq._sq)
+        elif not skip_sequence:
+            function = "esl_sqio_ReadSequence"
+            with nogil:
+                status = libeasel.sqio.esl_sqio_ReadSequence(sqfp, seq._sq)
+        else:
+            raise ValueError("Cannot skip reading both sequence and metadata.")
+
         if status == libeasel.eslOK:
             return seq
         elif status == libeasel.eslEOF:
             return None
         elif status == libeasel.eslEFORMAT:
-            msg = <bytes> libeasel.sqio.esl_sqfile_GetErrorBuf(self._sqfp)
+            msg = <bytes> libeasel.sqio.esl_sqfile_GetErrorBuf(sqfp)
             raise ValueError("Could not parse file: {}".format(msg.decode()))
         else:
-            raise UnexpectedError(status, "esl_sqio_Read")
+            raise UnexpectedError(status, function)
 
-    cpdef Sequence readinto_info(self, Sequence seq):
-        """Read info from the next sequence, using ``seq`` to store metadata.
-        """
-        assert seq._sq != NULL
-
-        if self._sqfp == NULL:
-            raise ValueError("I/O operation on closed file.")
-
-        cdef int status = libeasel.sqio.esl_sqio_ReadInfo(self._sqfp, seq._sq)
-        if status == libeasel.eslOK:
-            return seq
-        elif status == libeasel.eslEOF:
-            return None
-        elif status == libeasel.eslEFORMAT:
-            msg = <bytes> libeasel.sqio.esl_sqfile_GetErrorBuf(self._sqfp)
-            raise ValueError("Could not parse file: {}".format(msg.decode()))
-        else:
-            raise UnexpectedError(status, "esl_sqio_ReadInfo")
-
-    cpdef Sequence readinto_seq(self, Sequence seq):
-        """Read the next sequence into ``seq``, without loading metadata.
-        """
-        assert seq._sq != NULL
-
-        if self._sqfp == NULL:
-            raise ValueError("I/O operation on closed file.")
-
-        cdef int status = libeasel.sqio.esl_sqio_ReadSequence(self._sqfp, seq._sq)
-        if status == libeasel.eslOK:
-            return seq
-        elif status == libeasel.eslEOF:
-            return None
-        elif status == libeasel.eslEFORMAT:
-            msg = <bytes> libeasel.sqio.esl_sqfile_GetErrorBuf(self._sqfp)
-            raise ValueError("Could not parse file: {}".format(msg.decode()))
-        else:
-            raise UnexpectedError(status, "esl_sqio_ReadSequence")
+    # cpdef Sequence readinto_info(self, Sequence seq):
+    #     """Read info from the next sequence, using ``seq`` to store metadata.
+    #     """
+    #     assert seq._sq != NULL
+    #
+    #     if self._sqfp == NULL:
+    #         raise ValueError("I/O operation on closed file.")
+    #
+    #     cdef int status = libeasel.sqio.esl_sqio_ReadInfo(self._sqfp, seq._sq)
+    #     if status == libeasel.eslOK:
+    #         return seq
+    #     elif status == libeasel.eslEOF:
+    #         return None
+    #     elif status == libeasel.eslEFORMAT:
+    #         msg = <bytes> libeasel.sqio.esl_sqfile_GetErrorBuf(self._sqfp)
+    #         raise ValueError("Could not parse file: {}".format(msg.decode()))
+    #     else:
+    #         raise UnexpectedError(status, "esl_sqio_ReadInfo")
+    #
+    # cpdef Sequence readinto_seq(self, Sequence seq):
+    #     """Read the next sequence into ``seq``, without loading metadata.
+    #     """
+    #     assert seq._sq != NULL
+    #
+    #     if self._sqfp == NULL:
+    #         raise ValueError("I/O operation on closed file.")
+    #
+    #     cdef int status = libeasel.sqio.esl_sqio_ReadSequence(self._sqfp, seq._sq)
+    #     if status == libeasel.eslOK:
+    #         return seq
+    #     elif status == libeasel.eslEOF:
+    #         return None
+    #     elif status == libeasel.eslEFORMAT:
+    #         msg = <bytes> libeasel.sqio.esl_sqfile_GetErrorBuf(self._sqfp)
+    #         raise ValueError("Could not parse file: {}".format(msg.decode()))
+    #     else:
+    #         raise UnexpectedError(status, "esl_sqio_ReadSequence")
 
 
     # --- Fetch methods ------------------------------------------------------
 
-    cpdef Sequence fetch(self, bytes key):
-        raise NotImplementedError("TODO SequenceFile.fetch")
+    cpdef Sequence fetch(self, bytes key, bint skip_info=False, bint skip_sequence=False):
+        cdef Sequence seq = Sequence.__new__(Sequence)
+        seq._sq = libeasel.sq.esl_sq_Create()
+        if not seq._sq:
+            raise AllocationError("ESL_SQ")
+        return self.fetchinto(seq, key, skip_info=skip_info, skip_sequence=skip_sequence)
 
-    cpdef Sequence fetchinto(self, Sequence seq, bytes key):
-        raise NotImplementedError("TODO SequenceFile.fetchinto")
-
-    cpdef Sequence fetch_info(self, bytes key):
-        raise NotImplementedError("TODO SequenceFile.fetchinto")
-
-    cpdef Sequence fetchinto_info(self, Sequence seq, bytes key):
-        raise NotImplementedError("TODO SequenceFile.fetchinto")
-
-    cpdef Sequence fetch_seq(self, bytes key):
-        raise NotImplementedError("TODO SequenceFile.fetchinto")
-
-    cpdef Sequence fetchinto_seq(self, Sequence seq, bytes key):
+    cpdef Sequence fetchinto(self, Sequence seq, bytes key, bint skip_info=False, bint skip_sequence=False):
         raise NotImplementedError("TODO SequenceFile.fetchinto")
 
 

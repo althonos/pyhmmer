@@ -48,19 +48,11 @@ cdef class SequenceFile:
     cdef ESL_SQFILE* _sqfp
     cdef Alphabet _alphabet
 
-    cpdef Sequence read(self)
-    cpdef Sequence read_info(self)
-    cpdef Sequence read_seq(self)
-    cpdef Sequence readinto(self, Sequence)
-    cpdef Sequence readinto_info(self, Sequence)
-    cpdef Sequence readinto_seq(self, Sequence)
+    cpdef Sequence read(self, bint skip_info=*, bint skip_sequence=*)
+    cpdef Sequence readinto(self, Sequence, bint skip_info=*, bint skip_sequence=*)
 
-    cpdef Sequence fetch(self, bytes)
-    cpdef Sequence fetch_info(self, bytes)
-    cpdef Sequence fetch_seq(self, bytes)
-    cpdef Sequence fetchinto(self, Sequence, bytes)
-    cpdef Sequence fetchinto_info(self, Sequence, bytes)
-    cpdef Sequence fetchinto_seq(self, Sequence, bytes)
+    cpdef Sequence fetch(self, bytes key, bint skip_info=*, bint skip_sequence=*)
+    cpdef Sequence fetchinto(self, Sequence seq, bytes key, bint skip_info=*, bint skip_sequence=*)
 
     cpdef void close(self)
     cpdef Alphabet guess_alphabet(self)
