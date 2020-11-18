@@ -10,6 +10,7 @@ to facilitate the development of biological software in C. It is used by
 
 # --- C imports --------------------------------------------------------------
 
+cimport cython
 from libc.stdint cimport uint32_t
 from libc.stdlib cimport malloc
 from libc.string cimport memmove, strdup, strlen
@@ -283,6 +284,7 @@ cdef class KeyHash:
         return new
 
 
+@cython.freelist(4)
 cdef class Sequence:
     """An abstract biological sequence with some associated metadata.
 
@@ -443,6 +445,10 @@ cdef class TextSequence(Sequence):
 
 cdef class DigitalSequence(Sequence):
     """A biological sequence stored in digital mode.
+
+    Currently, objects from this class cannot be instantiated directly. Use
+    `TextSequence.digitize` to obtain a digital sequence from a sequence in
+    text mode.
 
     Attributes:
         alphabet (`Alphabet`, *readonly*): The biological alphabet used to
