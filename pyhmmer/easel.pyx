@@ -11,7 +11,7 @@ to facilitate the development of biological software in C. It is used by
 # --- C imports --------------------------------------------------------------
 
 cimport cython
-from libc.stdint cimport uint32_t
+from libc.stdint cimport int64_t, uint32_t
 from libc.stdlib cimport malloc
 from libc.string cimport memmove, strdup, strlen
 from cpython.unicode cimport PyUnicode_FromUnicode
@@ -20,6 +20,7 @@ cimport libeasel
 cimport libeasel.alphabet
 cimport libeasel.bitfield
 cimport libeasel.keyhash
+cimport libeasel.msa
 cimport libeasel.sq
 cimport libeasel.sqio
 from libeasel cimport ESL_DSQ
@@ -100,9 +101,10 @@ cdef class Alphabet:
             )
 
     def __eq__(self, Alphabet other):
+        # TODO: Update when we implement custom alphabet creation from Python.
         if other is None:
             return False
-        return self._abc.type == other._abc.type   # FIXME
+        return self._abc.type == other._abc.type
 
     def __getstate__(self):
         return {"type": self._abc.type}
@@ -282,6 +284,100 @@ cdef class KeyHash:
         if not new._kh:
             raise AllocationError("ESL_KEYHASH")
         return new
+
+
+cdef class MSA:
+    """An abstract alignment of multiple sequences.
+    """
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __cinit__(self):
+        self._msa = NULL
+
+    def __dealloc__(self):
+        libeasel.msa.esl_msa_Destroy(self._msa)
+
+    def __init__(self):
+        raise TypeError("Can't instantiate abstract class 'MSA'")
+
+    def __copy__(self):
+        return self.copy()
+
+    def __eq__(self, object other):
+        cdef ESL_MSA* other_msa
+        try:
+            other_ = (<MSA> other)._msa
+            return libeasel.msa.esl_msa_Compare(self._msa, other_msa) == libeasel.eslOK
+        except TypeError:
+            return False
+
+    # --- Methods ------------------------------------------------------------
+
+    cpdef uint32_t checksum(self):
+        """Calculate a 32-bit checksum for the multiple sequence alignment.
+        """
+        cdef uint32_t checksum = 0
+        cdef int status = libeasel.msa.esl_msa_Checksum(self._msa, &checksum)
+        if status == libeasel.eslOK:
+            return checksum
+        else:
+            raise UnexpectedError(status, "esl_msa_Checksum")
+
+
+cdef class TextMSA(MSA):
+    """A multiple sequence alignement stored in text mode.
+    """
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __init__(self, int nsequences, length=None):
+        cdef int64_t alen = length if length is not None else -1
+        self._msa = libeasel.msa.esl_msa_Create(nsequences, alen)
+        if self._msa == NULL:
+            raise AllocationError("ESL_MSA")
+
+    # --- Methods ------------------------------------------------------------
+
+    cpdef DigitalMSA digitize(self, Alphabet alphabet):
+        """Convert the text alignment to a digital alignment using ``alphabet``.
+        """
+        cdef int status
+        cdef DigitalMSA new
+
+        new = DigitalMSA.__new__(DigitalMSA, alphabet)
+        new._msa = libeasel.msa.esl_msa_CreateDigital(alphabet._abc, self._msa.nseq, self._msa.alen)
+        if new._msa == NULL:
+            raise AllocationError("ESL_MSA")
+
+        status = libeasel.msa.esl_msa_Copy(self._msa, new._msa)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_msa_Copy")
+
+        assert new._msa.flags & libeasel.msa.eslMSA_DIGITAL
+        return new
+
+
+cdef class DigitalMSA(MSA):
+    """A multiple sequence alignment stored in digital mode.
+
+    Attributes:
+        alphabet (`Alphabet`, *readonly*): The biological alphabet used to
+            encode this sequence alignment to digits.
+
+    """
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __cinit__(self, Alphabet alphabet):
+        self._msa = NULL
+        self.alphabet = alphabet
+
+    def __init__(self, Alphabet alphabet, int nsequences, length=None):
+        cdef int64_t alen = length if length is not None else -1
+        self._msa = libeasel.msa.esl_msa_CreateDigital(alphabet._abc, nsequences, alen)
+        if self._msa == NULL:
+            raise AllocationError("ESL_MSA")
 
 
 @cython.freelist(4)

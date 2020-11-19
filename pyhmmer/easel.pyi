@@ -1,4 +1,5 @@
 # coding: utf-8
+import abc
 import collections.abc
 import types
 import typing
@@ -34,7 +35,33 @@ class Bitfield(typing.Sequence[bool]):
     def toggle(self, index: int) -> None: ...
 
 
-class Sequence(object):
+
+class MSA(abc.ABC):
+    @abc.abstractmethod
+    def __init__(self, nsequences: int, length: typing.Optional[int] = None) -> None: ...
+
+    def __copy__(self) -> MSA: ...
+    def __eq__(self, other: object) -> bool: ...
+
+    def checksum(self) -> int: ...
+
+
+class TextMSA(MSA):
+    def __init__(self, nsequences: int, length: typing.Optional[int] = None) -> None: ...
+    def digitize(self, alphabet: Alphabet) -> DigitalMSA: ...
+
+
+class DigitalMSA(MSA):
+    alphabet: Alphabet
+    def __init__(self, alphabet: Alphabet, nsequences: int, length: typing.Optional[int] = None) -> None: ...
+
+
+
+
+class Sequence(abc.ABC):
+    @abc.abstractmethod
+    def __init__(self) -> None: ...
+
     @property
     def accession(self) -> bytes: ...
     @accession.setter

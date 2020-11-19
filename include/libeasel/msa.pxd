@@ -19,6 +19,9 @@ cdef extern from "esl_msa.h":
         eslMSA_NC2 = 5
         eslMSA_NCUTS = 6
 
+    cdef enum:
+        eslMSA_HASWGTS = 0b01
+        eslMSA_DIGITAL = 0b10
 
     ctypedef struct ESL_MSA:
         char** aseq

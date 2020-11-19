@@ -9,6 +9,7 @@ cimport libeasel.sq
 from libeasel.alphabet cimport ESL_ALPHABET
 from libeasel.bitfield cimport ESL_BITFIELD
 from libeasel.keyhash cimport ESL_KEYHASH
+from libeasel.msa cimport ESL_MSA
 from libeasel.sq cimport ESL_SQ
 from libeasel.sqio cimport ESL_SQFILE
 
@@ -36,6 +37,20 @@ cdef class KeyHash:
     cpdef KeyHash copy(self)
 
 
+cdef class MSA:
+    cdef ESL_MSA* _msa
+
+    cpdef uint32_t checksum(self)
+
+
+cdef class TextMSA(MSA):
+    cpdef DigitalMSA digitize(self, Alphabet alphabet)
+
+
+cdef class DigitalMSA(MSA):
+    cdef readonly Alphabet alphabet
+
+
 cdef class Sequence:
     cdef ESL_SQ* _sq
 
@@ -48,7 +63,7 @@ cdef class TextSequence(Sequence):
 
 
 cdef class DigitalSequence(Sequence):
-    cdef Alphabet alphabet
+    cdef readonly Alphabet alphabet
 
 
 cdef class SequenceFile:
