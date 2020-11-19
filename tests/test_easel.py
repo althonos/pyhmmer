@@ -1,3 +1,5 @@
+import copy
+import gc
 import os
 import unittest
 import tempfile
@@ -94,3 +96,28 @@ class TestSequenceFile(unittest.TestCase):
         # check reading an EMBL file while giving another format fails
         with easel.SequenceFile(embl, "fasta") as f:
             self.assertRaises(ValueError, f.read)
+
+
+class TestTextSequence(unittest.TestCase):
+
+    def test_copy(self):
+        seq = easel.TextSequence(name=b"TEST", sequence=b"ATGC")
+
+        # copy the sequence
+        cpy = seq.copy()
+
+        # check the copy is equal and attributes are equal
+        self.assertEqual(seq, cpy)
+        self.assertEqual(seq.name, cpy.name)
+        self.assertEqual(seq.checksum(), cpy.checksum())
+
+        # check attributes can be read even after the original object
+        # is (hopefully) deallocated, to make sure internal strings were copied
+        del seq
+        gc.collect()
+        self.assertEqual(cpy.name, b"TEST")
+
+        # check `copy.copy` works too
+        cpy2 = copy.copy(cpy)
+        self.assertEqual(cpy, cpy2)
+        self.assertEqual(cpy.name, cpy2.name)

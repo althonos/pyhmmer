@@ -307,7 +307,7 @@ cdef class MSA:
     def __eq__(self, object other):
         cdef ESL_MSA* other_msa
         try:
-            other_ = (<MSA> other)._msa
+            other_msa = (<MSA> other)._msa
             return libeasel.msa.esl_msa_Compare(self._msa, other_msa) == libeasel.eslOK
         except TypeError:
             return False
@@ -338,6 +338,23 @@ cdef class TextMSA(MSA):
             raise AllocationError("ESL_MSA")
 
     # --- Methods ------------------------------------------------------------
+
+    cpdef TextMSA copy(self):
+        """Duplicate the text sequence alignment, and return the copy.
+        """
+        assert self._msa != NULL
+        assert not (self._msa.flags & libeasel.msa.eslMSA_DIGITAL)
+
+        cdef TextMSA new = TextMSA.__new__(TextMSA)
+        new._msa = libeasel.msa.esl_msa_Create(self._msa.nseq, self._msa.alen)
+        if new._msa == NULL:
+            raise AllocationError("ESL_MSA")
+
+        cdef int status = libeasel.msa.esl_msa_Copy(self._msa, new._msa)
+        if status == libeasel.eslOK:
+            return new
+        else:
+            raise UnexpectedError(status, "esl_msa_Copy")
 
     cpdef DigitalMSA digitize(self, Alphabet alphabet):
         """Convert the text alignment to a digital alignment using ``alphabet``.
@@ -379,6 +396,25 @@ cdef class DigitalMSA(MSA):
         if self._msa == NULL:
             raise AllocationError("ESL_MSA")
 
+    # --- Methods ------------------------------------------------------------
+
+    cpdef DigitalMSA copy(self):
+        """Duplicate the digital sequence alignment, and return the copy.
+        """
+        assert self._msa != NULL
+        assert self._msa.flags & libeasel.msa.eslMSA_DIGITAL
+
+        cdef DigitalMSA new = DigitalMSA.__new__(DigitalMSA, self.alphabet)
+        new._msa = libeasel.msa.esl_msa_CreateDigital(self.alphabet._abc, self._msa.nseq, self._msa.alen)
+        if new._msa == NULL:
+            raise AllocationError("ESL_MSA")
+
+        cdef int status = libeasel.msa.esl_msa_Copy(self._msa, new._msa)
+        if status == libeasel.eslOK:
+            return new
+        else:
+            raise UnexpectedError(status, "esl_msa_Copy")
+
 
 @cython.freelist(4)
 cdef class Sequence:
@@ -409,8 +445,16 @@ cdef class Sequence:
     def __dealloc__(self):
         libeasel.sq.esl_sq_Destroy(self._sq)
 
-    def __eq__(self, Sequence other):
-        return libeasel.sq.esl_sq_Compare(self._sq, other._sq) == libeasel.eslOK
+    def __eq__(self, object other):
+        cdef ESL_SQ* other_sq
+        try:
+            other_sq = (<Sequence> other)._sq
+            return libeasel.sq.esl_sq_Compare(self._sq, other_sq) == libeasel.eslOK
+        except TypeError:
+            return False
+
+    def __copy__(self):
+        return self.copy()
 
     # --- Properties ---------------------------------------------------------
 
@@ -513,6 +557,9 @@ cdef class TextSequence(Sequence):
         if not self._sq:
             raise AllocationError("ESL_SQ")
 
+        # FIXME: Temporary patch, remove when EddyRivasLab/easel#55 is merged
+        self._sq.abc = NULL
+
         if name is not None:
             self.name = name
         if accession is not None:
@@ -523,6 +570,9 @@ cdef class TextSequence(Sequence):
     cpdef DigitalSequence digitize(self, Alphabet alphabet):
         """Convert the text sequence to a digital sequence using ``alphabet``.
         """
+        assert self._sq != NULL
+        assert libeasel.sq.esl_sq_IsText(self._sq)
+
         cdef int status
         cdef DigitalSequence new
 
@@ -537,6 +587,27 @@ cdef class TextSequence(Sequence):
 
         assert libeasel.sq.esl_sq_IsDigital(new._sq)
         return new
+
+    cpdef TextSequence copy(self):
+        """Duplicate the text sequence, and return the copy.
+        """
+        assert self._sq != NULL
+        assert libeasel.sq.esl_sq_IsText(self._sq)
+
+        cdef TextSequence new = TextSequence.__new__(TextSequence)
+        new._sq = libeasel.sq.esl_sq_Create()
+        if new._sq == NULL:
+            raise AllocationError("ESL_SQ")
+
+        # FIXME: Temporary patch, remove when EddyRivasLab/easel#55 is merged
+        new._sq.abc = NULL
+
+        cdef int status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
+        if status == libeasel.eslOK:
+            assert libeasel.sq.esl_sq_IsText(new._sq)
+            return new
+        else:
+            raise UnexpectedError(status, "esl_sq_Copy")
 
 
 cdef class DigitalSequence(Sequence):
@@ -554,6 +625,24 @@ cdef class DigitalSequence(Sequence):
 
     def __cinit__(self, Alphabet alphabet):
         self.alphabet = alphabet
+
+    cpdef DigitalSequence copy(self):
+        """Duplicate the digital sequence, and return the copy.
+        """
+        assert self._sq != NULL
+        assert libeasel.sq.esl_sq_IsDigital(self._sq)
+
+        cdef DigitalSequence new = DigitalSequence.__new__(DigitalSequence, self.alphabet)
+        new._sq = libeasel.sq.esl_sq_CreateDigital(self.alphabet._abc)
+        if new._sq == NULL:
+            raise AllocationError("ESL_SQ")
+
+        cdef int status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
+        if status == libeasel.eslOK:
+            assert libeasel.sq.esl_sq_IsDigital(new._sq)
+            return new
+        else:
+            raise UnexpectedError(status, "esl_sq_Copy")
 
 
 cdef class SequenceFile:

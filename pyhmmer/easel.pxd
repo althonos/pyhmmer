@@ -45,10 +45,13 @@ cdef class MSA:
 
 cdef class TextMSA(MSA):
     cpdef DigitalMSA digitize(self, Alphabet alphabet)
+    cpdef TextMSA copy(self)
 
 
 cdef class DigitalMSA(MSA):
     cdef readonly Alphabet alphabet
+
+    cpdef DigitalMSA copy(self)
 
 
 cdef class Sequence:
@@ -60,10 +63,13 @@ cdef class Sequence:
 
 cdef class TextSequence(Sequence):
     cpdef DigitalSequence digitize(self, Alphabet alphabet)
+    cpdef TextSequence copy(self)
 
 
 cdef class DigitalSequence(Sequence):
     cdef readonly Alphabet alphabet
+
+    cpdef DigitalSequence copy(self)
 
 
 cdef class SequenceFile:
