@@ -24,7 +24,7 @@ from .hmmer import hmmsearch
 
 __author__ = "Martin Larralde <martin.larralde@embl.de>"
 __license__ = "MIT"
-__version__ = "0.1.0-a2"
+__version__ = "0.1.0-a3"
 __all__ = [errors.__name__, easel.__name__, plan7.__name__, hmmsearch.__name__]
 if __doc__ is not None:
     __doc__ += """See Also:
