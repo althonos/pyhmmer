@@ -792,6 +792,24 @@ cdef class Profile:
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_profile_Reuse")
 
+    cpdef void configure(self, HMM hmm, Background background, int L, bint multihit=True, bint local=True):
+        """Configure a search profile using the given models.
+
+        Arguments:
+            hmm (`pyhmmer.plan7.HMM`): The model HMM with core probabilities.
+            bg (`pyhmmer.plan7.Background`): The null background model.
+            L (`int`): The expected target sequence length.
+            multihit (`bool`):  Whether or not to use multihit modes.
+            local (`bool`):  Whether or not to use non-local modes.
+
+        """
+        cdef int mode = ((4, 3), (2, 1))[multihit][local]
+        cdef int status = libhmmer.modelconfig.p7_ProfileConfig(
+            hmm._hmm, background._bg, self._gm, L, mode
+        )
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_ProfileConfig")
+
     cpdef Profile copy(self):
         assert self._gm != NULL
 

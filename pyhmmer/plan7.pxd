@@ -81,6 +81,7 @@ cdef class Profile:
     cdef P7_PROFILE* _gm
 
     cpdef void clear(self)
+    cpdef void configure(self, HMM hmm, Background background, int L, bint multihit=*, bint local=*)
     cpdef Profile copy(self)
     cpdef bint is_local(self)
     cpdef bint is_multihit(self)
