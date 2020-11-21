@@ -132,11 +132,11 @@ cdef class Background:
 
     def __init__(self, Alphabet alphabet, bint uniform=False):
         self.alphabet = alphabet
-
-        if uniform:
-            self._bg = libhmmer.p7_bg.p7_bg_CreateUniform(alphabet._abc)
-        else:
-            self._bg = libhmmer.p7_bg.p7_bg_Create(alphabet._abc)
+        with nogil:
+            if uniform:
+                self._bg = libhmmer.p7_bg.p7_bg_CreateUniform(alphabet._abc)
+            else:
+                self._bg = libhmmer.p7_bg.p7_bg_Create(alphabet._abc)
         if self._bg == NULL:
             raise AllocationError("P7_BG")
 
@@ -154,10 +154,14 @@ cdef class Background:
         return <int> ceil(self._bg.p1 / (1 - self._bg.p1))
 
     @length.setter
-    def length(self, length: int):
+    def length(self, int length):
+        cdef int    status
+        cdef P7_BG* bg     = self._bg
+
         assert self._bg != NULL
-        cdef int status
-        libhmmer.p7_bg.p7_bg_SetLength(self._bg, length)
+
+        with nogil:
+            status = libhmmer.p7_bg.p7_bg_SetLength(bg, length)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_bg_SetLength")
 
@@ -367,7 +371,8 @@ cdef class HMM:
 
     def __init__(self, int m, Alphabet alphabet):
         self.alphabet = alphabet
-        self._hmm = libhmmer.p7_hmm.p7_hmm_Create(m, alphabet._abc)
+        with nogil:
+            self._hmm = libhmmer.p7_hmm.p7_hmm_Create(m, alphabet._abc)
         if not self.hmm:
             raise AllocationError("P7_HMM")
 
@@ -525,7 +530,8 @@ cdef class OptimizedProfile:
 
     def __init__(self, int m, Alphabet alphabet):
         self.alphabet = alphabet
-        self._om = p7_oprofile.p7_oprofile_Create(m, alphabet._abc)
+        with nogil:
+            self._om = p7_oprofile.p7_oprofile_Create(m, alphabet._abc)
         if self._om == NULL:
             raise AllocationError("P7_OPROFILE")
 
@@ -545,7 +551,8 @@ cdef class OptimizedProfile:
         assert self._om != NULL
         cdef OptimizedProfile new = OptimizedProfile.__new__(OptimizedProfile)
         new.alphabet = self.alphabet
-        new._om = p7_oprofile.p7_oprofile_Clone(self._om)
+        with nogil:
+            new._om = p7_oprofile.p7_oprofile_Clone(self._om)
         if new._om == NULL:
             raise AllocationError("P7_OPROFILE")
         return new
@@ -681,7 +688,7 @@ cdef class Pipeline:
         cdef int                  status
         cdef int                  allocM
         cdef DigitalSequence      seq
-        cdef Profile              profile = self._profile
+        cdef Profile              profile = self.profile
         cdef OptimizedProfile     opt
         cdef ESL_ALPHABET*        abc     = self.alphabet._abc
         cdef P7_BG*               bg      = self.background._bg
@@ -724,7 +731,7 @@ cdef class Pipeline:
         # build the profile from the HMM, using the first sequence length
         # as a hint for the model configuration
         if profile is None or profile._gm.allocM < hm.M:
-            profile = self._profile = Profile(hm.M, alphabet)
+            profile = self.profile = Profile(hm.M, self.alphabet)
         else:
             profile.clear()
         profile.configure(hmm, self.background, sq.L)
@@ -839,8 +846,12 @@ cdef class Profile:
         elif hm.M > self._gm.allocM:
             raise ValueError("Profile is too small to hold HMM")
 
+        if multihit:
+            mode = p7_LOCAL if local else p7_GLOCAL
+        else:
+            mode = p7_UNILOCAL if local else p7_UNIGLOCAL
+
         with nogil:
-            mode = ((p7_UNIGLOCAL, p7_UNILOCAL), (p7_GLOCAL, p7_LOCAL))[multihit][local]
             status = libhmmer.modelconfig.p7_ProfileConfig(hm, bg, gm, L, mode)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_ProfileConfig")
@@ -875,12 +886,17 @@ cdef class Profile:
     cpdef OptimizedProfile optimized(self):
         """Convert the profile to a platform-specific optimized model.
         """
+        cdef int              status
+        cdef OptimizedProfile opt
+        cdef P7_PROFILE*      gm     = self._gm
+
         assert self._gm != NULL
 
-        cdef OptimizedProfile opt = OptimizedProfile.__new__(OptimizedProfile)
+        opt = OptimizedProfile.__new__(OptimizedProfile)
         OptimizedProfile.__init__(opt, self._gm.M, self.alphabet)
 
-        cdef int status = p7_oprofile.p7_oprofile_Convert(self._gm, opt._om)
+        with nogil:
+            status = p7_oprofile.p7_oprofile_Convert(gm, opt._om)
         if status == libeasel.eslOK:
             return opt
         elif status == libeasel.eslEINVAL:

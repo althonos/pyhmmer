@@ -47,7 +47,8 @@ cdef class Alphabet:
     # --- Default constructors -----------------------------------------------
 
     cdef _init_default(self, int ty):
-        self._abc = libeasel.alphabet.esl_alphabet_Create(ty)
+        with nogil:
+            self._abc = libeasel.alphabet.esl_alphabet_Create(ty)
         if not self._abc:
             raise AllocationError("ESL_ALPHABET")
 
