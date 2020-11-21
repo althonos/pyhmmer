@@ -323,13 +323,14 @@ cdef class HMM:
 
     @property
     def name(self):
-        """`bytes`: The name of the HMM.
+        """`bytes` or `None`: The name of the HMM, if any.
         """
-        return <bytes> self._hmm.name
+        return None if self._hmm.name == NULL else <bytes> self._hmm.name
 
     @name.setter
     def name(self, bytes name):
-        cdef int err = libhmmer.p7_hmm.p7_hmm_SetName(self._hmm, name)
+        cdef char* name_ = NULL if name is None else <char*> name
+        cdef int err = libhmmer.p7_hmm.p7_hmm_SetName(self._hmm, name_)
         if err == libeasel.eslEMEM:
             raise MemoryError("could not allocate C string")
         elif err != libeasel.eslOK:
@@ -337,13 +338,14 @@ cdef class HMM:
 
     @property
     def accession(self):
-        """`bytes`: The accession of the HMM.
+        """`bytes` or `None`: The accession of the HMM, if any.
         """
-        return <bytes> self._hmm.acc
+        return None if self._hmm.acc == NULL else <bytes> self._hmm.acc
 
     @accession.setter
     def accession(self, bytes accession):
-        cdef int err = libhmmer.p7_hmm.p7_hmm_SetAccession(self._hmm, accession)
+        cdef char* acc = NULL if accession is None else <char*> accession
+        cdef int err = libhmmer.p7_hmm.p7_hmm_SetAccession(self._hmm, acc)
         if err == libeasel.eslEMEM:
             raise MemoryError("could not allocate C string")
         elif err != libeasel.eslOK:
@@ -351,13 +353,14 @@ cdef class HMM:
 
     @property
     def description(self):
-        """`bytes`: The description of the HMM.
+        """`bytes` or `None`: The description of the HMM, if any.
         """
-        return <bytes> self._hmm.desc
+        return None if self._hmm.desc == NULL else <bytes> self._hmm.desc
 
     @description.setter
     def description(self, bytes description):
-        cdef int err = libhmmer.p7_hmm.p7_hmm_SetDescription(self._hmm, description)
+        cdef char* desc = NULL if description is None else <char*> description
+        cdef int err = libhmmer.p7_hmm.p7_hmm_SetDescription(self._hmm, desc)
         if err == libeasel.eslEMEM:
             raise MemoryError("could not allocate C string")
         elif err != libeasel.eslOK:
