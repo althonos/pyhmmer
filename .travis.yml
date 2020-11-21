@@ -47,6 +47,7 @@ jobs:
   include:
     # Linux
     - python: pypy3
+      if: tag IS present
       <<: *test-linux
     - python: 3.5
       if: tag IS present
@@ -74,6 +75,7 @@ jobs:
       <<: *test-osx
     - env: PYTHON=python3.8
       name: "Python: 3.8"
+      if: tag IS present
       <<: *test-osx
 
 deploy:
