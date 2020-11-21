@@ -4,11 +4,12 @@ import itertools
 import os
 import unittest
 import tempfile
+import threading
 import pkg_resources
 
 import pyhmmer
 from pyhmmer.plan7 import Pipeline, HMMFile, TopHits
-from pyhmmer.easel import Alphabet, SequenceFile
+from pyhmmer.easel import Alphabet, SequenceFile, TextSequence
 
 
 class _TestSearch(metaclass=abc.ABCMeta):
@@ -113,8 +114,16 @@ class TestHmmsearch(_TestSearch, unittest.TestCase):
     def get_hits(self, hmm, seqs):
         return pyhmmer.hmmsearch([hmm], seqs)
 
+    def test_background_error(self):
+        # check that errors occuring in worker threads are recovered and raised
+        # in the main threads (a common error is mismatching the HMM and the
+        # sequence alphabets).
+        seqs = [ TextSequence().digitize(Alphabet.dna()) ]
+        with self.hmm_file("PF02826") as hmm_file:
+            hmm = next(hmm_file)
+        self.assertRaises(ValueError, self.get_hits, hmm, seqs)
 
-class TestHmmsearchSingle(_TestSearch, unittest.TestCase):
+class TestHmmsearchSingle(TestHmmsearch, unittest.TestCase):
 
     def get_hits(self, hmm, seqs):
         return pyhmmer.hmmsearch([hmm], seqs, cpus=1)
