@@ -459,6 +459,8 @@ cdef class Pipeline:
     L_HINT = 400         # default sequence size
     LONG_TARGETS = False
 
+    # --- Magic methods ------------------------------------------------------
+
     def __cinit__(self):
         self._pli = NULL
 
@@ -526,6 +528,8 @@ cdef class Pipeline:
         libhmmer.p7_pipeline.p7_pipeline_Destroy(self._pli)
         libhmmer.p7_bg.p7_bg_Destroy(self._bg)
 
+    # --- Properties ---------------------------------------------------------
+
     @property
     def Z(self):
         return self._pli.Z
@@ -534,6 +538,8 @@ cdef class Pipeline:
     def Z(self, double Z):
         assert self._pli != NULL
         self._pli.Z = Z
+
+    # --- Methods ------------------------------------------------------------
 
     cpdef TopHits search(self, HMM hmm, object sequences, TopHits hits = None):
         """Run the pipeline using a query HMM against a sequence database.
@@ -596,6 +602,11 @@ cdef class Pipeline:
         seq = next(seqs_iter, None)
         if seq is None:
             return hits
+        if seq.alphabet != self.alphabet:
+            raise ValueError("Wrong alphabet in input HMM: expected {!r}, found {!r}".format(
+              self.alphabet,
+              seq.alphabet,
+            ))
         sq = seq._sq
 
         # release the GIL for as long as possible to allow several search
@@ -633,14 +644,6 @@ cdef class Pipeline:
             # run the inner loop on all sequences
             while sq != NULL:
 
-                # digitize the sequence if needed
-                # TODO: give user control of digitization, and make it take
-                #       place on the user's side
-                # if not libeasel.sq.esl_sq_IsDigital(sq):
-                #   status = libeasel.sq.esl_sq_Digitize(abc, sq)
-                #   if status != libeasel.eslOK:
-                #       raise UnexpectedError(status, "esl_sq_Digitize")
-
                 # configure the profile, background and pipeline for the new sequence
                 status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq)
                 if status != libeasel.eslOK:
@@ -668,6 +671,11 @@ cdef class Pipeline:
                 with gil:
                     seq = next(seqs_iter, None)
                     sq = NULL if seq is None else seq._sq
+                    if seq is not None and seq.alphabet != self.alphabet:
+                        raise ValueError("Wrong alphabet in input HMM: expected {!r}, found {!r}".format(
+                          self.alphabet,
+                          seq.alphabet,
+                        ))
 
             # deallocate the profile and optimized model
             # TODO: also properly deallocate if an exception is thrown to
