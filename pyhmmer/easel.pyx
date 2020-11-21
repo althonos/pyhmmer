@@ -934,6 +934,13 @@ cdef class SSIReader:
         ["fd", "record_offset", "data_offset", "record_length"]
     )
 
+    FileInfo = collections.namedtuple(
+        "FileInfo",
+        ["name", "format"]
+    )
+
+    # --- Magic methods ------------------------------------------------------
+
     def __cinit__(self):
         self._ssi = NULL
 
@@ -948,7 +955,7 @@ cdef class SSIReader:
             raise ValueError("File is not in correct SSI format")
         elif status == libeasel.eslERANGE:
             raise RuntimeError("File has 64-bit file offsets, which are unsupported on this system")
-        else:
+        elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_ssi_Open")
 
     def __dealloc__(self):
@@ -958,18 +965,38 @@ cdef class SSIReader:
         return self
 
     def __exit__(self, exc_value, exc_type, traceback):
-        if self.mode == "r":
-            libeasel.ssi.esl_ssi_Close(self._ssi)
+        self.close()
         return False
 
-    def find_name(self, bytes key):
+    # --- Methods ------------------------------------------------------------
 
+    def file_info(self, int fd):
+        cdef int   status
+        cdef char* filename
+        cdef int   format
+
+        if self._ssi == NULL:
+            raise ValueError("I/O operation on closed file.")
+        if fd >= self._ssi.nfiles:
+            raise IndexError(fd)
+
+        status = libeasel.ssi.esl_ssi_FileInfo(self._ssi, fd, &filename, &format)
+        if status == libeasel.eslOK:
+            return self.FileInfo(os.fsdecode(filename), format)
+        else:
+            raise UnexpectedError(status, "esl_ssi_FileInfo")
+
+    def find_name(self, bytes key):
         cdef uint16_t ret_fh
         cdef off_t    ret_roff
         cdef off_t    opt_doff
         cdef int64_t  opt_L
+        cdef int      status
 
-        cdef int status = libeasel.ssi.esl_ssi_FindName(
+        if self._ssi == NULL:
+            raise ValueError("I/O operation on closed file.")
+
+        status = libeasel.ssi.esl_ssi_FindName(
             self._ssi, key, &ret_fh, &ret_roff, &opt_doff, &opt_L
         )
 
@@ -981,6 +1008,10 @@ cdef class SSIReader:
             raise ValueError("malformed index")
         else:
             raise UnexpectedError(status, "esl_ssi_FindName")
+
+    cpdef void close(self):
+        libeasel.ssi.esl_ssi_Close(self._ssi)
+        self._ssi = NULL
 
 
 cdef class SSIWriter:

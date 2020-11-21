@@ -91,6 +91,7 @@ cdef class SequenceFile:
 cdef class SSIReader:
     cdef ESL_SSI* _ssi
 
+    cpdef void close(self)
 
 cdef class SSIWriter:
     cdef ESL_NEWSSI* _newssi
