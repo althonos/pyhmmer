@@ -151,6 +151,11 @@ class Pipeline(object):
         hits: typing.Optional[TopHits] = None
     ) -> TopHits: ...
 
+    @property
+    def Z(self) -> float: ...
+    @Z.setter
+    def Z(self, Z: float) -> None: ...
+
 
 class Profile(object):
     alphabet: Alphabet
