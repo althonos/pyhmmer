@@ -73,3 +73,31 @@ cdef extern from "esl_alphabet.h" nogil:
     int    esl_abc_EncodeTypeMem(char *type, int n);
     char  *esl_abc_DecodeType   (int type);
     int    esl_abc_ValidateSeq(const ESL_ALPHABET *a, const char *seq, int64_t L, char *errbuf);
+
+    ESL_DSQ esl_abc_DigitizeSymbol (ESL_ALPHABET*, char)
+
+    bint    esl_abc_XIsValid       (ESL_ALPHABET*, int)
+    bint    esl_abc_XIsResidue     (ESL_ALPHABET*, int)
+    bint    esl_abc_XIsCanonical   (ESL_ALPHABET*, int)
+    bint    esl_abc_XIsGap         (ESL_ALPHABET*, int)
+    bint    esl_abc_XIsDegenerate  (ESL_ALPHABET*, int)
+    bint    esl_abc_XIsUnknown     (ESL_ALPHABET*, int)
+    bint    esl_abc_XIsNonresidue  (ESL_ALPHABET*, int)
+    bint    esl_abc_XIsMissing     (ESL_ALPHABET*, int)
+    int     esl_abc_XGetGap        (ESL_ALPHABET*)
+    int     esl_abc_XGetUnknown    (ESL_ALPHABET*)
+    int     esl_abc_XGetNonresidue (ESL_ALPHABET*)
+    int     esl_abc_XGetMissing    (ESL_ALPHABET*)
+
+    bint    esl_abc_CIsValid       (ESL_ALPHABET*, char)
+    bint    esl_abc_CIsResidue     (ESL_ALPHABET*, char)
+    bint    esl_abc_CIsCanonical   (ESL_ALPHABET*, char)
+    bint    esl_abc_CIsGap         (ESL_ALPHABET*, char)
+    bint    esl_abc_CIsDegenerate  (ESL_ALPHABET*, char)
+    bint    esl_abc_CIsUnknown     (ESL_ALPHABET*, char)
+    bint    esl_abc_CIsNonresidue  (ESL_ALPHABET*, char)
+    bint    esl_abc_CIsMissing     (ESL_ALPHABET*, char)
+    char    esl_abc_CGetGap        (ESL_ALPHABET*)
+    char    esl_abc_CGetUnknown    (ESL_ALPHABET*)
+    char    esl_abc_CGetNonresidue (ESL_ALPHABET*)
+    char    esl_abc_CGetMissing    (ESL_ALPHABET*)
