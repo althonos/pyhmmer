@@ -12,6 +12,7 @@ See Also:
 
 # --- C imports --------------------------------------------------------------
 
+from libc.stdlib cimport realloc
 from libc.stdint cimport uint32_t
 from libc.stdio cimport fprintf, FILE, stdout
 from libc.math cimport exp, ceil
@@ -21,6 +22,7 @@ cimport libeasel.sq
 cimport libeasel.alphabet
 cimport libeasel.random
 cimport libeasel.getopts
+cimport libeasel.vec
 cimport libhmmer.modelconfig
 cimport libhmmer.p7_hmm
 cimport libhmmer.p7_bg
@@ -38,6 +40,7 @@ from libhmmer.logsum cimport p7_FLogsumInit
 from libhmmer.p7_tophits cimport p7_hitflags_e
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e
+from libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL
 
 IF HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx cimport p7_oprofile
@@ -153,7 +156,8 @@ cdef class Background:
     @length.setter
     def length(self, length: int):
         assert self._bg != NULL
-        cdef int status = libhmmer.p7_bg.p7_bg_SetLength(self._bg, length)
+        cdef int status
+        libhmmer.p7_bg.p7_bg_SetLength(self._bg, length)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_bg_SetLength")
 
@@ -365,7 +369,7 @@ cdef class HMM:
         self.alphabet = alphabet
         self._hmm = libhmmer.p7_hmm.p7_hmm_Create(m, alphabet._abc)
         if not self.hmm:
-           raise MemoryError("could not allocate C object")
+            raise AllocationError("P7_HMM")
 
     def __dealloc__(self):
         libhmmer.p7_hmm.p7_hmm_Destroy(self._hmm)
@@ -383,7 +387,7 @@ cdef class HMM:
         cdef char* name_ = NULL if name is None else <char*> name
         cdef int err = libhmmer.p7_hmm.p7_hmm_SetName(self._hmm, name_)
         if err == libeasel.eslEMEM:
-            raise MemoryError("could not allocate C string")
+            raise AllocationError("char*")
         elif err != libeasel.eslOK:
             raise UnexpectedError(err, "p7_hmm_SetName")
 
@@ -398,7 +402,7 @@ cdef class HMM:
         cdef char* acc = NULL if accession is None else <char*> accession
         cdef int err = libhmmer.p7_hmm.p7_hmm_SetAccession(self._hmm, acc)
         if err == libeasel.eslEMEM:
-            raise MemoryError("could not allocate C string")
+            raise AllocationError("char*")
         elif err != libeasel.eslOK:
             raise UnexpectedError(err, "p7_hmm_SetAccession")
 
@@ -413,7 +417,7 @@ cdef class HMM:
         cdef char* desc = NULL if description is None else <char*> description
         cdef int err = libhmmer.p7_hmm.p7_hmm_SetDescription(self._hmm, desc)
         if err == libeasel.eslEMEM:
-            raise MemoryError("could not allocate C string")
+            raise AllocationError("char*")
         elif err != libeasel.eslOK:
             raise UnexpectedError(err, "p7_hmm_SetDescription")
 
@@ -514,6 +518,39 @@ cdef class HMMFile:
         self._hfp = NULL
 
 
+cdef class OptimizedProfile:
+
+    def __cinit__(self):
+        self._om = NULL
+
+    def __init__(self, int m, Alphabet alphabet):
+        self.alphabet = alphabet
+        self._om = p7_oprofile.p7_oprofile_Create(m, alphabet._abc)
+        if self._om == NULL:
+            raise AllocationError("P7_OPROFILE")
+
+    def __dealloc__(self):
+        p7_oprofile.p7_oprofile_Destroy(self._om)
+
+    def __copy__(self):
+        return self.copy()
+
+    cpdef bint is_local(self):
+        """Returns whether or not the profile is in a local alignment mode.
+        """
+        assert self._om != NULL
+        return p7_oprofile.p7_oprofile_IsLocal(self._om)
+
+    cpdef OptimizedProfile copy(self):
+        assert self._om != NULL
+        cdef OptimizedProfile new = OptimizedProfile.__new__(OptimizedProfile)
+        new.alphabet = self.alphabet
+        new._om = p7_oprofile.p7_oprofile_Clone(self._om)
+        if new._om == NULL:
+            raise AllocationError("P7_OPROFILE")
+        return new
+
+
 cdef class Pipeline:
     """An HMMER3 accelerated sequence/profile comparison pipeline.
     """
@@ -526,6 +563,7 @@ cdef class Pipeline:
 
     def __cinit__(self):
         self._pli = NULL
+        self.profile = None
         self.background = None
 
     def __init__(
@@ -641,11 +679,13 @@ cdef class Pipeline:
         """
 
         cdef int                  status
+        cdef int                  allocM
         cdef DigitalSequence      seq
+        cdef Profile              profile = self._profile
+        cdef OptimizedProfile     opt
         cdef ESL_ALPHABET*        abc     = self.alphabet._abc
         cdef P7_BG*               bg      = self.background._bg
         cdef P7_HMM*              hm      = hmm._hmm
-        cdef P7_PROFILE*          gm
         cdef P7_OPROFILE*         om
         cdef P7_TOPHITS*          th
         cdef P7_PIPELINE*         pli     = self._pli
@@ -681,30 +721,21 @@ cdef class Pipeline:
             ))
         sq = seq._sq
 
+        # build the profile from the HMM, using the first sequence length
+        # as a hint for the model configuration
+        if profile is None or profile._gm.allocM < hm.M:
+            profile = self._profile = Profile(hm.M, alphabet)
+        else:
+            profile.clear()
+        profile.configure(hmm, self.background, sq.L)
+
+        # build the optimized model from the profile
+        opt = profile.optimized()
+        om = opt._om
+
         # release the GIL for as long as possible to allow several search
         # pipelines to run in true parallel mode even in Python threads
         with nogil:
-
-            # build the profile from the HMM, using the first sequence length
-            # as a hint for the model configuraiton
-            gm = libhmmer.p7_profile.p7_profile_Create(hm.M, abc)
-            if gm == NULL:
-                raise AllocationError("P7_PROFILE")
-            status = libhmmer.modelconfig.p7_ProfileConfig(hm, bg, gm, sq.L, p7_LOCAL)
-            if status != libeasel.eslOK:
-                raise UnexpectedError(status, "p7_ProfileEmit")
-
-            # build the optimized model from the HMM
-            om = p7_oprofile.p7_oprofile_Create(hm.M, abc)
-            if om == NULL:
-                raise AllocationError("P7_OPROFILE")
-            status = p7_oprofile.p7_oprofile_Convert(gm, om)
-            if status == libeasel.eslEINVAL:
-                raise ValueError("standard and optimized profiles are not compatible")
-            elif status == libeasel.eslEMEM:
-                raise AllocationError("P7_OPROFILE")
-            elif status != libeasel.eslOK:
-                raise UnexpectedError(status, "p7_oprofile_Convert")
 
             # configure the pipeline for the current HMM
             status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
@@ -748,12 +779,6 @@ cdef class Pipeline:
                           self.alphabet,
                           seq.alphabet,
                         ))
-
-            # deallocate the profile and optimized model
-            # TODO: also properly deallocate if an exception is thrown to
-            #       avoid memory leaks
-            libhmmer.p7_profile.p7_profile_Destroy(gm)
-            p7_oprofile.p7_oprofile_Destroy(om)
 
         # store this pipeline as the pipeline that parameterizes the top hits;
         # TODO: check if any previous pipeline was stored, and check its
@@ -803,10 +828,20 @@ cdef class Profile:
             local (`bool`):  Whether or not to use non-local modes.
 
         """
-        cdef int mode = ((4, 3), (2, 1))[multihit][local]
-        cdef int status = libhmmer.modelconfig.p7_ProfileConfig(
-            hmm._hmm, background._bg, self._gm, L, mode
-        )
+        cdef int         mode
+        cdef int         status
+        cdef P7_HMM*     hm     = hmm._hmm
+        cdef P7_BG*      bg     = background._bg
+        cdef P7_PROFILE* gm     = self._gm
+
+        if hmm.alphabet != self.alphabet:
+            raise ValueError("HMM and profile alphabet don't match")
+        elif hm.M > self._gm.allocM:
+            raise ValueError("Profile is too small to hold HMM")
+
+        with nogil:
+            mode = ((p7_UNIGLOCAL, p7_UNILOCAL), (p7_GLOCAL, p7_LOCAL))[multihit][local]
+            status = libhmmer.modelconfig.p7_ProfileConfig(hm, bg, gm, L, mode)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_ProfileConfig")
 
@@ -836,6 +871,24 @@ cdef class Profile:
         """
         assert self._gm != NULL
         return libhmmer.p7_profile.p7_profile_IsMultihit(self._gm)
+
+    cpdef OptimizedProfile optimized(self):
+        """Convert the profile to a platform-specific optimized model.
+        """
+        assert self._gm != NULL
+
+        cdef OptimizedProfile opt = OptimizedProfile.__new__(OptimizedProfile)
+        OptimizedProfile.__init__(opt, self._gm.M, self.alphabet)
+
+        cdef int status = p7_oprofile.p7_oprofile_Convert(self._gm, opt._om)
+        if status == libeasel.eslOK:
+            return opt
+        elif status == libeasel.eslEINVAL:
+            raise ValueError("standard and optimized profiles are not compatible")
+        elif status == libeasel.eslEMEM:
+            raise AllocationError("P7_OPROFILE")
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_oprofile_Convert")
 
 
 cdef class TopHits:

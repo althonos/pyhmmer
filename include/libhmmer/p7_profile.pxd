@@ -40,6 +40,12 @@ cdef extern from "hmmer.h" nogil:
         p7P_MSC = 0
         p7P_ISC = 1
 
+    cdef enum:
+        p7_NO_MODE   = 0
+        p7_LOCAL     = 1
+        p7_GLOCAL    = 2
+        p7_UNILOCAL  = 3
+        p7_UNIGLOCAL = 4
 
     ctypedef p7_profile_s P7_PROFILE
     cdef struct p7_profile_s:

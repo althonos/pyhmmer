@@ -12,7 +12,12 @@ from libhmmer.p7_pipeline cimport P7_PIPELINE
 from libhmmer.p7_profile cimport P7_PROFILE
 from libhmmer.p7_tophits cimport P7_TOPHITS, P7_HIT
 
-from pyhmmer.easel cimport Alphabet
+IF HMMER_IMPL == "VMX":
+    from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
+ELIF HMMER_IMPL == "SSE":
+    from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
+
+from .easel cimport Alphabet
 
 # --- Cython classes ---------------------------------------------------------
 
@@ -68,9 +73,21 @@ cdef class HMMFile:
     cpdef void close(self)
 
 
-cdef class Pipeline:
+cdef class OptimizedProfile:
     cdef readonly Alphabet alphabet
+    cdef P7_OPROFILE* _om
+
+    cpdef OptimizedProfile copy(self)
+    cpdef bint is_local(self)
+
+
+cdef class Pipeline:
+    cdef readonly Alphabet   alphabet
     cdef readonly Background background
+    cdef readonly Profile    profile
+
+    cdef OptimizedProfile _optimized
+
     cdef P7_PIPELINE* _pli
 
     cpdef TopHits search(self, HMM hmm, object seqs, TopHits hits=?)
@@ -85,6 +102,7 @@ cdef class Profile:
     cpdef Profile copy(self)
     cpdef bint is_local(self)
     cpdef bint is_multihit(self)
+    cpdef OptimizedProfile optimized(self)
 
 
 cdef class TopHits:

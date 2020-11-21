@@ -143,9 +143,17 @@ class HMMFile(typing.ContextManager[HMMFile], typing.Iterator[HMM]):
     def close(self) -> None: ...
 
 
+class OptimizedProfile(object):
+    def __init__(self, m: int, abc: Alphabet) -> None: ...
+    def __copy__(self) -> OptimizedProfile: ...
+    def is_local(self) -> bool: ...
+    def copy(self) -> OptimizedProfile: ...
+
+
 class Pipeline(object):
     alphabet: Alphabet
     background: Background
+    profile: typing.Optional[Profile]
 
     def __init__(
         self,
