@@ -14,7 +14,7 @@ See Also:
 
 from libc.stdint cimport uint32_t
 from libc.stdio cimport fprintf, FILE, stdout
-from libc.math cimport exp
+from libc.math cimport exp, ceil
 
 cimport libeasel
 cimport libeasel.sq
@@ -115,6 +115,57 @@ cdef class Alignment:
     @property
     def identity_sequence(self):
         return self._ad.mline.decode('ascii')
+
+
+cdef class Background:
+    """The null background model of HMMER.
+    """
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __cinit__(self):
+        self._bg = NULL
+        self.alphabet = None
+
+    def __init__(self, Alphabet alphabet, bint uniform=False):
+        self.alphabet = alphabet
+
+        if uniform:
+            self._bg = libhmmer.p7_bg.p7_bg_CreateUniform(alphabet._abc)
+        else:
+            self._bg = libhmmer.p7_bg.p7_bg_Create(alphabet._abc)
+        if self._bg == NULL:
+            raise AllocationError("P7_BG")
+
+    def __dealloc__(self):
+        libhmmer.p7_bg.p7_bg_Destroy(self._bg)
+
+    def __copy__(self):
+        return self.copy()
+
+    # --- Magic methods ------------------------------------------------------
+
+    @property
+    def length(self):
+        assert self._bg != NULL
+        return <int> ceil(self._bg.p1 / (1 - self._bg.p1))
+
+    @length.setter
+    def length(self, length: int):
+        assert self._bg != NULL
+        cdef int status = libhmmer.p7_bg.p7_bg_SetLength(self._bg, length)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_bg_SetLength")
+
+    # --- Methods ------------------------------------------------------------
+
+    cpdef Background copy(self):
+        cdef Background new = Background.__new__(Background)
+        new.alphabet = self.alphabet
+        new._bg = libhmmer.p7_bg.p7_bg_Clone(self._bg)
+        if new._bg == NULL:
+            raise AllocationError("P7_BG")
+        return new
 
 
 cdef class Domain:
@@ -306,15 +357,15 @@ cdef class HMM:
 
     # --- Magic methods ------------------------------------------------------
 
+    def __cinit__(self):
+        self.alphabet = None
+        self._hmm = NULL
+
     def __init__(self, int m, Alphabet alphabet):
         self.alphabet = alphabet
         self._hmm = libhmmer.p7_hmm.p7_hmm_Create(m, alphabet._abc)
         if not self.hmm:
            raise MemoryError("could not allocate C object")
-
-    def __cinit__(self):
-        self.alphabet = None
-        self._hmm = NULL
 
     def __dealloc__(self):
         libhmmer.p7_hmm.p7_hmm_Destroy(self._hmm)
@@ -400,7 +451,7 @@ cdef class HMMFile:
             raise FileNotFoundError(errno.ENOENT, "no such file or directory: {!r}".format(filename))
         elif status == libeasel.eslEFORMAT:
             raise ValueError("format not recognized by HMMER")
-        else:
+        elif status != libeasel.eslOK:
             raise UnexpectedError(status, function)
 
         self._alphabet = Alphabet.__new__(Alphabet)
@@ -475,10 +526,12 @@ cdef class Pipeline:
 
     def __cinit__(self):
         self._pli = NULL
+        self.background = None
 
     def __init__(
         self,
         Alphabet alphabet,
+        Background background = None,
         *,
         bint bias_filter=True,
         float report_e=10.0,
@@ -491,6 +544,11 @@ cdef class Pipeline:
             alphabet (`~pyhmmer.easel.Alphabet`): The biological alphabet the
                 of the HMMs and sequences that are going to be compared. Used
                 to build the background model.
+            background (`~pyhmmer.plan7.Background`, optional): The background
+                model to use with the pipeline, or ``None`` to create and use
+                a default one. *The pipeline needs ownership of the background
+                model, so make sure to use* `Background.copy` *if passing a
+                custom background model here.*
 
         Keyword Arguments:
             bias_filter (`bool`): Whether or not to enable composition bias
@@ -507,10 +565,13 @@ cdef class Pipeline:
         # store a reference to the alphabet to avoid deallocation
         self.alphabet = alphabet
 
-        # create the background model and the pipeline
-        self._bg = libhmmer.p7_bg.p7_bg_Create(alphabet._abc)
-        if self._bg == NULL:
-            raise AllocationError("P7_BG")
+        # use the background model or create a default one
+        if background is None:
+            self.background = Background(alphabet)
+        else:
+            self.background = background.copy()
+
+        # allocate and initialize the pipeline
         self._pli = libhmmer.p7_pipeline.p7_pipeline_Create(
             NULL,
             self.M_HINT,
@@ -538,7 +599,6 @@ cdef class Pipeline:
 
     def __dealloc__(self):
         libhmmer.p7_pipeline.p7_pipeline_Destroy(self._pli)
-        libhmmer.p7_bg.p7_bg_Destroy(self._bg)
 
     # --- Properties ---------------------------------------------------------
 
@@ -583,7 +643,7 @@ cdef class Pipeline:
         cdef int                  status
         cdef DigitalSequence      seq
         cdef ESL_ALPHABET*        abc     = self.alphabet._abc
-        cdef P7_BG*               bg      = self._bg
+        cdef P7_BG*               bg      = self.background._bg
         cdef P7_HMM*              hm      = hmm._hmm
         cdef P7_PROFILE*          gm
         cdef P7_OPROFILE*         om

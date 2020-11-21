@@ -22,6 +22,13 @@ cdef class Alignment:
     cdef P7_ALIDISPLAY* _ad
 
 
+cdef class Background:
+    cdef readonly Alphabet alphabet
+    cdef P7_BG* _bg
+
+    cpdef Background copy(self)
+
+
 cdef class Domain:
     cdef readonly Alignment alignment
     cdef readonly Hit hit
@@ -63,8 +70,8 @@ cdef class HMMFile:
 
 cdef class Pipeline:
     cdef readonly Alphabet alphabet
+    cdef readonly Background background
     cdef P7_PIPELINE* _pli
-    cdef P7_BG* _bg
 
     cpdef TopHits search(self, HMM hmm, object seqs, TopHits hits=?)
 

@@ -33,6 +33,18 @@ class Alignment(collections.abc.Sized):
     def identity_sequence(self) -> str: ...
 
 
+class Background(object):
+    def __init__(self, alphabet: Alphabet, uniform: bool = False) -> None: ...
+    def __copy__(self) -> Background: ...
+
+    @property
+    def length(self) -> int: ...
+    @length.setter
+    def length(self, length: int) -> None: ...
+
+    def copy(self) -> Background: ...
+
+
 class Domain(object):
     alignment: Alignment
     hit: Hit
@@ -133,10 +145,12 @@ class HMMFile(typing.ContextManager[HMMFile], typing.Iterator[HMM]):
 
 class Pipeline(object):
     alphabet: Alphabet
+    background: Background
 
     def __init__(
         self,
         alphabet: Alphabet,
+        background: typing.Optional[Background] = None,
         *,
         bias_filter: bool = True,
         report_e: float = 10.0,
