@@ -381,15 +381,24 @@ cdef class HMMFile:
         self._alphabet = None
         self._hfp = NULL
 
-    def __init__(self, str filename):
-        cdef bytes fspath = os.fsencode(filename)
-        cdef errbuf = bytearray(eslERRBUFSIZE)
+    def __init__(self, str filename, bint db = True):
+        cdef bytes     fspath = os.fsencode(filename)
+        cdef bytearray errbuf = bytearray(eslERRBUFSIZE)
+        cdef int status
 
-        cdef err = libhmmer.p7_hmmfile.p7_hmmfile_OpenE(fspath, NULL, &self._hfp, errbuf)
-        if err == libeasel.eslENOTFOUND:
+        if db:
+            function = "p7_hmmfile_OpenE"
+            status = libhmmer.p7_hmmfile.p7_hmmfile_OpenE(fspath, NULL, &self._hfp, errbuf)
+        else:
+            function = "p7_hmmfile_OpenENoDB"
+            status = libhmmer.p7_hmmfile.p7_hmmfile_OpenENoDB(fspath, NULL, &self._hfp, errbuf)
+
+        if status == libeasel.eslENOTFOUND:
             raise FileNotFoundError(errno.ENOENT, "no such file or directory: {!r}".format(filename))
-        elif err == libeasel.eslEFORMAT:
+        elif status == libeasel.eslEFORMAT:
             raise ValueError("format not recognized by HMMER")
+        else:
+            raise UnexpectedError(status, function)
 
         self._alphabet = Alphabet.__new__(Alphabet)
         self._alphabet._abc = NULL
