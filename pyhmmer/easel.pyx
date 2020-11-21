@@ -11,9 +11,10 @@ to facilitate the development of biological software in C. It is used by
 # --- C imports --------------------------------------------------------------
 
 cimport cython
-from libc.stdint cimport int64_t, uint32_t
+from libc.stdint cimport int64_t, uint16_t, uint32_t
 from libc.stdlib cimport malloc
 from libc.string cimport memmove, strdup, strlen
+from posix.types cimport off_t
 from cpython.unicode cimport PyUnicode_FromUnicode
 
 cimport libeasel
@@ -23,6 +24,7 @@ cimport libeasel.keyhash
 cimport libeasel.msa
 cimport libeasel.sq
 cimport libeasel.sqio
+cimport libeasel.ssi
 from libeasel cimport ESL_DSQ
 
 DEF eslERRBUFSIZE = 128
@@ -30,6 +32,7 @@ DEF eslERRBUFSIZE = 128
 # --- Python imports ---------------------------------------------------------
 
 import os
+import collections
 import warnings
 
 from .errors import AllocationError, UnexpectedError
@@ -920,3 +923,84 @@ cdef class SequenceFile:
             self._alphabet = alphabet
         else:
             raise UnexpectedError(status, "esl_sqfile_SetDigital")
+
+
+cdef class SSIReader:
+    """A read-only handler for sequence/subsequence index file.
+    """
+
+    Entry = collections.namedtuple(
+        "Entry",
+        ["fd", "record_offset", "data_offset", "record_length"]
+    )
+
+    def __cinit__(self):
+        self._ssi = NULL
+
+    def __init__(self, str file):
+        cdef int      status
+        cdef bytes    fspath = os.fsencode(file)
+
+        status = libeasel.ssi.esl_ssi_Open(fspath, &self._ssi)
+        if status == libeasel.eslENOTFOUND:
+            raise FileNotFoundError(2, "No such file or directory: {!r}".format(file))
+        elif status == libeasel.eslEFORMAT:
+            raise ValueError("File is not in correct SSI format")
+        elif status == libeasel.eslERANGE:
+            raise RuntimeError("File has 64-bit file offsets, which are unsupported on this system")
+        else:
+            raise UnexpectedError(status, "esl_ssi_Open")
+
+    def __dealloc__(self):
+        libeasel.ssi.esl_ssi_Close(self._ssi)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_value, exc_type, traceback):
+        if self.mode == "r":
+            libeasel.ssi.esl_ssi_Close(self._ssi)
+        return False
+
+    def find_name(self, bytes key):
+
+        cdef uint16_t ret_fh
+        cdef off_t    ret_roff
+        cdef off_t    opt_doff
+        cdef int64_t  opt_L
+
+        cdef int status = libeasel.ssi.esl_ssi_FindName(
+            self._ssi, key, &ret_fh, &ret_roff, &opt_doff, &opt_L
+        )
+
+        if status == libeasel.eslOK:
+            return self.Entry(ret_fh, ret_roff, opt_doff or None, opt_L or None)
+        elif status == libeasel.eslENOTFOUND:
+            raise KeyError(key)
+        elif status == libeasel.eslEFORMAT:
+            raise ValueError("malformed index")
+        else:
+            raise UnexpectedError(status, "esl_ssi_FindName")
+
+
+cdef class SSIWriter:
+    """A writer for sequence/subsequence index files.
+    """
+
+    def __cinit__(self):
+        self._newssi = NULL
+
+    def __init__(self, str file, bint exclusive = False):
+        cdef int   status
+        cdef bytes fspath = os.fsencode(file)
+
+        status = libeasel.ssi.esl_newssi_Open(fspath, not exclusive, &self._newssi)
+        if status == libeasel.eslENOTFOUND:
+            raise FileNotFoundError(2, "No such file or directory: {!r}".format(file))
+        elif status == libeasel.eslEOVERWRITE:
+            raise FileExistsError(17, "File exists: {!r}".format(file))
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_newssi_Open")
+
+    def __dealloc__(self):
+        libeasel.ssi.esl_newssi_Close(self._newssi)

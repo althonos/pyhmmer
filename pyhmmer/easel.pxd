@@ -12,6 +12,7 @@ from libeasel.keyhash cimport ESL_KEYHASH
 from libeasel.msa cimport ESL_MSA
 from libeasel.sq cimport ESL_SQ
 from libeasel.sqio cimport ESL_SQFILE
+from libeasel.ssi cimport ESL_SSI, ESL_NEWSSI
 
 
 # --- Cython classes ---------------------------------------------------------
@@ -85,3 +86,11 @@ cdef class SequenceFile:
     cpdef void close(self)
     cpdef Alphabet guess_alphabet(self)
     cpdef void set_digital(self, Alphabet)
+
+
+cdef class SSIReader:
+    cdef ESL_SSI* _ssi
+
+
+cdef class SSIWriter:
+    cdef ESL_NEWSSI* _newssi
