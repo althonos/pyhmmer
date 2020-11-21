@@ -10,6 +10,7 @@ cdef extern from "easel.h" nogil:
     cdef double eslCONST_GOLD
     cdef double eslCONST_LOG2
     cdef double eslCONST_LOG2R
+    cdef double eslINFINITY
 
     ctypedef uint8_t ESL_DSQ
     ctypedef int64_t esl_pos_t
