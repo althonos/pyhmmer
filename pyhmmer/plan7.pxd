@@ -63,7 +63,7 @@ cdef class HMM:
     cdef readonly Alphabet alphabet
     cdef P7_HMM* _hmm
 
-    cpdef void write(self, object fh, bint binary=*)
+    cpdef void write(self, object fh, bint binary=*) except *
     cpdef void zero(self)
 
 

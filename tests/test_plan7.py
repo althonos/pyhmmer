@@ -6,6 +6,7 @@ import tempfile
 import pkg_resources
 
 import pyhmmer
+from pyhmmer.errors import EaselError
 from pyhmmer.easel import SequenceFile
 from pyhmmer.plan7 import HMMFile, Pipeline
 
@@ -34,7 +35,11 @@ class TestHMM(unittest.TestCase):
 
     def test_write_error(self):
         buffer = io.StringIO()
-        self.assertRaises(TypeError, self.hmm.write, buffer)
+
+        with self.assertRaises(EaselError) as ctx:
+            self.hmm.write(buffer)
+        self.assertEqual(ctx.exception.code, 27)
+        self.assertIsInstance(ctx.exception.__cause__, TypeError)
 
 
 class TestHMMFile(unittest.TestCase):

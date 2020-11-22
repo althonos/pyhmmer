@@ -4,7 +4,7 @@
 
 # --- C imports --------------------------------------------------------------
 
-from cpython.exc cimport PyErr_Occurred, PyErr_Fetch
+from cpython.exc cimport PyErr_Clear, PyErr_Occurred, PyErr_Fetch, PyErr_Restore
 from cpython.ref cimport PyObject
 
 cdef extern from "stdarg.h" nogil:
@@ -24,7 +24,7 @@ from .errors import EaselError
 
 # We register a custom exception handler so that the program should not crash,
 # but simply raise an exception, while chaining
-cdef void py_handler(int errcode, int use_errno, char* sourcefile, int sourceline, char* format, va_list argp) nogil:
+cdef void py_handler(int errcode, int use_errno, char* sourcefile, int sourceline, char* format, va_list argp) nogil except *:
     cdef PyObject*  type
     cdef PyObject*  value
     cdef PyObject*  traceback
@@ -47,7 +47,7 @@ cdef void py_handler(int errcode, int use_errno, char* sourcefile, int sourcelin
         else:
             message = None
 
-        # return the EaselError
+        # raise the exception and hope it's collected
         raise EaselError(errcode, message) from error
 
 libeasel.esl_exception_SetHandler(<libeasel.esl_exception_handler_f> py_handler)

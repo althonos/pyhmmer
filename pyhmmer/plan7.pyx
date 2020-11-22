@@ -13,6 +13,7 @@ See Also:
 # --- C imports --------------------------------------------------------------
 
 from cpython.ref cimport PyObject
+from cpython.exc cimport PyErr_Clear
 from libc.stdlib cimport realloc
 from libc.stdint cimport uint32_t
 from libc.stdio cimport fprintf, FILE, stdout, fclose
@@ -58,7 +59,6 @@ ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
     include "fileobj/bsd.pxi"
 
 from .easel cimport Alphabet, Sequence, DigitalSequence
-from .iotools cimport fopen_obj
 
 # --- Python imports ---------------------------------------------------------
 
@@ -434,18 +434,23 @@ cdef class HMM:
 
     # --- Methods ------------------------------------------------------------
 
-    cpdef void write(self, object fh, bint binary=False):
-        cdef int   status
-        cdef FILE* file
+    cpdef void write(self, object fh, bint binary=False) except *:
+        cdef int     status
+        cdef FILE*   file
+        cdef P7_HMM* hm     = self._hmm
 
         file = fopen_obj(<PyObject*> fh, mode="w")
 
-        if binary:
-            status = libhmmer.p7_hmmfile.p7_hmmfile_WriteBinary(file, -1, self._hmm)
-        else:
-            status = libhmmer.p7_hmmfile.p7_hmmfile_WriteASCII(file, -1, self._hmm)
+        with nogil:
+            if binary:
+                status = libhmmer.p7_hmmfile.p7_hmmfile_WriteBinary(file, -1, hm)
+            else:
+                status = libhmmer.p7_hmmfile.p7_hmmfile_WriteASCII(file, -1, hm)
 
-        fclose(file)
+        if status == libeasel.eslOK:
+            fclose(file)
+        else:
+            raise UnexpectedError(status, "p7_hmmfile_WriteASCII")
 
     cpdef void zero(self):
         """Set all parameters to zero (including model composition).

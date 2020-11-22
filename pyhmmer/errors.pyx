@@ -86,7 +86,7 @@ class EaselError(RuntimeError):
         return "{}({!r}, {!r})".format(type(self).__name__, self.code, self.message)
 
     def __str__(self):
-        return "Error occurred in C code: {}, {} (status code {}).".format(
+        return "Error raised from C code: {}, {} (status code {}).".format(
             statuscode.get(self.code, "<unknown>"),
             self.message,
             self.code
