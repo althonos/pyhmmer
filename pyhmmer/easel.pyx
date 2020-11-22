@@ -11,11 +11,11 @@ to facilitate the development of biological software in C. It is used by
 # --- C imports --------------------------------------------------------------
 
 cimport cython
+from cpython.unicode cimport PyUnicode_FromUnicode
 from libc.stdint cimport int64_t, uint16_t, uint32_t
 from libc.stdlib cimport malloc
 from libc.string cimport memmove, strdup, strlen
 from posix.types cimport off_t
-from cpython.unicode cimport PyUnicode_FromUnicode
 
 cimport libeasel
 cimport libeasel.alphabet
@@ -1096,3 +1096,8 @@ cdef class SSIWriter:
     def close(self):
         libeasel.ssi.esl_newssi_Close(self._newssi)
         self._newssi = NULL
+
+
+# --- Module init code -------------------------------------------------------
+
+include "exceptions.pxi"

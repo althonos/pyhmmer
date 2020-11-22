@@ -12,9 +12,10 @@ See Also:
 
 # --- C imports --------------------------------------------------------------
 
+from cpython.ref cimport PyObject
 from libc.stdlib cimport realloc
 from libc.stdint cimport uint32_t
-from libc.stdio cimport fprintf, FILE, stdout
+from libc.stdio cimport fprintf, FILE, stdout, fclose
 from libc.math cimport exp, ceil
 
 cimport libeasel
@@ -51,8 +52,13 @@ ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse cimport impl_Init
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
-from .easel cimport Alphabet, Sequence, DigitalSequence
+IF UNAME_SYSNAME == "Linux":
+    include "fileobj/linux.pxi"
+ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
+    include "fileobj/bsd.pxi"
 
+from .easel cimport Alphabet, Sequence, DigitalSequence
+from .iotools cimport fopen_obj
 
 # --- Python imports ---------------------------------------------------------
 
@@ -1076,3 +1082,5 @@ cdef class TopHits:
 
 impl_Init()
 p7_FLogsumInit()
+
+include "exceptions.pxi"
