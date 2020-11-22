@@ -441,11 +441,10 @@ cdef class HMM:
 
         file = fopen_obj(<PyObject*> fh, mode="w")
 
-        with nogil:
-            if binary:
-                status = libhmmer.p7_hmmfile.p7_hmmfile_WriteBinary(file, -1, hm)
-            else:
-                status = libhmmer.p7_hmmfile.p7_hmmfile_WriteASCII(file, -1, hm)
+        if binary:
+            status = libhmmer.p7_hmmfile.p7_hmmfile_WriteBinary(file, -1, hm)
+        else:
+            status = libhmmer.p7_hmmfile.p7_hmmfile_WriteASCII(file, -1, hm)
 
         if status == libeasel.eslOK:
             fclose(file)
