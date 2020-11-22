@@ -428,6 +428,19 @@ cdef class HMM:
 
     # --- Methods ------------------------------------------------------------
 
+    cpdef void write(self, object fh, bint binary=False):
+        cdef int   status
+        cdef FILE* file
+
+        file = fopen_obj(<PyObject*> fh, mode="w")
+
+        if binary:
+            status = libhmmer.p7_hmmfile.p7_hmmfile_WriteBinary(file, -1, self._hmm)
+        else:
+            status = libhmmer.p7_hmmfile.p7_hmmfile_WriteASCII(file, -1, self._hmm)
+
+        fclose(file)
+
     cpdef void zero(self):
         """Set all parameters to zero (including model composition).
         """

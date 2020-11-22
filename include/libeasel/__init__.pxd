@@ -1,5 +1,10 @@
 from libc.stdint cimport uint8_t, int64_t
 
+
+cdef extern from "stdarg.h" nogil:
+    ctypedef struct va_list:
+          pass
+
 cdef extern from "easel.h" nogil:
 
     cdef size_t eslERRBUFSIZE
@@ -45,3 +50,12 @@ cdef extern from "easel.h" nogil:
         eslENOALPHABET = 26
         eslEWRITE = 27
         eslEINACCURATE = 28
+
+    # 1. Error handling
+    ctypedef void(*esl_exception_handler_f)(int errcode, int use_errno, char *sourcefile, int sourceline, char *format, va_list argp)
+    # void esl_fail(char *errbuf, const char *format, ...)
+    # void esl_exception(int errcode, int use_errno, char *sourcefile, int sourceline, char *format, ...);
+    void esl_exception_SetHandler(esl_exception_handler_f)
+    void esl_exception_ResetDefaultHandler()
+    # void esl_nonfatal_handler(int errcode, int use_errno, char *sourcefile, int sourceline, char *format, va_list argp);
+    # void esl_fatal(const char *format, ...) ESL_ATTRIBUTE_NORETURN;

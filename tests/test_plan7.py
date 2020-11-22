@@ -1,3 +1,5 @@
+import io
+import itertools
 import os
 import unittest
 import tempfile
@@ -6,6 +8,33 @@ import pkg_resources
 import pyhmmer
 from pyhmmer.easel import SequenceFile
 from pyhmmer.plan7 import HMMFile, Pipeline
+
+
+class TestHMM(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.hmms_folder = os.path.join(os.path.dirname(__file__), "data", "hmm")
+        cls.hmm_path = os.path.join(cls.hmms_folder, "Thioesterase.hmm")
+        with HMMFile(cls.hmm_path) as hmm_file:
+            cls.hmm = next(hmm_file)
+
+    def test_write(self):
+        buffer = io.BytesIO()
+        self.hmm.write(buffer)
+
+        self.assertNotEqual(buffer.tell(), 0)
+        buffer.seek(0)
+
+        with open(self.hmm_path, "rb") as f:
+            # 1st line is skipped, cause it contains the format date, which will
+            # obviously not be the same as the reference
+            for line_written, line_ref in itertools.islice(zip(buffer, f), 1, None):
+                self.assertEqual(line_written, line_ref)
+
+    def test_write_error(self):
+        buffer = io.StringIO()
+        self.assertRaises(TypeError, self.hmm.write, buffer)
 
 
 class TestHMMFile(unittest.TestCase):
