@@ -36,6 +36,7 @@ class _PipelineThread(threading.Thread):
         self.callback = callback or self._none_callback
         self.kill_switch = kill_switch
         self.error = None
+        self.processed = 0
 
     def run(self) -> None:
         while not self.kill_switch.is_set():
@@ -48,6 +49,7 @@ class _PipelineThread(threading.Thread):
                     self.pipeline.search(hmm, self.sequences, hits=self.hits)
                     self.hmm_queue.task_done()
                     self.callback(hmm, self.hmm_count.value)
+                    self.processed += 1
                 except BaseException as exc:
                     self.error = exc
                     self.kill()
@@ -101,14 +103,13 @@ def hmmsearch(
     for thread in threads[1:]:
         hits += thread.hits
 
-    # extract the first pipeline from the thread so that the TopHits can use it,
-    # and patch the Z value using either the options or the sequences count
+    # threshold the sequences with the first pipeline
     with threads[0].pipeline_lock:
-        hits.pipeline, threads[0].pipeline = threads[0].pipeline, None  # type: ignore
-        hits.pipeline.Z = options.get("Z", len(sequences))
+        hits.Z = threads[0].pipeline.Z = options.get("Z", len(sequences))
+        hits.threshold(threads[0].pipeline)
+        hits.domZ = threads[0].pipeline.domZ
 
     # return thresholded hits
-    hits.threshold()
     return hits
 
 
@@ -141,3 +142,5 @@ if __name__ == "__main__":
             hits = hmmsearch(hmms, sequences, cpus=args.jobs)
 
     print("Found {} hits".format(len(hits)))
+    print(" - included: {}".format(hits.included))
+    print(" - reported: {}".format(len(hits)))

@@ -3,12 +3,14 @@
 
 # --- C imports --------------------------------------------------------------
 
+from libc.stdint cimport uint32_t
+
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_bg cimport P7_BG
 from libhmmer.p7_domain cimport P7_DOMAIN
 from libhmmer.p7_hmm cimport P7_HMM
 from libhmmer.p7_hmmfile cimport P7_HMMFILE
-from libhmmer.p7_pipeline cimport P7_PIPELINE
+from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e
 from libhmmer.p7_profile cimport P7_PROFILE
 from libhmmer.p7_tophits cimport P7_TOPHITS, P7_HIT
 
@@ -83,14 +85,19 @@ cdef class OptimizedProfile:
 
 
 cdef class Pipeline:
+    cdef public   uint32_t   seed
+    cdef public   bint       null2
+    cdef public   bint       bias_filter
+    cdef public   float      report_e
+
     cdef readonly Alphabet   alphabet
     cdef readonly Background background
     cdef readonly Profile    profile
 
     cdef OptimizedProfile _optimized
-
     cdef P7_PIPELINE* _pli
 
+    cdef void _reset(self, p7_pipemodes_e mode)
     cpdef TopHits search(self, HMM hmm, object seqs, TopHits hits=?)
 
 
@@ -107,13 +114,18 @@ cdef class Profile:
 
 
 cdef class TopHits:
-    cdef public Pipeline pipeline
+
+    cdef readonly float Z
+    cdef readonly float domZ
+    cdef readonly bint  long_targets
+
+    # cdef public Pipeline pipeline
     cdef P7_TOPHITS* _th
-    cdef bint _thresholded
+    # cdef bint _thresholded
 
     cdef void _on_edit(self)
 
-    cpdef void threshold(self)
+    cpdef void threshold(self, Pipeline pipeline)
     cpdef void clear(self)
     cpdef void sort(self, str by=*)
     cpdef bint is_sorted(self, str by=*)

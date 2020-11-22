@@ -65,7 +65,6 @@ class _TestSearch(metaclass=abc.ABCMeta):
         self.assertEqual(len(hits), 1)
 
         hits.sort()
-        hits.threshold()
 
         hit = hits[0]
         self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_113")
@@ -95,7 +94,6 @@ class _TestSearch(metaclass=abc.ABCMeta):
         self.assertEqual(len(hits), 16)
 
         hits.sort()
-        hits.threshold()
 
         with self.table("PF02826.tbl") as table:
             lines = filter(lambda line: not line.startswith("#"), table)

@@ -116,13 +116,6 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(hit.name, b"938293.PRJEB85.HG003688_14")
 
     def test_threshold(self):
-        # before thresholding, all hits are reported / included
-        self.assertEqual(self.hits.included, len(self.hits))
-        self.assertEqual(self.hits.reported, len(self.hits))
-
-        # thresholding should not segfault, even without sorting
-        self.hits.threshold()
-
         # after thresholding, one of the htis will not be included.
         self.assertEqual(self.hits.included, 15)
         self.assertEqual(self.hits.reported, 16)
