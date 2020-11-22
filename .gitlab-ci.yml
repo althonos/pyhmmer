@@ -28,30 +28,35 @@ variables:
 test:python3.6:
   image: python:3.6
   environment:
+    name: Python 3.6
     python: python
   <<: *test
 
 test:python3.7:
   image: python:3.7
   environment:
+    name: Python 3.7
     python: python
   <<: *test
 
 test:python3.8:
   image: python:3.8
   environment:
+    name: Python 3.8
     python: python
   <<: *test
 
 test:python3.9:
   image: python:3.9
   environment:
+    name: Python 3.9
     python: python
   <<: *test
 
 test:pypy3.7:
   image: pypy:3.7
   environment:
+    name: PyPy 3.7
     python: pypy3
   rules:
     allow_failure: true
