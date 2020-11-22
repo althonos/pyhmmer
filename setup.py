@@ -442,6 +442,10 @@ libraries = [
 
 extensions = [
     Extension(
+        "pyhmmer.iotools",
+        [os.path.join("pyhmmer", "iotools.pyx")],
+    ),
+    Extension(
         "pyhmmer.errors",
         [os.path.join("pyhmmer", "errors.pyx")],
         libraries=["easel"],
@@ -457,7 +461,7 @@ extensions = [
     ),
     Extension(
         "pyhmmer.plan7",
-        ["pyhmmer/plan7.pyx"],
+        [os.path.join("pyhmmer", "plan7.pyx")],
         libraries=["hmmer", "easel", "divsufsort"],
         define_macros=platform_define_macros,
         extra_compile_args=platform_compile_args,
