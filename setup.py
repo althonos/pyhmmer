@@ -442,10 +442,6 @@ libraries = [
 
 extensions = [
     Extension(
-        "pyhmmer.iotools",
-        [os.path.join("pyhmmer", "iotools.pyx")],
-    ),
-    Extension(
         "pyhmmer.errors",
         [os.path.join("pyhmmer", "errors.pyx")],
         libraries=["easel"],
