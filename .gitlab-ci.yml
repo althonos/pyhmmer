@@ -29,6 +29,7 @@ test:python3.6:
   image: python:3.6
   environment:
     name: Python 3.6
+  variables:
     python: python
   <<: *test
 
@@ -36,6 +37,7 @@ test:python3.7:
   image: python:3.7
   environment:
     name: Python 3.7
+  variables:
     python: python
   <<: *test
 
@@ -43,6 +45,7 @@ test:python3.8:
   image: python:3.8
   environment:
     name: Python 3.8
+  variables:
     python: python
   <<: *test
 
@@ -50,6 +53,7 @@ test:python3.9:
   image: python:3.9
   environment:
     name: Python 3.9
+  variables:
     python: python
   <<: *test
 
@@ -57,7 +61,8 @@ test:pypy3.7:
   image: pypy:3.7
   environment:
     name: PyPy 3.7
+  variables:
     python: pypy3
   rules:
-    allow_failure: true
+    - allow_failure: true
   <<: *test
