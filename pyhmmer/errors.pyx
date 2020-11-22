@@ -72,3 +72,22 @@ class AllocationError(MemoryError):
 
     def __str__(self):
         return "Could not allocate {}.".format(self.ctype)
+
+
+class EaselError(RuntimeError):
+    """An error that was raised from the Easel code.
+    """
+
+    def __init__(self, code, message):
+        self.code = code
+        self.message = message
+
+    def __repr__(self):
+        return "{}({!r}, {!r})".format(type(self).__name__, self.code, self.message)
+
+    def __str__(self):
+        return "Error occurred in C code: {}, {} (status code {}).".format(
+            statuscode.get(self.code, "<unknown>"),
+            self.message,
+            self.code
+        )
