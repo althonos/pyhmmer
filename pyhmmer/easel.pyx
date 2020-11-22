@@ -971,7 +971,7 @@ cdef class SSIReader:
 
     # --- Methods ------------------------------------------------------------
 
-    def file_info(self, int fd):
+    def file_info(self, uint16_t fd):
         cdef int   status
         cdef char* filename
         cdef int   format
@@ -1019,6 +1019,8 @@ cdef class SSIWriter:
     """A writer for sequence/subsequence index files.
     """
 
+    # --- Magic methods ------------------------------------------------------
+
     def __cinit__(self):
         self._newssi = NULL
 
@@ -1035,4 +1037,62 @@ cdef class SSIWriter:
             raise UnexpectedError(status, "esl_newssi_Open")
 
     def __dealloc__(self):
+        self.close()
+
+    # --- Methods ------------------------------------------------------------
+
+    cpdef uint16_t add_file(self, str filename, int format = 0):
+        """Add a new file to the index.
+
+        Arguments:
+            filename (str): The name of the file to register.
+            format (int): A format code to associate with the file, or *0*.
+
+        Returns:
+            `int`: The filehandle associated with the new indexed file.
+
+        """
+        cdef int        status
+        cdef uint16_t   fd
+
+        if self._newssi == NULL:
+            raise ValueError("I/O operation on closed file.")
+
+        name = os.fsdecode(filename)
+        status = libeasel.ssi.esl_newssi_AddFile(self._newssi, name, format, &fd)
+        if status == libeasel.eslOK:
+            return fd
+        elif status == libeasel.eslERANGE:
+            raise ValueError("Too many files registered in index.")
+        else:
+            raise UnexpectedError(status, "esl_newssi_AddFile")
+
+    cpdef void add_key(
+        self,
+        bytes key,
+        uint16_t fd,
+        off_t record_offset,
+        off_t data_offset = 0,
+        int64_t record_length = 0
+    ):
+        cdef int status
+
+        if self._newssi == NULL:
+            raise ValueError("I/O operation on closed file.")
+
+        status = libeasel.ssi.esl_newssi_AddKey(
+            self._newssi, key, fd, record_offset, data_offset, record_length
+        )
+
+        if status == libeasel.eslERANGE:
+            raise ValueError("Too many primary keys registered in index.")
+        elif status == libeasel.eslENOTFOUND:
+            raise OSError("Could not open external temporary files.")
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_newssi_AddKey")
+
+    # cpdef void add_alias(self, )
+
+    def close(self):
         libeasel.ssi.esl_newssi_Close(self._newssi)
+        self._newssi = NULL

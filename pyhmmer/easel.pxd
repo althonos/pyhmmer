@@ -3,7 +3,8 @@
 
 # --- C imports --------------------------------------------------------------
 
-from libc.stdint cimport uint32_t
+from libc.stdint cimport int64_t, uint16_t, uint32_t
+from posix.types cimport off_t
 
 cimport libeasel.sq
 from libeasel.alphabet cimport ESL_ALPHABET
@@ -93,5 +94,16 @@ cdef class SSIReader:
 
     cpdef void close(self)
 
+
 cdef class SSIWriter:
     cdef ESL_NEWSSI* _newssi
+
+    cpdef uint16_t add_file(self, str filename, int format = *)
+    cpdef void add_key(
+        self,
+        bytes key,
+        uint16_t fd,
+        off_t record_offset,
+        off_t data_offset = *,
+        int64_t record_length = *
+    )
