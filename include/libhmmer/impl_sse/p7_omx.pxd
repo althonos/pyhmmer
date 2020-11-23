@@ -43,3 +43,9 @@ cdef extern from "impl_sse/impl_sse.h" nogil:
 
         bint     debugging;
         FILE   *dfp;
+
+
+    P7_OMX* p7_omx_Create(int allocM, int allocL, int allocXL)
+    int     p7_omx_GrowTo(P7_OMX *ox, int allocM, int allocL, int allocXL)
+    int     p7_omx_Reuse(P7_OMX *ox)
+    void    p7_omx_Destroy(P7_OMX *ox)
