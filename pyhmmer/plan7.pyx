@@ -865,7 +865,6 @@ cdef class Pipeline:
                 match the alphabet of the given HMM.
 
         """
-
         cdef int                  status
         cdef int                  allocM
         cdef DigitalSequence      seq
@@ -977,14 +976,6 @@ cdef class Pipeline:
 
         # return the hits
         return hits
-
-    cpdef void merge(self, Pipeline other):
-        assert self._pli != NULL
-        assert other._pli != NULL
-
-        status = libhmmer.p7_pipeline.p7_pipeline_Merge(self._pli, other._pli)
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "p7_pipeline_Merge")
 
 
 cdef class Profile:
@@ -1100,11 +1091,8 @@ cdef class Profile:
 cdef class TopHits:
     """A ranked list of top-scoring hits.
 
-    `TopHits` can be thresholded using the parameters from the pipeline, but
-    it is also possible to manually filter them using Python code. Therefore,
-    contrary to the HMMER code, all hits are considered included & reported
-    when a `TopHits` instance is created, until the `~TopHits.threshold`
-    method is called.
+    `TopHits` are thresholded using the parameters from the pipeline, but
+    it is also possible to manually filter them using Python code.
 
     """
 
@@ -1144,24 +1132,12 @@ cdef class TopHits:
     def included(self):
         return self._th.nincluded
 
-    cpdef void merge(self, TopHits other):
-        assert self._th != NULL
-
-        cdef int status = libhmmer.p7_tophits.p7_tophits_Merge(self._th, (<TopHits> other)._th)
-        if status == libeasel.eslOK:
-            libhmmer.p7_tophits.p7_tophits_Reuse((<TopHits> other)._th)
-        elif status == libeasel.eslEMEM:
-            raise AllocationError("P7_TOPHITS")
-        else:
-            raise UnexpectedError(status, "p7_tophits_Merge")
-
-    cpdef void threshold(self, Pipeline pipeline):
+    cdef void threshold(self, Pipeline pipeline):
         """Apply score and e-value thresholds using pipeline parameters.
 
-        This function will mark the targets and domains satisfying the
-        reporting thresholds set for ``pipeline`` as significant, and update
-        the total number of reported and included targets.
-
+        This function is automatically called in `Pipeline.search`, and
+        therefore not exposed in the Python API.
+        
         """
         cdef int          status
         cdef P7_TOPHITS*  th     = self._th

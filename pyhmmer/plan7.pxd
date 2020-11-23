@@ -100,7 +100,6 @@ cdef class Pipeline:
     cdef P7_PIPELINE* _pli
 
     cpdef void clear(self)
-    cpdef void merge(self, Pipeline other)
     cpdef TopHits search(self, HMM hmm, object seqs, TopHits hits=?)
 
 
@@ -123,8 +122,7 @@ cdef class TopHits:
 
     cdef P7_TOPHITS* _th
 
-    cpdef void merge(self, TopHits other)
-    cpdef void threshold(self, Pipeline pipeline)
+    cdef void threshold(self, Pipeline pipeline)
     cpdef void clear(self)
     cpdef void sort(self, str by=*)
     cpdef bint is_sorted(self, str by=*)
