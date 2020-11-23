@@ -11,6 +11,7 @@ variables:
 
 .test: &test
   stage: test
+  image: quay.io/pypa/manylinux2010_x86_64
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
@@ -32,6 +33,7 @@ variables:
 
 .bdist: &bdist
   stage: bdist
+  image: quay.io/pypa/manylinux2010_x86_64
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
@@ -51,35 +53,31 @@ variables:
 # --- Stages -------------------------------------------------------------------
 
 test:python3.6:
-  image: python:3.6
   environment:
     name: Python 3.6
   variables:
-    python: python
+    python: /opt/python/cp36-cp36m/bin/python
   <<: *test
 
 test:python3.7:
-  image: python:3.7
   environment:
     name: Python 3.7
   variables:
-    python: python
+    python: /opt/python/cp37-cp37m/bin/python
   <<: *test
 
 test:python3.8:
-  image: python:3.8
   environment:
     name: Python 3.8
   variables:
-    python: python
+    python: /opt/python/cp38-cp38m/bin/python
   <<: *test
 
 test:python3.9:
-  image: python:3.9
   environment:
     name: Python 3.9
   variables:
-    python: python
+    python: /opt/python/cp39-cp39m/bin/python
   <<: *test
 
 test:pypy3.7:
