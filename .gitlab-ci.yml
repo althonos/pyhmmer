@@ -4,6 +4,8 @@ stages:
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
+  TWINE_USERNAME: gitlab-ci-token
+  TWINE_PASSWORD: $CI_JOB_TOKEN
 
 # --- Stage Templates ----------------------------------------------------------
 
@@ -40,13 +42,7 @@ variables:
     - $python setup.py build_ext
     - $python setup.py bdist_wheel
   after_script:
-    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url https://git.embl.de/api/v4/projects/${CI_PROJECT_ID}/packages/pypi dist/*
-  # artifacts:
-  #   expose_as: "Wheel"
-  #   paths:
-  #     - dist
-  # only:
-  #   - tags
+    - $python -m twine upload --repository-url https://git.embl.de/api/v4/projects/${CI_PROJECT_ID}/packages/pypi dist/*
 
 # --- Stages -------------------------------------------------------------------
 
