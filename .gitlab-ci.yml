@@ -33,7 +33,7 @@ variables:
     - $python setup.py build_ext
     - $python setup.py bdist_wheel
   artifacts:
-    path:
+    paths:
       - dist
   # only:
   #   - tags
@@ -126,7 +126,7 @@ bdist:python3.9:
 bdist:pypy3.7:
   image: pypy:3.7
   dependencies:
-    - test:pypy.7
+    - test:pypy3.7
   environment:
     name: PyPy 3.7
   variables:
