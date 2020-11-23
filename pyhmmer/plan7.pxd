@@ -89,6 +89,8 @@ cdef class Pipeline:
     cdef public   bint       null2
     cdef public   bint       bias_filter
     cdef public   float      report_e
+    cdef          object     _Z
+    cdef          object     _domZ
 
     cdef readonly Alphabet   alphabet
     cdef readonly Background background
@@ -97,7 +99,8 @@ cdef class Pipeline:
     cdef OptimizedProfile _optimized
     cdef P7_PIPELINE* _pli
 
-    cdef void _reset(self, p7_pipemodes_e mode)
+    cpdef void clear(self)
+    cpdef void merge(self, Pipeline other)
     cpdef TopHits search(self, HMM hmm, object seqs, TopHits hits=?)
 
 
@@ -114,17 +117,13 @@ cdef class Profile:
 
 
 cdef class TopHits:
+    cdef public float Z
+    cdef public float domZ
+    cdef public bint  long_targets
 
-    cdef readonly float Z
-    cdef readonly float domZ
-    cdef readonly bint  long_targets
-
-    # cdef public Pipeline pipeline
     cdef P7_TOPHITS* _th
-    # cdef bint _thresholded
 
-    cdef void _on_edit(self)
-
+    cpdef void merge(self, TopHits other)
     cpdef void threshold(self, Pipeline pipeline)
     cpdef void clear(self)
     cpdef void sort(self, str by=*)

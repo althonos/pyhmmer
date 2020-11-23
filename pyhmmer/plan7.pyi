@@ -164,8 +164,21 @@ class Pipeline(object):
         report_e: float = 10.0,
         null2: bool = True,
         seed: typing.Optional[int] = None,
+        Z: typing.Optional[float] = None,
+        domZ: typing.Optional[float] = None,
     ) -> None: ...
 
+    @property
+    def Z(self) -> typing.Optional[float]: ...
+    @Z.setter
+    def Z(self, Z: typing.Optional[float]) -> None: ...
+    @property
+    def domZ(self) -> typing.Optional[float]: ...
+    @domZ.setter
+    def domZ(self, domZ: typing.Optional[float]) -> None: ...
+
+    def clear(self) -> None: ...
+    def merge(self, other: Pipeline) -> None: ...
     def search(
         self,
         hmm: HMM,
@@ -173,10 +186,6 @@ class Pipeline(object):
         hits: typing.Optional[TopHits] = None
     ) -> TopHits: ...
 
-    @property
-    def Z(self) -> float: ...
-    @Z.setter
-    def Z(self, Z: float) -> None: ...
 
 
 class Profile(object):
@@ -201,7 +210,9 @@ class Profile(object):
 
 
 class TopHits(typing.Sequence[Hit]):
-    pipeline: typing.Optional[Pipeline]
+    Z: float
+    domZ: float
+    long_targets: bool
 
     def __init__(self) -> None: ...
     def __bool__(self) -> bool: ...

@@ -93,8 +93,8 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(dom.name, dom_last.name)
 
     def test_sort(self):
-        # check the hits are not sorted by default
-        self.assertFalse(self.hits.is_sorted())
+        # check the hits are sorted by default
+        self.assertTrue(self.hits.is_sorted())
 
         # check sorting
         self.hits.sort()
@@ -109,11 +109,11 @@ class TestTopHits(unittest.TestCase):
     def test_sort_while_hit(self):
         # check sorting while a Hit instance exists does not crash, and that
         # the Hit still points to the right data
-        hit = self.hits[0]
-        self.assertEqual(hit.name, b"938293.PRJEB85.HG003688_14")
-        self.hits.sort()
-        self.assertNotEqual(self.hits[0].name, b"938293.PRJEB85.HG003688_14")
-        self.assertEqual(hit.name, b"938293.PRJEB85.HG003688_14")
+        hit = self.hits[-1]
+        self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_154")
+        self.hits.sort(by="seqidx")
+        self.assertNotEqual(self.hits[-1].name, b"938293.PRJEB85.HG003687_154")
+        self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_154")
 
     def test_threshold(self):
         # after thresholding, one of the htis will not be included.

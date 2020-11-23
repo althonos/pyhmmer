@@ -110,7 +110,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
 class TestHmmsearch(_TestSearch, unittest.TestCase):
 
     def get_hits(self, hmm, seqs):
-        return pyhmmer.hmmsearch([hmm], seqs)
+        return pyhmmer.hmmsearch([hmm], seqs)[0]
 
     def test_background_error(self):
         # check that errors occuring in worker threads are recovered and raised
@@ -124,7 +124,7 @@ class TestHmmsearch(_TestSearch, unittest.TestCase):
 class TestHmmsearchSingle(TestHmmsearch, unittest.TestCase):
 
     def get_hits(self, hmm, seqs):
-        return pyhmmer.hmmsearch([hmm], seqs, cpus=1)
+        return pyhmmer.hmmsearch([hmm], seqs, cpus=1)[0]
 
 
 class TestPipelinesearch(_TestSearch, unittest.TestCase):

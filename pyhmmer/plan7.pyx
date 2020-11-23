@@ -45,11 +45,11 @@ from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e
 from libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL
 
 IF HMMER_IMPL == "VMX":
-    from libhmmer.impl_vmx cimport p7_oprofile
+    from libhmmer.impl_vmx cimport p7_oprofile, p7_omx
     from libhmmer.impl_vmx cimport impl_Init
     from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
 ELIF HMMER_IMPL == "SSE":
-    from libhmmer.impl_sse cimport p7_oprofile
+    from libhmmer.impl_sse cimport p7_oprofile, p7_omx
     from libhmmer.impl_sse cimport impl_Init
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
@@ -586,7 +586,7 @@ cdef class Pipeline:
     """
 
     M_HINT = 100         # default model size
-    L_HINT = 400         # default sequence size
+    L_HINT = 100         # default sequence size
     LONG_TARGETS = False
 
     # --- Magic methods ------------------------------------------------------
@@ -605,6 +605,8 @@ cdef class Pipeline:
         float report_e=10.0,
         bint null2=True,
         uint32_t seed=42,
+        object Z=None,
+        object domZ=None,
     ):
         """Instantiate and configure a new accelerated comparison pipeline.
 
@@ -655,6 +657,8 @@ cdef class Pipeline:
         self.null2 = null2
         self.bias_filter = bias_filter
         self.report_e = report_e
+        self.Z = Z
+        self.domZ = domZ
 
     def __dealloc__(self):
         libhmmer.p7_pipeline.p7_pipeline_Destroy(self._pli)
@@ -663,34 +667,53 @@ cdef class Pipeline:
 
     @property
     def Z(self):
-        return self._pli.Z
+        return self._Z
 
     @Z.setter
-    def Z(self, double Z):
+    def Z(self, object Z):
         assert self._pli != NULL
-        self._pli.Z = Z
+        if Z is None:
+            self._pli.Z       = 0.0
+            self._pli.Z_setby = p7_zsetby_e.p7_ZSETBY_NTARGETS
+            self._Z           = None
+        else:
+            self._pli.Z_setby = p7_zsetby_e.p7_ZSETBY_OPTION
+            self._pli.Z = self._Z = Z
 
     @property
     def domZ(self):
-        return self._pli.domZ
+        return self._domZ
 
     @domZ.setter
-    def domZ(self, double domZ):
+    def domZ(self, object domZ):
         assert self._pli != NULL
-        self._pli.domZ = domZ
+        if domZ is None:
+            self._pli.domZ       = 0.0
+            self._pli.domZ_setby = p7_zsetby_e.p7_ZSETBY_NTARGETS
+            self._domZ           = None
+        else:
+            self._pli.domZ_setby = p7_zsetby_e.p7_ZSETBY_OPTION
+            self._pli.domZ = self._domZ = domZ
+
 
     # --- Methods ------------------------------------------------------------
 
-    cdef void _reset(self, p7_pipemodes_e mode):
+    cpdef void clear(self):
+        # reset the Z and domZ values from the CLI
+        self.Z = self._Z
+        self.domZ = self._domZ
+
         #
         self._pli.do_alignment_score_calc = 0
         self._pli.long_targets = self.LONG_TARGETS
 
+        # Dynamic programming matrices -> these are automatically resized if needed
+
         # reinitialize the random number generator
         libeasel.random.esl_randomness_Destroy(self._pli.r)
-        libhmmer.p7_domaindef.p7_domaindef_Destroy(self._pli.ddef)
         self._pli.r = libeasel.random.esl_randomness_CreateFast(self.seed)
         self._pli.do_reseeding = self.seed != 0
+        libhmmer.p7_domaindef.p7_domaindef_Destroy(self._pli.ddef)
         self._pli.ddef = libhmmer.p7_domaindef.p7_domaindef_Create(self._pli.r)
         self._pli.ddef.do_reseeding = self._pli.do_reseeding
 
@@ -701,7 +724,7 @@ cdef class Pipeline:
         self._pli.dom_by_E        = True
         self._pli.domE            = 10.0
         self._pli.domT            = 0.0
-        self._pli.use_bit_cutoffs = True
+        self._pli.use_bit_cutoffs = False
         # if (go && esl_opt_IsOn(go, "-T"))
         #   {
         #     pli->T    = esl_opt_GetReal(go, "-T");
@@ -771,8 +794,8 @@ cdef class Pipeline:
         #     pli->domZ       = esl_opt_GetReal(go, "--domZ");
         #   }
 
-        # Configure acceleration pipeline thresholds */
-        self._pli.do_max        = True
+        # Configure acceleration pipeline thresholds
+        self._pli.do_max        = False
         self._pli.do_biasfilter = self.bias_filter
         self._pli.do_null2      = self.null2
         self._pli.F1            = 0.02
@@ -793,8 +816,6 @@ cdef class Pipeline:
         #     pli->F2 = pli->F3 = 1.0;
         #     pli->F1 = (pli->long_targets ? 0.3 : 1.0); // need to set some threshold for F1 even on long targets. Should this be tighter?
         #   }
-        # if (go && esl_opt_GetBoolean(go, "--nonull2")) pli->do_null2      = FALSE;
-        # if (go && esl_opt_GetBoolean(go, "--nobias"))  pli->do_biasfilter = FALSE;
 
         # Accounting as we collect results
         self._pli.nmodels         = 0
@@ -805,12 +826,15 @@ cdef class Pipeline:
         self._pli.n_past_bias     = 0
         self._pli.n_past_vit      = 0
         self._pli.n_past_fwd      = 0
+        self._pli.n_output        = 0
         self._pli.pos_past_msv    = 0
         self._pli.pos_past_bias   = 0
         self._pli.pos_past_vit    = 0
         self._pli.pos_past_fwd    = 0;
-        self._pli.mode            = mode
-        self._pli.show_accessions = False #(go && esl_opt_GetBoolean(go, "--acc")   ? TRUE  : FALSE);
+        self._pli.pos_output      = 0
+        self._pli.strands         = 0
+        self._pli.W               = 0
+        self._pli.show_accessions = True #(go && esl_opt_GetBoolean(go, "--acc")   ? TRUE  : FALSE);
         self._pli.show_alignments = False #(go && esl_opt_GetBoolean(go, "--noali") ? FALSE : TRUE);
         self._pli.hfp             = NULL
         self._pli.errbuf[0]       = b'\0'
@@ -866,7 +890,7 @@ cdef class Pipeline:
             ))
 
         # make sure the pipeline is set to search mode and ready for a new HMM
-        self._reset(p7_pipemodes_e.p7_SEARCH_SEQS)
+        self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
 
         # get a pointer to the P7_TOPHITS struct to use
         hits = TopHits() if hits is None else hits
@@ -893,7 +917,7 @@ cdef class Pipeline:
             profile = self.profile = Profile(hm.M, self.alphabet)
         else:
             profile.clear()
-        profile.configure(hmm, self.background, sq.L)
+        profile.configure(hmm, self.background, 100)
 
         # build the optimized model from the profile
         opt = profile.optimized()
@@ -947,20 +971,20 @@ cdef class Pipeline:
                           seq.alphabet,
                         ))
 
-        # update the pipeline parameters if necessary
-        pli.Z = nseq
-
         # threshold hits
-        hits._on_edit()
-        libhmmer.p7_tophits.p7_tophits_Threshold(th, pli)
-
-        # store the pipeline parameters so that the
-        hits.Z = pli.Z
-        hits.domZ = pli.domZ
-        hits.long_targets = pli.long_targets
+        hits.sort(by="key")
+        hits.threshold(self)
 
         # return the hits
         return hits
+
+    cpdef void merge(self, Pipeline other):
+        assert self._pli != NULL
+        assert other._pli != NULL
+
+        status = libhmmer.p7_pipeline.p7_pipeline_Merge(self._pli, other._pli)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_pipeline_Merge")
 
 
 cdef class Profile:
@@ -1084,23 +1108,6 @@ cdef class TopHits:
 
     """
 
-    cdef void _on_edit(self):
-        """Patch the internal ``P7_TOPHITS`` after a modification.
-
-        In the HMMER library, the ``hits`` array is only filled when the
-        top hits are sorted, but we way wish to index the hits directly
-        without sorting when using this class. To avoid this, we manually
-        patch the ``hits`` array using the same order as the ``unsrt`` array
-        whenever the object is modified.
-
-        """
-        # self._thresholded = False
-        for i in range(self._th.N):
-            self._th.hit[i] = &self._th.unsrt[i]
-        if self._th.N > 1:
-            self._th.is_sorted_by_sortkey = False
-            self._th.is_sorted_by_seqidx = False
-
     def __init__(self):
         assert self._th == NULL, "called TopHits.__init__ more than once"
         self._th = libhmmer.p7_tophits.p7_tophits_Create()
@@ -1109,7 +1116,6 @@ cdef class TopHits:
 
     def __cinit__(self):
         self._th = NULL
-        # self._thresholded = False
 
     def __dealloc__(self):
         libhmmer.p7_tophits.p7_tophits_Destroy(self._th)
@@ -1130,19 +1136,20 @@ cdef class TopHits:
             raise IndexError("list index out of range")
         return Hit(self, index)
 
-    def __iadd__(self, other):
-        assert self._th != NULL
+    @property
+    def reported(self):
+        return self._th.nreported
 
-        if not isinstance(other, TopHits):
-            self_ty = type(self).__name__
-            other_ty = type(other).__name__
-            return TypeError("Cannot merge {!r} object into a {!r} instance".format(other_ty, self_ty))
+    @property
+    def included(self):
+        return self._th.nincluded
+
+    cpdef void merge(self, TopHits other):
+        assert self._th != NULL
 
         cdef int status = libhmmer.p7_tophits.p7_tophits_Merge(self._th, (<TopHits> other)._th)
         if status == libeasel.eslOK:
             libhmmer.p7_tophits.p7_tophits_Reuse((<TopHits> other)._th)
-            self._on_edit()
-            return self
         elif status == libeasel.eslEMEM:
             raise AllocationError("P7_TOPHITS")
         else:
@@ -1209,22 +1216,6 @@ cdef class TopHits:
             return self._th.is_sorted_by_seqidx
 
         raise ValueError("Invalid value for `by` argument: {!r}".format(by))
-
-    @property
-    def reported(self):
-        return self._th.nreported# if self._thresholded else self._th.N
-
-    @property
-    def included(self):
-        return self._th.nincluded# if self._thresholded else self._th.N
-
-    # cpdef void print_targets(self, Pipeline pipeline):
-    #     assert self._th != NULL
-    #     libhmmer.p7_tophits.p7_tophits_Targets(stdout, self._th, pipeline._pli, 0)
-    #
-    # cpdef void print_domains(self, Pipeline pipeline):
-    #     assert self._th != NULL
-    #     libhmmer.p7_tophits.p7_tophits_Domains(stdout, self._th, pipeline._pli, 0)
 
 
 # --- Module init code -------------------------------------------------------
