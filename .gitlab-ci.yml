@@ -30,7 +30,6 @@ variables:
     reports:
       cobertura: coverage.xml
 
-
 .bdist: &bdist
   stage: bdist
   image: quay.io/pypa/manylinux2010_x86_64
@@ -49,6 +48,7 @@ variables:
     - $python setup.py bdist_wheel
   after_script:
     - $python -m twine upload --repository-url https://git.embl.de/api/v4/projects/${CI_PROJECT_ID}/packages/pypi dist/*
+
 
 # --- Stages -------------------------------------------------------------------
 
@@ -70,22 +70,22 @@ test:python3.8:
   environment:
     name: Python 3.8
   variables:
-    python: /opt/python/cp38-cp38m/bin/python
+    python: /opt/python/cp38-cp38/bin/python
   <<: *test
 
 test:python3.9:
   environment:
     name: Python 3.9
   variables:
-    python: /opt/python/cp39-cp39m/bin/python
+    python: /opt/python/cp39-cp39/bin/python
   <<: *test
 
 test:pypy3.7:
-  image: pypy:3.7
+  image: pypywheels/manylinux2010-pypy_x86_64
   environment:
     name: PyPy 3.7
   variables:
-    python: pypy3
+    python: /opt/python/pp36-pypy3_*/bin/python
   rules:
     - allow_failure: true
   <<: *test
@@ -98,7 +98,7 @@ bdist:python3.6:
   environment:
     name: Python 3.6
   variables:
-    python: python
+    python: /opt/python/cp36-cp36m/bin/python
   <<: *bdist
 
 bdist:python3.7:
@@ -108,7 +108,7 @@ bdist:python3.7:
   environment:
     name: Python 3.7
   variables:
-    python: python
+    python: /opt/python/cp37-cp37m/bin/python
   <<: *bdist
 
 bdist:python3.8:
@@ -118,7 +118,7 @@ bdist:python3.8:
   environment:
     name: Python 3.8
   variables:
-    python: python
+    python: /opt/python/cp38-cp38/bin/python
   <<: *bdist
 
 bdist:python3.9:
@@ -128,7 +128,7 @@ bdist:python3.9:
   environment:
     name: Python 3.9
   variables:
-    python: python
+    python: /opt/python/cp39-cp39/bin/python
   <<: *bdist
 
 bdist:pypy3.7:
@@ -138,7 +138,7 @@ bdist:pypy3.7:
   environment:
     name: PyPy 3.7
   variables:
-    python: pypy3
+    python: /opt/python/pp36-pypy3_*/bin/python
   rules:
     - allow_failure: true
   <<: *bdist
