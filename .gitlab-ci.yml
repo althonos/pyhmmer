@@ -23,6 +23,10 @@ variables:
     - $python -m coverage xml
     - $python -m coverage report
     - $python -m codecov
+  artifacts:
+    reports:
+      cobertura: coverage.xml
+
 
 .bdist: &bdist
   stage: bdist
@@ -33,6 +37,7 @@ variables:
     - $python setup.py build_ext
     - $python setup.py bdist_wheel
   artifacts:
+    expose_as: "Wheel"
     paths:
       - dist
   # only:
