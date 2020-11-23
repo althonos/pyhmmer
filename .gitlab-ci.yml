@@ -3,6 +3,7 @@ stages:
   - bdist
 
 variables:
+  GIT_DEPTH: 100
   GIT_SUBMODULE_STRATEGY: recursive
   TWINE_USERNAME: gitlab-ci-token
   TWINE_PASSWORD: $CI_JOB_TOKEN
@@ -40,7 +41,7 @@ variables:
   before_script:
     - $python -m pip install -U -r ci/requirements.txt
     - VERSION=$($python setup.py --version)
-    - NEW_VERSION=$(git describe | sed "s/v${VERSION}-\\([0-9]\\+\\)-\\([0-9a-z]\\+\\)/$VERSION+\1.\2/g")
+    - NEW_VERSION=$(git describe --tags | sed "s/v${VERSION}-\\([0-9]\\+\\)-\\([0-9a-z]\\+\\)/$VERSION+\1.\2/g")
     - sed -i "s/${VERSION}/${NEW_VERSION}/g" pyhmmer/__init__.py
   script:
     - $python setup.py build_clib
