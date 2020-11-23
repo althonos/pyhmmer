@@ -1,5 +1,6 @@
 stages:
   - test
+  - bdist
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
@@ -22,6 +23,20 @@ variables:
     - $python -m coverage xml
     - $python -m coverage report
     - $python -m codecov
+
+.bdist: &bdist
+  stage: bdist
+  before_script:
+    - $python -m pip install -U -r ci/requirements.txt
+  script:
+    - $python setup.py build_clib
+    - $python setup.py build_ext
+    - $python setup.py bdist_wheel
+  artifacts:
+    path:
+      - dist
+  # only:
+  #   - tags
 
 # --- Stages -------------------------------------------------------------------
 
@@ -66,3 +81,56 @@ test:pypy3.7:
   rules:
     - allow_failure: true
   <<: *test
+
+
+bdist:python3.6:
+  image: python:3.6
+  dependencies:
+    - test:python3.6
+  environment:
+    name: Python 3.6
+  variables:
+    python: python
+  <<: *bdist
+
+bdist:python3.7:
+  image: python:3.7
+  dependencies:
+    - test:python3.7
+  environment:
+    name: Python 3.7
+  variables:
+    python: python
+  <<: *bdist
+
+bdist:python3.8:
+  image: python:3.8
+  dependencies:
+    - test:python3.8
+  environment:
+    name: Python 3.8
+  variables:
+    python: python
+  <<: *bdist
+
+bdist:python3.9:
+  image: python:3.9
+  dependencies:
+    - test:python3.9
+  environment:
+    name: Python 3.9
+  variables:
+    python: python
+  <<: *bdist
+
+bdist:pypy3.7:
+  image: pypy:3.7
+  dependencies:
+    - test:pypy.7
+  environment:
+    name: PyPy 3.7
+  variables:
+    python: pypy3
+  rules:
+    - allow_failure: true
+  <<: *bdist
