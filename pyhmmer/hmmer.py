@@ -12,7 +12,6 @@ from .plan7 import Pipeline, TopHits, HMM, HMMFile
 
 
 class _PipelineThread(threading.Thread):
-
     @staticmethod
     def _none_callback(hmm: HMM, total: int) -> None:
         pass
@@ -22,7 +21,7 @@ class _PipelineThread(threading.Thread):
         sequences: typing.Iterable[DigitalSequence],
         hmm_queue: "queue.Queue[typing.Optional[typing.Tuple[int, HMM]]]",
         hmm_count: multiprocessing.Value,  # type: ignore
-        hits_queue: "queue.queue.PriorityQueue[typing.Tuple[int, TopHits]]",
+        hits_queue: "queue.PriorityQueue[typing.Tuple[int, TopHits]]",
         kill_switch: threading.Event,
         callback: typing.Optional[typing.Callable[[HMM, int], None]],
         options: typing.Dict[str, typing.Any],
@@ -37,7 +36,7 @@ class _PipelineThread(threading.Thread):
         self.hits_queue = hits_queue
         self.callback = callback or self._none_callback
         self.kill_switch = kill_switch
-        self.error = None
+        self.error: typing.Optional[BaseException] = None
 
     def run(self) -> None:
         while not self.kill_switch.is_set():
@@ -49,17 +48,16 @@ class _PipelineThread(threading.Thread):
                 index, hmm = args
             try:
                 hits = self.pipeline.search(hmm, self.sequences)
-                hits.threshold(self.pipeline)
                 self.hits_queue.put((index, hits))
                 self.hmm_queue.task_done()
-                self.callback(hmm, self.hmm_count.value)
+                self.callback(hmm, self.hmm_count.value)  # type: ignore
                 self.pipeline.clear()
             except BaseException as exc:
                 self.error = exc
                 self.kill()
                 return
 
-    def kill(self):
+    def kill(self) -> None:
         self.kill_switch.set()
 
 
@@ -75,15 +73,17 @@ def hmmsearch(
 
     # create the queues to pass the HMM objects around, as well as atomic
     # values that we use to synchronize the threads
-    hits_queue = typing.cast("queue.Queue[typing.Optional[typing.Tuple[TopHits, HMM]]]", queue.Queue())
-    hmm_queue = typing.cast("queue.Queue[typing.Optional[HMM]]", queue.Queue())
+    hits_queue = queue.PriorityQueue()  # type: ignore
+    hmm_queue = queue.Queue()  # type: ignore
     hmm_count = multiprocessing.Value(ctypes.c_ulong)
     kill_switch = threading.Event()
 
     # create and launch one pipeline thread per CPU
     threads = []
     for _ in range(_cpus):
-        thread = _PipelineThread(sequences, hmm_queue, hmm_count, hits_queue, kill_switch, callback, options)
+        thread = _PipelineThread(
+            sequences, hmm_queue, hmm_count, hits_queue, kill_switch, callback, options
+        )
         thread.start()
         threads.append(thread)
 
@@ -105,7 +105,7 @@ def hmmsearch(
 
     # give back results
     while not hits_queue.empty():
-        yield hits_queue.get_nowait()
+        yield hits_queue.get_nowait()[1]
 
 
 # add a very limited CLI so that this module can be invoked in a shell:
@@ -136,8 +136,15 @@ if __name__ == "__main__":
         with HMMFile(args.hmmfile) as hmms:
             hits_list = hmmsearch(hmms, sequences, cpus=args.jobs)
 
-        with HMMFile(args.hmmfile) as hmms:
-            for hits, hmm in zip(hits_list, hmms):
+            for hits in hits_list:
                 for hit in hits:
                     if hit.is_reported():
-                        print(hit.name.decode(), "-", hmm.name, hit.evalue, hit.score, hit.bias, sep="\t")
+                        print(
+                            hit.name.decode(),
+                            "-",
+                            hit.domains[0].alignment.hmm_name.decode(),
+                            hit.evalue,
+                            hit.score,
+                            hit.bias,
+                            sep="\t",
+                        )
