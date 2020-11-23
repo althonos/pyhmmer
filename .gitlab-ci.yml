@@ -32,14 +32,19 @@ variables:
   stage: bdist
   before_script:
     - $python -m pip install -U -r ci/requirements.txt
+    - VERSION=$($python setup.py --version)
+    - NEW_VERSION=${VERSION}+$(git rev-parse --short HEAD)
+    - sed -i "s/${VERSION}/${NEW_VERSION}/g" pyhmmer/__init__.py
   script:
     - $python setup.py build_clib
     - $python setup.py build_ext
     - $python setup.py bdist_wheel
-  artifacts:
-    expose_as: "Wheel"
-    paths:
-      - dist
+  after_script:
+    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url https://git.embl.de/api/v4/projects/${CI_PROJECT_ID}/packages/pypi dist/*
+  # artifacts:
+  #   expose_as: "Wheel"
+  #   paths:
+  #     - dist
   # only:
   #   - tags
 
