@@ -20,40 +20,44 @@ class _PipelineThread(threading.Thread):
     def __init__(
         self,
         sequences: typing.Iterable[DigitalSequence],
-        hmm_queue: "queue.Queue[typing.Optional[HMM]]",
+        hmm_queue: "queue.Queue[typing.Optional[typing.Tuple[int, HMM]]]",
         hmm_count: multiprocessing.Value,  # type: ignore
+        hits_queue: "queue.Queue[typing.Tuple[int, TopHits]]",
         kill_switch: threading.Event,
         callback: typing.Optional[typing.Callable[[HMM, int], None]],
         options: typing.Dict[str, typing.Any],
     ) -> None:
         super().__init__()
+        self.options = options
         self.pipeline = Pipeline(alphabet=Alphabet.amino(), **options)
-        self.pipeline_lock = threading.Lock()
         self.hits = TopHits()
         self.sequences = sequences
         self.hmm_queue = hmm_queue
         self.hmm_count = hmm_count
+        self.hits_queue = hits_queue
         self.callback = callback or self._none_callback
         self.kill_switch = kill_switch
         self.error = None
-        self.processed = 0
 
     def run(self) -> None:
         while not self.kill_switch.is_set():
-            hmm = self.hmm_queue.get()
-            if hmm is None:
+            args = self.hmm_queue.get()
+            if args is None:
                 self.hmm_queue.task_done()
                 return
-            with self.pipeline_lock:
-                try:
-                    self.pipeline.search(hmm, self.sequences, hits=self.hits)
-                    self.hmm_queue.task_done()
-                    self.callback(hmm, self.hmm_count.value)
-                    self.processed += 1
-                except BaseException as exc:
-                    self.error = exc
-                    self.kill()
-                    return
+            else:
+                index, hmm = args
+            try:
+                hits = self.pipeline.search(hmm, self.sequences)
+                hits.threshold(self.pipeline)
+                self.hits_queue.put((index, hits))
+                self.hmm_queue.task_done()
+                self.callback(hmm, self.hmm_count.value)
+                self.pipeline.clear()
+            except BaseException as exc:
+                self.error = exc
+                self.kill()
+                return
 
     def kill(self):
         self.kill_switch.set()
@@ -65,12 +69,13 @@ def hmmsearch(
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
     **options: typing.Any,
-) -> TopHits:
+) -> typing.List[TopHits]:
     # count the number of CPUs to use
     _cpus = cpus if cpus > 0 else multiprocessing.cpu_count()
 
     # create the queues to pass the HMM objects around, as well as atomic
     # values that we use to synchronize the threads
+    hits_queue = typing.cast("queue.Queue[typing.Optional[typing.Tuple[TopHits, HMM]]]", queue.Queue())
     hmm_queue = typing.cast("queue.Queue[typing.Optional[HMM]]", queue.Queue())
     hmm_count = multiprocessing.Value(ctypes.c_ulong)
     kill_switch = threading.Event()
@@ -78,14 +83,14 @@ def hmmsearch(
     # create and launch one pipeline thread per CPU
     threads = []
     for _ in range(_cpus):
-        thread = _PipelineThread(sequences, hmm_queue, hmm_count, kill_switch, callback, options)
+        thread = _PipelineThread(sequences, hmm_queue, hmm_count, hits_queue, kill_switch, callback, options)
         thread.start()
         threads.append(thread)
 
     # queue the HMMs passed as arguments
-    for hmm in hmms:
+    for index, hmm in enumerate(hmms):
         hmm_count.value += 1
-        hmm_queue.put(hmm)
+        hmm_queue.put((index, hmm))
 
     # poison-pill the queue so that threads terminate when they
     # have consumed all the HMMs
@@ -98,19 +103,14 @@ def hmmsearch(
         if thread.error is not None:
             raise thread.error
 
-    # merge the hits from each pipeline and return the merged hits
-    hits = threads[0].hits
-    for thread in threads[1:]:
-        hits += thread.hits
+    # collect results
+    hits_queue.put(None)
 
-    # threshold the sequences with the first pipeline
-    with threads[0].pipeline_lock:
-        hits.Z = threads[0].pipeline.Z = options.get("Z", len(sequences))
-        hits.threshold(threads[0].pipeline)
-        hits.domZ = threads[0].pipeline.domZ
+    hits_list = [None] * hmm_count.value
+    for index, hit in iter(hits_queue.get, None):
+        hits_list[index] = hit
 
-    # return thresholded hits
-    return hits
+    return hits_list
 
 
 # add a very limited CLI so that this module can be invoked in a shell:
@@ -139,8 +139,10 @@ if __name__ == "__main__":
             seq.clear()
 
         with HMMFile(args.hmmfile) as hmms:
-            hits = hmmsearch(hmms, sequences, cpus=args.jobs)
+            hits_list = hmmsearch(hmms, sequences, cpus=args.jobs)
 
-    print("Found {} hits".format(len(hits)))
-    print(" - included: {}".format(hits.included))
-    print(" - reported: {}".format(len(hits)))
+        with HMMFile(args.hmmfile) as hmms:
+            for hits, hmm in zip(hits_list, hmms):
+                for hit in hits:
+                    if hit.is_reported():
+                        print(hit.name.decode(), "-", hmm.name, hit.evalue, hit.score, hit.bias, sep="\t")

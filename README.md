@@ -99,7 +99,7 @@ with pyhmmer.easel.SequenceFile("938293.PRJEB85.HG003687.faa") as file:
     sequences = [seq.digitize(alphabet) for seq in file]
 
 with pyhmmer.plan7.HMMFile("Pfam.hmm") as hmms:
-    hits = pyhmmer.hmmsearch(hmms, sequences_file)
+    all_hits = pyhmmer.hmmsearch(hmms, sequences_file)
 ```
 
 
