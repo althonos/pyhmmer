@@ -22,7 +22,7 @@ class _PipelineThread(threading.Thread):
         sequences: typing.Iterable[DigitalSequence],
         hmm_queue: "queue.Queue[typing.Optional[typing.Tuple[int, HMM]]]",
         hmm_count: multiprocessing.Value,  # type: ignore
-        hits_queue: "queue.Queue[typing.Tuple[int, TopHits]]",
+        hits_queue: "queue.queue.PriorityQueue[typing.Tuple[int, TopHits]]",
         kill_switch: threading.Event,
         callback: typing.Optional[typing.Callable[[HMM, int], None]],
         options: typing.Dict[str, typing.Any],
@@ -69,7 +69,7 @@ def hmmsearch(
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
     **options: typing.Any,
-) -> typing.List[TopHits]:
+) -> typing.Iterator[TopHits]:
     # count the number of CPUs to use
     _cpus = cpus if cpus > 0 else multiprocessing.cpu_count()
 
@@ -103,14 +103,9 @@ def hmmsearch(
         if thread.error is not None:
             raise thread.error
 
-    # collect results
-    hits_queue.put(None)
-
-    hits_list = [None] * hmm_count.value
-    for index, hit in iter(hits_queue.get, None):
-        hits_list[index] = hit
-
-    return hits_list
+    # give back results
+    while not hits_queue.empty():
+        yield hits_queue.get_nowait()
 
 
 # add a very limited CLI so that this module can be invoked in a shell:
