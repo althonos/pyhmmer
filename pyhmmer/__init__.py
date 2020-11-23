@@ -31,7 +31,9 @@ if __doc__ is not None:
     An online rendered version of the documentation for this version of the
     library on `Read The Docs <https://pyhmmer.readthedocs.io/en/v{}/>`_.
 
-    """.format(__version__)
+    """.format(
+        __version__
+    )
 
 # Register collections using the `collections.abc` module (this is probably
 # not required with later versions of Python)

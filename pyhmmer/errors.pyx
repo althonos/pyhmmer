@@ -45,7 +45,7 @@ class UnexpectedError(RuntimeError):
 
     """
 
-    def __init__(self, code, function):
+    def __init__(self, int code, str function):
         self.code = code
         self.function = function
 
@@ -64,7 +64,7 @@ class AllocationError(MemoryError):
     """A memory error that is caused by an unsuccessful allocation.
     """
 
-    def __init__(self, ctype):
+    def __init__(self, str ctype):
         self.ctype = ctype
 
     def __repr__(self):
@@ -78,7 +78,7 @@ class EaselError(RuntimeError):
     """An error that was raised from the Easel code.
     """
 
-    def __init__(self, code, message):
+    def __init__(self, int code, str message):
         self.code = code
         self.message = message
 
