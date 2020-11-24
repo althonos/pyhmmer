@@ -11,6 +11,7 @@ variables:
 # --- Stage Templates ----------------------------------------------------------
 
 .test: &test
+  image: quay.io/pypa/manylinux2010_x86_64
   stage: test
   cache:
     key: ${CI_COMMIT_REF_SLUG}
@@ -31,6 +32,7 @@ variables:
       cobertura: coverage.xml
 
 .bdist: &bdist
+  image: quay.io/pypa/manylinux2010_x86_64
   stage: bdist
   cache:
     key: ${CI_COMMIT_REF_SLUG}
@@ -52,7 +54,6 @@ variables:
 # --- Stages -------------------------------------------------------------------
 
 test:python3.6:
-  image: quay.io/pypa/manylinux2010_x86_64
   environment:
     name: Python 3.6
   variables:
@@ -60,7 +61,6 @@ test:python3.6:
   <<: *test
 
 test:python3.7:
-  image: quay.io/pypa/manylinux2010_x86_64
   environment:
     name: Python 3.7
   variables:
@@ -68,7 +68,6 @@ test:python3.7:
   <<: *test
 
 test:python3.8:
-  image: quay.io/pypa/manylinux2010_x86_64
   environment:
     name: Python 3.8
   variables:
@@ -76,7 +75,6 @@ test:python3.8:
   <<: *test
 
 test:python3.9:
-  image: quay.io/pypa/manylinux2010_x86_64
   environment:
     name: Python 3.9
   variables:
@@ -84,7 +82,6 @@ test:python3.9:
   <<: *test
 
 test:pypy3.7:
-  image: pypywheels/manylinux2010-pypy_x86_64
   environment:
     name: PyPy 3.7
   variables:
@@ -95,7 +92,6 @@ test:pypy3.7:
 
 
 bdist:python3.6:
-  image: quay.io/pypa/manylinux2010_x86_64
   dependencies:
     - test:python3.6
   environment:
@@ -105,7 +101,6 @@ bdist:python3.6:
   <<: *bdist
 
 bdist:python3.7:
-  image: quay.io/pypa/manylinux2010_x86_64
   dependencies:
     - test:python3.7
   environment:
@@ -115,7 +110,6 @@ bdist:python3.7:
   <<: *bdist
 
 bdist:python3.8:
-  image: quay.io/pypa/manylinux2010_x86_64
   dependencies:
     - test:python3.8
   environment:
@@ -125,23 +119,10 @@ bdist:python3.8:
   <<: *bdist
 
 bdist:python3.9:
-  image: quay.io/pypa/manylinux2010_x86_64
   dependencies:
     - test:python3.9
   environment:
     name: Python 3.9
   variables:
     python: /opt/python/cp39-cp39/bin/python
-  <<: *bdist
-
-bdist:pypy3.7:
-  image: pypywheels/manylinux2010-pypy_x86_64
-  dependencies:
-    - test:pypy3.7
-  environment:
-    name: PyPy 3.7
-  variables:
-    python: /opt/pypy/pypy3.7-7.3.3/bin/python
-  rules:
-    - allow_failure: true
   <<: *bdist
