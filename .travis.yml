@@ -59,6 +59,9 @@ jobs:
       if: tag IS present
       <<: *test-linux
     - python: 3.8
+      if: tag IS present
+      <<: *test-linux
+    - python: 3.9
       <<: *test-linux
     # OSX
     - env: PYTHON=python3.5
