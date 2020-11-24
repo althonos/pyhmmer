@@ -8,7 +8,7 @@ pyHMMER |Stars|
 *Cython bindings and Python interface to* `HMMER3 <http://hmmer.org/>`_.
 
 
-|TravisCI| |Coverage| |PyPI| |Wheel| |Versions| |Implementations| |License| |Source| |Issues| |Docs| |Changelog| |Downloads| |DOI|
+|TravisCI| |Coverage| |PyPI| |Wheel| |Versions| |Implementations| |License| |Source| |Mirror| |Issues| |Docs| |Changelog| |Downloads| |DOI|
 
 
 .. |TravisCI| image:: https://img.shields.io/travis/com/althonos/pyhmmer/master.svg?&maxAge=600&style=flat-square
@@ -26,7 +26,7 @@ pyHMMER |Stars|
 .. |Versions| image:: https://img.shields.io/pypi/pyversions/pyhmmer.svg?style=flat-square&maxAge=3600
    :target: https://pypi.org/project/pyhmmer/#files
 
-.. |Implementations| image:: https://img.shields.io/pypi/implementation/pyhmmer.svg?style=flat-square&maxAge=3600
+.. |Implementations| image:: https://img.shields.io/pypi/implementation/pyhmmer.svg?style=flat-square&maxAge=3600&label=impl
    :target: https://pypi.org/project/pyhmmer/#files
 
 .. |License| image:: https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square&maxAge=3600
@@ -34,6 +34,9 @@ pyHMMER |Stars|
 
 .. |Source| image:: https://img.shields.io/badge/source-GitHub-303030.svg?maxAge=2678400&style=flat-square
    :target: https://github.com/althonos/pyhmmer/
+
+.. |Mirror| image:: https://img.shields.io/badge/mirror-EMBL-009f4d?style=flat-square&maxAge=2678400
+   :target: https://git.embl.de/larralde/pyhmmer/
 
 .. |Issues| image:: https://img.shields.io/github/issues/althonos/pyhmmer.svg?style=flat-square&maxAge=600
    :target: https://github.com/althonos/pyhmmer/issues
