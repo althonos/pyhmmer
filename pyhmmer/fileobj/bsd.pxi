@@ -16,7 +16,7 @@ cdef extern from "stdio.h":
     FILE *fwopen(void *cookie, int (*writefn)(void *, const char *, int));
 
 
-cdef size_t fwrite_obj(void *cookie, const char *buf, int size) except 0:
+cdef int fwrite_obj(void *cookie, const char *buf, int size) except 0:
     cdef PyObject* obj = <PyObject*> cookie
     return (<object> cookie).write(buf[:size])
 
