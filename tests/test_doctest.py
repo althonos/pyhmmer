@@ -49,6 +49,13 @@ def load_tests(loader, tests, ignore):
     if sys.argv[0].endswith("green"):
         return tests
 
+    # add a sample HMM and some sequences to use with the globals
+    data = os.path.realpath(os.path.join(__file__, os.pardir, "data"))
+    with pyhmmer.plan7.HMMFile(os.path.join(data, "hmm", "Thioesterase.hmm")) as hmm_file:
+        thioesterase = next(hmm_file)
+    with pyhmmer.easel.SequenceFile(os.path.join(data, "seqs", "938293.PRJEB85.HG003687.faa")) as seq_file:
+        proteins = [seq.digitize(thioesterase.alphabet) for seq in seq_file]
+
     # recursively traverse all library submodules and load tests from them
     packages = [None, pyhmmer]
 
@@ -59,11 +66,11 @@ def load_tests(loader, tests, ignore):
                 continue
             # import the submodule and add it to the tests
             module = importlib.import_module(".".join([pkg.__name__, subpkgname]))
-            globs = dict(_=None, **module.__dict__)
+            globs = dict(thioesterase=thioesterase, proteins=proteins, **module.__dict__)
             tests.addTests(
                 doctest.DocTestSuite(
                     module,
-                    globs=module.__dict__,
+                    globs=globs,
                     setUp=setUp,
                     tearDown=tearDown,
                     optionflags=+doctest.ELLIPSIS,

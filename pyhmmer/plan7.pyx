@@ -547,6 +547,8 @@ cdef class HMMFile:
 
 
 cdef class OptimizedProfile:
+    """An optimized profile that uses platform-specific instructions.
+    """
 
     def __cinit__(self):
         self._om = NULL
@@ -1091,8 +1093,21 @@ cdef class Profile:
 cdef class TopHits:
     """A ranked list of top-scoring hits.
 
-    `TopHits` are thresholded using the parameters from the pipeline, but
-    it is also possible to manually filter them using Python code.
+    `TopHits` are thresholded using the parameters from the pipeline, and are
+    sorted by key when you obtain them from a `Pipeline` instance::
+
+        >>> abc = thioesterase.alphabet
+        >>> hits = Pipeline(abc).search(thioesterase, proteins)
+        >>> hits.is_sorted()
+        True
+
+    Use `len` to query the number of top hits, and the usual indexing notation
+    to extract a particular hit::
+
+        >>> len(hits)
+        1
+        >>> hits[0].name
+        b'938293.PRJEB85.HG003687_113'
 
     """
 
@@ -1137,7 +1152,7 @@ cdef class TopHits:
 
         This function is automatically called in `Pipeline.search`, and
         therefore not exposed in the Python API.
-        
+
         """
         cdef int          status
         cdef P7_TOPHITS*  th     = self._th
