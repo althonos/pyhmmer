@@ -6,7 +6,28 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.0-a3...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.0-a4...HEAD
+
+## [v0.1.0-a4] - 2020-11-24
+[v0.1.0-a3]: https://github.com/althonos/pyhmmer/compare/v0.1.0-a3...v0.1.0-a4
+
+### Added
+- `MSA`, `TextMSA` and `DigitalMSA` classes representing a multiple sequence alignment to `pyhmmer.easel`.
+- Methods and protocol to copy a `Sequence` and a `MSA`.
+- `pyhmmer.plan7.OptimizedProfile` wrapping a platform-specific optimized profile.
+- `SSIReader` and `SSIWriter` classes interacting with sequence/subsequence indices to `pyhmmer.easel`.
+- Exception handler using Python exceptions to report Easel errors.
+
+### Changed
+- `pyhmmer.hmmsearch` returns an iterator of `TopHits`, with one instance per `HMM` in the input.
+- `pyhmmer.hmmsearch` properly raises errors happenning in the background threads without deadlock.
+- `pyhmmer.plan7.Pipeline` recycles memory between `Pipeline.search` calls.
+
+### Fixed
+- Missing type annotations for the `pyhmmer.errors` module.
+
+### Removed
+- Unneeded or private methods from `pyhmmer.plan7`.
 
 
 ## [v0.1.0-a3] - 2020-11-19

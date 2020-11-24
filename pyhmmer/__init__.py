@@ -25,7 +25,7 @@ from .hmmer import hmmsearch
 
 __author__ = "Martin Larralde <martin.larralde@embl.de>"
 __license__ = "MIT"
-__version__ = "0.1.0-a3"
+__version__ = "0.1.0-a4"
 __all__ = [errors.__name__, easel.__name__, plan7.__name__, hmmsearch.__name__]
 
 # Small addition to the docstring: we want to show a link redirecting to the
