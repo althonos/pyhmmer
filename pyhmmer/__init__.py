@@ -14,6 +14,7 @@ HMMER internals, which has several advantages over CLI wrappers like
 
 import collections.abc as _collections_abc
 import contextlib as _contextlib
+import os as _os
 
 from . import errors
 from . import easel
@@ -26,13 +27,20 @@ __author__ = "Martin Larralde <martin.larralde@embl.de>"
 __license__ = "MIT"
 __version__ = "0.1.0-a3"
 __all__ = [errors.__name__, easel.__name__, plan7.__name__, hmmsearch.__name__]
+
+# Small addition to the docstring: we want to show a link redirecting to the
+# rendered version of the documentation, but this can only work when Python
+# is running with docstrings enabled
 if __doc__ is not None:
     __doc__ += """See Also:
     An online rendered version of the documentation for this version of the
     library on `Read The Docs <https://pyhmmer.readthedocs.io/en/v{}/>`_.
 
     """.format(
-        __version__
+        # in the even the library is a CI build installed from GitLab, we
+        # just redirect to the stable version instead, i.e. not including
+        # the local component of the version (everything after the ``+``)
+        __version__.split("+")[0]
     )
 
 # Register collections using the `collections.abc` module (this is probably

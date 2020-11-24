@@ -44,15 +44,18 @@ def setup(app):
 
 import pyhmmer
 
+# extract the project metadata from the module itself
 project = pyhmmer.__name__
 author = re.match('(.*) <.*>', pyhmmer.__author__).group(1)
 year = datetime.date.today().year
 copyright = '{}, {}'.format("2020" if year==2020 else "2020-{}".format(year), author)
 
+# extract the semantic version
 semver = semantic_version.Version.coerce(pyhmmer.__version__)
-version = "{v.major}.{v.minor}.{v.patch}".format(v=semver)
+version = str(semver.truncate(level="patch"))
 release = str(semver)
 
+# extract the project URLs from ``setup.cfg``
 cfgparser = configparser.ConfigParser()
 cfgparser.read(os.path.join(project_dir, "setup.cfg"))
 project_urls = dict(
@@ -60,6 +63,12 @@ project_urls = dict(
     for line in cfgparser.get("metadata", "project_urls").splitlines()
     if line.strip()
 )
+
+# patch the docstring of `pyhmmer` so that we don't show the link to redirect
+# to the docs (we don't want to see it when reading the docs already, duh!)
+doc_lines = pyhmmer.__doc__.splitlines()
+see_also = doc_lines.index("See Also:")
+pyhmmer.__doc__ = "\n".join(doc_lines[:see_also])
 
 # -- General configuration ---------------------------------------------------
 
