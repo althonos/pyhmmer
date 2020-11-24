@@ -12,3 +12,7 @@ Errors
 
 .. autoexception:: UnexpectedError(RuntimeError)
    :members:
+
+
+.. autoexception:: EaselError(RuntimeError)
+   :members:

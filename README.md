@@ -73,6 +73,7 @@ Compilation for UNIX PowerPC is not tested in CI, but should work out of the
 box. Other architectures (e.g. Arm) and OSes (e.g. Windows) are not
 supported by HMMER.
 
+*A `bioconda` package is planned when this package exits the alpha status.*
 
 ## 📖 Documentation
 
@@ -88,8 +89,9 @@ $ pydoc pyhmmer.plan7
 
 ## 💡 Example
 
-Use `pyhmmer` to run `hmmsearch`, and obtain a ``TopHits`` instance that
-can be used for further sorting/querying in Python:
+Use `pyhmmer` to run `hmmsearch`, and obtain an iterable over
+[`TopHits`](https://pyhmmer.readthedocs.io/en/latest/api/plan7.html#pyhmmer.plan7.TopHits)
+that can be used for further sorting/querying in Python:
 
 ```python
 import pyhmmer
@@ -99,8 +101,14 @@ with pyhmmer.easel.SequenceFile("938293.PRJEB85.HG003687.faa") as file:
     sequences = [seq.digitize(alphabet) for seq in file]
 
 with pyhmmer.plan7.HMMFile("Pfam.hmm") as hmms:
-    all_hits = pyhmmer.hmmsearch(hmms, sequences_file)
+    all_hits = list(pyhmmer.hmmsearch(hmms, sequences_file))
 ```
+
+Processing happens in parallel using Python threads, and a ``TopHits``
+object is yielded for every ``HMM`` passed in the input iterable. *Note that
+for optimal performance, you should pass the number of **physical** cores to
+the `cpus` argument of the `pyhmmer.hmmsearch` function, as HMMER cannot
+benefit from hyperthreading*.
 
 
 ## ⏱️ Benchmarks
