@@ -81,15 +81,6 @@ test:python3.9:
     python: /opt/python/cp39-cp39/bin/python
   <<: *test
 
-test:pypy3.7:
-  environment:
-    name: PyPy 3.7
-  variables:
-    python: /opt/pypy/pypy3.7-7.3.3/bin/python
-  rules:
-    - allow_failure: true
-  <<: *test
-
 
 bdist:python3.6:
   dependencies:

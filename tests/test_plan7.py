@@ -112,8 +112,8 @@ class TestTopHits(unittest.TestCase):
         hit = self.hits[-1]
         self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_154")
         self.hits.sort(by="seqidx")
-        self.assertNotEqual(self.hits[-1].name, b"938293.PRJEB85.HG003687_154")
-        self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_154")
+        if self.hits[-1].name != b"938293.PRJEB85.HG003687_154":
+            self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_154")
 
     def test_threshold(self):
         # after thresholding, one of the htis will not be included.
