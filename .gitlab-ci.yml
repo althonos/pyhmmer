@@ -17,6 +17,8 @@ variables:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
     - build
+  only:
+  - master
   before_script:
     - $python -m pip install -U -r ci/requirements.txt
   script:
@@ -38,6 +40,8 @@ variables:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
     - build
+  only:
+  - master
   before_script:
     - $python -m pip install -U -r ci/requirements.txt
     - VERSION=$($python setup.py --version)
