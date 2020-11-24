@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 [Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.0-a4...HEAD
 
 ## [v0.1.0-a4] - 2020-11-24
-[v0.1.0-a3]: https://github.com/althonos/pyhmmer/compare/v0.1.0-a3...v0.1.0-a4
+[v0.1.0-a4]: https://github.com/althonos/pyhmmer/compare/v0.1.0-a3...v0.1.0-a4
 
 ### Added
 - `MSA`, `TextMSA` and `DigitalMSA` classes representing a multiple sequence alignment to `pyhmmer.easel`.
