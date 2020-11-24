@@ -64,22 +64,22 @@ jobs:
     - python: 3.9
       <<: *test-linux
     # OSX
-    - env: PYTHON=python3.5
-      name: "Python: 3.5"
-      if: tag IS present
-      <<: *test-osx
-    - env: PYTHON=python3.6
-      name: "Python: 3.6"
-      if: tag IS present
-      <<: *test-osx
-    - env: PYTHON=python3.7
-      name: "Python: 3.7"
-      if: tag IS present
-      <<: *test-osx
-    - env: PYTHON=python3.8
-      name: "Python: 3.8"
-      if: tag IS present
-      <<: *test-osx
+    # - env: PYTHON=python3.5
+    #   name: "Python: 3.5"
+    #   if: tag IS present
+    #   <<: *test-osx
+    # - env: PYTHON=python3.6
+    #   name: "Python: 3.6"
+    #   if: tag IS present
+    #   <<: *test-osx
+    # - env: PYTHON=python3.7
+    #   name: "Python: 3.7"
+    #   if: tag IS present
+    #   <<: *test-osx
+    # - env: PYTHON=python3.8
+    #   name: "Python: 3.8"
+    #   if: tag IS present
+    #   <<: *test-osx
 
 deploy:
   provider: script
