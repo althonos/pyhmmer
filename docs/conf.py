@@ -80,7 +80,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
-    "sphinx.ext.imgconverter",
+    # "sphinx.ext.imgconverter",
     "sphinx.ext.napoleon",
     "sphinx.ext.coverage",
     "sphinx.ext.mathjax",
