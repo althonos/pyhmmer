@@ -15,4 +15,5 @@ nbsphinx ~=0.5
 https://github.com/althonos/sphinx-bootstrap-theme/archive/master.zip
 
 # dependencies to run the example notebook(s)
+ipython ~=7.19
 dna_features_viewer ~=3.0
