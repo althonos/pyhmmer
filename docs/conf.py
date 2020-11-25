@@ -67,8 +67,9 @@ project_urls = dict(
 # patch the docstring of `pyhmmer` so that we don't show the link to redirect
 # to the docs (we don't want to see it when reading the docs already, duh!)
 doc_lines = pyhmmer.__doc__.splitlines()
-see_also = doc_lines.index("See Also:")
-pyhmmer.__doc__ = "\n".join(doc_lines[:see_also])
+if "See Also:" in doc_lines:
+    see_also = doc_lines.index("See Also:")
+    pyhmmer.__doc__ = "\n".join(doc_lines[:see_also])
 
 # -- General configuration ---------------------------------------------------
 
@@ -79,6 +80,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.imgconverter",
     "sphinx.ext.napoleon",
     "sphinx.ext.coverage",
     "sphinx.ext.mathjax",
