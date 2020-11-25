@@ -80,9 +80,11 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
+    "sphinx.ext.coverage",
     "sphinx.ext.mathjax",
     "sphinx.ext.todo",
     "sphinx_bootstrap_theme",
+    "nbsphinx",
     "recommonmark",
     "IPython.sphinxext.ipython_console_highlighting",
 ]
@@ -212,3 +214,7 @@ source_suffix = {
 # -- Options for nbsphinx extension ------------------------------------------
 
 nbsphinx_execute = 'auto'
+nbsphinx_execute_arguments = [
+    "--InlineBackend.figure_formats={'svg', 'pdf'}",
+    "--InlineBackend.rc={'figure.dpi': 96}",
+]

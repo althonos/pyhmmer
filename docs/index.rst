@@ -69,6 +69,7 @@ Library
    :maxdepth: 2
 
    Installation <install>
+   Examples <examples/index>
    API Reference <api/index>
    Changelog <changes>
 
