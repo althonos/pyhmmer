@@ -7,7 +7,7 @@ semantic_version ~=2.8
 sphinx ~=3.0
 recommonmark ~=0.6
 pygments-style-monokailight ~=0.4
-ipython ~=7.11
+ipython ~=7.19
 pygments ~=2.4
 nbsphinx ~=0.5
 
@@ -15,5 +15,5 @@ nbsphinx ~=0.5
 https://github.com/althonos/sphinx-bootstrap-theme/archive/master.zip
 
 # dependencies to run the example notebook(s)
-ipython ~=7.19
+ipykernel ~=5.3
 dna_features_viewer ~=3.0
