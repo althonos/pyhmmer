@@ -165,6 +165,7 @@ html_theme_options = {
 html_sidebars = {
     "*": ["localtoc.html"],
     "api/*": ["localtoc.html"],
+    "examples/*": ["localtoc.html"],
 }
 
 
