@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 [Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.0-a4...HEAD
 
+### Added
+- `Sequence.__len__` magic method so that `len(seq)` returns the number of letters in `seq`.
+
 ## [v0.1.0-a4] - 2020-11-24
 [v0.1.0-a4]: https://github.com/althonos/pyhmmer/compare/v0.1.0-a3...v0.1.0-a4
 

@@ -457,6 +457,9 @@ cdef class Sequence:
         except TypeError:
             return False
 
+    def __len__(self):
+        return self._sq.L
+
     def __copy__(self):
         return self.copy()
 
