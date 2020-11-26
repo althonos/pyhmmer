@@ -503,7 +503,10 @@ cdef class HMMFile:
         if status == libeasel.eslENOTFOUND:
             raise FileNotFoundError(errno.ENOENT, "no such file or directory: {!r}".format(file))
         elif status == libeasel.eslEFORMAT:
-            raise ValueError("format not recognized by HMMER")
+            if os.stat(file).st_size:
+                raise ValueError("format not recognized by HMMER")
+            else:
+                raise EOFError("HMM file is empty")
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, function)
 

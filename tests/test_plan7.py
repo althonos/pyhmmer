@@ -42,42 +42,53 @@ class TestHMM(unittest.TestCase):
         self.assertIsInstance(ctx.exception.__cause__, TypeError)
 
 
-class TestHMMFile(unittest.TestCase):
+class _TestHMMFile:
 
     @classmethod
     def setUpClass(cls):
         cls.hmms_folder = os.path.join(os.path.dirname(__file__), "data", "hmm")
 
-    def test_init_fileobj_error_empty(self):
+    @classmethod
+    def open_hmm(cls, path):
+        return NotImplemented
+
+    def test_init_empty(self):
         with tempfile.NamedTemporaryFile() as empty:
-            self.assertRaises(EOFError, HMMFile, empty)
+            self.assertRaises(EOFError, self.open_hmm, empty.name)
 
-    def test_init_fileobj_error_badformat(self):
-        with open(__file__, "rb") as f:
-            self.assertRaises(ValueError, HMMFile, f)
+    def test_read_hmm3(self):
+        path = os.path.join(self.hmms_folder, "Thioesterase.hmm")
+        with self.open_hmm(path) as f:
+            self.assertEqual(next(f).name, b"Thioesterase")
 
-    def test_init_path_error_empty(self):
-        with tempfile.NamedTemporaryFile() as empty:
-            # the file format can't be determined on an empty file, so this
-            # should raise a value error
-            self.assertRaises(ValueError, HMMFile, empty.name)
+    def test_read_hmm2(self):
+        path = os.path.join(self.hmms_folder, "PKSI-AT.hmm2")
+        with self.open_hmm(path) as f:
+            self.assertEqual(next(f).name, b"PKS-AT.tcoffee")
 
-    def test_init_path_error_filenotfound(self):
-        self.assertRaises(FileNotFoundError, HMMFile, "path/to/missing/file.hmm")
-
-    def test_iter_path(self):
-        hmm = os.path.join(self.hmms_folder, "Thioesterase.hmm")
-        with HMMFile(hmm) as f:
+    def test_iter(self):
+        path = os.path.join(self.hmms_folder, "Thioesterase.hmm")
+        with self.open_hmm(path) as f:
             thioesterase = next(f)
             self.assertRaises(StopIteration, next, f)
         self.assertEqual(thioesterase.name, b"Thioesterase")
 
-    def test_iter_fileobj(self):
-        with open(os.path.join(self.hmms_folder, "Thioesterase.hmm"), "rb") as file:
-            with HMMFile(file) as f:
-                thioesterase = next(f)
-                self.assertRaises(StopIteration, next, f)
-            self.assertEqual(thioesterase.name, b"Thioesterase")
+
+class TestHMMFilePath(_TestHMMFile, unittest.TestCase):
+
+    @classmethod
+    def open_hmm(cls, path):
+        return HMMFile(path)
+
+    def test_init_filenotfound(self):
+        self.assertRaises(FileNotFoundError, HMMFile, "path/to/missing/file.hmm")
+
+
+class TestHMMFileFileobj(_TestHMMFile, unittest.TestCase):
+
+    @classmethod
+    def open_hmm(self, path):
+        return HMMFile(open(path, "rb"))
 
 
 class TestTopHits(unittest.TestCase):
