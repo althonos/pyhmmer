@@ -63,9 +63,9 @@ cdef ssize_t fread_obj_readinto(void *cookie, char *buf, size_t size) except -1:
 
 # --- fseek implementation ---------------------------------------------------
 
-cdef int fseek_obj(void* cookie, off64_t offset, int whence) except -1:
+cdef int fseek_obj(void* cookie, off64_t* offset, int whence) except -1:
     cdef object obj = <object> cookie
-    return obj.seek(offset, whence)
+    return obj.seek(offset[0], whence)
 
 
 # --- fclose implementation --------------------------------------------------
