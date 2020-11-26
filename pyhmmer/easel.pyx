@@ -729,7 +729,7 @@ cdef class SequenceFile:
             if format is None:
                 raise ValueError("Could not determine format of file: {!r}".format(file))
             else:
-                raise EOFError("Sequence file appears to be empty: {!r}")
+                raise EOFError("Sequence file is empty")
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_Checksum")
 

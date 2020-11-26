@@ -616,7 +616,9 @@ cdef class HMMFile:
 
         # get the magic string at the beginning
         status = libeasel.fileparser.esl_fileparser_NextLine(hfp.efp)
-        if status != libeasel.eslOK:
+        if status == libeasel.eslEOF:
+            raise EOFError("HMM file is empty")
+        elif status != libeasel.eslOK:
             libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
             raise UnexpectedError(status, "esl_fileparser_NextLine");
         status = libeasel.fileparser.esl_fileparser_GetToken(hfp.efp, &token, &token_len)
