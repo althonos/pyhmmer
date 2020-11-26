@@ -1,4 +1,6 @@
-#!/bin/sh -e
+#!/bin/sh
+
+set -e
 
 export PATH="$HOME/.cargo/bin:$PATH"
 export PYBIN="$(echo /opt/python/${1}*/bin)"

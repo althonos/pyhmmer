@@ -1,4 +1,6 @@
-#!/bin/sh -e
+#!/bin/sh
+
+set -e
 
 . $(dirname $(dirname $0))/functions.sh
 
