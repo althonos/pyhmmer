@@ -48,6 +48,7 @@ class _TestHMMFile:
     def setUpClass(cls):
         cls.hmms_folder = os.path.join(os.path.dirname(__file__), "data", "hmm")
 
+    @classmethod
     def open_hmm(cls, path):
         return NotImplemented
 
@@ -75,6 +76,7 @@ class _TestHMMFile:
 
 class TestHMMFilePath(_TestHMMFile, unittest.TestCase):
 
+    @classmethod
     def open_hmm(cls, path):
         return HMMFile(path)
 
@@ -84,21 +86,9 @@ class TestHMMFilePath(_TestHMMFile, unittest.TestCase):
 
 class TestHMMFileFileobj(_TestHMMFile, unittest.TestCase):
 
-    def setUp(self):
-        self.files = []
-
-    def tearDown(self):
-        for file in self.files:
-            file.close()
-
+    @classmethod
     def open_hmm(self, path):
-        self.files.append(open(path, "rb"))
-        return HMMFile(self.files[-1])
-
-    def test_init_typeerror(self):
-        self.assertRaises(TypeError, HMMFile, list())
-        self.assertRaises(TypeError, HMMFile, io.StringIO())
-
+        return HMMFile(open(path, "rb"))
 
 
 class TestTopHits(unittest.TestCase):

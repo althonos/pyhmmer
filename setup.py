@@ -323,6 +323,7 @@ class build_clib(_build_clib):
 
     def copy_sources(self):
         self.copy_tree("vendor", os.path.join(self.build_temp, "vendor"))
+        self.patch_p7_hmmfile()
 
     def build_libraries(self, libraries):
         self.mkpath(self.build_clib)
@@ -335,8 +336,6 @@ class build_clib(_build_clib):
             )
 
     def build_library(self, library):
-        if library.name == "plan7":
-            self.patch_p7_hmmfile()
         objects = self.compiler.compile(
             self.get_temp_sources(library),
             output_dir=self.build_temp,
