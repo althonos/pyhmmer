@@ -65,7 +65,8 @@ cdef ssize_t fread_obj_readinto(void *cookie, char *buf, size_t size) except -1:
 
 cdef int fseek_obj(void* cookie, off64_t* offset, int whence) except -1:
     cdef object obj = <object> cookie
-    return obj.seek(offset[0], whence)
+    offset[0] = obj.seek(offset[0], whence)
+    return 0
 
 
 # --- fclose implementation --------------------------------------------------
@@ -93,7 +94,7 @@ cdef FILE* fopen_obj(object obj, str mode = "r") except NULL:
         if obj.writable():
             functions.write = <cookie_write_function_t*> fwrite_obj
         if obj.seekable():
-            functions.seek = <cookie_seek_function_t*> fseek_obj
+           functions.seek = <cookie_seek_function_t*> fseek_obj
     except AttributeError as err:
         ty = type(obj).__name__
         raise TypeError("expected `io.IOBase` instance, found {}".format(ty)) from err
