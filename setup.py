@@ -316,6 +316,7 @@ class build_clib(_build_clib):
     def run(self):
         self.run_command("configure")
         self.copy_sources()
+        self.patch_p7_hmmfile()
         _build_clib.run(self)
 
     def get_temp_sources(self, library):
@@ -323,7 +324,6 @@ class build_clib(_build_clib):
 
     def copy_sources(self):
         self.copy_tree("vendor", os.path.join(self.build_temp, "vendor"))
-        self.patch_p7_hmmfile()
 
     def build_libraries(self, libraries):
         self.mkpath(self.build_clib)
@@ -355,9 +355,10 @@ class build_clib(_build_clib):
     def patch_p7_hmmfile(self):
         p7_hmmfile = os.path.join(self.build_temp, "vendor", "hmmer", "src", "p7_hmmfile.c")
         with open(p7_hmmfile, "r") as f:
-            lines = [line.replace("static int", "int") for line in f]
-        with open(p7_hmmfile, "w") as f:
-            f.writelines(lines)
+            lines = f.readlines()
+        if any("static int" in line for line in lines):
+            with open(p7_hmmfile, "w") as f:
+                f.writelines(l.replace("static int", "int") for l in lines)
 
 
 class clean(_clean):
