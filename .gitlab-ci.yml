@@ -13,10 +13,6 @@ variables:
 .test: &test
   image: quay.io/pypa/manylinux2010_x86_64
   stage: test
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-    - build
   only:
   - master
   before_script:
@@ -36,10 +32,6 @@ variables:
 .bdist: &bdist
   image: quay.io/pypa/manylinux2010_x86_64
   stage: bdist
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-    - build
   only:
   - master
   before_script:
