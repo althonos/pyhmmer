@@ -84,17 +84,19 @@ cdef FILE* fopen_obj(object obj, str mode = "r") except NULL:
     functions.seek  = NULL
     functions.write = NULL
 
-    if obj.readable():
-        if hasattr((<object> obj), "readinto"):
-            functions.read = <cookie_read_function_t*> fread_obj_readinto
-        else:
-            functions.read = <cookie_read_function_t*> fread_obj_read
-
-    if obj.writable():
-        functions.write = <cookie_write_function_t*> fwrite_obj
-
-    if obj.seekable():
-        functions.seek = <cookie_seek_function_t*> fseek_obj
+    try:
+        if obj.readable():
+            if hasattr((<object> obj), "readinto"):
+                functions.read = <cookie_read_function_t*> fread_obj_readinto
+            else:
+                functions.read = <cookie_read_function_t*> fread_obj_read
+        if obj.writable():
+            functions.write = <cookie_write_function_t*> fwrite_obj
+        if obj.seekable():
+            functions.seek = <cookie_seek_function_t*> fseek_obj
+    except AttributeError as err:
+        ty = type(obj).__name__
+        raise TypeError("expected `io.IOBase` instance, found {}".format(ty)) from err
 
     Py_INCREF(obj)
     return fopencookie(<void*> obj, mode.encode("ascii"), functions)

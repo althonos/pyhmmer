@@ -79,17 +79,19 @@ cdef FILE* fopen_obj(object obj, str mode = "r") except NULL:
     cdef writefn_t* writefn = NULL
     cdef seekfn_t*  seekfn  = NULL
 
-    if obj.readable():
-        if hasattr((<object> obj), "readinto"):
-            readfn = <readfn_t*> fread_obj_readinto
-        else:
-            readfn = <readfn_t*> fread_obj_read
-
-    if obj.writable():
-        writefn = <writefn_t*> fwrite_obj
-
-    if obj.seekable():
-        seekfn = <seekfn_t*> fseek_obj
+    try:
+        if obj.readable():
+            if hasattr((<object> obj), "readinto"):
+                readfn = <readfn_t*> fread_obj_readinto
+            else:
+                readfn = <readfn_t*> fread_obj_read
+        if obj.writable():
+            writefn = <writefn_t*> fwrite_obj
+        if obj.seekable():
+            seekfn = <seekfn_t*> fseek_obj
+    except AttributeError as err:
+        ty = type(obj).__name__
+        raise TypeError("expected `io.IOBase` instance, found {}".format(ty)) from err
 
     Py_INCREF(obj)
     return funopen(<void*> obj, readfn, writefn, seekfn, closefn)
