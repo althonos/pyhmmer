@@ -2,41 +2,99 @@
 """Obtain a `FILE*` from a Python object using ``fopencookie``.
 """
 
-from cpython.ref cimport PyObject
-from libc.stdio cimport FILE
+# --- C imports --------------------------------------------------------------
+
+from cpython.buffer cimport PyObject_GetBuffer, PyBUF_READ, PyBUF_WRITE
+from cpython.memoryview cimport PyMemoryView_FromMemory
+from cpython.ref cimport PyObject, Py_INCREF, Py_DECREF
+from libc.stdio cimport EOF, FILE
 from libc.stdint cimport uint64_t
+from libc.string cimport strcpy, strncpy
+
+
+# --- Linux interface --------------------------------------------------------
 
 cdef extern from "sys/types.h":
     ctypedef uint64_t off64_t
 
 cdef extern from "stdio.h":
 
-  ctypedef ssize_t (*cookie_read_function_t) (void *cookie,       char *buf, size_t size)
-  ctypedef ssize_t (*cookie_write_function_t)(void *cookie, const char *buf, size_t size)
-  ctypedef int     (*cookie_seek_function_t) (void *cookie, off64_t *offset, int whence);
-  ctypedef int     (*cookie_close_function_t)(void *cookie)
+    ctypedef ssize_t (*cookie_read_function_t) (void *cookie,       char *buf, size_t size)
+    ctypedef ssize_t (*cookie_write_function_t)(void *cookie, const char *buf, size_t size)
+    ctypedef int     (*cookie_seek_function_t) (void *cookie, off64_t *offset, int whence);
+    ctypedef int     (*cookie_close_function_t)(void *cookie)
 
-  ctypedef struct cookie_io_functions_t:
-      cookie_read_function_t*  read
-      cookie_write_function_t* write
-      cookie_seek_function_t*  seek
-      cookie_close_function_t* close
+    ctypedef struct cookie_io_functions_t:
+        cookie_read_function_t*  read
+        cookie_write_function_t* write
+        cookie_seek_function_t*  seek
+        cookie_close_function_t* close
 
-  FILE *fopencookie(void *cookie, const char *mode, cookie_io_functions_t io_funcs);
-
-
-cdef size_t fwrite_obj(void *cookie, const char *buf, size_t size) except 0:
-    cdef PyObject* obj = <PyObject*> cookie
-    return (<object> cookie).write(buf[:size])
+    FILE *fopencookie(void *cookie, const char *mode, cookie_io_functions_t io_funcs);
 
 
-cdef FILE* fopen_obj(PyObject* obj, str mode = "r"):
-    cdef void* cookie = <void*> obj
+# --- fwrite implementation --------------------------------------------------
 
+cdef ssize_t fwrite_obj(void *cookie, const char *buf, size_t size) except 0:
+    """Zero-copy implementation of `fwrite` for a Python file-handle.
+    """
+    cdef object obj = <object> cookie
+    cdef object mem = PyMemoryView_FromMemory(<char*> buf, size, PyBUF_READ)
+    return obj.write(mem)
+
+
+# --- fread implementations --------------------------------------------------
+
+cdef ssize_t fread_obj_read(void *cookie, char *buf, size_t size) except -1:
+    """Copying variant of `fread` for files lacking `readinto`.
+    """
+    cdef object obj   = <object> cookie
+    cdef bytes  chunk = obj.read(size)
+    strncpy(buf, <char*> chunk, len(chunk))
+    return len(chunk)
+
+cdef ssize_t fread_obj_readinto(void *cookie, char *buf, size_t size) except -1:
+    """Zero-copy implementation of `fread` using the `readinto` method.
+    """
+    cdef object obj = <object> cookie
+    cdef object mem = PyMemoryView_FromMemory(buf, size, PyBUF_WRITE)
+    return obj.readinto(mem)
+
+
+# --- fseek implementation ---------------------------------------------------
+
+cdef int fseek_obj(void* cookie, off64_t offset, int whence) except -1:
+    cdef object obj = <object> cookie
+    return obj.seek(offset, whence)
+
+
+# --- fclose implementation --------------------------------------------------
+
+cdef ssize_t fclose_obj(void *cookie) except EOF:
+    Py_DECREF(<object> cookie)
+    return 0
+
+
+# --- fopen_obj --------------------------------------------------------------
+
+cdef FILE* fopen_obj(object obj, str mode = "r"):
     cdef cookie_io_functions_t functions
-    functions.read = NULL
-    functions.write = <cookie_write_function_t*> fwrite_obj
-    functions.seek = NULL
-    functions.close = NULL
+    functions.close = <cookie_close_function_t*> fclose_obj
+    functions.read  = NULL
+    functions.seek  = NULL
+    functions.write = NULL
 
-    return fopencookie(cookie, mode.encode("ascii"), functions)
+    if obj.readable():
+        if hasattr((<object> obj), "readinto"):
+            functions.read = <cookie_read_function_t*> fread_obj_readinto
+        else:
+            functions.read = <cookie_read_function_t*> fread_obj_read
+
+    if obj.writable():
+        functions.write = <cookie_write_function_t*> fwrite_obj
+
+    if obj.seekable():
+        functions.seek = <cookie_seek_function_t*> fseek_obj
+
+    Py_INCREF(obj)
+    return fopencookie(<void*> obj, mode.encode("ascii"), functions)

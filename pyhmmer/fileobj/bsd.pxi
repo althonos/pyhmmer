@@ -2,29 +2,94 @@
 """Obtain a `FILE*` from a Python object using ``funopen``.
 """
 
+# --- C imports --------------------------------------------------------------
+
+from cpython.buffer cimport PyObject_GetBuffer, PyBUF_READ, PyBUF_WRITE
+from cpython.memoryview cimport PyMemoryView_FromMemory
+from cpython.ref cimport PyObject, Py_INCREF, Py_DECREF
+from libc.stdio cimport EOF, FILE, fpos_t
+from libc.stdint cimport int64_t, uint64_t
+from libc.string cimport strcpy, strncpy
+
+
+# --- BSD interface ----------------------------------------------------------
+
+ctypedef int    (*readfn_t) (void *cookie,       char *buf, int size)
+ctypedef int    (*writefn_t)(void *cookie, const char *buf, int size)
+ctypedef fpos_t (*seekfn_t) (void *cookie,   fpos_t offset, int whence)
+ctypedef int    (*closefn_t)(void *cookie)
+
 cdef extern from "stdio.h":
-
     FILE* funopen(
-        const void  *cookie,
-        int        (*readfn)   (void *,       char *, int),
-        int        (*writefn)  (void *, const char *, int),
-        fpos_t     (*seekfn)   (void *,       fpos_t, int),
-        int        (*closefn)  (void *)
-    );
+        const void*  cookie,
+        readfn_t*    readfn,
+        writefn_t*   writefn,
+        seekfn_t*    seekfn,
+        closefn_t*   closefn
+    )
 
-    FILE* fropen(void *cookie, int (*readfn) (void *,       char *, int))
-    FILE *fwopen(void *cookie, int (*writefn)(void *, const char *, int));
 
+# --- fwrite implementation --------------------------------------------------
 
 cdef int fwrite_obj(void *cookie, const char *buf, int size) except 0:
-    cdef PyObject* obj = <PyObject*> cookie
-    return (<object> cookie).write(buf[:size])
+    """Zero-copy implementation of `fwrite` for a Python file-handle.
+    """
+    cdef object obj = <object> cookie
+    cdef object mem = PyMemoryView_FromMemory(<char*> buf, size, PyBUF_READ)
+    return obj.write(mem)
 
 
-cdef FILE* fopen_obj(PyObject* obj, str mode = "r"):
+# --- fread implementations --------------------------------------------------
 
-    cdef void* cookie = <void*> obj
-    if mode == "w":
-        return fwopen(cookie, fwrite_obj)
-    else:
-        raise NotImplementedError()
+cdef int fread_obj_read(void *cookie, char *buf, int size) except -1:
+    """Copying variant of `fread` for files lacking `readinto`.
+    """
+    cdef object obj   = <object> cookie
+    cdef bytes  chunk = obj.read(size)
+    strncpy(buf, <char*> chunk, len(chunk))
+    return len(chunk)
+
+cdef int fread_obj_readinto(void *cookie, char *buf, int size) except -1:
+    """Zero-copy implementation of `fread` using the `readinto` method.
+    """
+    cdef object obj = <object> cookie
+    cdef object mem = PyMemoryView_FromMemory(buf, size, PyBUF_WRITE)
+    return obj.readinto(mem)
+
+
+# --- fseek implementation ---------------------------------------------------
+
+cdef fpos_t fseek_obj(void* cookie, fpos_t offset, int whence):
+    cdef object obj = <object> cookie
+    return obj.seek(offset, whence)
+
+
+# --- fclose implementation --------------------------------------------------
+
+cdef int fclose_obj(void *cookie) except EOF:
+    Py_DECREF(<object> cookie)
+    return 0
+
+
+# --- fopen_obj --------------------------------------------------------------
+
+cdef FILE* fopen_obj(object obj, str mode = "r"):
+    cdef closefn_t* closefn = <closefn_t*> fclose_obj
+    cdef readfn_t*  readfn  = NULL
+    cdef writefn_t* writefn = NULL
+    cdef seekfn_t*  seekfn  = NULL
+
+    if obj.readable():
+        if hasattr((<object> obj), "readinto"):
+            readfn = <readfn_t*> fread_obj_readinto
+        else:
+            readfn = <readfn_t*> fread_obj_read
+
+    if obj.writable():
+        writefn = <writefn_t*> fwrite_obj
+
+    if obj.seekable():
+        seekfn = <seekfn_t*> fseek_obj
+
+    Py_INCREF(obj)
+    return funopen(<void*> obj, readfn, writefn, seekfn, closefn)
