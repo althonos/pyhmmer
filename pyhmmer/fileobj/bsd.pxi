@@ -73,7 +73,7 @@ cdef int fclose_obj(void *cookie) except EOF:
 
 # --- fopen_obj --------------------------------------------------------------
 
-cdef FILE* fopen_obj(object obj, str mode = "r"):
+cdef FILE* fopen_obj(object obj, str mode = "r") except NULL:
     cdef closefn_t* closefn = <closefn_t*> fclose_obj
     cdef readfn_t*  readfn  = NULL
     cdef writefn_t* writefn = NULL

@@ -77,7 +77,7 @@ cdef ssize_t fclose_obj(void *cookie) except EOF:
 
 # --- fopen_obj --------------------------------------------------------------
 
-cdef FILE* fopen_obj(object obj, str mode = "r"):
+cdef FILE* fopen_obj(object obj, str mode = "r") except NULL:
     cdef cookie_io_functions_t functions
     functions.close = <cookie_close_function_t*> fclose_obj
     functions.read  = NULL
