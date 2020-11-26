@@ -315,25 +315,30 @@ class build_clib(_build_clib):
 
     def run(self):
         self.run_command("configure")
+        self.copy_sources()
         _build_clib.run(self)
 
+    def get_temp_sources(self, library):
+        return [ os.path.join(self.build_temp, s) for s in library.sources ]
+
+    def copy_sources(self):
+        self.copy_tree("vendor", os.path.join(self.build_temp, "vendor"))
+
     def build_libraries(self, libraries):
-
         self.mkpath(self.build_clib)
-        # self._configure_easel()
-        # self._configure_plan7()
-
         for library in libraries:
             self.make_file(
-                library.sources,
+                self.get_temp_sources(library),
                 self.compiler.library_filename(library.name, output_dir=self.build_clib),
                 self.build_library,
                 (library,)
             )
 
     def build_library(self, library):
+        if library.name == "plan7":
+            self.patch_p7_hmmfile()
         objects = self.compiler.compile(
-            library.sources,
+            self.get_temp_sources(library),
             output_dir=self.build_temp,
             include_dirs=library.include_dirs + [self.build_clib],
             macros=library.define_macros,
@@ -347,6 +352,13 @@ class build_clib(_build_clib):
             output_dir=self.build_clib,
             debug=self.debug,
         )
+
+    def patch_p7_hmmfile(self):
+        p7_hmmfile = os.path.join(self.build_temp, "vendor", "hmmer", "src", "p7_hmmfile.c")
+        with open(p7_hmmfile, "r") as f:
+            lines = [line.replace("static int", "int") for line in f]
+        with open(p7_hmmfile, "w") as f:
+            f.writelines(lines)
 
 
 class clean(_clean):

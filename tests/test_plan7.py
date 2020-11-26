@@ -48,21 +48,36 @@ class TestHMMFile(unittest.TestCase):
     def setUpClass(cls):
         cls.hmms_folder = os.path.join(os.path.dirname(__file__), "data", "hmm")
 
-    def test_init_error_empty(self):
+    def test_init_fileobj_error_empty(self):
+        with tempfile.NamedTemporaryFile() as empty:
+            self.assertRaises(EOFError, HMMFile, empty)
+
+    def test_init_fileobj_error_badformat(self):
+        with open(__file__, "rb") as f:
+            self.assertRaises(ValueError, HMMFile, f)
+
+    def test_init_path_error_empty(self):
         with tempfile.NamedTemporaryFile() as empty:
             # the file format can't be determined on an empty file, so this
             # should raise a value error
             self.assertRaises(ValueError, HMMFile, empty.name)
 
-    def test_init_error_filenotfound(self):
+    def test_init_path_error_filenotfound(self):
         self.assertRaises(FileNotFoundError, HMMFile, "path/to/missing/file.hmm")
 
-    def test_iter(self):
+    def test_iter_path(self):
         hmm = os.path.join(self.hmms_folder, "Thioesterase.hmm")
         with HMMFile(hmm) as f:
             thioesterase = next(f)
             self.assertRaises(StopIteration, next, f)
         self.assertEqual(thioesterase.name, b"Thioesterase")
+
+    def test_iter_fileobj(self):
+        with open(os.path.join(self.hmms_folder, "Thioesterase.hmm"), "rb") as file:
+            with HMMFile(file) as f:
+                thioesterase = next(f)
+                self.assertRaises(StopIteration, next, f)
+            self.assertEqual(thioesterase.name, b"Thioesterase")
 
 
 class TestTopHits(unittest.TestCase):

@@ -14,14 +14,16 @@ See Also:
 
 from cpython.ref cimport PyObject
 from cpython.exc cimport PyErr_Clear
-from libc.stdlib cimport realloc
+from libc.stdlib cimport malloc, realloc, free
 from libc.stdint cimport uint32_t
 from libc.stdio cimport fprintf, FILE, stdout, fclose
+from libc.string cimport strdup
 from libc.math cimport exp, ceil
 
 cimport libeasel
 cimport libeasel.sq
 cimport libeasel.alphabet
+cimport libeasel.fileparser
 cimport libeasel.random
 cimport libeasel.getopts
 cimport libeasel.vec
@@ -39,10 +41,12 @@ from libeasel.getopts cimport ESL_GETOPTS, ESL_OPTIONS
 from libeasel.sq cimport ESL_SQ
 from libhmmer cimport p7_LOCAL
 from libhmmer.logsum cimport p7_FLogsumInit
+from libhmmer.p7_hmmfile cimport p7_hmmfile_formats_e
 from libhmmer.p7_tophits cimport p7_hitflags_e
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e
 from libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL
+
 
 IF HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx cimport p7_oprofile, p7_omx
@@ -59,6 +63,8 @@ ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
     include "fileobj/bsd.pxi"
 
 from .easel cimport Alphabet, Sequence, DigitalSequence
+from .reexports.p7_hmmfile cimport read_asc20hmm, read_asc30hmm
+from .reexports.p7_tophits cimport p7_tophits_Reuse
 
 # --- Python imports ---------------------------------------------------------
 
@@ -439,7 +445,7 @@ cdef class HMM:
         cdef FILE*   file
         cdef P7_HMM* hm     = self._hmm
 
-        file = fopen_obj(<PyObject*> fh, mode="w")
+        file = fopen_obj(fh, mode="w")
 
         if binary:
             status = libhmmer.p7_hmmfile.p7_hmmfile_WriteBinary(file, -1, hm)
@@ -461,26 +467,41 @@ cdef class HMMFile:
     """A wrapper around a file (or database), storing serialized HMMs.
     """
 
+    _FORMATS = {
+        "2.0": p7_hmmfile_formats_e.p7_HMMFILE_20,
+        "3/a": p7_hmmfile_formats_e.p7_HMMFILE_3a,
+        "3/b": p7_hmmfile_formats_e.p7_HMMFILE_3b,
+        "3/c": p7_hmmfile_formats_e.p7_HMMFILE_3c,
+        "3/d": p7_hmmfile_formats_e.p7_HMMFILE_3d,
+        "3/e": p7_hmmfile_formats_e.p7_HMMFILE_3e,
+        "3/f": p7_hmmfile_formats_e.p7_HMMFILE_3f,
+    }
+
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
         self._alphabet = None
         self._hfp = NULL
 
-    def __init__(self, str filename, bint db = True):
-        cdef bytes     fspath = os.fsencode(filename)
+    def __init__(self, object file, bint db = True):
+        cdef int       status
+        cdef bytes     fspath
         cdef bytearray errbuf = bytearray(eslERRBUFSIZE)
-        cdef int status
 
-        if db:
-            function = "p7_hmmfile_OpenE"
-            status = libhmmer.p7_hmmfile.p7_hmmfile_OpenE(fspath, NULL, &self._hfp, errbuf)
+        if isinstance(file, str):
+            fspath = os.fsencode(file)
+            if db:
+                function = "p7_hmmfile_OpenE"
+                status = libhmmer.p7_hmmfile.p7_hmmfile_OpenE(fspath, NULL, &self._hfp, errbuf)
+            else:
+                function = "p7_hmmfile_OpenENoDB"
+                status = libhmmer.p7_hmmfile.p7_hmmfile_OpenENoDB(fspath, NULL, &self._hfp, errbuf)
         else:
-            function = "p7_hmmfile_OpenENoDB"
-            status = libhmmer.p7_hmmfile.p7_hmmfile_OpenENoDB(fspath, NULL, &self._hfp, errbuf)
+            self._hfp = self._open_fileobj(file)
+            status    = libeasel.eslOK
 
         if status == libeasel.eslENOTFOUND:
-            raise FileNotFoundError(errno.ENOENT, "no such file or directory: {!r}".format(filename))
+            raise FileNotFoundError(errno.ENOENT, "no such file or directory: {!r}".format(file))
         elif status == libeasel.eslEFORMAT:
             raise ValueError("format not recognized by HMMER")
         elif status != libeasel.eslOK:
@@ -512,8 +533,8 @@ cdef class HMMFile:
         if self._hfp == NULL:
             raise ValueError("I/O operation on closed file.")
 
-        with nogil:
-            status = libhmmer.p7_hmmfile.p7_hmmfile_Read(self._hfp, &self._alphabet._abc, &hmm)
+        # with nogil:
+        status = libhmmer.p7_hmmfile.p7_hmmfile_Read(self._hfp, &self._alphabet._abc, &hmm)
 
         if status == libeasel.eslOK:
             py_hmm = HMM.__new__(HMM)
@@ -535,15 +556,94 @@ cdef class HMMFile:
             raise UnexpectedError(status, "p7_hmmfile_Read")
 
 
-    # --- Utils --------------------------------------------------------------
+    # --- Methods ------------------------------------------------------------
 
     cpdef void close(self):
         """Close the HMM file and free resources.
 
         This method has no effect if the file is already closed.
         """
-        libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
-        self._hfp = NULL
+        if self._hfp:
+            libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
+            self._hfp = NULL
+
+    # --- Utils --------------------------------------------------------------
+
+    cdef P7_HMMFILE* _open_fileobj(self, object fh) except *:
+        cdef int         status
+        cdef char*       token
+        cdef int         token_len
+        cdef bytes       filename
+        cdef P7_HMMFILE* hfp       = NULL
+
+        # attempt to allocate space for the P7_HMMFILE
+        hfp = <P7_HMMFILE*> malloc(sizeof(P7_HMMFILE));
+        if hfp == NULL:
+            raise AllocationError("P7_HMMFILE")
+
+        # store options
+        hfp.f            = fopen_obj(fh)
+        hfp.do_gzip      = False
+        hfp.do_stdin     = False
+        hfp.newly_opened = True
+        hfp.is_pressed   = False
+
+        # set pointers as NULL for now
+        hfp.parser    = NULL
+        hfp.efp       = NULL
+        hfp.ffp       = NULL
+        hfp.pfp       = NULL
+        hfp.ssi       = NULL
+        hfp.fname     = NULL
+        hfp.errbuf[0] = b"\0"
+
+        # extract the filename if the file handle has a `name` attribute
+        if hasattr(fh, "name"):
+            filename = fh.name.encode()
+            hfp.fname = strdup(filename)
+            if hfp.fname == NULL:
+                raise AllocationError("char*")
+
+        # create and configure the file parser
+        hfp.efp = libeasel.fileparser.esl_fileparser_Create(hfp.f)
+        if hfp.efp == NULL:
+            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
+            raise AllocationError("ESL_FILEPARSER")
+        status = libeasel.fileparser.esl_fileparser_SetCommentChar(hfp.efp, b"#")
+        if status != libeasel.eslOK:
+            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
+            raise UnexpectedError(status, "esl_fileparser_SetCommentChar")
+
+        # get the magic string at the beginning
+        status = libeasel.fileparser.esl_fileparser_NextLine(hfp.efp)
+        if status != libeasel.eslOK:
+            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
+            raise UnexpectedError(status, "esl_fileparser_NextLine");
+        status = libeasel.fileparser.esl_fileparser_GetToken(hfp.efp, &token, &token_len)
+        if status != libeasel.eslOK:
+            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
+            raise UnexpectedError(status, "esl_fileparser_GetToken");
+
+        # detect the format
+        if token.startswith(b"HMMER3/"):
+            hfp.parser = read_asc30hmm
+            format = token[5:].decode("ascii", errors="replace")
+            if format in self._FORMATS:
+                hfp.format = self._FORMATS[format]
+            else:
+                hfp.parser = NULL
+        elif token.startswith(b"HMMER2.0"):
+            hfp.parser = read_asc20hmm
+            hfp.format = p7_hmmfile_formats_e.p7_HMMFILE_20
+
+        # check the format tag was recognized
+        if hfp.parser == NULL:
+            text = token.decode(encoding='ascii', errors='replace')
+            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
+            raise ValueError("Unrecognized format tag in HMM file: {!r}".format(text))
+
+        # return the finalized P7_HMMFILE*
+        return hfp
 
 
 cdef class OptimizedProfile:
@@ -1172,7 +1272,7 @@ cdef class TopHits:
         """Free internals to allow reusing for a new pipeline run.
         """
         assert self._th != NULL
-        cdef int status = libhmmer.p7_tophits.p7_tophits_Reuse(self._th)
+        cdef int status = p7_tophits_Reuse(self._th)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tophits_Reuse")
 
