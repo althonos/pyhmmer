@@ -564,9 +564,6 @@ cdef class TextSequence(Sequence):
         if not self._sq:
             raise AllocationError("ESL_SQ")
 
-        # FIXME: Temporary patch, remove when EddyRivasLab/easel#55 is merged
-        self._sq.abc = NULL
-
         if name is not None:
             self.name = name
         if accession is not None:
