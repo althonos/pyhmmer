@@ -54,4 +54,6 @@ _collections_abc.Sequence.register(plan7.TopHits)
 
 if hasattr(_contextlib, "AbstractContextManager"):
     _contextlib.AbstractContextManager.register(easel.SequenceFile)
+    _contextlib.AbstractContextManager.register(easel.SSIReader)
+    _contextlib.AbstractContextManager.register(easel.SSIWriter)
     _contextlib.AbstractContextManager.register(plan7.HMMFile)
