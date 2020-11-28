@@ -1,14 +1,16 @@
 # coding: utf-8
 
+import contextlib
 import ctypes
 import queue
 import time
 import threading
 import typing
+import os
 import multiprocessing
 
-from .easel import Alphabet, DigitalSequence, TextSequence, SequenceFile
-from .plan7 import Pipeline, TopHits, HMM, HMMFile
+from .easel import Alphabet, DigitalSequence, TextSequence, SequenceFile, SSIWriter
+from .plan7 import Background, Pipeline, TopHits, HMM, HMMFile, Profile
 
 
 class _PipelineThread(threading.Thread):
@@ -106,6 +108,43 @@ def hmmsearch(
     # give back results
     while not hits_queue.empty():
         yield hits_queue.get_nowait()[1]
+
+
+def hmmpress(hmms: typing.Iterable[HMM], output: str) -> None:
+
+    DEFAULT_L = 400
+
+    with contextlib.ExitStack() as ctx:
+        h3p = ctx.enter_context(open("{}.h3p".format(output), "wb"))
+        h3m = ctx.enter_context(open("{}.h3m".format(output), "wb"))
+        h3f = ctx.enter_context(open("{}.h3f".format(output), "wb"))
+        h3i = ctx.enter_context(SSIWriter("{}.h3i".format(output)))
+        fh = h3i.add_file(output, format=0)
+
+        for nmodel, hmm in enumerate(hmms):
+            # create the background model on the first iteration
+            if nmodel == 0:
+                bg = Background(hmm.alphabet)
+                bg.L = DEFAULT_L
+
+            # build the optimized models
+            gm = Profile(hmm.M, hmm.alphabet)
+            gm.configure(hmm, bg, DEFAULT_L)
+            om = gm.optimized()
+
+            # update the disk offsets of the optimized model to be written
+            om.offsets.model = h3m.tell()
+            om.offsets.profile = h3p.tell()
+            om.offsets.filter = h3f.tell()
+
+            # add the HMM name, and optionally the HMM accession to the index
+            h3i.add_key(hmm.name, fh, h3m_offset, 0, 0)
+            if hmm.accession is not None:
+                h3i.add_alias(hmm.accession, hmm.name)
+
+            # write the HMM in binary format, and the optimized profile
+            hmm.write(h3m, binary=True)
+            om.write(h3f, h3p)
 
 
 # add a very limited CLI so that this module can be invoked in a shell:
