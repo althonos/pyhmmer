@@ -1,6 +1,7 @@
 import io
 import itertools
 import os
+import shutil
 import unittest
 import tempfile
 import pkg_resources
@@ -55,6 +56,11 @@ class _TestHMMFile:
         with tempfile.NamedTemporaryFile() as empty:
             self.assertRaises(EOFError, self.open_hmm, empty.name)
 
+    def test_read_h3m(self):
+        path = os.path.join(self.hmms_folder, "Thioesterase.hmm.h3m")
+        with self.open_hmm(path) as f:
+            self.assertEqual(next(f).name, b"Thioesterase")
+
     def test_read_hmm3(self):
         path = os.path.join(self.hmms_folder, "Thioesterase.hmm")
         with self.open_hmm(path) as f:
@@ -92,8 +98,12 @@ class TestHMMFileFileobj(_TestHMMFile, unittest.TestCase):
             f.close()
 
     def open_hmm(self, path):
-        self.files.append(open(path, "rb"))
-        return HMMFile(self.files[-1])
+
+        with open(path, "rb") as f:
+            buffer = io.BytesIO(f.read())
+
+        # self.files.append(open(path, "rb"))
+        return HMMFile(buffer)
 
 
 class TestTopHits(unittest.TestCase):

@@ -63,16 +63,27 @@ ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
     include "fileobj/bsd.pxi"
 
 from .easel cimport Alphabet, Sequence, DigitalSequence
-from .reexports.p7_hmmfile cimport read_asc20hmm, read_asc30hmm
 from .reexports.p7_tophits cimport p7_tophits_Reuse
+from .reexports.p7_hmmfile cimport (
+    read_asc20hmm,
+    read_asc30hmm,
+    read_bin30hmm,
+    v3a_magic,
+    v3b_magic,
+    v3c_magic,
+    v3d_magic,
+    v3e_magic,
+    v3f_magic
+)
 
 # --- Python imports ---------------------------------------------------------
 
-import errno
-import os
-import io
-import warnings
 import collections.abc
+import errno
+import io
+import os
+import sys
+import warnings
 
 from .errors import AllocationError, UnexpectedError
 
@@ -477,6 +488,15 @@ cdef class HMMFile:
         "3/f": p7_hmmfile_formats_e.p7_HMMFILE_3f,
     }
 
+    _MAGIC = {
+        v3a_magic: p7_hmmfile_formats_e.p7_HMMFILE_3a,
+        v3b_magic: p7_hmmfile_formats_e.p7_HMMFILE_3b,
+        v3c_magic: p7_hmmfile_formats_e.p7_HMMFILE_3c,
+        v3d_magic: p7_hmmfile_formats_e.p7_HMMFILE_3d,
+        v3e_magic: p7_hmmfile_formats_e.p7_HMMFILE_3e,
+        v3f_magic: p7_hmmfile_formats_e.p7_HMMFILE_3f,
+    }
+
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
@@ -570,6 +590,7 @@ cdef class HMMFile:
             libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
             self._hfp = NULL
 
+
     # --- Utils --------------------------------------------------------------
 
     cdef P7_HMMFILE* _open_fileobj(self, object fh) except *:
@@ -577,7 +598,12 @@ cdef class HMMFile:
         cdef char*       token
         cdef int         token_len
         cdef bytes       filename
+        cdef object      fh_       = fh
         cdef P7_HMMFILE* hfp       = NULL
+
+        # use buffered IO to be able to peek efficiently
+        if not hasattr(fh, "peek"):
+            fh_ = io.BufferedReader(fh)
 
         # attempt to allocate space for the P7_HMMFILE
         hfp = <P7_HMMFILE*> malloc(sizeof(P7_HMMFILE));
@@ -585,7 +611,7 @@ cdef class HMMFile:
             raise AllocationError("P7_HMMFILE")
 
         # store options
-        hfp.f            = fopen_obj(fh)
+        hfp.f            = fopen_obj(fh_)
         hfp.do_gzip      = False
         hfp.do_stdin     = False
         hfp.newly_opened = True
@@ -606,6 +632,17 @@ cdef class HMMFile:
             hfp.fname = strdup(filename)
             if hfp.fname == NULL:
                 raise AllocationError("char*")
+
+        # check if the parser is in binary format,
+        magic = int.from_bytes(fh_.peek()[:4], sys.byteorder)
+        if magic in self._MAGIC:
+            hfp.format = self._MAGIC[magic]
+            hfp.parser = read_bin30hmm
+            # NB: the file must be advanced, since read_bin30hmm assumes
+            #     the binary tag has been skipped already, buf we only peeked
+            #     so far; note that we advance without seeking or rewinding.
+            fh_.read(4)
+            return hfp
 
         # create and configure the file parser
         hfp.efp = libeasel.fileparser.esl_fileparser_Create(hfp.f)
