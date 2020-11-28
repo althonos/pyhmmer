@@ -1,4 +1,11 @@
+from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
+
 cdef extern from "impl_vmx/impl_vmx.h" nogil:
+
+    ctypedef struct P7_OM_BLOCK:
+        int count
+        int listSize
+        P7_OPROFILE** list
 
     ctypedef p7_omx_s P7_OMX
     cdef struct p7_omx_s:
