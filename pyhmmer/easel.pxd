@@ -98,8 +98,11 @@ cdef class SSIReader:
 cdef class SSIWriter:
     cdef ESL_NEWSSI* _newssi
 
+    cdef void _on_write(self)
+
+    cpdef void     add_alias(self, bytes alias, bytes key)
     cpdef uint16_t add_file(self, str filename, int format = *)
-    cpdef void add_key(
+    cpdef void     add_key(
         self,
         bytes key,
         uint16_t fd,

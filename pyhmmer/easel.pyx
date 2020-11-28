@@ -1039,6 +1039,18 @@ cdef class SSIWriter:
     def __dealloc__(self):
         self.close()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    # --- Utils --------------------------------------------------------------
+
+    cdef void _on_write(self):
+        if self._newssi == NULL:
+            raise ValueError("I/O operation on closed file.")
+
     # --- Methods ------------------------------------------------------------
 
     cpdef uint16_t add_file(self, str filename, int format = 0):
@@ -1055,9 +1067,7 @@ cdef class SSIWriter:
         cdef int        status
         cdef uint16_t   fd
 
-        if self._newssi == NULL:
-            raise ValueError("I/O operation on closed file.")
-
+        self._on_write()
         name = os.fsdecode(filename)
         status = libeasel.ssi.esl_newssi_AddFile(self._newssi, name, format, &fd)
         if status == libeasel.eslOK:
@@ -1077,9 +1087,7 @@ cdef class SSIWriter:
     ):
         cdef int status
 
-        if self._newssi == NULL:
-            raise ValueError("I/O operation on closed file.")
-
+        self._on_write()
         status = libeasel.ssi.esl_newssi_AddKey(
             self._newssi, key, fd, record_offset, data_offset, record_length
         )
@@ -1091,7 +1099,19 @@ cdef class SSIWriter:
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_newssi_AddKey")
 
-    # cpdef void add_alias(self, )
+    cpdef void add_alias(self, bytes alias, bytes key):
+        cdef int status
+
+        self._on_write()
+        status = libeasel.ssi.esl_newssi_AddAlias(self._newssi, alias, key)
+        if status == libeasel.eslOK:
+            return
+        elif status == libeasel.eslERANGE:
+            raise ValueError("Too many secondary keys registed in index")
+        elif status == libeasel.eslENOTFOUND:
+            raise OSError("Could not open external temporary files.")
+        else:
+            raise UnexpectedError(status, "esl_newssi_AddAlias")
 
     def close(self):
         libeasel.ssi.esl_newssi_Close(self._newssi)
