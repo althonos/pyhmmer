@@ -314,22 +314,26 @@ class build_clib(_build_clib):
     # --- Build code ---
 
     def run(self):
+        # make sure the C headers were generated already
         self.run_command("configure")
-        self.copy_sources()
-        self.patch_p7_hmmfile()
+
+        # patch the `p7_hmmfile.c` so that we can use functions it otherwise
+        # declares as `static`
+        libhmmer = next(lib for lib in self.libraries if lib.name == "hmmer")
+        old = next( src for src in libhmmer.sources if src.endswith("p7_hmmfile.c") )
+        new = os.path.join(self.build_temp, "p7_hmmfile.c")
+        self.make_file([old], new, self.patch_p7_hmmfile, (old, new))
+        libhmmer.sources.remove(old)
+        libhmmer.sources.append(new)
+
+        # build the libraries normally
         _build_clib.run(self)
-
-    def get_temp_sources(self, library):
-        return [ os.path.join(self.build_temp, s) for s in library.sources ]
-
-    def copy_sources(self):
-        self.copy_tree("vendor", os.path.join(self.build_temp, "vendor"))
 
     def build_libraries(self, libraries):
         self.mkpath(self.build_clib)
         for library in libraries:
             self.make_file(
-                self.get_temp_sources(library),
+                library.sources,
                 self.compiler.library_filename(library.name, output_dir=self.build_clib),
                 self.build_library,
                 (library,)
@@ -337,7 +341,7 @@ class build_clib(_build_clib):
 
     def build_library(self, library):
         objects = self.compiler.compile(
-            self.get_temp_sources(library),
+            library.sources,
             output_dir=self.build_temp,
             include_dirs=library.include_dirs + [self.build_clib],
             macros=library.define_macros,
@@ -352,13 +356,11 @@ class build_clib(_build_clib):
             debug=self.debug,
         )
 
-    def patch_p7_hmmfile(self):
-        p7_hmmfile = os.path.join(self.build_temp, "vendor", "hmmer", "src", "p7_hmmfile.c")
-        with open(p7_hmmfile, "r") as f:
+    def patch_p7_hmmfile(self, old, new):
+        with open(old, "r") as f:
             lines = f.readlines()
-        if any("static int" in line for line in lines):
-            with open(p7_hmmfile, "w") as f:
-                f.writelines(l.replace("static int", "int") for l in lines)
+        with open(new, "w") as f:
+            f.writelines(l.replace("static ", "") for l in lines)
 
 
 class clean(_clean):
