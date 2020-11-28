@@ -1037,7 +1037,9 @@ cdef class SSIWriter:
             raise UnexpectedError(status, "esl_newssi_Open")
 
     def __dealloc__(self):
-        self.close()
+        if self._newssi != NULL:
+            warnings.warn("unclosed SSI file", ResourceWarning)
+            self.close()
 
     def __enter__(self):
         return self
@@ -1045,10 +1047,16 @@ cdef class SSIWriter:
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
 
+    # --- Properties -----------------------------------------------------------
+
+    @property
+    def closed(self):
+        return self._newssi == NULL
+
     # --- Utils --------------------------------------------------------------
 
     cdef void _on_write(self):
-        if self._newssi == NULL:
+        if self.closed:
             raise ValueError("I/O operation on closed file.")
 
     # --- Methods ------------------------------------------------------------
@@ -1068,7 +1076,7 @@ cdef class SSIWriter:
         cdef uint16_t   fd
 
         self._on_write()
-        name = os.fsdecode(filename)
+        name = os.fsencode(filename)
         status = libeasel.ssi.esl_newssi_AddFile(self._newssi, name, format, &fd)
         if status == libeasel.eslOK:
             return fd
@@ -1114,8 +1122,20 @@ cdef class SSIWriter:
             raise UnexpectedError(status, "esl_newssi_AddAlias")
 
     def close(self):
-        libeasel.ssi.esl_newssi_Close(self._newssi)
-        self._newssi = NULL
+        cdef int status
+
+        if not self.closed:
+
+            status = libeasel.ssi.esl_newssi_Write(self._newssi)
+            if status == libeasel.eslERANGE:
+                raise ValueError("Too many keys registered in index.")
+            elif status == libeasel.eslESYS:
+                raise RuntimeError("Extern sorting of keys failed.")
+            elif status == libeasel.eslEDUP:
+                raise ValueError("Index contains duplicate keys.")
+
+            libeasel.ssi.esl_newssi_Close(self._newssi)
+            self._newssi = NULL
 
 
 # --- Module init code -------------------------------------------------------
