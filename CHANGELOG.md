@@ -6,10 +6,33 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.0-a4...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.0-a5...HEAD
+
+
+## [v0.1.0-a5] - 2020-11-28
+[v0.1.0-a5]: https://github.com/althonos/pyhmmer/compare/v0.1.0-a4...v0.1.0-a5
 
 ### Added
 - `Sequence.__len__` magic method so that `len(seq)` returns the number of letters in `seq`.
+- Python file-handle support when opening an `pyhmmer.plan7.HMMFile`.
+- Context manager protocol to `pyhmmer.easel.SSIWriter`.
+- Type annotations for `pyhmmer.easel.SSIWriter`.
+- `add_alias` to `pyhmmer.easel.SSIWriter`.
+- `write` method to `pyhmmer.plan7.OptimizedProfile` to write an optimized profile in binary format.
+- `offsets` property to interact with the disk offsets of a `pyhmmer.plan7.OptimizedProfile` instance.
+- `pyhmmer.hmmer.hmmpress` emulating the `hmmpress` binary from HMMER.
+- `M` property to `pyhmmer.plan7.HMM` exposing the number of nodes in the model.
+
+### Changed
+- Bumped vendored Easel to `v0.48`.
+- Bumped vendored HMMER to `v3.3.2`.
+- `pyhmmer.plan7.HMMFile` will raise an `EOFError` when given an empty file.
+- Renamed `length` property to `L` in `pyhmmer.plan7.Background`.
+
+### Fixed
+- Segmentation fault when `close` method of `pyhmmer.easel.SSIWriter` was called more than once.
+- `close` method of `pyhmmer.easel.SSIWriter` not writing the index contents.
+
 
 ## [v0.1.0-a4] - 2020-11-24
 [v0.1.0-a4]: https://github.com/althonos/pyhmmer/compare/v0.1.0-a3...v0.1.0-a4
