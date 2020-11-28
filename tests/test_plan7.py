@@ -16,8 +16,8 @@ class TestHMM(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.hmms_folder = os.path.join(os.path.dirname(__file__), "data", "hmm")
-        cls.hmm_path = os.path.join(cls.hmms_folder, "Thioesterase.hmm")
+        cls.hmms_folder = os.path.join(os.path.dirname(__file__), "data", "hmms")
+        cls.hmm_path = os.path.join(cls.hmms_folder, "txt", "Thioesterase.hmm")
         with HMMFile(cls.hmm_path) as hmm_file:
             cls.hmm = next(hmm_file)
 
@@ -47,7 +47,7 @@ class _TestHMMFile:
 
     @classmethod
     def setUpClass(cls):
-        cls.hmms_folder = os.path.join(os.path.dirname(__file__), "data", "hmm")
+        cls.hmms_folder = os.path.join(os.path.dirname(__file__), "data", "hmms")
 
     def open_hmm(self, path):
         return NotImplemented
@@ -57,22 +57,22 @@ class _TestHMMFile:
             self.assertRaises(EOFError, self.open_hmm, empty.name)
 
     def test_read_h3m(self):
-        path = os.path.join(self.hmms_folder, "Thioesterase.hmm.h3m")
+        path = os.path.join(self.hmms_folder, "bin", "Thioesterase.h3m")
         with self.open_hmm(path) as f:
             self.assertEqual(next(f).name, b"Thioesterase")
 
     def test_read_hmm3(self):
-        path = os.path.join(self.hmms_folder, "Thioesterase.hmm")
+        path = os.path.join(self.hmms_folder, "txt", "Thioesterase.hmm")
         with self.open_hmm(path) as f:
             self.assertEqual(next(f).name, b"Thioesterase")
 
     def test_read_hmm2(self):
-        path = os.path.join(self.hmms_folder, "PKSI-AT.hmm2")
+        path = os.path.join(self.hmms_folder, "txt2", "PKS_AT.hmm2")
         with self.open_hmm(path) as f:
             self.assertEqual(next(f).name, b"PKS-AT.tcoffee")
 
     def test_iter(self):
-        path = os.path.join(self.hmms_folder, "Thioesterase.hmm")
+        path = os.path.join(self.hmms_folder, "txt", "Thioesterase.hmm")
         with self.open_hmm(path) as f:
             thioesterase = next(f)
             self.assertRaises(StopIteration, next, f)
@@ -90,26 +90,16 @@ class TestHMMFilePath(_TestHMMFile, unittest.TestCase):
 
 class TestHMMFileFileobj(_TestHMMFile, unittest.TestCase):
 
-    def setUp(self):
-        self.files = []
-
-    def tearDown(self):
-        for f in self.files:
-            f.close()
-
     def open_hmm(self, path):
-
         with open(path, "rb") as f:
             buffer = io.BytesIO(f.read())
-
-        # self.files.append(open(path, "rb"))
         return HMMFile(buffer)
 
 
 class TestTopHits(unittest.TestCase):
 
     def setUp(self):
-        hmm_path = pkg_resources.resource_filename(__name__, "data/hmm/PF02826.hmm")
+        hmm_path = pkg_resources.resource_filename(__name__, "data/hmms/txt/PF02826.hmm")
         seqs_path = pkg_resources.resource_filename(__name__, "data/seqs/938293.PRJEB85.HG003687.faa")
 
         with HMMFile(hmm_path) as hmm_file:
@@ -151,12 +141,12 @@ class TestTopHits(unittest.TestCase):
         # check sorting while a Hit instance exists does not crash, and that
         # the Hit still points to the right data
         hit = self.hits[-1]
-        self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_154")
+        self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_187")
         self.hits.sort(by="seqidx")
-        if self.hits[-1].name != b"938293.PRJEB85.HG003687_154":
-            self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_154")
+        if self.hits[-1].name != b"938293.PRJEB85.HG003687_187":
+            self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_187")
 
     def test_threshold(self):
         # after thresholding, one of the htis will not be included.
         self.assertEqual(self.hits.included, 15)
-        self.assertEqual(self.hits.reported, 16)
+        self.assertEqual(self.hits.reported, 22)

@@ -51,7 +51,7 @@ def load_tests(loader, tests, ignore):
 
     # add a sample HMM and some sequences to use with the globals
     data = os.path.realpath(os.path.join(__file__, os.pardir, "data"))
-    with pyhmmer.plan7.HMMFile(os.path.join(data, "hmm", "Thioesterase.hmm")) as hmm_file:
+    with pyhmmer.plan7.HMMFile(os.path.join(data, "hmms", "txt", "Thioesterase.hmm")) as hmm_file:
         thioesterase = next(hmm_file)
     with pyhmmer.easel.SequenceFile(os.path.join(data, "seqs", "938293.PRJEB85.HG003687.faa")) as seq_file:
         proteins = [seq.digitize(thioesterase.alphabet) for seq in seq_file]

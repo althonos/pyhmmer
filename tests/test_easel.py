@@ -128,7 +128,7 @@ class TestSSIReader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.h3i = os.path.realpath(os.path.join(
-            __file__, os.pardir, "data", "hmm", "Thioesterase.hmm.h3i"
+            __file__, os.pardir, "data", "hmms", "db", "Thioesterase.hmm.h3i"
         ))
 
     def test_init_error_filenotfound(self):

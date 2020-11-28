@@ -25,7 +25,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
 
     @staticmethod
     def hmm_file(name):
-        path = pkg_resources.resource_filename(__name__, "data/hmm/{}.hmm".format(name))
+        path = pkg_resources.resource_filename(__name__, "data/hmms/txt/{}.hmm".format(name))
         return HMMFile(path)
 
     @staticmethod
@@ -91,7 +91,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
 
         pipeline = Pipeline(alphabet=hmm.alphabet)
         hits = pipeline.search(hmm, seqs)
-        self.assertEqual(len(hits), 16)
+        self.assertEqual(len(hits), 22)
 
         hits.sort()
 
@@ -120,6 +120,7 @@ class TestHmmsearch(_TestSearch, unittest.TestCase):
         with self.hmm_file("PF02826") as hmm_file:
             hmm = next(hmm_file)
         self.assertRaises(ValueError, self.get_hits, hmm, seqs)
+
 
 class TestHmmsearchSingle(TestHmmsearch, unittest.TestCase):
 
