@@ -172,19 +172,19 @@ cdef class Background:
     # --- Magic methods ------------------------------------------------------
 
     @property
-    def length(self):
+    def L(self):
         assert self._bg != NULL
         return <int> ceil(self._bg.p1 / (1 - self._bg.p1))
 
-    @length.setter
-    def length(self, int length):
+    @L.setter
+    def L(self, int L):
         cdef int    status
         cdef P7_BG* bg     = self._bg
 
         assert self._bg != NULL
 
         with nogil:
-            status = libhmmer.p7_bg.p7_bg_SetLength(bg, length)
+            status = libhmmer.p7_bg.p7_bg_SetLength(bg, L)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_bg_SetLength")
 
@@ -392,10 +392,10 @@ cdef class HMM:
         self.alphabet = None
         self._hmm = NULL
 
-    def __init__(self, int m, Alphabet alphabet):
+    def __init__(self, int M, Alphabet alphabet):
         self.alphabet = alphabet
         with nogil:
-            self._hmm = libhmmer.p7_hmm.p7_hmm_Create(m, alphabet._abc)
+            self._hmm = libhmmer.p7_hmm.p7_hmm_Create(M, alphabet._abc)
         if not self.hmm:
             raise AllocationError("P7_HMM")
 
@@ -403,6 +403,12 @@ cdef class HMM:
         libhmmer.p7_hmm.p7_hmm_Destroy(self._hmm)
 
     # --- Properties ---------------------------------------------------------
+
+    @property
+    def M(self):
+        """`int`: The length of the model (i.e. the number of nodes).
+        """
+        return self._hmm.M
 
     @property
     def name(self):
@@ -1181,9 +1187,9 @@ cdef class Profile:
     def __cinit__(self):
         self._gm = NULL
 
-    def __init__(self, int m, Alphabet alphabet):
+    def __init__(self, int M, Alphabet alphabet):
         self.alphabet = alphabet
-        self._gm = libhmmer.p7_profile.p7_profile_Create(m, alphabet._abc)
+        self._gm = libhmmer.p7_profile.p7_profile_Create(M, alphabet._abc)
         if not self._gm:
             raise AllocationError("P7_PROFILE")
 
@@ -1208,8 +1214,8 @@ cdef class Profile:
             hmm (`pyhmmer.plan7.HMM`): The model HMM with core probabilities.
             bg (`pyhmmer.plan7.Background`): The null background model.
             L (`int`): The expected target sequence length.
-            multihit (`bool`):  Whether or not to use multihit modes.
-            local (`bool`):  Whether or not to use non-local modes.
+            multihit (`bool`): Whether or not to use multihit modes.
+            local (`bool`): Whether or not to use non-local modes.
 
         """
         cdef int         mode
@@ -1261,7 +1267,7 @@ cdef class Profile:
         return libhmmer.p7_profile.p7_profile_IsMultihit(self._gm)
 
     cpdef OptimizedProfile optimized(self):
-        """Convert the profile to a platform-specific optimized model.
+        """Convert the profile to a platform-specific optimized profile.
         """
         cdef int              status
         cdef OptimizedProfile opt
@@ -1277,7 +1283,7 @@ cdef class Profile:
         if status == libeasel.eslOK:
             return opt
         elif status == libeasel.eslEINVAL:
-            raise ValueError("standard and optimized profiles are not compatible")
+            raise ValueError("Standard and optimized profiles are not compatible.")
         elif status == libeasel.eslEMEM:
             raise AllocationError("P7_OPROFILE")
         elif status != libeasel.eslOK:
