@@ -89,6 +89,7 @@ cdef class OptimizedProfile:
 
     cpdef OptimizedProfile copy(self)
     cpdef bint is_local(self)
+    cpdef void write(self, object fh_filter, object fh_profile)
 
 
 cdef class _Offsets:

@@ -458,6 +458,17 @@ cdef class HMM:
     # --- Methods ------------------------------------------------------------
 
     cpdef void write(self, object fh, bint binary=False) except *:
+        """Write the HMM to a file handle.
+
+        Arguments:
+            fh (`io.IOBase`): A Python file handle, opened in binary mode
+                (this must be the case even with ``binary=False``, since
+                the C code will emit bytes in either case).
+            binary (`bool`): Pass ``False`` to emit the file in ASCII mode
+                using the latest supported HMMER format, or ``True`` to use
+                the binary HMMER3 format.
+
+        """
         cdef int     status
         cdef FILE*   file
         cdef P7_HMM* hm     = self._hmm
@@ -514,7 +525,7 @@ cdef class HMMFile:
         cdef bytes     fspath
         cdef bytearray errbuf = bytearray(eslERRBUFSIZE)
 
-        if isinstance(file, str):
+        try:
             fspath = os.fsencode(file)
             if db:
                 function = "p7_hmmfile_OpenE"
@@ -522,7 +533,7 @@ cdef class HMMFile:
             else:
                 function = "p7_hmmfile_OpenENoDB"
                 status = libhmmer.p7_hmmfile.p7_hmmfile_OpenENoDB(fspath, NULL, &self._hfp, errbuf)
-        else:
+        except TypeError:
             self._hfp = self._open_fileobj(file)
             status    = libeasel.eslOK
 
@@ -733,6 +744,28 @@ cdef class OptimizedProfile:
         if new._om == NULL:
             raise AllocationError("P7_OPROFILE")
         return new
+
+    cpdef void write(self, object fh_filter, object fh_profile):
+        """Write an optimized profile to two separate files.
+
+        HMMER implements an acceleration pipeline using several scoring
+        algorithms. Parameters for MSV (the *Multi ungapped Segment Viterbi*)
+        are saved independently to the ``fh_filter`` handle, while the rest of
+        the profile is saved to ``fh_profile``.
+
+        """
+        cdef P7_OPROFILE* om     = self._om
+        cdef int          status
+        cdef FILE*        pfp
+        cdef FILE*        ffp
+
+        assert self._om != NULL
+
+        pfp = fopen_obj(fh_profile, mode="w")
+        ffp = fopen_obj(fh_filter, mode="w")
+        status = p7_oprofile.p7_oprofile_Write(ffp, pfp, self._om)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_oprofile_Write")
 
 
 cdef class _Offsets:
