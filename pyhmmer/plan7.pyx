@@ -47,20 +47,14 @@ from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e
 from libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL
 
-
 IF HMMER_IMPL == "VMX":
-    from libhmmer.impl_vmx cimport p7_oprofile, p7_omx
-    from libhmmer.impl_vmx cimport impl_Init
+    from libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init
     from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
+    from libhmmer.impl_vmx.io cimport p7_oprofile_Write
 ELIF HMMER_IMPL == "SSE":
-    from libhmmer.impl_sse cimport p7_oprofile, p7_omx
-    from libhmmer.impl_sse cimport impl_Init
+    from libhmmer.impl_sse cimport p7_oprofile, p7_omx, impl_Init
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
-
-IF UNAME_SYSNAME == "Linux":
-    include "fileobj/linux.pxi"
-ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
-    include "fileobj/bsd.pxi"
+    from libhmmer.impl_sse.io cimport p7_oprofile_Write
 
 from .easel cimport Alphabet, Sequence, DigitalSequence
 from .reexports.p7_tophits cimport p7_tophits_Reuse
@@ -75,6 +69,11 @@ from .reexports.p7_hmmfile cimport (
     v3e_magic,
     v3f_magic
 )
+
+IF UNAME_SYSNAME == "Linux":
+    include "fileobj/linux.pxi"
+ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
+    include "fileobj/bsd.pxi"
 
 # --- Python imports ---------------------------------------------------------
 
@@ -763,8 +762,11 @@ cdef class OptimizedProfile:
 
         pfp = fopen_obj(fh_profile, mode="w")
         ffp = fopen_obj(fh_filter, mode="w")
-        status = p7_oprofile.p7_oprofile_Write(ffp, pfp, self._om)
-        if status != libeasel.eslOK:
+        status = p7_oprofile_Write(ffp, pfp, self._om)
+        if status == libeasel.eslOK:
+            fclose(ffp)
+            fclose(pfp)
+        else:
             raise UnexpectedError(status, "p7_oprofile_Write")
 
 
