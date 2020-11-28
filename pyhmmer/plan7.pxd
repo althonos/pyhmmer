@@ -4,6 +4,7 @@
 # --- C imports --------------------------------------------------------------
 
 from libc.stdint cimport uint32_t
+from posix.types cimport off_t
 
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_bg cimport P7_BG
@@ -20,6 +21,10 @@ ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
 from .easel cimport Alphabet
+
+
+cdef extern from "hmmer.h" nogil:
+    DEF p7_NOFFSETS = 3
 
 # --- Cython classes ---------------------------------------------------------
 
@@ -84,6 +89,11 @@ cdef class OptimizedProfile:
 
     cpdef OptimizedProfile copy(self)
     cpdef bint is_local(self)
+
+
+cdef class _Offsets:
+    cdef OptimizedProfile    opt
+    cdef off_t[p7_NOFFSETS]* _offs
 
 
 cdef class Pipeline:

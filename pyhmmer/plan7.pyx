@@ -39,7 +39,7 @@ from libeasel cimport eslERRBUFSIZE, eslCONST_LOG2R
 from libeasel.alphabet cimport ESL_ALPHABET, esl_alphabet_Create, esl_abc_ValidateType
 from libeasel.getopts cimport ESL_GETOPTS, ESL_OPTIONS
 from libeasel.sq cimport ESL_SQ
-from libhmmer cimport p7_LOCAL
+from libhmmer cimport p7_LOCAL, p7_offsets_e
 from libhmmer.logsum cimport p7_FLogsumInit
 from libhmmer.p7_hmmfile cimport p7_hmmfile_formats_e
 from libhmmer.p7_tophits cimport p7_hitflags_e
@@ -708,6 +708,10 @@ cdef class OptimizedProfile:
     def __copy__(self):
         return self.copy()
 
+    @property
+    def offsets(self):
+        return _Offsets.__new__(_Offsets, self)
+
     cpdef bint is_local(self):
         """Returns whether or not the profile is in a local alignment mode.
         """
@@ -723,6 +727,54 @@ cdef class OptimizedProfile:
         if new._om == NULL:
             raise AllocationError("P7_OPROFILE")
         return new
+
+
+cdef class _Offsets:
+    """A view over the disk offsets of an optimized profile.
+    """
+
+    def __cinit__(self, OptimizedProfile opt):
+        self.opt = opt
+        self._offs = &opt._om.offs
+
+    def __copy__(self):
+        return _Offsets.__new__(_Offsets, self.om)
+
+    def __str__(self):
+        ty = type(self).__name__
+        return "<offsets of {!r} model={!r} filter={!r} profile={!r}>".format(
+            self.opt,
+            self.model,
+            self.filter,
+            self.profile,
+        )
+
+    @property
+    def model(self):
+        cdef off_t model = self._offs[0][<int> p7_offsets_e.p7_MOFFSET]
+        return None if model == -1 else model
+
+    @model.setter
+    def model(self, object model):
+        self._offs[0][<int> p7_offsets_e.p7_MOFFSET] = -1 if model is None else model
+
+    @property
+    def filter(self):
+        cdef off_t filter = self._offs[0][<int> p7_offsets_e.p7_FOFFSET]
+        return None if filter == -1 else filter
+
+    @filter.setter
+    def filter(self, object filter):
+        self._offs[0][<int> p7_offsets_e.p7_FOFFSET] = -1 if filter is None else filter
+
+    @property
+    def profile(self):
+        cdef off_t profile = self._offs[0][<int> p7_offsets_e.p7_POFFSET]
+        return None if profile == -1 else profile
+
+    @profile.setter
+    def profile(self, object profile):
+        self._offs[0][<int> p7_offsets_e.p7_MOFFSET] = -1 if profile is None else profile
 
 
 cdef class Pipeline:
