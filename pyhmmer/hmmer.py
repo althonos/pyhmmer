@@ -38,7 +38,7 @@ class _PipelineThread(threading.Thread):
         self.hits_queue = hits_queue
         self.callback = callback or self._none_callback
         self.kill_switch = kill_switch
-        self.error: typing.Optional[BaseException] = None
+        self.error = None  # type: typing.Optional[BaseException]
 
     def run(self) -> None:
         while not self.kill_switch.is_set():
