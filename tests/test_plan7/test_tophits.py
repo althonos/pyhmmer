@@ -26,6 +26,10 @@ class TestTopHits(unittest.TestCase):
         self.pipeline = Pipeline(alphabet=self.hmm.alphabet)
         self.hits = self.pipeline.search(self.hmm, self.seqs)
 
+    def test_bool(self):
+        self.assertFalse(pyhmmer.plan7.TopHits())
+        self.assertTrue(self.hits)
+
     def test_index_error(self):
         # check out of bounds indexing is caught
         with self.assertRaises(IndexError):
