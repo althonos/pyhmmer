@@ -453,12 +453,16 @@ cdef class Sequence:
         cdef ESL_SQ* other_sq
         try:
             other_sq = (<Sequence> other)._sq
-            return libeasel.sq.esl_sq_Compare(self._sq, other_sq) == libeasel.eslOK
         except TypeError:
             return False
+        else:
+            return libeasel.sq.esl_sq_Compare(self._sq, other_sq) == libeasel.eslOK
 
     def __len__(self):
-        return self._sq.L
+        assert self._sq != NULL
+        if self._sq.L == -1:
+            return 0
+        return <int> self._sq.L
 
     def __copy__(self):
         return self.copy()
@@ -557,10 +561,17 @@ cdef class TextSequence(Sequence):
         bytes name=None,
         bytes description=None,
         bytes accession=None,
-        bytes sequence=None,
+        str   sequence=None,
         bytes secondary_structure=None
     ):
-        self._sq = libeasel.sq.esl_sq_Create()
+
+        cdef bytes sq
+
+        if sequence is not None:
+            sq = sequence.encode("ascii")
+            self._sq = libeasel.sq.esl_sq_CreateFrom(NULL, sq, NULL, NULL, NULL)
+        else:
+            self._sq = libeasel.sq.esl_sq_Create()
         if not self._sq:
             raise AllocationError("ESL_SQ")
 
@@ -570,6 +581,12 @@ cdef class TextSequence(Sequence):
             self.accession = accession
         if description is not None:
             self.description = description
+
+    @property
+    def sequence(self):
+        assert self._sq != NULL
+        assert libeasel.sq.esl_sq_IsText(self._sq)
+        return self._sq.seq.decode("ascii")
 
     cpdef DigitalSequence digitize(self, Alphabet alphabet):
         """Convert the text sequence to a digital sequence using ``alphabet``.

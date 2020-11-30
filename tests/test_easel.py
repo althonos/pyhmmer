@@ -100,8 +100,32 @@ class TestSequenceFile(unittest.TestCase):
 
 class TestTextSequence(unittest.TestCase):
 
+    def test_init_empty(self):
+        seq = easel.TextSequence()
+        self.assertEqual(seq.name, b"")
+        self.assertEqual(seq.sequence, "")
+        self.assertEqual(len(seq), 0)
+
+    def test_init_kwargs(self):
+        seq = easel.TextSequence(name=b"TEST", sequence="ATGC")
+        self.assertEqual(seq.name, b"TEST")
+        self.assertEqual(seq.sequence, "ATGC")
+        self.assertEqual(len(seq), 4)
+
+    def test_setter_name(self):
+        seq = easel.TextSequence()
+        self.assertEqual(seq.name, b"")
+        seq.name = b"OTHER"
+        self.assertEqual(seq.name, b"OTHER")
+
+    def test_setter_description(self):
+        seq = easel.TextSequence()
+        self.assertIs(seq.description, b"")
+        seq.description = b"a test sequence"
+        self.assertEqual(seq.description, b"a test sequence")
+
     def test_copy(self):
-        seq = easel.TextSequence(name=b"TEST", sequence=b"ATGC")
+        seq = easel.TextSequence(name=b"TEST", sequence="ATGC")
 
         # copy the sequence
         cpy = seq.copy()
