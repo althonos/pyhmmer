@@ -134,3 +134,24 @@ class TestPipelinesearch(_TestSearch, unittest.TestCase):
         pipeline = Pipeline(alphabet=hmm.alphabet)
         hits = pipeline.search(hmm, seqs)
         return hits
+
+
+class TestHmmpress(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+         cls.tmp = tempfile.NamedTemporaryFile(suffix=".hmm", delete=False).name
+         cls.hmm = pkg_resources.resource_filename(__name__, "data/hmms/txt/Thioesterase.hmm")
+         cls.h3p = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3p")
+         cls.h3m = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3m")
+         cls.h3f = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3f")
+         cls.h3i = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3i")
+         with HMMFile(cls.hmm) as hmms:
+             pyhmmer.hmmer.hmmpress(hmms, cls.tmp)
+
+    def test_h3m(self):
+        with open("{}.h3m".format(self.tmp), "rb") as f:
+            actual = f.read()
+        with open(self.h3m, "rb") as f:
+            expected = f.read()
+        self.assertEqual(actual, expected)
