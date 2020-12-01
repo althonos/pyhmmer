@@ -6,7 +6,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.0-a5...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.0...HEAD
+
+
+## [v0.1.0] - 2020-12-01
+[v0.1.0]: https://github.com/althonos/pyhmmer/compare/v0.1.0-a5...v0.1.0
+
+Initial beta release.
+
+### Fixed
+- `TextSequence` uses the sequence argument it's given on instantiation.
+- Segmentation fault in `Sequence.__eq__` caused by implicit type conversion.
+- Segmentation fault on `SequenceFile.read` failure.
+- Missing type annotations for the `pyhmmer.easel` module.
 
 
 ## [v0.1.0-a5] - 2020-11-28

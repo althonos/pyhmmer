@@ -69,25 +69,25 @@ jobs:
         - python -m coverage xml
         - python -m coverage report
         - python -m codecov
-    # Linux
-    # - python: pypy3
-    #   if: tag IS present
-    #   <<: *test-linux
-    # - python: 3.5
-    #   if: tag IS present
-    #   <<: *test-linux
-    # - python: 3.6
-    #   if: tag IS present
-    #   <<: *test-linux
-    # - python: 3.7
-    #   if: tag IS present
-    #   <<: *test-linux
-    # - python: 3.8
-    #   if: tag IS present
-    #   <<: *test-linux
-    # - python: 3.9
-    #   if: tag IS present
-    #   <<: *test-linux
+    # Manylinux
+    - python: pypy3
+      if: tag IS present
+      <<: *test-linux
+    - python: 3.5
+      if: tag IS present
+      <<: *test-linux
+    - python: 3.6
+      if: tag IS present
+      <<: *test-linux
+    - python: 3.7
+      if: tag IS present
+      <<: *test-linux
+    - python: 3.8
+      if: tag IS present
+      <<: *test-linux
+    - python: 3.9
+      if: tag IS present
+      <<: *test-linux
     # OSX
     # - env: PYTHON=python3.5
     #   name: "Python: 3.5"
