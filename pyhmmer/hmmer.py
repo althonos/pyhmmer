@@ -110,18 +110,23 @@ def hmmsearch(
         yield hits_queue.get_nowait()[1]
 
 
-def hmmpress(hmms: typing.Iterable[HMM], output: str) -> None:
+def hmmpress(
+    hmms: typing.Iterable[HMM],
+    output: typing.Union[str, "os.PathLike[str]"],
+) -> int:
 
     DEFAULT_L = 400
+    path = os.fspath(output)
+    nmodel = 0
 
     with contextlib.ExitStack() as ctx:
-        h3p = ctx.enter_context(open("{}.h3p".format(output), "wb"))
-        h3m = ctx.enter_context(open("{}.h3m".format(output), "wb"))
-        h3f = ctx.enter_context(open("{}.h3f".format(output), "wb"))
-        h3i = ctx.enter_context(SSIWriter("{}.h3i".format(output)))
-        fh = h3i.add_file(output, format=0)
+        h3p = ctx.enter_context(open("{}.h3p".format(path), "wb"))
+        h3m = ctx.enter_context(open("{}.h3m".format(path), "wb"))
+        h3f = ctx.enter_context(open("{}.h3f".format(path), "wb"))
+        h3i = ctx.enter_context(SSIWriter("{}.h3i".format(path)))
+        fh = h3i.add_file(path, format=0)
 
-        for nmodel, hmm in enumerate(hmms):
+        for hmm in hmms:
             # create the background model on the first iteration
             if nmodel == 0:
                 bg = Background(hmm.alphabet)
@@ -145,6 +150,10 @@ def hmmpress(hmms: typing.Iterable[HMM], output: str) -> None:
             # write the HMM in binary format, and the optimized profile
             hmm.write(h3m, binary=True)
             om.write(h3f, h3p)
+            nmodel += 1
+
+    # return the number of written HMMs
+    return nmodel
 
 
 # add a very limited CLI so that this module can be invoked in a shell:
