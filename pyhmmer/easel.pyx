@@ -828,10 +828,7 @@ cdef class SequenceFile:
             if you can to recycle the internal buffers.
 
         """
-        cdef Sequence seq = TextSequence.__new__(TextSequence)
-        seq._sq = libeasel.sq.esl_sq_Create()
-        if not seq._sq:
-            raise AllocationError("ESL_SQ")
+        cdef Sequence seq = TextSequence()
         return self.readinto(seq, skip_info=skip_info, skip_sequence=skip_sequence)
 
     cpdef Sequence readinto(self, Sequence seq, bint skip_info=False, bint skip_sequence=False):
@@ -870,27 +867,28 @@ cdef class SequenceFile:
         """
         assert seq._sq != NULL
 
-        cdef int status
-        cdef str function
-        cdef ESL_SQFILE* sqfp = self._sqfp
+        cdef int         (*funcread)(ESL_SQFILE *sqfp, ESL_SQ *sq) nogil
+        cdef int         status
+        cdef str         funcname
+        cdef ESL_SQFILE* sqfp     = self._sqfp
 
-        if sqfp == NULL:
+        if self._sqfp == NULL:
             raise ValueError("I/O operation on closed file.")
 
         if not skip_info and not skip_sequence:
-            function = "esl_sqio_Read"
-            with nogil:
-                status = libeasel.sqio.esl_sqio_Read(sqfp, seq._sq)
+            funcname = "esl_sqio_Read"
+            funcread = libeasel.sqio.esl_sqio_Read
         elif not skip_info:
-            function = "esl_sqio_ReadInfo"
-            with nogil:
-                status = libeasel.sqio.esl_sqio_ReadInfo(sqfp, seq._sq)
+            funcname = "esl_sqio_ReadInfo"
+            funcread = libeasel.sqio.esl_sqio_ReadInfo
         elif not skip_sequence:
-            function = "esl_sqio_ReadSequence"
-            with nogil:
-                status = libeasel.sqio.esl_sqio_ReadSequence(sqfp, seq._sq)
+            funcname = "esl_sqio_ReadSequence"
+            funcread = libeasel.sqio.esl_sqio_ReadSequence
         else:
             raise ValueError("Cannot skip reading both sequence and metadata.")
+
+        with nogil:
+            status = funcread(sqfp, seq._sq)
 
         if status == libeasel.eslOK:
             return seq
@@ -900,7 +898,7 @@ cdef class SequenceFile:
             msg = <bytes> libeasel.sqio.esl_sqfile_GetErrorBuf(sqfp)
             raise ValueError("Could not parse file: {}".format(msg.decode()))
         else:
-            raise UnexpectedError(status, function)
+            raise UnexpectedError(status, funcname)
 
 
     # --- Fetch methods ------------------------------------------------------
