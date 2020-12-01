@@ -125,7 +125,7 @@ in a simple, easily reproducible situation.
 
 ### 🏗️ Contributing
 
-See `CONTRIBUTING.md`.
+Contributions are more than welcome! See `CONTRIBUTING.md` for more details.
 
 ## ⏱️ Benchmarks
 
@@ -134,10 +134,17 @@ containing 2100 protein sequences (`tests/data/seqs/938293.PRJEB85.HG003687.faa`
 and a subset of the [Pfam](https://pfam.xfam.org/) HMM library containing
 2873 domains. Both commands were set to use 8 threads, and were run 20 times.
 
-| Command                     | mean (s) | σ (ms) | min (s) | max (s) |
-|-----------------------------|----------|--------|---------|---------|
-| `hmmsearch`                 | 40.723   | 223    | 40.402  | 41.321  |
-| `python -m hmmer.hmmsearch` | 40.128   | 946    | 37.706  | 42.457  |
+| Command                       | # CPUs | mean (s) | σ (ms) | min (s) | max (s) | Speedup |
+|-------------------------------|--------|----------|--------|---------|---------|---------|
+| `python -m pyhmmer hmmsearch` |      4 |  20.706  |  316   |  19.960 |  42.457 |   x1.00 |
+| `python -m pyhmmer hmmsearch` |      2 |  24.076  |  842   |  22.289 |  21.118 |   x1.16 |
+| `hmmsearch`                   |      2 |  35.046  |  161   |  34.734 |  35.183 |   x1.69 |
+| `hmmsearch`                   |      4 |  37.721  |   78   |  37.605 |  37.847 |   x1.82 |
+| `python -m pyhmmer hmmsearch` |      1 |  39.022  | 1346   |  36.081 |  40.644 |   x1.88 |
+| `hmmsearch`                   |      1 |  44.360  |  243   |  44.184 |  45.018 |   x2.14 |
+| `hmmscan`                     |      2 | 102.248  |  381   | 101.479 | 102.765 |   x4.93 |
+| `hmmscan`                     |      4 | 106.779  |  375   | 106.197 | 107.482 |   x5.15 |
+| `hmmscan`                     |      1 | 107.945  |  326   | 107.460 | 108.502 |   x5.21 |
 
 
 ## ⚖️ License
