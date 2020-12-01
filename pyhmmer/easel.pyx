@@ -42,6 +42,18 @@ from .errors import AllocationError, UnexpectedError
 
 cdef class Alphabet:
     """A biological alphabet, including additional marker symbols.
+
+    This type is used to share an alphabet to several objects in the `easel`
+    and `plan7` modules. Reference counting helps sharing the same instance
+    everywhere, instead of reallocating memory every time an alphabet is needed.
+
+    Use the factory class methods to obtain a default `Alphabet` for one of the
+    three biological alphabets::
+
+        >>> dna = Alphabet.dna()
+        >>> rna = Alphabet.rna()
+        >>> aa  = Alphabet.amino()
+
     """
 
     # --- Default constructors -----------------------------------------------
@@ -104,11 +116,16 @@ cdef class Alphabet:
                 self._abc.Kp
             )
 
-    def __eq__(self, Alphabet other):
+    def __eq__(self, object other):
+        cdef Alphabet other_abc
+
+        assert self._abc != NULL
+
         # TODO: Update when we implement custom alphabet creation from Python.
-        if other is None:
-            return False
-        return self._abc.type == other._abc.type
+        if isinstance(other, Alphabet):
+            other_abc = other
+            return self._abc.type == other_abc._abc.type
+        return False
 
     def __getstate__(self):
         return {"type": self._abc.type}
@@ -162,6 +179,16 @@ cdef class Alphabet:
 
 cdef class Bitfield:
     """A statically sized sequence of booleans stored as a packed bitfield.
+
+    A bitfield is instantiated with a fixed length, and all booleans are set
+    to `False` by default::
+
+        >>> bitfield = Bitfield(8)
+        >>> len(bitfield)
+        8
+        >>> bitfield[0]
+        False
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -450,13 +477,14 @@ cdef class Sequence:
         libeasel.sq.esl_sq_Destroy(self._sq)
 
     def __eq__(self, object other):
-        cdef ESL_SQ* other_sq
-        try:
-            other_sq = (<Sequence> other)._sq
-        except TypeError:
-            return False
-        else:
-            return libeasel.sq.esl_sq_Compare(self._sq, other_sq) == libeasel.eslOK
+        cdef Sequence other_sq
+
+        assert self._sq != NULL
+
+        if isinstance(other, Sequence):
+            other_sq = other
+            return libeasel.sq.esl_sq_Compare(self._sq, other_sq._sq) == libeasel.eslOK
+        return False
 
     def __len__(self):
         assert self._sq != NULL
@@ -572,7 +600,7 @@ cdef class TextSequence(Sequence):
             self._sq = libeasel.sq.esl_sq_CreateFrom(NULL, sq, NULL, NULL, NULL)
         else:
             self._sq = libeasel.sq.esl_sq_Create()
-        if not self._sq:
+        if self._sq == NULL:
             raise AllocationError("ESL_SQ")
 
         if name is not None:
@@ -581,6 +609,10 @@ cdef class TextSequence(Sequence):
             self.accession = accession
         if description is not None:
             self.description = description
+
+        assert self._sq.name != NULL
+        assert self._sq.desc != NULL
+        assert self._sq.acc != NULL
 
     @property
     def sequence(self):
