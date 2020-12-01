@@ -16,7 +16,7 @@ env:
   dist: bionic
   stage: Test (Linux)
   language: python
-  cache: 
+  cache:
     pip: true
     directories:
       - $TRAVIS_BUILD_DIR/build
@@ -48,24 +48,46 @@ env:
 
 jobs:
   include:
-    # Linux
-    - python: pypy3
-      if: tag IS present
-      <<: *test-linux
-    - python: 3.5
-      if: tag IS present
-      <<: *test-linux
-    - python: 3.6
-      if: tag IS present
-      <<: *test-linux
-    - python: 3.7
-      if: tag IS present
-      <<: *test-linux
-    - python: 3.8
-      if: tag IS present
-      <<: *test-linux
+    # Test
     - python: 3.9
-      <<: *test-linux
+      if: tag IS blank
+      os: linux
+      dist: bionic
+      stage: Test (Linux)
+      language: python
+      cache:
+        pip: true
+        directories:
+          - $TRAVIS_BUILD_DIR/build
+      before_install:
+        - python -m pip install -U -r ci/requirements.txt
+      script:
+        - python setup.py build_clib --debug
+        - python setup.py build_ext  --debug --inplace
+        - python -m coverage run -m unittest discover -v
+      after_success:
+        - python setup.py build_clib --debug
+        - python setup.py build_ext  --debug --inplace
+        - python -m coverage run -m unittest discover -v
+    # Linux
+    # - python: pypy3
+    #   if: tag IS present
+    #   <<: *test-linux
+    # - python: 3.5
+    #   if: tag IS present
+    #   <<: *test-linux
+    # - python: 3.6
+    #   if: tag IS present
+    #   <<: *test-linux
+    # - python: 3.7
+    #   if: tag IS present
+    #   <<: *test-linux
+    # - python: 3.8
+    #   if: tag IS present
+    #   <<: *test-linux
+    # - python: 3.9
+    #   if: tag IS present
+    #   <<: *test-linux
     # OSX
     # - env: PYTHON=python3.5
     #   name: "Python: 3.5"
