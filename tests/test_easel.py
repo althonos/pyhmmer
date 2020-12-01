@@ -7,6 +7,16 @@ import tempfile
 from pyhmmer import easel
 
 
+class TestAlphabet(unittest.TestCase):
+
+    def test_eq(self):
+        self.assertEqual(easel.Alphabet.dna(), easel.Alphabet.dna())
+        self.assertEqual(easel.Alphabet.rna(), easel.Alphabet.rna())
+        self.assertEqual(easel.Alphabet.amino(), easel.Alphabet.amino())
+        self.assertNotEqual(easel.Alphabet.amino(), easel.Alphabet.dna())
+        self.assertNotEqual(easel.Alphabet.amino(), object())
+
+
 class TestSequenceFile(unittest.TestCase):
 
     @classmethod
@@ -146,6 +156,20 @@ class TestTextSequence(unittest.TestCase):
         self.assertEqual(cpy, cpy2)
         self.assertEqual(cpy.name, cpy2.name)
 
+    def test_eq(self):
+        seq1 = easel.TextSequence(name=b"TEST", sequence="ATGC")
+        self.assertEqual(seq1, seq1)
+        self.assertNotEqual(seq1, object())
+
+        seq2 = easel.TextSequence(name=b"TEST", sequence="ATGC")
+        self.assertEqual(seq1, seq2)
+
+        seq3 = easel.TextSequence(name=b"OTHER", sequence="ATGC")
+        self.assertNotEqual(seq1, seq3)
+
+        seq4 = easel.TextSequence(name=b"TEST", sequence="ATGT")
+        self.assertNotEqual(seq1, seq4)
+
 
 class TestSSIReader(unittest.TestCase):
 
@@ -190,3 +214,10 @@ class TestSSIReader(unittest.TestCase):
         with easel.SSIReader(self.h3i) as reader:
             reader.close()
             self.assertRaises(ValueError, reader.file_info, 0)
+
+
+class TestSSIWriter(unittest.TestCase):
+
+    def test_init_error_fileexists(self):
+        with tempfile.NamedTemporaryFile() as tmp:
+            self.assertRaises(FileExistsError, easel.SSIWriter, tmp.name, exclusive=True)
