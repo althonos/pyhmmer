@@ -68,7 +68,7 @@ def hmmsearch(
     sequences: typing.Sequence[DigitalSequence],
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
-    **options: typing.Any,
+    **options,  # type: typing.Any
 ) -> typing.Iterator[TopHits]:
     # count the number of CPUs to use
     _cpus = cpus if cpus > 0 else multiprocessing.cpu_count()
