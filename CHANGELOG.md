@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 [Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.0...HEAD
 
+### Fixed
+- `HMMFile` failing to work with PyPy file objects because of a bug with their implementation of `readinto`.
+- C/Python file object implementation using `strcpy` instead of `memcpy`, causing issues when null bytes were read.
+
 
 ## [v0.1.0] - 2020-12-01
 [v0.1.0]: https://github.com/althonos/pyhmmer/compare/v0.1.0-a5...v0.1.0
