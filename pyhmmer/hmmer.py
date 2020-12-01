@@ -155,7 +155,7 @@ if __name__ == "__main__":
     import sys
 
 
-    def _hmmsearch(args):
+    def _hmmsearch(args: argparse.Namespace) -> int:
         with SequenceFile(args.seqdb) as seqfile:
             alphabet = seqfile.guess_alphabet()
             if alphabet is None:
@@ -184,8 +184,10 @@ if __name__ == "__main__":
                                 sep="\t",
                             )
 
+        return 0
 
-    def _hmmpress(args):
+
+    def _hmmpress(args: argparse.Namespace) -> int:
         for ext in ["h3m", "h3i", "h3f", "h3p"]:
             path = "{}.{}".format(args.hmmfile, ext)
             if os.path.exists(path):
@@ -196,6 +198,8 @@ if __name__ == "__main__":
 
         with HMMFile(args.hmmfile) as hmms:
             hmmpress(hmms, args.hmmfile)
+
+        return 0
 
 
     parser = argparse.ArgumentParser()
