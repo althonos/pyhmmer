@@ -20,13 +20,19 @@ from . import errors
 from . import easel
 from . import plan7
 
-from .hmmer import hmmsearch
+from .hmmer import hmmsearch, hmmpress
 
 
 __author__ = "Martin Larralde <martin.larralde@embl.de>"
 __license__ = "MIT"
 __version__ = "0.1.0-a5"
-__all__ = [errors.__name__, easel.__name__, plan7.__name__, hmmsearch.__name__]
+__all__ = [
+    errors.__name__,
+    easel.__name__,
+    plan7.__name__,
+    hmmsearch.__name__,
+    hmmpress.__name__
+]
 
 # Small addition to the docstring: we want to show a link redirecting to the
 # rendered version of the documentation, but this can only work when Python
