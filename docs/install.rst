@@ -71,7 +71,7 @@ build dependencies (mainly `Cython <https://pypi.org/project/cython>`_):
 
 .. code:: console
 
-	$ git clone https://github.com/althonos/pyhmmer
+	$ git clone --recursive https://github.com/althonos/pyhmmer
 	$ cd pyhmmer
 	$ python setup.py build
 	# python setup.py install
