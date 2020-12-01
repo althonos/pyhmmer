@@ -63,16 +63,55 @@ class _PipelineThread(threading.Thread):
         self.kill_switch.set()
 
 
-def hmmsearch(
+def _hmmsearch_singlethreaded(
     hmms: typing.Iterable[HMM],
     sequences: typing.Sequence[DigitalSequence],
-    cpus: int = 0,
     callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
-    **options,  # type: typing.Any
-) -> typing.Iterator[TopHits]:
-    # count the number of CPUs to use
-    _cpus = cpus if cpus > 0 else multiprocessing.cpu_count()
+    **options  # type: typing.Any
+) -> typing.Iterator:
+    # create the queues to pass the HMM objects around, as well as atomic
+    # values that we use to synchronize the threads
+    hits_queue = queue.PriorityQueue()  # type: ignore
+    hmm_queue = queue.Queue()  # type: ignore
+    hmm_count = multiprocessing.Value(ctypes.c_ulong)
+    kill_switch = threading.Event()
 
+    # create the thread (to recycle code)
+    thread = _PipelineThread(
+        sequences,
+        hmm_queue,
+        hmm_count,
+        hits_queue,
+        kill_switch,
+        callback,
+        options
+    )
+
+    # queue the HMMs passed as arguments
+    for index, hmm in enumerate(hmms):
+        hmm_count.value += 1
+        hmm_queue.put((index, hmm))
+
+    # poison-pill the queue so that threads terminate when they
+    # have consumed all the HMMs
+    hmm_queue.put(None)
+
+    # launch the thread code, but in the main thread
+    thread.run()
+    if thread.error is not None:
+        raise thread.error
+
+    # give back results
+    while not hits_queue.empty():
+        yield hits_queue.get_nowait()[1]
+
+def _hmmsearch_multithreaded(
+    hmms: typing.Iterable[HMM],
+    sequences: typing.Sequence[DigitalSequence],
+    cpus: int,
+    callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
+    **options  # type: typing.Any
+) -> typing.Iterator:
     # create the queues to pass the HMM objects around, as well as atomic
     # values that we use to synchronize the threads
     hits_queue = queue.PriorityQueue()  # type: ignore
@@ -82,7 +121,7 @@ def hmmsearch(
 
     # create and launch one pipeline thread per CPU
     threads = []
-    for _ in range(_cpus):
+    for _ in range(cpus):
         thread = _PipelineThread(
             sequences, hmm_queue, hmm_count, hits_queue, kill_switch, callback, options
         )
@@ -108,6 +147,23 @@ def hmmsearch(
     # give back results
     while not hits_queue.empty():
         yield hits_queue.get_nowait()[1]
+
+
+def hmmsearch(
+    hmms: typing.Iterable[HMM],
+    sequences: typing.Sequence[DigitalSequence],
+    cpus: int = 0,
+    callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
+    **options  # type: typing.Any
+) -> typing.Iterator[TopHits]:
+    # count the number of CPUs to use
+    _cpus = cpus if cpus > 0 else multiprocessing.cpu_count()
+
+    if _cpus > 1:
+        return _hmmsearch_multithreaded(hmms, sequences, _cpus, callback, **options)
+    else:
+        return _hmmsearch_singlethreaded(hmms, sequences, callback, **options)
+
 
 
 def hmmpress(
