@@ -15,7 +15,7 @@ pyHMMER |Stars|
    :target: https://travis-ci.com/althonos/pyhmmer/branches
 
 .. |Coverage| image:: https://img.shields.io/codecov/c/gh/althonos/pyhmmer?style=flat-square&maxAge=600
-   :target: https://www.codecov.com/gh/althonos/pyhmmer/
+   :target: https://codecov.io/gh/althonos/pyhmmer/
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/pyhmmer.svg?style=flat-square&maxAge=3600
    :target: https://pypi.python.org/pypi/pyhmmer
