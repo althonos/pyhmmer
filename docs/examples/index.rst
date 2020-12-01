@@ -5,4 +5,4 @@ Examples
 .. toctree::
    :maxdepth: 2
 
-   Active site analysis <antismash>
+   Active site analysis <active_site>
