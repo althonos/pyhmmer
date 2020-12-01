@@ -65,8 +65,8 @@ involving `hmmsearch`.*
 ## 🔧 Installing
 
 `pyhmmer` can be installed from [PyPI](https://pypi.org/project/pyhmmer/),
-which hosts some pre-built CPython wheels for x86-64 Linux and OSX,
-as well as the code required to compile from source with Cython:
+which hosts some pre-built CPython wheels for x86-64 Linux, as well as the
+code required to compile from source with Cython:
 ```console
 $ pip install pyhmmer
 ```
@@ -103,14 +103,14 @@ with pyhmmer.easel.SequenceFile("938293.PRJEB85.HG003687.faa") as file:
     sequences = [seq.digitize(alphabet) for seq in file]
 
 with pyhmmer.plan7.HMMFile("Pfam.hmm") as hmms:
-    all_hits = list(pyhmmer.hmmsearch(hmms, sequences_file))
+    all_hits = list(pyhmmer.hmmsearch(hmms, sequences_file, cpus=4))
 ```
 
 Processing happens in parallel using Python threads, and a ``TopHits``
 object is yielded for every ``HMM`` passed in the input iterable. *Note that
 for optimal performance, you should pass the number of **physical** cores to
-the `cpus` argument of the `pyhmmer.hmmsearch` function, as HMMER cannot
-benefit from hyperthreading*.
+the `cpus` argument of the `pyhmmer.hmmsearch` function, as HMMER requires
+too many SIMD registers to benefit from hyperthreading*.
 
 
 ## 💭 Feedback
@@ -125,14 +125,15 @@ in a simple, easily reproducible situation.
 
 ### 🏗️ Contributing
 
-Contributions are more than welcome! See `CONTRIBUTING.md` for more details.
+Contributions are more than welcome! See [`CONTRIBUTING.md`](https://github.com/althonos/pyhmmer/blob/master/CONTRIBUTING.md) for more details.
 
 ## ⏱️ Benchmarks
 
 Benchmarks were run on a i7-8550U CPU running at 1.80GHz, using a FASTA file
-containing 2100 protein sequences (`tests/data/seqs/938293.PRJEB85.HG003687.faa`)
+containing 2100 protein sequences
+([`tests/data/seqs/938293.PRJEB85.HG003687.faa`](https://github.com/althonos/pyhmmer/blob/master/tests/data/seqs/938293.PRJEB85.HG003687.faa))
 and a subset of the [Pfam](https://pfam.xfam.org/) HMM library containing
-2873 domains. Both commands were set to use 8 threads, and were run 20 times.
+2873 domains. Commands were run 20 times.
 
 | Command                       | # CPUs | mean (s) | σ (ms) | min (s) | max (s) | Speedup |
 |-------------------------------|--------|----------|--------|---------|---------|---------|
