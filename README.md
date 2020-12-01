@@ -151,8 +151,9 @@ and a subset of the [Pfam](https://pfam.xfam.org/) HMM library containing
 ## ⚖️ License
 
 This library is provided under the [MIT License](https://choosealicense.com/licenses/mit/).
-The HMMER3 and Easel code is available under the BSD 3-clause license. See
-`vendor/hmmer/LICENSE` and `vendor/easel/LICENSE` for more information.
+The HMMER3 and Easel code is available under the
+[BSD 3-clause](https://choosealicense.com/licenses/bsd-3-clause/) license.
+See `vendor/hmmer/LICENSE` and `vendor/easel/LICENSE` for more information.
 
 *This project is in no way not affiliated, sponsored, or otherwise endorsed by
 the [original HMMER authors](http://hmmer.org/). It was developed by
