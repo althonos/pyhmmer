@@ -50,11 +50,12 @@ HMMER internals, which has the following advantages over CLI wrappers
   and its fixed-width tabular output, which is hard to parse (even
   [`Bio.SearchIO.HmmerIO`](https://biopython.org/docs/dev/api/Bio.SearchIO.HmmerIO.html)
   is struggling on some sequences).
-- **no performance penalty**: Using `pyhmmer` to launch `hmmsearch` on sequences
+- **efficient**: Using `pyhmmer` to launch `hmmsearch` on sequences
   and HMMs in disk storage is typically not slower than directly using the
   `hmmsearch` binary (see the [Benchmarks section](#%EF%B8%8F-benchmarks)).
-  If you already have everything in memory, saving the writing/reading step
-  possibly gives you a slight boost!
+  `pyhmmer.hmmsearch` uses a different parallelisation strategy compared to
+  the `hmmsearch` binary from HMMER, which helps getting the most of
+  multiple CPUs.
 
 *This library is still a work-in-progress, and in a very experimental stage,
 but it should already pack enough features to run simple biological analyses
@@ -63,7 +64,7 @@ involving `hmmsearch`.*
 
 ## 🔧 Installing
 
-``pyhmmer`` can be installed from [PyPI](https://pypi.org/project/pyhmmer/),
+`pyhmmer` can be installed from [PyPI](https://pypi.org/project/pyhmmer/),
 which hosts some pre-built CPython wheels for x86-64 Linux and OSX,
 as well as the code required to compile from source with Cython:
 ```console
@@ -111,6 +112,20 @@ for optimal performance, you should pass the number of **physical** cores to
 the `cpus` argument of the `pyhmmer.hmmsearch` function, as HMMER cannot
 benefit from hyperthreading*.
 
+
+## 💭 Feedback
+
+### ⚠️ Issue Tracker
+
+Found a bug ? Have an enhancement request ? Head over to the [GitHub issue
+tracker](https://github.com/althonos/pyhmmer/issues) if you need to report
+or ask something. If you are filing in on a bug, please include as much
+information as you can about the issue, and try to recreate the same bug
+in a simple, easily reproducible situation.
+
+### 🏗️ Contributing
+
+See `CONTRIBUTING.md`.
 
 ## ⏱️ Benchmarks
 

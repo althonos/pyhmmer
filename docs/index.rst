@@ -71,6 +71,7 @@ Library
    Installation <install>
    Examples <examples/index>
    API Reference <api/index>
+   Contributing <contributing>
    Changelog <changes>
 
 
