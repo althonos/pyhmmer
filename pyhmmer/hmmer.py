@@ -138,7 +138,7 @@ def hmmpress(hmms: typing.Iterable[HMM], output: str) -> None:
             om.offsets.filter = h3f.tell()
 
             # add the HMM name, and optionally the HMM accession to the index
-            h3i.add_key(hmm.name, fh, h3m_offset, 0, 0)
+            h3i.add_key(hmm.name, fh, om.offsets.model, 0, 0)
             if hmm.accession is not None:
                 h3i.add_alias(hmm.accession, hmm.name)
 
@@ -154,36 +154,64 @@ if __name__ == "__main__":
     import argparse
     import sys
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-j", "--jobs", required=False, default=0, type=int)
-    parser.add_argument("hmmfile")
-    parser.add_argument("seqdb")
-    args = parser.parse_args()
 
-    with SequenceFile(args.seqdb) as seqfile:
-        alphabet = seqfile.guess_alphabet()
-        if alphabet is None:
-            print("could not guess alphabet of input, exiting")
-            sys.exit(1)
+    def _hmmsearch(args):
+        with SequenceFile(args.seqdb) as seqfile:
+            alphabet = seqfile.guess_alphabet()
+            if alphabet is None:
+                print("could not guess alphabet of input, exiting")
+                sys.exit(1)
 
-        seq = TextSequence()
-        sequences = []
-        while seqfile.readinto(seq) is not None:
-            sequences.append(seq.digitize(alphabet))
-            seq.clear()
+            seq = TextSequence()
+            sequences = []
+            while seqfile.readinto(seq) is not None:
+                sequences.append(seq.digitize(alphabet))
+                seq.clear()
+
+            with HMMFile(args.hmmfile) as hmms:
+                hits_list = hmmsearch(hmms, sequences, cpus=args.jobs)
+
+                for hits in hits_list:
+                    for hit in hits:
+                        if hit.is_reported():
+                            print(
+                                hit.name.decode(),
+                                "-",
+                                hit.domains[0].alignment.hmm_name.decode(),
+                                hit.evalue,
+                                hit.score,
+                                hit.bias,
+                                sep="\t",
+                            )
+
+
+    def _hmmpress(args):
+        for ext in ["h3m", "h3i", "h3f", "h3p"]:
+            path = "{}.{}".format(args.hmmfile, ext)
+            if os.path.exists(path):
+                if args.force:
+                    os.remove(path)
+                else:
+                    raise FileExistsError(path)
 
         with HMMFile(args.hmmfile) as hmms:
-            hits_list = hmmsearch(hmms, sequences, cpus=args.jobs)
+            hmmpress(hmms, args.hmmfile)
 
-            for hits in hits_list:
-                for hit in hits:
-                    if hit.is_reported():
-                        print(
-                            hit.name.decode(),
-                            "-",
-                            hit.domains[0].alignment.hmm_name.decode(),
-                            hit.evalue,
-                            hit.score,
-                            hit.bias,
-                            sep="\t",
-                        )
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-j", "--jobs", required=False, default=0, type=int)
+    subparsers = parser.add_subparsers(dest="cmd", help='HMMER command to run', required=True)
+
+    parser_hmmsearch = subparsers.add_parser("hmmsearch")
+    parser_hmmsearch.add_argument("hmmfile")
+    parser_hmmsearch.add_argument("seqdb")
+
+    parser_hmmpress = subparsers.add_parser("hmmpress")
+    parser_hmmpress.add_argument("hmmfile")
+    parser_hmmpress.add_argument("-f", "--force", action="store_true")
+
+    args = parser.parse_args()
+    if args.cmd == "hmmsearch":
+        sys.exit(_hmmsearch(args))
+    elif args.cmd == "hmmpress":
+        sys.exit(_hmmpress(args))
