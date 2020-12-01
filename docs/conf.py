@@ -34,7 +34,6 @@ def setup(app):
     app.add_css_file("css/main.css")
     # app.add_js_file("js/apitoc.js")
     # app.add_js_file("js/example-admonition.js")
-    shutil.copy(changelog_src, changelog_dst)
 
 
 # -- Project information -----------------------------------------------------
