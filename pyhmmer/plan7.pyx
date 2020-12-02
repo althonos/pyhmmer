@@ -650,7 +650,7 @@ cdef class HMMFile:
                 raise AllocationError("char*")
 
         # check if the parser is in binary format,
-        magic = int.from_bytes(fh_.peek()[:4], sys.byteorder)
+        magic = int.from_bytes(fh_.peek(4)[:4], sys.byteorder)
         if magic in self._MAGIC:
             hfp.format = self._MAGIC[magic]
             hfp.parser = read_bin30hmm
