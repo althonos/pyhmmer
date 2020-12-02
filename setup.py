@@ -28,6 +28,7 @@ except ImportError as err:
 # --- Constants --------------------------------------------------------------
 
 PLATFORM_MACHINE = platform.machine()
+SYS_IMPLEMENTATION = sys.implementation.name
 
 
 # --- Utils ------------------------------------------------------------------
@@ -80,8 +81,9 @@ class build_ext(_build_ext):
 
         # use debug directives with Cython if building in debug mode
         cython_args = {"include_path": ["include"], "compiler_directives": {}}
+        cython_args["compile_time_env"] = {"SYS_IMPLEMENTATION": SYS_IMPLEMENTATION}
         if hmmer_impl is not None:
-            cython_args["compile_time_env"] = {"HMMER_IMPL": hmmer_impl}
+            cython_args["compile_time_env"]["HMMER_IMPL"] = hmmer_impl
         if self.force:
             cython_args["force"] = True
         if self.debug:
