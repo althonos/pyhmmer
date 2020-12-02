@@ -6,9 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.1...HEAD
+
+
+## [v0.1.0] - 2020-12-01
+[v0.1.0]: https://github.com/althonos/pyhmmer/compare/v0.1.0...v0.1.1
 
 ### Fixed
+- `HMMFile` calling `file.peek` without arguments, causing it to crash when passed some types, e.g. `gzip.GzipFile`.
 - `HMMFile` failing to work with PyPy file objects because of a bug with their implementation of `readinto`.
 - C/Python file object implementation using `strcpy` instead of `memcpy`, causing issues when null bytes were read.
 
