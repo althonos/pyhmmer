@@ -1,4 +1,5 @@
 stages:
+  - sdist
   - test
   - deploy
   - release
@@ -58,13 +59,6 @@ variables:
 
 # --- Stages -------------------------------------------------------------------
 
-test:python3.5:
-  environment:
-    name: Python 3.5
-  variables:
-    python: /opt/python/cp35-cp35m/bin/python
-  <<: *test
-
 test:python3.6:
   environment:
     name: Python 3.6
@@ -93,18 +87,26 @@ test:python3.9:
     python: /opt/python/cp39-cp39/bin/python
   <<: *test
 
-deploy:python3.5:
-  dependencies:
-    - test:python3.5
+sdist:
   environment:
-    name: Python 3.5
+    name: Python 3.9
   variables:
-    python: /opt/python/cp35-cp35m/bin/python
-  <<: *deploy
+    python: /opt/python/cp39-cp39/bin/python
+  image: quay.io/pypa/manylinux2010_x86_64
+  stage: sdist
+  only:
+    - master
+    - tags
+  before_script:
+    - $python -m pip install -U -r ci/requirements.txt
+  script:
+    - $python setup.py sdist
+    - $python -m pip install pyhmmer dist/*.tar.gz
 
 deploy:python3.6:
   dependencies:
     - test:python3.6
+    - sdist
   environment:
     name: Python 3.6
   variables:
@@ -114,6 +116,7 @@ deploy:python3.6:
 deploy:python3.7:
   dependencies:
     - test:python3.7
+    - sdist
   environment:
     name: Python 3.7
   variables:
@@ -123,6 +126,7 @@ deploy:python3.7:
 deploy:python3.8:
   dependencies:
     - test:python3.8
+    - sdist
   environment:
     name: Python 3.8
   variables:
@@ -132,6 +136,7 @@ deploy:python3.8:
 deploy:python3.9:
   dependencies:
     - test:python3.9
+    - sdist
   environment:
     name: Python 3.9
   variables:
