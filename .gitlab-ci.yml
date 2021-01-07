@@ -1,6 +1,7 @@
 stages:
   - test
-  - bdist
+  - deploy
+  - release
 
 variables:
   GIT_DEPTH: 100
@@ -19,6 +20,7 @@ variables:
     - build
   only:
   - master
+  - tags
   before_script:
     - $python -m pip install -U -r ci/requirements.txt
   script:
@@ -33,29 +35,35 @@ variables:
     reports:
       cobertura: coverage.xml
 
-.bdist: &bdist
+.deploy: &deploy
   image: quay.io/pypa/manylinux2010_x86_64
-  stage: bdist
+  stage: deploy
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
     - build
   only:
-  - master
+  - tags
   before_script:
     - $python -m pip install -U -r ci/requirements.txt
-    - VERSION=$($python setup.py --version)
-    - NEW_VERSION=$(git describe --tags | sed "s/v${VERSION}-\\([0-9]\\+\\)-\\([0-9a-z]\\+\\)/$VERSION+\1.\2/g")
-    - sed -i "s/${VERSION}/${NEW_VERSION}/g" pyhmmer/__init__.py
   script:
     - $python setup.py build_clib
-    - $python setup.py build_ext
-    - $python setup.py bdist_wheel
+    - $python setup.py build_ext  --inplace
+    - $python -m unittest discover -v
+    - $python setup.py sdist bdist_wheel
+    - for whl in dist/*.whl; do auditwheel repair "$whl" -w dist && rm "$whl"; done
   after_script:
-    - $python -m twine upload --repository-url https://git.embl.de/api/v4/projects/${CI_PROJECT_ID}/packages/pypi dist/*
+    - $python -m twine upload --skip-existing dist/*
 
 
 # --- Stages -------------------------------------------------------------------
+
+test:python3.5:
+  environment:
+    name: Python 3.5
+  variables:
+    python: /opt/python/cp35-cp35m/bin/python
+  <<: *test
 
 test:python3.6:
   environment:
@@ -85,39 +93,58 @@ test:python3.9:
     python: /opt/python/cp39-cp39/bin/python
   <<: *test
 
+deploy:python3.5:
+  dependencies:
+    - test:python3.5
+  environment:
+    name: Python 3.5
+  variables:
+    python: /opt/python/cp35-cp35m/bin/python
+  <<: *deploy
 
-bdist:python3.6:
+deploy:python3.6:
   dependencies:
     - test:python3.6
   environment:
     name: Python 3.6
   variables:
     python: /opt/python/cp36-cp36m/bin/python
-  <<: *bdist
+  <<: *deploy
 
-bdist:python3.7:
+deploy:python3.7:
   dependencies:
     - test:python3.7
   environment:
     name: Python 3.7
   variables:
     python: /opt/python/cp37-cp37m/bin/python
-  <<: *bdist
+  <<: *deploy
 
-bdist:python3.8:
+deploy:python3.8:
   dependencies:
     - test:python3.8
   environment:
     name: Python 3.8
   variables:
     python: /opt/python/cp38-cp38/bin/python
-  <<: *bdist
+  <<: *deploy
 
-bdist:python3.9:
+deploy:python3.9:
   dependencies:
     - test:python3.9
   environment:
     name: Python 3.9
   variables:
     python: /opt/python/cp39-cp39/bin/python
-  <<: *bdist
+  <<: *deploy
+
+
+release:
+  image: ruby
+  stage: release
+  only:
+    - tags
+  before_script:
+    - gem install chandler
+  script:
+    - chandler push --github="althonos/pyrodigal" --changelog="CHANGELOG.md"

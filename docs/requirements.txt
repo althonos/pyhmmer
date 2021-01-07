@@ -1,5 +1,4 @@
 # pyhmmer cannot be compiled in RTD, so we get a wheel from the last release
---extra-index-url https://git.embl.de/api/v4/projects/3638/packages/pypi/simple
 pyhmmer
 
 # sphinx documentation dependencies
