@@ -21,7 +21,6 @@ variables:
     - build
   only:
   - master
-  - tags
   before_script:
     - $python -m pip install -U -r ci/requirements.txt
   script:
@@ -95,7 +94,6 @@ sdist:
   image: quay.io/pypa/manylinux2010_x86_64
   stage: sdist
   only:
-    - master
     - tags
   before_script:
     - $python -m pip install -U -r ci/requirements.txt
