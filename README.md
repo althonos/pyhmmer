@@ -2,7 +2,7 @@
 
 *[Cython](https://cython.org/) bindings and Python interface to [HMMER3](http://hmmer.org/).*
 
-[![TravisCI](https://img.shields.io/travis/com/althonos/pyhmmer/master.svg?maxAge=600&style=flat-square)](https://travis-ci.com/althonos/pyhmmer/branches)
+[![GitLabCI](https://img.shields.io/gitlab/pipeline/larralde/pyhmmer/master?gitlab_url=https%3A%2F%2Fgit.embl.de&logo=gitlab&style=flat-square&maxAge=600)](https://git.embl.de/larralde/pyhmmer)
 [![Coverage](https://img.shields.io/codecov/c/gh/althonos/pyhmmer?style=flat-square&maxAge=3600)](https://codecov.io/gh/althonos/pyhmmer/)
 [![PyPI](https://img.shields.io/pypi/v/pyhmmer.svg?style=flat-square&maxAge=3600)](https://pypi.org/project/pyhmmer)
 [![Wheel](https://img.shields.io/pypi/wheel/pyhmmer.svg?style=flat-square&maxAge=3600)](https://pypi.org/project/pyhmmer/#files)
