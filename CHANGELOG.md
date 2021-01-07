@@ -6,7 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.2...HEAD
+
+
+## [v0.1.2] - 2021-01-07
+[v0.1.2]: https://github.com/althonos/pyhmmer/compare/v0.1.1...v0.1.2
+
+### Fixed
+- Required Cython files not being included in source distribution.
 
 
 ## [v0.1.1] - 2020-12-02

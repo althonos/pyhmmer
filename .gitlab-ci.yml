@@ -152,4 +152,4 @@ release:
   before_script:
     - gem install chandler
   script:
-    - chandler push --github="althonos/pyrodigal" --changelog="CHANGELOG.md"
+    - chandler push --github="althonos/pyhmmer" --changelog="CHANGELOG.md"
