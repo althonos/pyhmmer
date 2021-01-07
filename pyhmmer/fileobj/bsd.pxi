@@ -9,7 +9,7 @@ from cpython.memoryview cimport PyMemoryView_FromMemory
 from cpython.ref cimport PyObject, Py_INCREF, Py_DECREF
 from libc.stdio cimport EOF, FILE, fpos_t
 from libc.stdint cimport int64_t, uint64_t
-from libc.string cimport strcpy, strncpy
+from libc.string cimport strcpy, strncpy, memcpy
 
 
 # --- BSD interface ----------------------------------------------------------
