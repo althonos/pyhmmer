@@ -7,12 +7,15 @@
 from cpython.buffer cimport Py_buffer, PyObject_GetBuffer, PyBuffer_Release, PyBUF_READ, PyBUF_WRITE
 from cpython.memoryview cimport PyMemoryView_FromMemory
 from cpython.ref cimport PyObject, Py_INCREF, Py_DECREF
-from libc.stdio cimport EOF, FILE, fpos_t
+from libc.stdio cimport EOF, FILE
 from libc.stdint cimport int64_t, uint64_t
 from libc.string cimport strcpy, strncpy, memcpy
 
 
 # --- BSD interface ----------------------------------------------------------
+
+cdef extern from "stdio.h":
+    ctypedef long fpos_t
 
 ctypedef int    (*readfn_t) (void *cookie,       char *buf, int size)
 ctypedef int    (*writefn_t)(void *cookie, const char *buf, int size)
