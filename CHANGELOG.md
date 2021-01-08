@@ -6,7 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.3...HEAD
+
+
+## [v0.1.3] - 2021-01-08
+[v0.1.3]: https://github.com/althonos/pyhmmer/compare/v0.1.2...v0.1.3
+
+### Fixed
+- Compilation issues in OSX-specific Cython code.
 
 
 ## [v0.1.2] - 2021-01-07
