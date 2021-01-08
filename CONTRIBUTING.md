@@ -26,12 +26,12 @@ $ python -m unittest discover -vv
 
 ## Coding guidelines
 
-This project targets Python 3.5 or later.
+This project targets Python 3.6 or later.
 
 Python objects should be typed; since it is not supported by Cython,
 you must manually declare types in type stubs (`.pyi` files). In Python
 files, you can add type annotations to function signatures (supported in
-Python 3.5) but not in variable assignments (supported from Python 3.6
+Python 3.5) or in variable assignments (supported from Python 3.6
 onward).
 
 ### Interfacing with C
