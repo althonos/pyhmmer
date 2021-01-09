@@ -16,7 +16,7 @@ from cpython.memoryview cimport PyMemoryView_FromMemory
 from cpython.unicode cimport PyUnicode_FromUnicode
 from libc.stdint cimport int64_t, uint16_t, uint32_t
 from libc.stdlib cimport malloc
-from libc.string cimport memmove, strdup, strlen
+from libc.string cimport memcpy, memmove, strdup, strlen
 from posix.types cimport off_t
 
 cimport libeasel
@@ -699,20 +699,33 @@ cdef class DigitalSequence(Sequence):
         char[:]  sequence=None,
         bytes    source=None,
     ):
-        if sequence is not None:
-            self._sq = libeasel.sq.esl_sq_CreateDigitalFrom(
-              alphabet._abc,
-              NULL,
-              <const ESL_DSQ*> &sequence[0],
-              sequence.shape[0],
-              NULL,
-              NULL,
-              NULL
-            )
-        else:
-            self._sq = libeasel.sq.esl_sq_CreateDigital(alphabet._abc)
+
+        cdef int     status
+        cdef int64_t n
+
+        # create an empty digital sequence
+        self._sq = libeasel.sq.esl_sq_CreateDigital(alphabet._abc)
         if self._sq == NULL:
             raise AllocationError("ESL_SQ")
+
+        # NB: because the easel sequence has sentinel bytes that we hide from
+        #     the user, we cannot just copy the sequence here or use the libeasel
+        #     internals; instead, if a sequence is given, we need to emulate
+        #     the `esl_sq_CreateDigitalFrom` but copy the sequence with different
+        #     offsets.
+        if sequence is not None:
+            # grow the sequence buffer so it can hold `len(sequence)` residues
+            n = sequence.shape[0]
+            status = libeasel.sq.esl_sq_GrowTo(self._sq, n)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_sq_GrowTo")
+            # update the digital sequence buffer
+            self._sq.dsq[0] = self._sq.dsq[n+1] = libeasel.eslDSQ_SENTINEL
+            memcpy(<void*> &self._sq.dsq[1], <const void*> &sequence[0], n)
+            # set the coor bookkeeping like it would happend
+            self._sq.start = 1
+            self._sq.C = 0
+            self._sq.end = self._sq.W = self._sq.L = self._sq.n = n
 
         if name is not None:
             self.name = name
