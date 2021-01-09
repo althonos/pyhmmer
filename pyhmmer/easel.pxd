@@ -64,14 +64,15 @@ cdef class Sequence:
 
 
 cdef class TextSequence(Sequence):
-    cpdef DigitalSequence digitize(self, Alphabet alphabet)
     cpdef TextSequence copy(self)
+    cpdef DigitalSequence digitize(self, Alphabet alphabet)
 
 
 cdef class DigitalSequence(Sequence):
     cdef readonly Alphabet alphabet
 
     cpdef DigitalSequence copy(self)
+    cpdef TextSequence textize(self)
 
 
 cdef class SequenceFile:

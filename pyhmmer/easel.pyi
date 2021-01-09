@@ -91,6 +91,7 @@ class TextSequence(Sequence):
 class DigitalSequence(Sequence):
     alphabet: Alphabet
     def copy(self) -> DigitalSequence: ...
+    def textize(self) -> TextSequence: ...
 
 class SequenceFile(typing.ContextManager[SequenceFile], typing.Iterator[Sequence]):
     @classmethod

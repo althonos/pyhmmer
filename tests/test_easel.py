@@ -170,6 +170,15 @@ class TestTextSequence(unittest.TestCase):
         seq4 = easel.TextSequence(name=b"TEST", sequence="ATGT")
         self.assertNotEqual(seq1, seq4)
 
+    def test_digitize_roundtrip(self):
+        seq1 = easel.TextSequence(name=b"TEST", sequence="ATGC")
+        dsq1 = seq1.digitize(easel.Alphabet.dna())
+        self.assertEqual(seq1.name, dsq1.name)
+
+        seq2 = dsq1.textize()
+        self.assertEqual(seq1.name, seq2.name)
+        self.assertEqual(seq1, seq2)
+
 
 class TestSSIReader(unittest.TestCase):
 

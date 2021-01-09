@@ -696,6 +696,27 @@ cdef class DigitalSequence(Sequence):
         else:
             raise UnexpectedError(status, "esl_sq_Copy")
 
+    cpdef TextSequence textize(self):
+        """Convert the digital sequence to a text sequence.
+        """
+        assert self._sq != NULL
+        assert libeasel.sq.esl_sq_IsDigital(self._sq)
+
+        cdef int status
+        cdef TextSequence new
+
+        new = TextSequence.__new__(TextSequence)
+        new._sq = libeasel.sq.esl_sq_Create()
+        if new._sq == NULL:
+            raise AllocationError("ESL_SQ")
+
+        status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_sq_Copy")
+
+        assert libeasel.sq.esl_sq_IsText(new._sq)
+        return new
+
 
 cdef class SequenceFile:
     """A wrapper around a sequence file, containing unaligned sequences.
