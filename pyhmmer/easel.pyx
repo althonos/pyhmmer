@@ -11,6 +11,8 @@ to facilitate the development of biological software in C. It is used by
 # --- C imports --------------------------------------------------------------
 
 cimport cython
+from cpython.buffer cimport PyBUF_READ, PyBUF_WRITE
+from cpython.memoryview cimport PyMemoryView_FromMemory
 from cpython.unicode cimport PyUnicode_FromUnicode
 from libc.stdint cimport int64_t, uint16_t, uint32_t
 from libc.stdlib cimport malloc
@@ -582,6 +584,11 @@ cdef class Sequence:
 
 cdef class TextSequence(Sequence):
     """A biological sequence stored in text mode.
+
+    Hint:
+        Use the ``sequence`` property to access the sequence letters as a
+        Python string.
+
     """
 
     def __init__(
@@ -590,9 +597,8 @@ cdef class TextSequence(Sequence):
         bytes description=None,
         bytes accession=None,
         str   sequence=None,
-        bytes secondary_structure=None
+        bytes source=None,
     ):
-
         cdef bytes sq
 
         if sequence is not None:
@@ -610,13 +616,18 @@ cdef class TextSequence(Sequence):
             self.accession = accession
         if description is not None:
             self.description = description
+        if source is not None:
+            self.source = source
 
+        assert libeasel.sq.esl_sq_IsText(self._sq)
         assert self._sq.name != NULL
         assert self._sq.desc != NULL
         assert self._sq.acc != NULL
 
     @property
     def sequence(self):
+        """`str`: The raw sequence letters, as a Python string.
+        """
         assert self._sq != NULL
         assert libeasel.sq.esl_sq_IsText(self._sq)
         return self._sq.seq.decode("ascii")
@@ -665,9 +676,11 @@ cdef class TextSequence(Sequence):
 cdef class DigitalSequence(Sequence):
     """A biological sequence stored in digital mode.
 
-    Currently, objects from this class cannot be instantiated directly. Use
-    `TextSequence.digitize` to obtain a digital sequence from a sequence in
-    text mode.
+    Hint:
+        Use the ``sequence`` property to access the sequence digits as a
+        memory view, allowing to access the individual bytes. This can be
+        combined with `numpy.asarray` to get the sequence as an array with
+        zero-copy.
 
     Attributes:
         alphabet (`Alphabet`, *readonly*): The biological alphabet used to
@@ -675,8 +688,57 @@ cdef class DigitalSequence(Sequence):
 
     """
 
-    def __cinit__(self, Alphabet alphabet):
+    def __cinit__(self, Alphabet alphabet, *args, **kwargs):
         self.alphabet = alphabet
+
+    def __init__(self,
+        Alphabet alphabet,
+        bytes    name=None,
+        bytes    description=None,
+        bytes    accession=None,
+        char[:]  sequence=None,
+        bytes    source=None,
+    ):
+        if sequence is not None:
+            self._sq = libeasel.sq.esl_sq_CreateDigitalFrom(
+              alphabet._abc,
+              NULL,
+              <const ESL_DSQ*> &sequence[0],
+              sequence.shape[0],
+              NULL,
+              NULL,
+              NULL
+            )
+        else:
+            self._sq = libeasel.sq.esl_sq_CreateDigital(alphabet._abc)
+        if self._sq == NULL:
+            raise AllocationError("ESL_SQ")
+
+        if name is not None:
+            self.name = name
+        if accession is not None:
+            self.accession = accession
+        if description is not None:
+            self.description = description
+        if source is not None:
+            self.source = source
+
+        assert libeasel.sq.esl_sq_IsDigital(self._sq)
+        assert self._sq.name != NULL
+        assert self._sq.desc != NULL
+        assert self._sq.acc != NULL
+
+    @property
+    def sequence(self):
+        """`memoryview`: The raw sequence digits, as a memory view.
+        """
+        assert self._sq != NULL
+        assert libeasel.sq.esl_sq_IsDigital(self._sq)
+        return PyMemoryView_FromMemory(
+            <char*> &self._sq.dsq[1],
+            self._sq.n,
+            PyBUF_WRITE
+        )
 
     cpdef DigitalSequence copy(self):
         """Duplicate the digital sequence, and return the copy.

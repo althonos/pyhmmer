@@ -78,10 +78,10 @@ class TextSequence(Sequence):
     def __init__(
         self,
         name: bytes = None,
-        sequence: str = None,
         description: bytes = None,
         accession: bytes = None,
-        secondary_structure: bytes = None,
+        sequence: str = None,
+        source: bytes = None,
     ) -> None: ...
     def copy(self) -> TextSequence: ...
     def digitize(self, alphabet: Alphabet) -> DigitalSequence: ...
@@ -90,8 +90,19 @@ class TextSequence(Sequence):
 
 class DigitalSequence(Sequence):
     alphabet: Alphabet
+    def __init__(
+        self,
+        alphabet: Alphabet,
+        name: bytes = None,
+        description: bytes = None,
+        accession: bytes = None,
+        sequence: str = None,
+        source: bytes = None,
+    ) -> None: ...
     def copy(self) -> DigitalSequence: ...
     def textize(self) -> TextSequence: ...
+    @property
+    def sequence(self) -> memoryview: ...
 
 class SequenceFile(typing.ContextManager[SequenceFile], typing.Iterator[Sequence]):
     @classmethod
