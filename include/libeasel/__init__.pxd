@@ -18,6 +18,12 @@ cdef extern from "easel.h" nogil:
     cdef double eslINFINITY
 
     ctypedef uint8_t ESL_DSQ
+    cdef     ESL_DSQ eslDSQ_SENTINEL
+    cdef     ESL_DSQ eslDSQ_ILLEGAL
+    cdef     ESL_DSQ eslDSQ_IGNORED
+    cdef     ESL_DSQ eslDSQ_EOL
+    cdef     ESL_DSQ eslDSQ_EOD
+
     ctypedef int64_t esl_pos_t
 
     cdef enum:
