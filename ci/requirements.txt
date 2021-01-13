@@ -8,4 +8,3 @@ codecov ~=2.0
 
 # deployment dependencies
 auditwheel
-twine

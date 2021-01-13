@@ -13,7 +13,6 @@ variables:
 # --- Stage Templates ----------------------------------------------------------
 
 .test: &test
-  image: quay.io/pypa/manylinux2010_x86_64
   stage: test
   cache:
     key: ${CI_COMMIT_REF_SLUG}
@@ -22,6 +21,7 @@ variables:
   only:
   - master
   before_script:
+    - $python -m pip install -U pip
     - $python -m pip install -U -r ci/requirements.txt
   script:
     - $python setup.py build_clib --debug
@@ -59,36 +59,36 @@ variables:
 # --- Stages -------------------------------------------------------------------
 
 test:python3.6:
-  environment:
-    name: Python 3.6
+  image: quay.io/pypa/manylinux2010_x86_64
   variables:
     python: /opt/python/cp36-cp36m/bin/python
   <<: *test
 
 test:python3.7:
-  environment:
-    name: Python 3.7
+  image: quay.io/pypa/manylinux2010_x86_64
   variables:
     python: /opt/python/cp37-cp37m/bin/python
   <<: *test
 
 test:python3.8:
-  environment:
-    name: Python 3.8
+  image: quay.io/pypa/manylinux2010_x86_64
   variables:
     python: /opt/python/cp38-cp38/bin/python
   <<: *test
 
 test:python3.9:
-  environment:
-    name: Python 3.9
+  image: quay.io/pypa/manylinux2010_x86_64
   variables:
     python: /opt/python/cp39-cp39/bin/python
   <<: *test
 
+test:pypy3.7:
+  image: pypywheels/manylinux2010-pypy_x86_64:2020-12-11-f1e0e80
+  variables:
+    python: /opt/pypy/pypy3.7-7.3.3/bin/python
+  <<: *test
+
 sdist:
-  environment:
-    name: Python 3.9
   variables:
     python: /opt/python/cp39-cp39/bin/python
   image: quay.io/pypa/manylinux2010_x86_64
@@ -140,7 +140,6 @@ deploy:python3.9:
   variables:
     python: /opt/python/cp39-cp39/bin/python
   <<: *deploy
-
 
 release:
   image: ruby
