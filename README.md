@@ -5,6 +5,7 @@
 [![GitLabCI](https://img.shields.io/gitlab/pipeline/larralde/pyhmmer/master?gitlab_url=https%3A%2F%2Fgit.embl.de&logo=gitlab&style=flat-square&maxAge=600)](https://git.embl.de/larralde/pyhmmer)
 [![Coverage](https://img.shields.io/codecov/c/gh/althonos/pyhmmer?style=flat-square&maxAge=3600)](https://codecov.io/gh/althonos/pyhmmer/)
 [![PyPI](https://img.shields.io/pypi/v/pyhmmer.svg?style=flat-square&maxAge=3600)](https://pypi.org/project/pyhmmer)
+[![Bioconda](https://img.shields.io/conda/vn/bioconda/pyhmmer?style=flat-square&maxAge=3600)](https://anaconda.org/bioconda/pyhmmer)
 [![Wheel](https://img.shields.io/pypi/wheel/pyhmmer.svg?style=flat-square&maxAge=3600)](https://pypi.org/project/pyhmmer/#files)
 [![Python Versions](https://img.shields.io/pypi/pyversions/pyhmmer.svg?style=flat-square&maxAge=3600)](https://pypi.org/project/pyhmmer/#files)
 [![Python Implementations](https://img.shields.io/pypi/implementation/pyhmmer.svg?style=flat-square&maxAge=3600&label=impl)](https://pypi.org/project/pyhmmer/#files)
@@ -75,7 +76,11 @@ Compilation for UNIX PowerPC is not tested in CI, but should work out of the
 box. Other architectures (e.g. Arm) and OSes (e.g. Windows) are not
 supported by HMMER.
 
-*A `bioconda` package is planned when this package exits the alpha status.*
+A [Bioconda](https://bioconda.github.io/) package is also available, 
+but only for Linux:
+```console
+$ conda install -c bioconda pyhmmer
+```
 
 ## 📖 Documentation
 
