@@ -1,14 +1,12 @@
 stages:
-  - sdist
   - test
+  - dist
   - deploy
   - release
 
 variables:
   GIT_DEPTH: 100
   GIT_SUBMODULE_STRATEGY: recursive
-  TWINE_USERNAME: gitlab-ci-token
-  TWINE_PASSWORD: $CI_JOB_TOKEN
 
 # --- Stage Templates ----------------------------------------------------------
 
@@ -20,6 +18,7 @@ variables:
     - build
   only:
   - master
+  - tags
   before_script:
     - $python -m pip install -U pip
     - $python -m pip install -U -r ci/requirements.txt
@@ -27,119 +26,148 @@ variables:
     - $python setup.py build_clib --debug
     - $python setup.py build_ext  --debug --inplace
     - $python -m coverage run -m unittest discover -v
+
+.test-cpython: &test-cpython
+  image: quay.io/pypa/manylinux2010_x86_64
+  artifacts:
+    reports:
+      cobertura: coverage.xml
   after_script:
     - $python -m coverage xml
     - $python -m coverage report
     - $python -m codecov
-  artifacts:
-    reports:
-      cobertura: coverage.xml
+  <<: *test
 
-.deploy: &deploy
-  image: quay.io/pypa/manylinux2010_x86_64
-  stage: deploy
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
+.test-pypy: &test-pypy
+  image: pypywheels/manylinux2010-pypy_x86_64:2020-12-11-f1e0e80
+  <<: *test
+
+
+.bdist: &bdist
+  stage: dist
+  artifacts:
     paths:
-    - build
+      - dist/*.whl
   only:
   - tags
   before_script:
     - $python -m pip install -U -r ci/requirements.txt
+    - $python setup.py clean --all
   script:
     - $python setup.py build_clib
     - $python setup.py build_ext  --inplace
     - $python -m unittest discover -v
-    - $python setup.py sdist bdist_wheel
-    - for whl in dist/*.whl; do auditwheel repair "$whl" -w dist && rm "$whl"; done
-  after_script:
-    - $python -m twine upload --skip-existing dist/*
+    - $python setup.py bdist_wheel
+
+.bdist-cpython: &bdist-cpython
+  image: quay.io/pypa/manylinux2010_x86_64
+  <<: *bdist
+
+.bdist-pypy: &bdist-pypy
+  image: pypywheels/manylinux2010-pypy_x86_64:2020-12-11-f1e0e80
+  <<: *bdist
 
 
 # --- Stages -------------------------------------------------------------------
 
 test:python3.6:
-  image: quay.io/pypa/manylinux2010_x86_64
   variables:
     python: /opt/python/cp36-cp36m/bin/python
-  <<: *test
+  <<: *test-cpython
 
 test:python3.7:
-  image: quay.io/pypa/manylinux2010_x86_64
   variables:
     python: /opt/python/cp37-cp37m/bin/python
-  <<: *test
+  <<: *test-cpython
 
 test:python3.8:
-  image: quay.io/pypa/manylinux2010_x86_64
   variables:
     python: /opt/python/cp38-cp38/bin/python
-  <<: *test
+  <<: *test-cpython
 
 test:python3.9:
-  image: quay.io/pypa/manylinux2010_x86_64
   variables:
     python: /opt/python/cp39-cp39/bin/python
-  <<: *test
+  <<: *test-cpython
+
+test:pypy3.6:
+  variables:
+    python: /opt/pypy/pypy3.6-7.3.3/bin/python
+  <<: *test-pypy
 
 test:pypy3.7:
-  image: pypywheels/manylinux2010-pypy_x86_64:2020-12-11-f1e0e80
   variables:
     python: /opt/pypy/pypy3.7-7.3.3/bin/python
-  <<: *test
+  <<: *test-pypy
+
 
 sdist:
   variables:
     python: /opt/python/cp39-cp39/bin/python
   image: quay.io/pypa/manylinux2010_x86_64
-  stage: sdist
+  stage: dist
   only:
     - tags
+  artifacts:
+    paths:
+      - dist/*.tar.gz
   before_script:
     - $python -m pip install -U -r ci/requirements.txt
   script:
     - $python setup.py sdist
     - $python -m pip install pyhmmer dist/*.tar.gz
 
-deploy:python3.6:
-  dependencies:
-    - test:python3.6
-    - sdist
-  environment:
-    name: Python 3.6
+bdist:python3.6:
   variables:
     python: /opt/python/cp36-cp36m/bin/python
-  <<: *deploy
+  <<: *bdist-cpython
 
-deploy:python3.7:
-  dependencies:
-    - test:python3.7
-    - sdist
-  environment:
-    name: Python 3.7
+bdist:python3.7:
   variables:
     python: /opt/python/cp37-cp37m/bin/python
-  <<: *deploy
+  <<: *bdist-cpython
 
-deploy:python3.8:
-  dependencies:
-    - test:python3.8
-    - sdist
-  environment:
-    name: Python 3.8
+bdist:python3.8:
   variables:
     python: /opt/python/cp38-cp38/bin/python
-  <<: *deploy
+  <<: *bdist-cpython
 
-deploy:python3.9:
-  dependencies:
-    - test:python3.9
-    - sdist
-  environment:
-    name: Python 3.9
+bdist:python3.9:
   variables:
     python: /opt/python/cp39-cp39/bin/python
-  <<: *deploy
+  <<: *bdist-cpython
+
+bdist:pypy3.6:
+  variables:
+    python: /opt/pypy/pypy3.6-7.3.3/bin/python
+  <<: *bdist-pypy
+
+bdist:pypy3.7:
+  variables:
+    python: /opt/pypy/pypy3.7-7.3.3/bin/python
+  <<: *bdist-pypy
+
+
+twine:
+  variables:
+    python: /opt/python/cp39-cp39/bin/python
+  image: quay.io/pypa/manylinux2010_x86_64
+  stage: deploy
+  only:
+    - tags
+  dependencies:
+    - sdist
+    - bdist:python3.6
+    - bdist:python3.7
+    - bdist:python3.8
+    - bdist:python3.9
+    - bdist:pypy3.6
+    - bdist:pypy3.7
+  before_script:
+    - $python -m pip install -U auditwheel twine
+  script:
+      - for whl in dist/*.whl; do auditwheel repair "$whl" -w dist && rm "$whl"; done
+      - $python -m twine upload dist/*
 
 release:
   image: ruby
