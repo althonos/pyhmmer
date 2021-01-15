@@ -13,7 +13,7 @@ variables:
 .test: &test
   stage: test
   cache:
-    key: ${CI_COMMIT_REF_SLUG}
+    key: ${CI_COMMIT_REF_SLUG}-${CI_JOB_STAGE}
     paths:
     - build
   only:
@@ -45,6 +45,10 @@ variables:
 
 .bdist: &bdist
   stage: dist
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-${CI_JOB_STAGE}
+    paths:
+    - build
   artifacts:
     paths:
       - dist/*.whl
@@ -52,7 +56,6 @@ variables:
   - tags
   before_script:
     - $python -m pip install -U -r ci/requirements.txt
-    - $python setup.py clean --all
   script:
     - $python setup.py build_clib
     - $python setup.py build_ext  --inplace
