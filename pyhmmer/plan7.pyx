@@ -118,6 +118,10 @@ cdef class Alignment:
         return <bytes> self._ad.hmmname
 
     @property
+    def hmm_accession(self):
+        return <bytes> self._ad.hmmacc
+
+    @property
     def hmm_sequence(self):
         return self._ad.model.decode('ascii')
 
