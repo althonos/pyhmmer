@@ -6,7 +6,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.4...HEAD
+
+
+## [v0.1.4] - 2021-01-15
+[v0.1.4]: https://github.com/althonos/pyhmmer/compare/v0.1.3...v0.1.4
+
+### Added
+- `DigitalSequence.textize` to convert a digital sequence to a text sequence.
+- `DigitalSequence.__init__` method allowing to create a digital sequence from any object implementing the buffer protocol.
+- `Alignment.hmm_accession` property to retrieve the accession of the HMM in an alignment.
 
 
 ## [v0.1.3] - 2021-01-08
