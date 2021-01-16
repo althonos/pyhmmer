@@ -569,7 +569,7 @@ cdef class HMM:
         self.alphabet = alphabet
         with nogil:
             self._hmm = libhmmer.p7_hmm.p7_hmm_Create(M, alphabet._abc)
-        if not self.hmm:
+        if not self._hmm:
             raise AllocationError("P7_HMM")
 
     def __dealloc__(self):
