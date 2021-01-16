@@ -1,4 +1,7 @@
-cdef extern from "esl_distance.h" nogil:
+from libc.stdio cimport FILE
+
+
+cdef extern from "esl_dmatrix.h" nogil:
 
     cdef enum:
         eslGENERAL

@@ -1,3 +1,9 @@
+from libc.stdio cimport FILE
+
+from libeasel.fileparser cimport ESL_FILEPARSER
+from libeasel.random cimport ESL_RANDOMNESS
+
+
 cdef extern from "esl_mixdchlet.h" nogil:
 
     ctypedef struct ESL_MIXDCHLET:
