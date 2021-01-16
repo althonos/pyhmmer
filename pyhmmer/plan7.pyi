@@ -4,7 +4,7 @@ import os
 import types
 import typing
 
-from .easel import Alphabet, Sequence
+from .easel import Alphabet, Sequence, DigitalSequence
 
 class Alignment(collections.abc.Sized):
     domain: Domain
@@ -38,6 +38,36 @@ class Background(object):
     @L.setter
     def L(self, L: int) -> None: ...
     def copy(self) -> Background: ...
+
+class Builder(object):
+    def __init__(
+        self,
+        alphabet: Alphabet,
+        *,
+        architecture: str = "fast",
+        weighting: str = "pb",
+        effective_number: typing.Union[str, int, float] = "entropy",
+        prior_scheme: typing.Optional[str] = "alphabet",
+        symfrac: float = 0.5,
+        fragthresh: float = 0.5,
+        wid: float = 0.62,
+        esigma: float = 45.0,
+        eid: float = 0.62,
+        EmL: int = 200,
+        EmN: int = 200,
+        EvL: int = 200,
+        EvN: int = 200,
+        EfL: int = 100,
+        EfN: int = 200,
+        Eft: int = 0.04,
+        seed: int = 42,
+        ere: typing.Optional[float] = None,
+    ) -> None: ...
+    def build(
+        self,
+        sequence: DigitalSequence,
+        background: Background
+    ) -> typing.Tuple[HMM, Profile, OptimizedProfile]: ...
 
 class Domain(object):
     alignment: Alignment
@@ -188,7 +218,7 @@ class Pipeline(object):
     def search(
         self,
         hmm: HMM,
-        sequences: typing.Iterable[Sequence],
+        sequences: typing.Iterable[DigitalSequence],
         hits: typing.Optional[TopHits] = None,
     ) -> TopHits: ...
 

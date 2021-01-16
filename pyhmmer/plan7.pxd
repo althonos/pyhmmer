@@ -8,6 +8,7 @@ from posix.types cimport off_t
 
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_bg cimport P7_BG
+from libhmmer.p7_builder cimport P7_BUILDER
 from libhmmer.p7_domain cimport P7_DOMAIN
 from libhmmer.p7_hmm cimport P7_HMM
 from libhmmer.p7_hmmfile cimport P7_HMMFILE
@@ -39,6 +40,11 @@ cdef class Background:
     cdef P7_BG* _bg
 
     cpdef Background copy(self)
+
+
+cdef class Builder:
+    cdef readonly Alphabet alphabet
+    cdef P7_BUILDER* _bld
 
 
 cdef class Domain:

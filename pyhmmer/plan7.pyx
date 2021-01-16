@@ -29,10 +29,12 @@ cimport libeasel.getopts
 cimport libeasel.vec
 cimport libhmmer.modelconfig
 cimport libhmmer.p7_hmm
+cimport libhmmer.p7_builder
 cimport libhmmer.p7_bg
 cimport libhmmer.p7_domaindef
 cimport libhmmer.p7_hmmfile
 cimport libhmmer.p7_pipeline
+cimport libhmmer.p7_prior
 cimport libhmmer.p7_profile
 cimport libhmmer.p7_tophits
 from libeasel cimport eslERRBUFSIZE, eslCONST_LOG2R
@@ -41,6 +43,7 @@ from libeasel.getopts cimport ESL_GETOPTS, ESL_OPTIONS
 from libeasel.sq cimport ESL_SQ
 from libhmmer cimport p7_LOCAL, p7_offsets_e
 from libhmmer.logsum cimport p7_FLogsumInit
+from libhmmer.p7_builder cimport P7_BUILDER, p7_archchoice_e, p7_wgtchoice_e, p7_effnchoice_e
 from libhmmer.p7_hmmfile cimport p7_hmmfile_formats_e
 from libhmmer.p7_tophits cimport p7_hitflags_e
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
@@ -200,6 +203,152 @@ cdef class Background:
         if new._bg == NULL:
             raise AllocationError("P7_BG")
         return new
+
+
+cdef class Builder:
+    """A factory for constructing new HMMs from raw sequences.
+    """
+
+    _ARCHITECTURE_STRATEGY = {
+        "fast": p7_archchoice_e.p7_ARCH_FAST,
+        "hand": p7_archchoice_e.p7_ARCH_HAND,
+    }
+
+    _WEIGHTING_STRATEGY = {
+        "pb": p7_wgtchoice_e.p7_WGT_PB,
+        "gsc": p7_wgtchoice_e.p7_WGT_GSC,
+        "blosum": p7_wgtchoice_e.p7_WGT_BLOSUM,
+        "none": p7_wgtchoice_e.p7_WGT_NONE,
+        "given": p7_wgtchoice_e.p7_WGT_GIVEN,
+    }
+
+    _EFFECTIVE_STRATEGY = {
+        "entropy": p7_effnchoice_e.p7_EFFN_ENTROPY,
+        "exp": p7_effnchoice_e.p7_EFFN_ENTROPY_EXP,
+        "clust": p7_effnchoice_e.p7_EFFN_CLUST,
+        "none": p7_effnchoice_e.p7_EFFN_NONE,
+    }
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __cinit__(self):
+        self._bld = NULL
+        self.alphabet = None
+
+    def __init__(
+        self,
+        Alphabet alphabet,
+        *,
+        str architecture="fast",
+        str weighting="pb",
+        str effective_number="entropy",
+        str prior_scheme="alphabet",
+        float symfrac=0.5,
+        float fragthresh=0.5,
+        float wid=0.62,
+        float esigma=45.0,
+        float eid=0.62,
+        int EmL=200,
+        int EmN=200,
+        int EvL=200,
+        int EvN=200,
+        int EfL=100,
+        int EfN=200,
+        float Eft=0.04,
+        int seed=42,
+        object ere=None,
+    ):
+        self.alphabet = alphabet
+        self._bld = libhmmer.p7_builder.p7_builder_Create(NULL, alphabet._abc)
+        if self._bld == NULL:
+            raise AllocationError("P7_BG")
+
+        # set numeric parameters
+        self._bld.symfrac = symfrac
+        self._bld.fragthresh = fragthresh
+        self._bld.wid = wid
+        self._bld.esigma = esigma
+        self._bld.eid = eid
+        self._bld.EmL = EmL
+        self._bld.EmN = EmN
+        self._bld.EvL = EvL
+        self._bld.EvN = EvN
+        self._bld.EfL = EfL
+        self._bld.EfN = EfN
+        self._bld.Eft = Eft
+
+        # set the architecture strategy
+        _arch = self._ARCHITECTURE_STRATEGY.get(architecture)
+        if _arch is not None:
+            self._bld.arch_strategy = _arch
+        else:
+            raise ValueError(f"Invalid value for 'architecture': {architecture}")
+
+        # set the weighting strategy
+        _weighting = self._WEIGHTING_STRATEGY.get(weighting)
+        if _weighting is not None:
+            self._bld.wgt_strategy = _weighting
+        else:
+            raise ValueError(f"Invalid value for 'weighting': {weighting}")
+
+        # set the effective sequence number strategy
+        if isinstance(effective_number, (int, float)):
+            self._bld.effn_strategy = p7_effnchoice_e.p7_EFFN_SET
+            self._bld.eset = effective_number
+        else:
+            _effn = self._EFFECTIVE_STRATEGY.get(effective_number)
+            if _effn is not None:
+                self._bld.effn_strategy = _effn
+            else:
+                raise ValueError(f"Invalid value for 'effective_number': {effective_number}")
+
+        # reset the random number generator
+        self._bld.r = libeasel.random.esl_randomness_CreateFast(seed)
+        self._bld.do_reseeding = seed != 0
+
+        # set the RE target if given one
+        if ere is not None:
+            self._bld.re_target = ere
+
+        # set the prior scheme
+        if prior_scheme is None:
+            self._bld.prior = NULL
+        elif prior_scheme == "laplace":
+            self._bld.prior = libhmmer.p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
+        elif prior_scheme != "alphabet":
+            raise ValueError("Invalid value for 'prior_scheme': {prior_scheme}")
+
+    def __dealloc__(self):
+        libhmmer.p7_builder.p7_builder_Destroy(self._bld)
+
+    # --- Methods ------------------------------------------------------------
+
+    def build(self, DigitalSequence sequence, Background background):
+        """Take ``sequence`` and build a new HMM using the builder.
+        """
+
+        cdef int              status
+        cdef HMM              hmm     = HMM.__new__(HMM)
+        cdef Profile          profile = Profile.__new__(Profile)
+        cdef OptimizedProfile opti    = OptimizedProfile.__new__(Profile)
+
+        hmm.alphabet = profile.alphabet = opti.alphabet = self.alphabet
+        if background.alphabet != self.alphabet:
+            raise ValueError("background does not have the right alphabet")
+
+        status = libhmmer.p7_builder.p7_SingleBuilder(
+            self._bld,
+            sequence._sq,
+            background._bg,
+            &hmm._hmm, # HMM
+            NULL, # traceback
+            &profile._gm, # profile,
+            &opti._om, # optimized profile
+        )
+
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_SingleBuilder")
+        return (hmm, profile, opti)
 
 
 cdef class Domain:
@@ -714,6 +863,7 @@ cdef class OptimizedProfile:
 
     def __cinit__(self):
         self._om = NULL
+        self.alphabet = None
 
     def __init__(self, int m, Alphabet alphabet):
         self.alphabet = alphabet
@@ -1225,6 +1375,7 @@ cdef class Profile:
 
     def __cinit__(self):
         self._gm = NULL
+        self.alphabet = None
 
     def __init__(self, int M, Alphabet alphabet):
         self.alphabet = alphabet
