@@ -324,7 +324,7 @@ cdef class Builder:
 
     # --- Methods ------------------------------------------------------------
 
-    def build(self, DigitalSequence sequence, Background background):
+    cpdef tuple build(self, DigitalSequence sequence, Background background):
         """Take ``sequence`` and build a new HMM using the builder.
         """
 
