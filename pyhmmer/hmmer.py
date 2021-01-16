@@ -31,7 +31,6 @@ class _PipelineThread(threading.Thread):
         super().__init__()
         self.options = options
         self.pipeline = Pipeline(alphabet=Alphabet.amino(), **options)
-        self.hits = TopHits()
         self.sequences = sequences
         self.hmm_queue = hmm_queue
         self.hmm_count = hmm_count

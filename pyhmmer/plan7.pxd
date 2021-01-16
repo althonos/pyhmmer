@@ -119,7 +119,7 @@ cdef class Pipeline:
     cdef P7_PIPELINE* _pli
 
     cpdef void clear(self)
-    cpdef TopHits search(self, HMM hmm, object seqs, TopHits hits=?)
+    cpdef TopHits search(self, HMM hmm, object seqs)
 
 
 cdef class Profile:

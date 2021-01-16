@@ -1111,6 +1111,8 @@ cdef class Pipeline:
     # --- Methods ------------------------------------------------------------
 
     cpdef void clear(self):
+        """Reset the pipeline configuration to its default state.
+        """
         # reset the Z and domZ values from the CLI
         self.Z = self._Z
         self.domZ = self._domZ
@@ -1251,7 +1253,7 @@ cdef class Pipeline:
         self._pli.hfp             = NULL
         self._pli.errbuf[0]       = b'\0'
 
-    cpdef TopHits search(self, HMM hmm, object sequences, TopHits hits = None):
+    cpdef TopHits search(self, HMM hmm, object sequences):
         """Run the pipeline using a query HMM against a sequence database.
 
         Arguments:
@@ -1260,12 +1262,6 @@ cdef class Pipeline:
             sequences (`Iterable` of `~pyhmmer.easel.DigitalSequence`): The
                 sequences to query with the HMMs. Pass a `~SequenceFile`
                 instance in digital mode to iteratively read from disk.
-            hits (`~pyhmmer.plan7.TopHits`, optional): A hit collection to
-                store results in, if any. If `None`, a new collection will
-                be allocated. Use a non-`None` value if you are running
-                several HMMs sequentially and want to aggregate the results,
-                or if you are able to recycle a `~pyhmmer.plan7.TopHits`
-                instance with `TopHits.clear`.
 
         Returns:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
@@ -1282,11 +1278,12 @@ cdef class Pipeline:
         cdef DigitalSequence      seq
         cdef Profile              profile = self.profile
         cdef OptimizedProfile     opt
+        cdef TopHits              hits    = TopHits()
         cdef ESL_ALPHABET*        abc     = self.alphabet._abc
         cdef P7_BG*               bg      = self.background._bg
         cdef P7_HMM*              hm      = hmm._hmm
         cdef P7_OPROFILE*         om
-        cdef P7_TOPHITS*          th
+        cdef P7_TOPHITS*          th      = hits._th
         cdef P7_PIPELINE*         pli     = self._pli
         cdef ESL_SQ*              sq      = NULL
         cdef size_t               nseq    = 1
@@ -1302,10 +1299,6 @@ cdef class Pipeline:
 
         # make sure the pipeline is set to search mode and ready for a new HMM
         self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
-
-        # get a pointer to the P7_TOPHITS struct to use
-        hits = TopHits() if hits is None else hits
-        th = hits._th
 
         # get an iterator over the input sequences, with an early return if
         # no sequences were given, and extract the raw pointer to the sequence

@@ -219,7 +219,6 @@ class Pipeline(object):
         self,
         hmm: HMM,
         sequences: typing.Iterable[DigitalSequence],
-        hits: typing.Optional[TopHits] = None,
     ) -> TopHits: ...
 
 class Profile(object):
