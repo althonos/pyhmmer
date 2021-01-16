@@ -904,7 +904,7 @@ cdef class SequenceFile:
         Arguments:
             skip_info (`bool`): Pass `True` to disable reading the sequence
                 *metadata*, and only read the sequence *letters*. Defaults to
-                False`.
+                `False`.
             skip_sequence (`bool`): Pass `True` to disable reading the
                 sequence *letters*, and only read the sequence *metadata*.
                 Defaults to `False`.
