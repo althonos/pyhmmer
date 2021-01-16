@@ -258,6 +258,7 @@ cdef class Builder:
         int seed=42,
         object ere=None,
     ):
+        # extract alphabet and create raw P7_BUILDER object
         self.alphabet = alphabet
         self._bld = libhmmer.p7_builder.p7_builder_Create(NULL, alphabet._abc)
         if self._bld == NULL:
@@ -330,12 +331,33 @@ cdef class Builder:
         cdef int              status
         cdef HMM              hmm     = HMM.__new__(HMM)
         cdef Profile          profile = Profile.__new__(Profile)
-        cdef OptimizedProfile opti    = OptimizedProfile.__new__(Profile)
+        cdef OptimizedProfile opti    = OptimizedProfile.__new__(OptimizedProfile)
 
+        # check alphabet and assign it to newly created objects
         hmm.alphabet = profile.alphabet = opti.alphabet = self.alphabet
         if background.alphabet != self.alphabet:
             raise ValueError("background does not have the right alphabet")
 
+        # load score matrix
+        # TODO: allow changing from the default values
+        # TODO: allow caching the parameter values to avoid resetting
+        #       everytime `build` is called.
+        status = libhmmer.p7_builder.p7_builder_SetScoreSystem(
+            self._bld,
+            NULL, # --mxfile
+            NULL, # env
+            0.02, # popen
+            0.4,  # pextend
+            background._bg
+        )
+        if status == libeasel.eslENOTFOUND:
+            raise FileNotFoundError("could not open substitution score matrix file")
+        elif status == libeasel.eslEINVAL:
+            raise ValueError("cannot convert matrix to conditional probabilities")
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_builder_SetScoreSystem")
+
+        # build HMM and profiles
         status = libhmmer.p7_builder.p7_SingleBuilder(
             self._bld,
             sequence._sq,
@@ -345,7 +367,6 @@ cdef class Builder:
             &profile._gm, # profile,
             &opti._om, # optimized profile
         )
-
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_SingleBuilder")
         return (hmm, profile, opti)
