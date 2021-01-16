@@ -138,17 +138,23 @@ class TestPipelinesearch(_TestSearch, unittest.TestCase):
 
 class TestHmmpress(unittest.TestCase):
 
-    def test_roundtrip(self):
+    def setUp(self):
+        self.tmp = tempfile.NamedTemporaryFile(suffix=".hmm", delete=False).name
 
-         self.tmp = tempfile.NamedTemporaryFile(suffix=".hmm", delete=False).name
-         self.hmm = pkg_resources.resource_filename(__name__, "data/hmms/txt/Thioesterase.hmm")
-         self.h3p = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3p")
-         self.h3m = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3m")
-         self.h3f = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3f")
-         self.h3i = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3i")
-         with HMMFile(self.hmm) as hmms:
-             n = pyhmmer.hmmer.hmmpress(hmms, self.tmp)
-             self.assertEqual(n, 1)
-         with HMMFile(self.tmp) as hmm_file:
-             hmm = next(hmm_file)
-             self.assertEqual(hmm.name, b"Thioesterase")
+    def tearDown(self):
+        for ext in ['', '.h3m', '.h3p', '.h3i', '.h3f']:
+            if os.path.exists(self.tmp + ext):
+                os.remove(self.tmp + ext)
+
+    def test_roundtrip(self):
+        self.hmm = pkg_resources.resource_filename(__name__, "data/hmms/txt/Thioesterase.hmm")
+        self.h3p = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3p")
+        self.h3m = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3m")
+        self.h3f = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3f")
+        self.h3i = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3i")
+        with HMMFile(self.hmm) as hmms:
+            n = pyhmmer.hmmer.hmmpress(hmms, self.tmp)
+            self.assertEqual(n, 1)
+        with HMMFile(self.tmp) as hmm_file:
+            hmm = next(hmm_file)
+            self.assertEqual(hmm.name, b"Thioesterase")
