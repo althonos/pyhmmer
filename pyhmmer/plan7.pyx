@@ -383,33 +383,34 @@ cdef class Builder:
         # TODO: allow changing from the default values
         # TODO: allow caching the parameter values to avoid resetting
         #       everytime `build` is called.
-        status = libhmmer.p7_builder.p7_builder_SetScoreSystem(
-            self._bld,
-            NULL, # --mxfile
-            NULL, # env
-            popen, # popen
-            pextend,  # pextend
-            background._bg
-        )
-        if status == libeasel.eslENOTFOUND:
-            raise FileNotFoundError("could not open substitution score matrix file")
-        elif status == libeasel.eslEINVAL:
-            raise ValueError("cannot convert matrix to conditional probabilities")
-        elif status != libeasel.eslOK:
-            raise UnexpectedError(status, "p7_builder_SetScoreSystem")
+        with nogil:
+            status = libhmmer.p7_builder.p7_builder_SetScoreSystem(
+                self._bld,
+                NULL, # --mxfile
+                NULL, # env
+                popen, # popen
+                pextend,  # pextend
+                background._bg
+            )
+            if status == libeasel.eslENOTFOUND:
+                raise FileNotFoundError("could not open substitution score matrix file")
+            elif status == libeasel.eslEINVAL:
+                raise ValueError("cannot convert matrix to conditional probabilities")
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_builder_SetScoreSystem")
 
-        # build HMM and profiles
-        status = libhmmer.p7_builder.p7_SingleBuilder(
-            self._bld,
-            sequence._sq,
-            background._bg,
-            &hmm._hmm, # HMM
-            NULL, # traceback
-            &profile._gm, # profile,
-            &opti._om, # optimized profile
-        )
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "p7_SingleBuilder")
+            # build HMM and profiles
+            status = libhmmer.p7_builder.p7_SingleBuilder(
+                self._bld,
+                sequence._sq,
+                background._bg,
+                &hmm._hmm, # HMM
+                NULL, # traceback
+                &profile._gm, # profile,
+                &opti._om, # optimized profile
+            )
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_SingleBuilder")
         return (hmm, profile, opti)
 
     cpdef Builder copy(self):
