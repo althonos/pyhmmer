@@ -121,6 +121,7 @@ cdef class Pipeline:
 
     cpdef void clear(self)
     cpdef TopHits search(self, HMM hmm, object seqs)
+    cpdef TopHits search_seq(self, DigitalSequence query, object seqs, Builder builder = ?)
 
 
 cdef class Profile:

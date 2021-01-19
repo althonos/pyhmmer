@@ -1405,6 +1405,121 @@ cdef class Pipeline:
         # return the hits
         return hits
 
+    cpdef TopHits search_seq(
+        self,
+        DigitalSequence query,
+        object sequences,
+        Builder builder = None,
+    ):
+        """Run the pipeline using a query sequence against a sequence database.
+        """
+        cdef int                  status
+        cdef int                  allocM
+        cdef DigitalSequence      seq
+        cdef Profile              profile
+        cdef HMM                  hmm
+        cdef OptimizedProfile     opt
+        cdef TopHits              hits    = TopHits()
+        cdef ESL_ALPHABET*        abc     = self.alphabet._abc
+        cdef P7_BG*               bg      = self.background._bg
+        cdef P7_HMM*              hm
+        cdef P7_OPROFILE*         om
+        cdef P7_TOPHITS*          th      = hits._th
+        cdef P7_PIPELINE*         pli     = self._pli
+        cdef ESL_SQ*              sq      = NULL
+        cdef size_t               nseq    = 1
+
+        assert self._pli != NULL
+
+        # check the pipeline was configure with the same alphabet
+        if query.alphabet != self.alphabet:
+            raise ValueError("Wrong alphabet in query sequence: expected {!r}, found {!r}".format(
+                self.alphabet,
+                query.alphabet
+            ))
+
+        # make sure the pipeline is set to search mode and ready for a new HMM
+        self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
+
+        # use a default HMM builder if none was given
+        builder = Builder(self.alphabet) if builder is None else builder
+
+        # get an iterator over the input sequences, with an early return if
+        # no sequences were given, and extract the raw pointer to the sequence
+        # from the Python object
+        seqs_iter = iter(sequences)
+        seq = next(seqs_iter, None)
+        if seq is None:
+            return hits
+        if seq.alphabet != self.alphabet:
+            raise ValueError("Wrong alphabet in database sequence: expected {!r}, found {!r}".format(
+                self.alphabet,
+                seq.alphabet,
+            ))
+        sq = seq._sq
+
+        # build the HMM and the profile from the query sequence, using the first
+        # as a hint for the model configuration, or reuse the profile we
+        # cached if it is large enough to hold the new HMM
+        hmm, profile, opt = builder.build(query, self.background)
+        hm = hmm._hmm
+        om = opt._om
+
+        # release the GIL for as long as possible to allow several search
+        # pipelines to run in true parallel mode even in Python threads
+        with nogil:
+
+            # configure the pipeline for the current HMM
+            status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
+            if status == libeasel.eslEINVAL:
+                raise ValueError("model does not have bit score thresholds expected by the pipeline")
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_pli_NewModel")
+
+            # run the inner loop on all sequences
+            while sq != NULL:
+
+                # configure the profile, background and pipeline for the new sequence
+                status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_pli_NewSeq")
+                status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq.n)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_bg_SetLength")
+                status = p7_oprofile.p7_oprofile_ReconfigLength(om, sq.n)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
+
+                # run the pipeline on the sequence
+                status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, sq, NULL, th)
+                if status == libeasel.eslEINVAL:
+                    raise ValueError("model does not have bit score thresholds expected by the pipeline")
+                elif status == libeasel.eslERANGE:
+                    raise OverflowError("numerical overflow in the optimized vector implementation")
+                elif status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_Pipeline")
+
+                # clear pipeline for reuse for next target
+                libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
+
+                # acquire the GIL just long enough to get the next sequence
+                with gil:
+                    seq = next(seqs_iter, None)
+                    sq = NULL if seq is None else seq._sq
+                    nseq += seq is not None
+                    if seq is not None and seq.alphabet != self.alphabet:
+                        raise ValueError("Wrong alphabet in input sequence: expected {!r}, found {!r}".format(
+                            self.alphabet,
+                            seq.alphabet,
+                        ))
+
+        # threshold hits
+        hits.sort(by="key")
+        hits.threshold(self)
+
+        # return the hits
+        return hits
+
 
 cdef class Profile:
     """A Plan7 search profile.

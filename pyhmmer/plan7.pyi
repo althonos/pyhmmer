@@ -220,6 +220,12 @@ class Pipeline(object):
         hmm: HMM,
         sequences: typing.Iterable[DigitalSequence],
     ) -> TopHits: ...
+    def search_seq(
+        self,
+        query: DigitalSequence,
+        sequences: typing.Iterable[DigitalSequence],
+        builder: typing.Optional[Builder] = None,
+    ) -> TopHits: ...
 
 class Profile(object):
     alphabet: Alphabet
