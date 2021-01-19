@@ -37,6 +37,13 @@ class TestBuilder(unittest.TestCase):
         with SequenceFile(cls.faa_path) as seqf:
             cls.proteins = list(seqf)
 
+    def test_copy(self):
+        abc = Alphabet.amino()
+        builder = Builder(alphabet=abc)
+        copy = builder.copy()
+        self.assertEqual(builder.alphabet, copy.alphabet)
+        self.assertEqual(builder.seed, copy.seed)
+
     def test_build_protein(self):
         abc = Alphabet.amino()
         builder = Builder(alphabet=abc)

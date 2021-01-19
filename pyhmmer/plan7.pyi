@@ -63,6 +63,7 @@ class Builder(object):
         seed: int = 42,
         ere: typing.Optional[float] = None,
     ) -> None: ...
+    def __copy__(self) -> Builder: ...
     def build(
         self,
         sequence: DigitalSequence,
@@ -70,6 +71,7 @@ class Builder(object):
         popen: float = 0.02,
         pextend: float = 0.4,
     ) -> typing.Tuple[HMM, Profile, OptimizedProfile]: ...
+    def copy(self) -> Builder: ...
 
 class Domain(object):
     alignment: Alignment

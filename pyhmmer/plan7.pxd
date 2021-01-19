@@ -43,10 +43,15 @@ cdef class Background:
 
 
 cdef class Builder:
+    cdef readonly object prior_scheme
+    cdef readonly object effective_number
+    cdef readonly object architecture
+    cdef readonly object weighting
     cdef readonly Alphabet alphabet
     cdef P7_BUILDER* _bld
 
     cpdef tuple build(self, DigitalSequence sequence, Background background, float popen=?, float pextend=?)
+    cpdef Builder copy(self)
 
 
 cdef class Domain:

@@ -282,6 +282,7 @@ cdef class Builder:
         self.seed = seed
 
         # set the architecture strategy
+        self.architecture = architecture
         _arch = self._ARCHITECTURE_STRATEGY.get(architecture)
         if _arch is not None:
             self._bld.arch_strategy = _arch
@@ -289,6 +290,7 @@ cdef class Builder:
             raise ValueError(f"Invalid value for 'architecture': {architecture}")
 
         # set the weighting strategy
+        self.weighting = weighting
         _weighting = self._WEIGHTING_STRATEGY.get(weighting)
         if _weighting is not None:
             self._bld.wgt_strategy = _weighting
@@ -296,6 +298,7 @@ cdef class Builder:
             raise ValueError(f"Invalid value for 'weighting': {weighting}")
 
         # set the effective sequence number strategy
+        self.effective_number = effective_number
         if isinstance(effective_number, (int, float)):
             self._bld.effn_strategy = p7_effnchoice_e.p7_EFFN_SET
             self._bld.eset = effective_number
@@ -311,6 +314,7 @@ cdef class Builder:
             self._bld.re_target = ere
 
         # set the prior scheme
+        self.prior_scheme = prior_scheme
         if prior_scheme is None:
             self._bld.prior = NULL
         elif prior_scheme == "laplace":
@@ -320,6 +324,9 @@ cdef class Builder:
 
     def __dealloc__(self):
         libhmmer.p7_builder.p7_builder_Destroy(self._bld)
+
+    def __copy__(self):
+        return self.copy()
 
     # --- Properties ---------------------------------------------------------
 
@@ -404,6 +411,31 @@ cdef class Builder:
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_SingleBuilder")
         return (hmm, profile, opti)
+
+    cpdef Builder copy(self):
+        """Create a duplicate `Builder` instance with the same arguments.
+        """
+        assert self._bld != NULL
+        return Builder(
+            self.alphabet,
+            architecture=self.architecture,
+            weighting=self.weighting,
+            effective_number=self.effective_number,
+            prior_scheme=self.prior_scheme,
+            symfrac=self._bld.symfrac,
+            fragthresh=self._bld.fragthresh,
+            wid=self._bld.wid,
+            esigma=self._bld.esigma,
+            eid=self._bld.eid,
+            EmL=self._bld.EmL,
+            EmN=self._bld.EmN,
+            EvL=self._bld.EvL,
+            EvN=self._bld.EvN,
+            EfL=self._bld.EfN,
+            Eft=self._bld.Eft,
+            seed=libeasel.random.esl_randomness_GetSeed(self._bld.r),
+            ere=self._bld.re_target,
+        )
 
 
 cdef class Domain:
@@ -1143,6 +1175,8 @@ cdef class Pipeline:
 
     @property
     def seed(self):
+        """`int`: The seed used by the internal random number generator.
+        """
         return libeasel.random.esl_randomness_GetSeed(self._pli.r)
 
     @seed.setter
@@ -1679,7 +1713,7 @@ cdef class TopHits:
         True
 
     Use `len` to query the number of top hits, and the usual indexing notation
-    to extract a particular hit::
+    to extract a particular `Hit`::
 
         >>> len(hits)
         1
