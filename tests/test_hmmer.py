@@ -158,3 +158,18 @@ class TestHmmpress(unittest.TestCase):
         with HMMFile(self.tmp) as hmm_file:
             hmm = next(hmm_file)
             self.assertEqual(hmm.name, b"Thioesterase")
+
+
+class TestPhmmer(unittest.TestCase):
+
+    def test_pksi(self):
+        alphabet = Alphabet.amino()
+        path = pkg_resources.resource_filename(__name__, "data/seqs/PKSI.faa")
+        with SequenceFile(path) as f:
+            seqs = [seq.digitize(alphabet) for seq in f]
+
+        query = seqs[-1]
+        hits = next(pyhmmer.phmmer([query], seqs, cpus=1))
+        self.assertGreater(len(hits), 1)
+
+        self.assertEqual(hits[0].domains[0].alignment.hmm_name, query.name)
