@@ -20,7 +20,7 @@ from . import errors
 from . import easel
 from . import plan7
 
-from .hmmer import hmmsearch, hmmpress
+from .hmmer import hmmsearch, hmmpress, phmmer
 
 
 __author__ = "Martin Larralde <martin.larralde@embl.de>"
