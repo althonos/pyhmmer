@@ -215,9 +215,9 @@ class Pipeline(object):
     @domZ.setter
     def domZ(self, domZ: typing.Optional[float]) -> None: ...
     def clear(self) -> None: ...
-    def search(
+    def search_hmm(
         self,
-        hmm: HMM,
+        query: HMM,
         sequences: typing.Iterable[DigitalSequence],
     ) -> TopHits: ...
     def search_seq(

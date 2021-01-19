@@ -25,7 +25,7 @@ class TestPipelinesearch(unittest.TestCase):
         bg = Background(self.alphabet)
         hmm, _, _ = Builder(self.alphabet).build(seq.digitize(self.alphabet), bg)
         pipeline = Pipeline(alphabet=self.alphabet)
-        hits = pipeline.search(hmm, self.references)
+        hits = pipeline.search_hmm(hmm, self.references)
         self.assertEqual(len(hits), 1)
 
     def test_search_seq(self):

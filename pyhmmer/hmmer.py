@@ -48,7 +48,7 @@ class _PipelineThread(threading.Thread):
             else:
                 index, hmm = args
             try:
-                hits = self.pipeline.search(hmm, self.sequences)
+                hits = self.pipeline.search_hmm(hmm, self.sequences)
                 self.hits_queue.put((index, hits))
                 self.hmm_queue.task_done()
                 self.callback(hmm, self.hmm_count.value)  # type: ignore

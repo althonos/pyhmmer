@@ -120,7 +120,7 @@ cdef class Pipeline:
     cdef P7_PIPELINE* _pli
 
     cpdef void clear(self)
-    cpdef TopHits search(self, HMM hmm, object seqs)
+    cpdef TopHits search_hmm(self, HMM query, object seqs)
     cpdef TopHits search_seq(self, DigitalSequence query, object seqs, Builder builder = ?)
 
 

@@ -1276,11 +1276,11 @@ cdef class Pipeline:
         self._pli.hfp             = NULL
         self._pli.errbuf[0]       = b'\0'
 
-    cpdef TopHits search(self, HMM hmm, object sequences):
+    cpdef TopHits search_hmm(self, HMM query, object sequences):
         """Run the pipeline using a query HMM against a sequence database.
 
         Arguments:
-            hmm (`~pyhmmer.plan7.HMM`): The HMM object to use to query the
+            query (`~pyhmmer.plan7.HMM`): The HMM object to use to query the
                 sequence database.
             sequences (`Iterable` of `~pyhmmer.easel.DigitalSequence`): The
                 sequences to query with the HMMs. Pass a `~SequenceFile`
@@ -1288,8 +1288,6 @@ cdef class Pipeline:
 
         Returns:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
-            If an instance was passed via the ``hits`` argument, it is safe
-            to ignore the return value and to access it by reference.
 
         Raises:
             `ValueError`: When the alphabet of the current pipeline does not
@@ -1304,7 +1302,7 @@ cdef class Pipeline:
         cdef TopHits              hits    = TopHits()
         cdef ESL_ALPHABET*        abc     = self.alphabet._abc
         cdef P7_BG*               bg      = self.background._bg
-        cdef P7_HMM*              hm      = hmm._hmm
+        cdef P7_HMM*              hm      = query._hmm
         cdef P7_OPROFILE*         om
         cdef P7_TOPHITS*          th      = hits._th
         cdef P7_PIPELINE*         pli     = self._pli
@@ -1314,10 +1312,10 @@ cdef class Pipeline:
         assert self._pli != NULL
 
         # check the pipeline was configure with the same alphabet
-        if hmm.alphabet != self.alphabet:
+        if query.alphabet != self.alphabet:
             raise ValueError("Wrong alphabet in input HMM: expected {!r}, found {!r}".format(
                 self.alphabet,
-                hmm.alphabet
+                query.alphabet
             ))
 
         # make sure the pipeline is set to search mode and ready for a new HMM
@@ -1344,7 +1342,7 @@ cdef class Pipeline:
             profile = self.profile = Profile(hm.M, self.alphabet)
         else:
             profile.clear()
-        profile.configure(hmm, self.background, sq.n)
+        profile.configure(query, self.background, sq.n)
 
         # build the optimized model from the profile
         opt = profile.optimized()
@@ -1412,6 +1410,21 @@ cdef class Pipeline:
         Builder builder = None,
     ):
         """Run the pipeline using a query sequence against a sequence database.
+
+        Arguments:
+            query (`~pyhmmer.plan7.DigitalSequence`): The sequence object to
+                use to query the sequence database.
+            sequences (`Iterable` of `~pyhmmer.easel.DigitalSequence`): The
+                sequences to query with the HMMs. Pass a `~SequenceFile`
+                instance in digital mode to iteratively read from disk.
+
+        Returns:
+            `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
+
+        Raises:
+            `ValueError`: When the alphabet of the current pipeline does not
+                match the alphabet of the given query.
+
         """
         cdef int                  status
         cdef int                  allocM
@@ -1639,7 +1652,7 @@ cdef class TopHits:
     sorted by key when you obtain them from a `Pipeline` instance::
 
         >>> abc = thioesterase.alphabet
-        >>> hits = Pipeline(abc).search(thioesterase, proteins)
+        >>> hits = Pipeline(abc).search_hmm(thioesterase, proteins)
         >>> hits.is_sorted()
         True
 
@@ -1692,8 +1705,8 @@ cdef class TopHits:
     cdef void threshold(self, Pipeline pipeline):
         """Apply score and e-value thresholds using pipeline parameters.
 
-        This function is automatically called in `Pipeline.search`, and
-        therefore not exposed in the Python API.
+        This function is automatically called in `Pipeline.search_hmm` or
+        `Pipeline.search_seq`, and is therefore not exposed in the Python API.
 
         """
         cdef int          status

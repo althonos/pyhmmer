@@ -90,7 +90,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
             seqs = [seq.digitize(hmm.alphabet) for seq in seqs_file]
 
         pipeline = Pipeline(alphabet=hmm.alphabet)
-        hits = pipeline.search(hmm, seqs)
+        hits = pipeline.search_hmm(hmm, seqs)
         self.assertEqual(len(hits), 22)
 
         hits.sort()
@@ -132,7 +132,7 @@ class TestPipelinesearch(_TestSearch, unittest.TestCase):
 
     def get_hits(self, hmm, seqs):
         pipeline = Pipeline(alphabet=hmm.alphabet)
-        hits = pipeline.search(hmm, seqs)
+        hits = pipeline.search_hmm(hmm, seqs)
         return hits
 
 
