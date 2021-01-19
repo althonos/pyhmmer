@@ -21,8 +21,8 @@ class _PipelineThread(threading.Thread):
     def __init__(
         self,
         sequences: typing.Iterable[DigitalSequence],
-        hmm_queue: "queue.Queue[typing.Optional[typing.Tuple[int, HMM]]]",
-        hmm_count: multiprocessing.Value,  # type: ignore
+        query_queue: "queue.Queue[typing.Optional[typing.Tuple[int, HMM]]]",
+        query_count: multiprocessing.Value,  # type: ignore
         hits_queue: "queue.PriorityQueue[typing.Tuple[int, TopHits]]",
         kill_switch: threading.Event,
         callback: typing.Optional[typing.Callable[[HMM, int], None]],
@@ -32,26 +32,26 @@ class _PipelineThread(threading.Thread):
         self.options = options
         self.pipeline = Pipeline(alphabet=Alphabet.amino(), **options)
         self.sequences = sequences
-        self.hmm_queue = hmm_queue
-        self.hmm_count = hmm_count
+        self.query_queue = query_queue
+        self.query_count = query_count
         self.hits_queue = hits_queue
         self.callback = callback or self._none_callback
         self.kill_switch = kill_switch
-        self.error = None  # type: typing.Optional[BaseException]
+        self.error: typing.Optional[BaseException] = None
 
     def run(self) -> None:
         while not self.kill_switch.is_set():
-            args = self.hmm_queue.get()
+            args = self.query_queue.get()
             if args is None:
-                self.hmm_queue.task_done()
+                self.query_queue.task_done()
                 return
             else:
-                index, hmm = args
+                index, query = args
             try:
-                hits = self.pipeline.search_hmm(hmm, self.sequences)
+                hits = self.pipeline.search_hmm(query, self.sequences)
                 self.hits_queue.put((index, hits))
-                self.hmm_queue.task_done()
-                self.callback(hmm, self.hmm_count.value)  # type: ignore
+                self.query_queue.task_done()
+                self.callback(query, self.query_count.value)  # type: ignore
                 self.pipeline.clear()
             except BaseException as exc:
                 self.error = exc
@@ -63,7 +63,7 @@ class _PipelineThread(threading.Thread):
 
 
 def _hmmsearch_singlethreaded(
-    hmms: typing.Iterable[HMM],
+    queries: typing.Iterable[HMM],
     sequences: typing.Sequence[DigitalSequence],
     callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
     **options  # type: typing.Any
@@ -71,15 +71,15 @@ def _hmmsearch_singlethreaded(
     # create the queues to pass the HMM objects around, as well as atomic
     # values that we use to synchronize the threads
     hits_queue = queue.PriorityQueue()  # type: ignore
-    hmm_queue = queue.Queue()  # type: ignore
-    hmm_count = multiprocessing.Value(ctypes.c_ulong)
+    query_queue = queue.Queue()  # type: ignore
+    query_count = multiprocessing.Value(ctypes.c_ulong)
     kill_switch = threading.Event()
 
     # create the thread (to recycle code)
     thread = _PipelineThread(
         sequences,
-        hmm_queue,
-        hmm_count,
+        query_queue,
+        query_count,
         hits_queue,
         kill_switch,
         callback,
@@ -87,13 +87,13 @@ def _hmmsearch_singlethreaded(
     )
 
     # queue the HMMs passed as arguments
-    for index, hmm in enumerate(hmms):
-        hmm_count.value += 1
-        hmm_queue.put((index, hmm))
+    for index, query in enumerate(queries):
+        query_count.value += 1
+        query_queue.put((index, query))
 
     # poison-pill the queue so that threads terminate when they
     # have consumed all the HMMs
-    hmm_queue.put(None)
+    query_queue.put(None)
 
     # launch the thread code, but in the main thread
     thread.run()
@@ -105,7 +105,7 @@ def _hmmsearch_singlethreaded(
         yield hits_queue.get_nowait()[1]
 
 def _hmmsearch_multithreaded(
-    hmms: typing.Iterable[HMM],
+    queries: typing.Iterable[HMM],
     sequences: typing.Sequence[DigitalSequence],
     cpus: int,
     callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
@@ -114,28 +114,28 @@ def _hmmsearch_multithreaded(
     # create the queues to pass the HMM objects around, as well as atomic
     # values that we use to synchronize the threads
     hits_queue = queue.PriorityQueue()  # type: ignore
-    hmm_queue = queue.Queue()  # type: ignore
-    hmm_count = multiprocessing.Value(ctypes.c_ulong)
+    query_queue = queue.Queue()  # type: ignore
+    query_count = multiprocessing.Value(ctypes.c_ulong)
     kill_switch = threading.Event()
 
     # create and launch one pipeline thread per CPU
     threads = []
     for _ in range(cpus):
         thread = _PipelineThread(
-            sequences, hmm_queue, hmm_count, hits_queue, kill_switch, callback, options
+            sequences, query_queue, query_count, hits_queue, kill_switch, callback, options
         )
         thread.start()
         threads.append(thread)
 
     # queue the HMMs passed as arguments
-    for index, hmm in enumerate(hmms):
-        hmm_count.value += 1
-        hmm_queue.put((index, hmm))
+    for index, query in enumerate(queries):
+        query_count.value += 1
+        query_queue.put((index, query))
 
     # poison-pill the queue so that threads terminate when they
     # have consumed all the HMMs
     for _ in threads:
-        hmm_queue.put(None)
+        query_queue.put(None)
 
     # wait for all threads to be completed
     for thread in threads:
@@ -149,7 +149,7 @@ def _hmmsearch_multithreaded(
 
 
 def hmmsearch(
-    hmms: typing.Iterable[HMM],
+    queries: typing.Iterable[HMM],
     sequences: typing.Sequence[DigitalSequence],
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
@@ -159,9 +159,9 @@ def hmmsearch(
     _cpus = cpus if cpus > 0 else multiprocessing.cpu_count()
 
     if _cpus > 1:
-        return _hmmsearch_multithreaded(hmms, sequences, _cpus, callback, **options)
+        return _hmmsearch_multithreaded(queries, sequences, _cpus, callback, **options)
     else:
-        return _hmmsearch_singlethreaded(hmms, sequences, callback, **options)
+        return _hmmsearch_singlethreaded(queries, sequences, callback, **options)
 
 
 
@@ -223,8 +223,8 @@ if __name__ == "__main__":
         with SequenceFile(args.seqdb) as seqfile:
             alphabet = seqfile.guess_alphabet()
             if alphabet is None:
-                print("could not guess alphabet of input, exiting")
-                sys.exit(1)
+                print("could not guess alphabet of input, exiting", file=sys.stderr)
+                return 1
 
             seq = TextSequence()
             sequences = []
@@ -258,7 +258,8 @@ if __name__ == "__main__":
                 if args.force:
                     os.remove(path)
                 else:
-                    raise FileExistsError(path)
+                    print(f"file {path} already exists")
+                    return 1
 
         with HMMFile(args.hmmfile) as hmms:
             hmmpress(hmms, args.hmmfile)
