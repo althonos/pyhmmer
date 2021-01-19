@@ -278,6 +278,9 @@ cdef class Builder:
         self._bld.EfN = EfN
         self._bld.Eft = Eft
 
+        # reset the random number generator
+        self.seed = seed
+
         # set the architecture strategy
         _arch = self._ARCHITECTURE_STRATEGY.get(architecture)
         if _arch is not None:
@@ -303,10 +306,6 @@ cdef class Builder:
             else:
                 raise ValueError(f"Invalid value for 'effective_number': {effective_number}")
 
-        # reset the random number generator
-        self._bld.r = libeasel.random.esl_randomness_CreateFast(seed)
-        self._bld.do_reseeding = seed != 0
-
         # set the RE target if given one
         if ere is not None:
             self._bld.re_target = ere
@@ -321,6 +320,19 @@ cdef class Builder:
 
     def __dealloc__(self):
         libhmmer.p7_builder.p7_builder_Destroy(self._bld)
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def seed(self):
+        return libeasel.random.esl_randomness_GetSeed(self._bld.r)
+
+    @seed.setter
+    def seed(self, uint32_t seed):
+        status = libeasel.random.esl_randomness_Init(self._bld.r, seed)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_randomness_Init")
+        self._bld.do_reseeding = seed != 0
 
     # --- Methods ------------------------------------------------------------
 
@@ -1065,12 +1077,12 @@ cdef class Pipeline:
             raise AllocationError("P7_PIPELINE")
 
         # configure the pipeline with the additional keyword arguments
-        self.seed = seed
         self.null2 = null2
         self.bias_filter = bias_filter
         self.report_e = report_e
         self.Z = Z
         self.domZ = domZ
+        self.seed = seed
 
     def __dealloc__(self):
         libhmmer.p7_pipeline.p7_pipeline_Destroy(self._pli)
@@ -1107,12 +1119,24 @@ cdef class Pipeline:
             self._pli.domZ_setby = p7_zsetby_e.p7_ZSETBY_OPTION
             self._pli.domZ = self._domZ = domZ
 
+    @property
+    def seed(self):
+        return libeasel.random.esl_randomness_GetSeed(self._pli.r)
+
+    @seed.setter
+    def seed(self, uint32_t seed):
+        status = libeasel.random.esl_randomness_Init(self._pli.r, seed)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_randomness_Init")
+        self._pli.do_reseeding = self._pli.ddef.do_reseeding = seed != 0
 
     # --- Methods ------------------------------------------------------------
 
     cpdef void clear(self):
         """Reset the pipeline configuration to its default state.
         """
+        cdef int      status
+
         # reset the Z and domZ values from the CLI
         self.Z = self._Z
         self.domZ = self._domZ
@@ -1121,15 +1145,14 @@ cdef class Pipeline:
         self._pli.do_alignment_score_calc = 0
         self._pli.long_targets = self.LONG_TARGETS
 
-        # Dynamic programming matrices -> these are automatically resized if needed
-
         # reinitialize the random number generator
-        libeasel.random.esl_randomness_Destroy(self._pli.r)
-        self._pli.r = libeasel.random.esl_randomness_CreateFast(self.seed)
-        self._pli.do_reseeding = self.seed != 0
-        libhmmer.p7_domaindef.p7_domaindef_Destroy(self._pli.ddef)
-        self._pli.ddef = libhmmer.p7_domaindef.p7_domaindef_Create(self._pli.r)
-        self._pli.ddef.do_reseeding = self._pli.do_reseeding
+        if self._pli.do_reseeding:
+            status = libeasel.random.esl_randomness_Init(self._pli.r, self.seed)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_randomness_Init")
+
+        # reinitialize the domaindef
+        libhmmer.p7_domaindef.p7_domaindef_Reuse(self._pli.ddef)
 
         # Configure reporting thresholds
         self._pli.by_E            = True

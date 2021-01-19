@@ -106,7 +106,6 @@ cdef class _Offsets:
 
 
 cdef class Pipeline:
-    cdef public   uint32_t   seed
     cdef public   bint       null2
     cdef public   bint       bias_filter
     cdef public   float      report_e
