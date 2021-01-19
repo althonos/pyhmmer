@@ -46,7 +46,7 @@ cdef class Builder:
     cdef readonly Alphabet alphabet
     cdef P7_BUILDER* _bld
 
-    cpdef tuple build(self, DigitalSequence sequence, Background background)
+    cpdef tuple build(self, DigitalSequence sequence, Background background, float popen=?, float pextend=?)
 
 
 cdef class Domain:

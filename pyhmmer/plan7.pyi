@@ -66,7 +66,9 @@ class Builder(object):
     def build(
         self,
         sequence: DigitalSequence,
-        background: Background
+        background: Background,
+        popen: float = 0.02,
+        pextend: float = 0.4,
     ) -> typing.Tuple[HMM, Profile, OptimizedProfile]: ...
 
 class Domain(object):

@@ -325,6 +325,8 @@ cdef class Builder:
 
     @property
     def seed(self):
+        """`int`: The seed used by the internal random number generator.
+        """
         return libeasel.random.esl_randomness_GetSeed(self._bld.r)
 
     @seed.setter
@@ -336,10 +338,30 @@ cdef class Builder:
 
     # --- Methods ------------------------------------------------------------
 
-    cpdef tuple build(self, DigitalSequence sequence, Background background):
-        """Take ``sequence`` and build a new HMM using the builder.
-        """
+    cpdef tuple build(
+        self,
+        DigitalSequence sequence,
+        Background background,
+        float popen = 0.02,
+        float pextend = 0.4
+    ):
+        """Build a new HMM from ``sequence`` using the builder configuration.
 
+        Arguments:
+            sequence (`~pyhmmer.easel.DigitalSequence`): A single biological
+                sequence in digital mode to build a HMM with.
+            background (`pyhmmer.plan7.background`): The background model to
+                use to create the HMM.
+            popen (`float`): The *gap open* probability to use with the score
+                system. Defaults to *0.02*.
+            pextend (`float`): The *gap extend* probability to use with the
+                score system. Defaults to *0.4*.
+
+        Raises:
+            `ValueError`: When either ``sequence`` or ``background`` have the
+                wrong alphabet for this builder.
+
+        """
         cdef int              status
         cdef HMM              hmm     = HMM.__new__(HMM)
         cdef Profile          profile = Profile.__new__(Profile)
@@ -358,8 +380,8 @@ cdef class Builder:
             self._bld,
             NULL, # --mxfile
             NULL, # env
-            0.02, # popen
-            0.4,  # pextend
+            popen, # popen
+            pextend,  # pextend
             background._bg
         )
         if status == libeasel.eslENOTFOUND:
