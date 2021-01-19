@@ -1308,9 +1308,9 @@ cdef class Pipeline:
         if seq is None:
             return hits
         if seq.alphabet != self.alphabet:
-            raise ValueError("Wrong alphabet in input HMM: expected {!r}, found {!r}".format(
-              self.alphabet,
-              seq.alphabet,
+            raise ValueError("Wrong alphabet in input sequence: expected {!r}, found {!r}".format(
+                self.alphabet,
+                seq.alphabet,
             ))
         sq = seq._sq
 
@@ -1321,7 +1321,7 @@ cdef class Pipeline:
             profile = self.profile = Profile(hm.M, self.alphabet)
         else:
             profile.clear()
-        profile.configure(hmm, self.background, 100)
+        profile.configure(hmm, self.background, sq.n)
 
         # build the optimized model from the profile
         opt = profile.optimized()
@@ -1370,9 +1370,9 @@ cdef class Pipeline:
                     sq = NULL if seq is None else seq._sq
                     nseq += seq is not None
                     if seq is not None and seq.alphabet != self.alphabet:
-                        raise ValueError("Wrong alphabet in input HMM: expected {!r}, found {!r}".format(
-                          self.alphabet,
-                          seq.alphabet,
+                        raise ValueError("Wrong alphabet in input sequence: expected {!r}, found {!r}".format(
+                            self.alphabet,
+                            seq.alphabet,
                         ))
 
         # threshold hits
