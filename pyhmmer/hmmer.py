@@ -67,7 +67,7 @@ def _hmmsearch_singlethreaded(
     sequences: typing.Sequence[DigitalSequence],
     callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
     **options  # type: typing.Any
-) -> typing.Iterator:
+) -> typing.Iterator[TopHits]:
     # create the queues to pass the HMM objects around, as well as atomic
     # values that we use to synchronize the threads
     hits_queue = queue.PriorityQueue()  # type: ignore
@@ -110,7 +110,7 @@ def _hmmsearch_multithreaded(
     cpus: int,
     callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
     **options  # type: typing.Any
-) -> typing.Iterator:
+) -> typing.Iterator[TopHits]:
     # create the queues to pass the HMM objects around, as well as atomic
     # values that we use to synchronize the threads
     hits_queue = queue.PriorityQueue()  # type: ignore

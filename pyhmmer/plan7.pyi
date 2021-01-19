@@ -59,7 +59,7 @@ class Builder(object):
         EvN: int = 200,
         EfL: int = 100,
         EfN: int = 200,
-        Eft: int = 0.04,
+        Eft: float = 0.04,
         seed: int = 42,
         ere: typing.Optional[float] = None,
     ) -> None: ...
