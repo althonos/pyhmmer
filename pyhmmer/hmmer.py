@@ -1,4 +1,6 @@
 # coding: utf-8
+"""Reimplementation of HMMER binaries with the PyHMMER API.
+"""
 
 import abc
 import contextlib
@@ -196,6 +198,30 @@ def hmmsearch(
     callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
     **options,  # type: typing.Any
 ) -> typing.Iterator[TopHits]:
+    """Search HMM profiles against a sequence database.
+
+    Arguments:
+        queries (iterable of `~pyhmmer.plan7.HMM`): The query HMMs to
+            search in the database.
+        sequences (collection of `~pyhmmer.easel.DigitalSequence`): A
+            database of sequences to query.
+        cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
+            run everything in the main thread, ``0`` to automatically
+            select a suitable number (using `multiprocessing.cpu_count`),
+            or any positive number otherwise.
+        callback (callable): A callback that is called everytime a query is
+            processed with two arguments: the query, and the total number
+            of queries. This can be used to display progress in UI.
+
+    Yields:
+        `~pyhmmer.plan7.TopHits`: A *top hits* instance for each query,
+        in the same order the queries were passed in the input.
+
+    Note:
+        Any additional arguments passed to the `hmmsearch` function will be
+        passed transparently to the `~pyhmmer.plan7.Pipeline` to be created.
+
+    """
     # count the number of CPUs to use
     _cpus = cpus if cpus > 0 else multiprocessing.cpu_count()
     if _cpus > 1:
@@ -257,7 +283,6 @@ def _phmmer_multithreaded(
     callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
     **options,  # type: typing.Any
 ) -> typing.Iterator[TopHits]:
-
     # create the queues to pass the HMM objects around, as well as atomic
     # values that we use to synchronize the threads
     hits_queue = queue.PriorityQueue()  # type: ignore
@@ -310,6 +335,33 @@ def phmmer(
     builder: typing.Optional[Builder] = None,
     **options: typing.Any,
 ) -> typing.Iterator[TopHits]:
+    """Search protein sequences against a sequence database.
+
+    Arguments:
+        queries (iterable of `~pyhmmer.easel.DigitalSequence`): The query
+            sequences to search in the database.
+        sequences (collection of `~pyhmmer.easel.DigitalSequence`): A
+            database of sequences to query.
+        cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
+            run everything in the main thread, ``0`` to automatically
+            select a suitable number (using `multiprocessing.cpu_count`),
+            or any positive number otherwise.
+        callback (callable): A callback that is called everytime a query is
+            processed with two arguments: the query, and the total number
+            of queries. This can be used to display progress in UI.
+        builder (`~pyhmmer.plan7.Builder`, optional): A builder to configure
+            how the queries are converted to HMMs. Passing `None` will create
+            a default instance.
+
+    Yields:
+        `~pyhmmer.plan7.TopHits`: A *top hits* instance for each query,
+        in the same order the queries were passed in the input.
+
+    Note:
+        Any additional arguments passed to the `phmmer` function will be
+        passed transparently to the `~pyhmmer.plan7.Pipeline` to be created.
+
+    """
     _cpus = cpus if cpus > 0 else multiprocessing.cpu_count()
     _builder = Builder(next(iter(sequences)).alphabet) if builder is None else builder
     if _cpus > 1:
@@ -323,7 +375,21 @@ def phmmer(
 def hmmpress(
     hmms: typing.Iterable[HMM], output: typing.Union[str, "os.PathLike[str]"],
 ) -> int:
+    """Press several HMMs into a database.
 
+    Calling this function will create 4 files at the given location:
+    ``{output}.h3p`` (containing the optimized profiles),
+    ``{output}.h3m`` (containing the binary HMMs),
+    ``{output}.h3f`` (containing the MSV parameters), and
+    ``{output}.h3i`` (the SSI index mapping the previous files).
+
+    Arguments:
+        hmms (iterable of `~pyhmmer.plan7.HMM`): The HMMs to be pressed
+            together in the file.
+        output (`str` or `os.PathLike`): The path to an output location
+            where to write the different files.
+
+    """
     DEFAULT_L = 400
     path = os.fspath(output)
     nmodel = 0
