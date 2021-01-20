@@ -104,7 +104,7 @@ class _SequencePipelineThread(_PipelineThread[DigitalSequence]):
 
 def _hmmsearch_singlethreaded(
     queries: typing.Iterable[HMM],
-    sequences: typing.Sequence[DigitalSequence],
+    sequences: typing.Collection[DigitalSequence],
     callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
     **options,  # type: typing.Any
 ) -> typing.Iterator[TopHits]:
@@ -141,7 +141,7 @@ def _hmmsearch_singlethreaded(
 
 def _hmmsearch_multithreaded(
     queries: typing.Iterable[HMM],
-    sequences: typing.Sequence[DigitalSequence],
+    sequences: typing.Collection[DigitalSequence],
     cpus: int,
     callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
     **options,  # type: typing.Any
@@ -191,7 +191,7 @@ def _hmmsearch_multithreaded(
 
 def hmmsearch(
     queries: typing.Iterable[HMM],
-    sequences: typing.Sequence[DigitalSequence],
+    sequences: typing.Collection[DigitalSequence],
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
     **options,  # type: typing.Any
@@ -206,7 +206,7 @@ def hmmsearch(
 
 def _phmmer_singlethreaded(
     queries: typing.Iterable[DigitalSequence],
-    sequences: typing.Sequence[DigitalSequence],
+    sequences: typing.Collection[DigitalSequence],
     builder: Builder,
     callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
     **options,  # type: typing.Any
@@ -251,7 +251,7 @@ def _phmmer_singlethreaded(
 
 def _phmmer_multithreaded(
     queries: typing.Iterable[DigitalSequence],
-    sequences: typing.Sequence[DigitalSequence],
+    sequences: typing.Collection[DigitalSequence],
     cpus: int,
     builder: Builder,
     callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
@@ -304,14 +304,14 @@ def _phmmer_multithreaded(
 
 def phmmer(
     queries: typing.Iterable[DigitalSequence],
-    sequences: typing.Sequence[DigitalSequence],
+    sequences: typing.Collection[DigitalSequence],
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
     builder: typing.Optional[Builder] = None,
     **options: typing.Any,
 ) -> typing.Iterator[TopHits]:
     _cpus = cpus if cpus > 0 else multiprocessing.cpu_count()
-    _builder = Builder(sequences[0].alphabet) if builder is None else builder
+    _builder = Builder(next(iter(sequences)).alphabet) if builder is None else builder
     if _cpus > 1:
         return _phmmer_multithreaded(
             queries, sequences, _cpus, _builder, callback, **options
