@@ -68,7 +68,10 @@ cdef class Alphabet:
 
     @classmethod
     def amino(cls):
-        """Create a default amino-acid alphabet.
+        """amino(cls)\n--
+
+        Create a default amino-acid alphabet.
+
         """
         cdef Alphabet alphabet = Alphabet.__new__(Alphabet)
         alphabet._init_default(libeasel.alphabet.eslAMINO)
@@ -76,7 +79,10 @@ cdef class Alphabet:
 
     @classmethod
     def dna(cls):
-        """Create a default DNA alphabet.
+        """dna(cls)\n--
+
+        Create a default DNA alphabet.
+
         """
         cdef Alphabet alphabet = Alphabet.__new__(Alphabet)
         alphabet._init_default(libeasel.alphabet.eslDNA)
@@ -84,7 +90,10 @@ cdef class Alphabet:
 
     @classmethod
     def rna(cls):
-        """Create a default RNA alphabet.
+        """rna(cls)\n--
+
+        Create a default RNA alphabet.
+
         """
         cdef Alphabet alphabet = Alphabet.__new__(Alphabet)
         alphabet._init_default(libeasel.alphabet.eslRNA)
@@ -202,6 +211,11 @@ cdef class Bitfield:
         libeasel.bitfield.esl_bitfield_Destroy(self._b)
 
     def __init__(self, size_t length):
+        """__init__(self, length)\n--
+
+        Create a new bitfield with the given ``length``.
+
+        """
         self._b = libeasel.bitfield.esl_bitfield_Create(length)
         if not self._b:
             raise AllocationError("ESL_BITFIELD")
@@ -231,7 +245,9 @@ cdef class Bitfield:
         return <size_t> index
 
     cpdef size_t count(self, bint value=1):
-        """Count the number occurrences of ``value`` in the bitfield.
+        """count(self, value=True)\n--
+
+        Count the number occurrences of ``value`` in the bitfield.
 
         If no argument is given, counts the number of `True` occurences.
 
@@ -250,7 +266,9 @@ cdef class Bitfield:
         return count_ if value else self._b.nb - count_
 
     cpdef void toggle(self, int index):
-        """Switch the value of one single bit.
+        """toggle(self, index)\n--
+
+        Switch the value of one single bit.
 
         Example:
             >>> bitfield = Bitfield(8)
@@ -280,6 +298,11 @@ cdef class KeyHash:
         libeasel.keyhash.esl_keyhash_Destroy(self._kh)
 
     def __init__(self):
+        """__init__(self)\n--
+
+        Create a new empty key-hash collection.
+
+        """
         self._kh = libeasel.keyhash.esl_keyhash_Create()
         if not self._kh:
             raise AllocationError("ESL_KEYHASH")
@@ -306,11 +329,21 @@ cdef class KeyHash:
             raise TypeError("'in <KeyHash>' requires string as left operand, not {}".format(ty))
 
     cpdef void clear(self):
+        """clear(self)\n--
+
+        Remove all entries from the collection.
+
+        """
         cdef int status = libeasel.keyhash.esl_keyhash_Reuse(self._kh)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_keyhash_Reuse")
 
     cpdef KeyHash copy(self):
+        """copy(self)\n--
+
+        Create and return an exact copy of this mapping.
+
+        """
         assert self._kh != NULL
         cdef KeyHash new = KeyHash.__new__(KeyHash)
         new._kh = libeasel.keyhash.esl_keyhash_Clone(self._kh)
@@ -348,7 +381,10 @@ cdef class MSA:
     # --- Methods ------------------------------------------------------------
 
     cpdef uint32_t checksum(self):
-        """Calculate a 32-bit checksum for the multiple sequence alignment.
+        """checksum(self)\n--
+
+        Calculate a 32-bit checksum for the multiple sequence alignment.
+
         """
         cdef uint32_t checksum = 0
         cdef int status = libeasel.msa.esl_msa_Checksum(self._msa, &checksum)
@@ -365,6 +401,11 @@ cdef class TextMSA(MSA):
     # --- Magic methods ------------------------------------------------------
 
     def __init__(self, int nsequences, length=None):
+        """__init__(self, nsequences, length=None)\n--
+
+        Create a new text-mode alignment for ``nsequences`` sequences.
+
+        """
         cdef int64_t alen = length if length is not None else -1
         self._msa = libeasel.msa.esl_msa_Create(nsequences, alen)
         if self._msa == NULL:
@@ -373,7 +414,10 @@ cdef class TextMSA(MSA):
     # --- Methods ------------------------------------------------------------
 
     cpdef TextMSA copy(self):
-        """Duplicate the text sequence alignment, and return the copy.
+        """copy(self)\n--
+
+        Duplicate the text sequence alignment, and return the copy.
+
         """
         assert self._msa != NULL
         assert not (self._msa.flags & libeasel.msa.eslMSA_DIGITAL)
@@ -390,7 +434,14 @@ cdef class TextMSA(MSA):
             raise UnexpectedError(status, "esl_msa_Copy")
 
     cpdef DigitalMSA digitize(self, Alphabet alphabet):
-        """Convert the text alignment to a digital alignment using ``alphabet``.
+        """digitize(self, alphabet)\n--
+
+        Convert the text alignment to a digital alignment using ``alphabet``.
+
+        Returns:
+            `DigitalMSA`: An alignment in digital mode containing the same
+            sequences digitized with ``alphabet``.
+
         """
         cdef int status
         cdef DigitalMSA new
@@ -412,8 +463,8 @@ cdef class DigitalMSA(MSA):
     """A multiple sequence alignment stored in digital mode.
 
     Attributes:
-        alphabet (`Alphabet`, *readonly*): The biological alphabet used to
-            encode this sequence alignment to digits.
+        alphabet (`Alphabet`): The biological alphabet used to encode this
+            sequence alignment to digits.
 
     """
 
@@ -424,6 +475,19 @@ cdef class DigitalMSA(MSA):
         self.alphabet = alphabet
 
     def __init__(self, Alphabet alphabet, int nsequences, length=None):
+        """__init__(self, alphabet, nsequences, length=None)\n--
+
+        Create a new digital-mode alignment for ``nsequences`` sequences.
+
+        Arguments:
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet the sequences
+                are digitized with.
+            nsequences (`int`): The number of sequences this alignment will
+                contain.
+            length (`int`, optional): The length of the alignment used to
+                allocate the buffers, or `None` to use a default capacity.
+
+        """
         cdef int64_t alen = length if length is not None else -1
         self._msa = libeasel.msa.esl_msa_CreateDigital(alphabet._abc, nsequences, alen)
         if self._msa == NULL:
@@ -563,7 +627,10 @@ cdef class Sequence:
     # --- Methods ------------------------------------------------------------
 
     cpdef uint32_t checksum(self):
-        """Calculate a 32-bit checksum for the sequence.
+        """checksum(self)\n--
+
+        Calculate a 32-bit checksum for the sequence.
+
         """
         cdef uint32_t checksum = 0
         cdef int status = libeasel.sq.esl_sq_Checksum(self._sq, &checksum)
@@ -573,7 +640,10 @@ cdef class Sequence:
             raise UnexpectedError(status, "esl_sq_Checksum")
 
     cpdef void clear(self):
-        """Reinitialize the sequence for re-use.
+        """clear(self)\n--
+
+        Reinitialize the sequence for re-use.
+
         """
         assert self._sq != NULL
 
@@ -599,6 +669,11 @@ cdef class TextSequence(Sequence):
         str   sequence=None,
         bytes source=None,
     ):
+        """__init__(self, name=None, description=None, accession=None, sequence=None, source=None)\n--
+
+        Create a new text-mode sequence with the given attributes.
+
+        """
         cdef bytes sq
 
         if sequence is not None:
@@ -633,7 +708,14 @@ cdef class TextSequence(Sequence):
         return self._sq.seq.decode("ascii")
 
     cpdef DigitalSequence digitize(self, Alphabet alphabet):
-        """Convert the text sequence to a digital sequence using ``alphabet``.
+        """digitize(self, alphabet)\n--
+
+        Convert the text sequence to a digital sequence using ``alphabet``.
+
+        Returns:
+            `DigitalSequence`: A copy of the sequence in digital-model,
+            digitized with ``alphabet``.
+
         """
         assert self._sq != NULL
         assert libeasel.sq.esl_sq_IsText(self._sq)
@@ -654,7 +736,10 @@ cdef class TextSequence(Sequence):
         return new
 
     cpdef TextSequence copy(self):
-        """Duplicate the text sequence, and return the copy.
+        """copy(self)\n--
+
+        Duplicate the text sequence, and return the copy.
+
         """
         assert self._sq != NULL
         assert libeasel.sq.esl_sq_IsText(self._sq)
@@ -699,7 +784,11 @@ cdef class DigitalSequence(Sequence):
         char[:]  sequence=None,
         bytes    source=None,
     ):
+        """__init__(self, alphabet, name=None, description=None, accession=None, sequence=None, source=None)\n--
 
+        Create a new digital-mode sequence with the given attributes.
+
+        """
         cdef int     status
         cdef int64_t n
 
@@ -754,7 +843,10 @@ cdef class DigitalSequence(Sequence):
         )
 
     cpdef DigitalSequence copy(self):
-        """Duplicate the digital sequence, and return the copy.
+        """copy(self)\n--
+
+        Duplicate the digital sequence, and return the copy.
+
         """
         assert self._sq != NULL
         assert libeasel.sq.esl_sq_IsDigital(self._sq)
@@ -772,7 +864,13 @@ cdef class DigitalSequence(Sequence):
             raise UnexpectedError(status, "esl_sq_Copy")
 
     cpdef TextSequence textize(self):
-        """Convert the digital sequence to a text sequence.
+        """textize(self)\n--
+
+        Convert the digital sequence to a text sequence.
+
+        Returns:
+            `TextSequence`: A copy of the sequence in text-mode.
+
         """
         assert self._sq != NULL
         assert libeasel.sq.esl_sq_IsDigital(self._sq)
@@ -820,6 +918,11 @@ cdef class SequenceFile:
 
     @classmethod
     def parse(cls, bytes buffer, str format):
+        """parse(cls, buffer, format)\n--
+
+        Parse a sequence from a binary ``buffer`` using the given ``format``.
+
+        """
         cdef Sequence seq = TextSequence.__new__(TextSequence)
         seq._sq = libeasel.sq.esl_sq_Create()
         if not seq._sq:
@@ -829,6 +932,11 @@ cdef class SequenceFile:
 
     @classmethod
     def parseinto(cls, Sequence seq, bytes buffer, str format):
+        """parseinto(cls, seq, buffer, format)\n--
+
+        Parse a sequence from a binary ``buffer`` into ``seq``.
+
+        """
         assert seq._sq != NULL
 
         cdef int fmt = libeasel.sqio.eslSQFILE_UNKNOWN
@@ -854,6 +962,19 @@ cdef class SequenceFile:
         self._sqfp = NULL
 
     def __init__(self, str file, str format=None):
+        """__init__(self, file, format=None)\n--
+
+        Create a new sequence file parser wrapping the given ``file``.
+
+        Arguments:
+            file (`str`): The path to a file containing sequences in one of
+                the supported file formats.
+            format (`str`, optional): The format of the file, or `None` to
+                autodetect. Supported values are: ``fasta``, ``embl``,
+                ``genbank``, ``ddbj``, ``uniprot``, ``ncbi``, ``daemon``,
+                ``hmmpgmd``, ``fmindex``.
+
+        """
         cdef int fmt = libeasel.sqio.eslSQFILE_UNKNOWN
         if format is not None:
             format_ = format.lower()
@@ -899,7 +1020,9 @@ cdef class SequenceFile:
     # --- Read methods -------------------------------------------------------
 
     cpdef Sequence read(self, bint skip_info=False, bint skip_sequence=False):
-        """Read the next sequence from the file.
+        """read(self, skip_info=False, skip_sequence=False)\n--
+
+        Read the next sequence from the file.
 
         Arguments:
             skip_info (`bool`): Pass `True` to disable reading the sequence
@@ -928,7 +1051,9 @@ cdef class SequenceFile:
         return self.readinto(seq, skip_info=skip_info, skip_sequence=skip_sequence)
 
     cpdef Sequence readinto(self, Sequence seq, bint skip_info=False, bint skip_sequence=False):
-        """Read the next sequence from the file, using ``seq`` to store data.
+        """readinto(self, seq, skip_info=False, skip_sequence=False)\n--
+
+        Read the next sequence from the file, using ``seq`` to store data.
 
         Arguments:
             seq (`~pyhmmer.easel.Sequence`): A sequence object to use to store
@@ -1008,11 +1133,18 @@ cdef class SequenceFile:
     # --- Utils --------------------------------------------------------------
 
     cpdef void close(self):
+        """close(self)\n--
+
+        Close the file and free the resources used by the parser.
+
+        """
         libeasel.sqio.esl_sqfile_Close(self._sqfp)
         self._sqfp = NULL
 
     cpdef Alphabet guess_alphabet(self):
-        """Guess the alphabet of an open `SequenceFile`.
+        """guess_alphabet(self)\n--
+
+        Guess the alphabet of an open `SequenceFile`.
 
         This method tries to guess the alphabet of a sequence file by
         inspecting the first sequence in the file. It returns the alphabet,
@@ -1024,7 +1156,6 @@ cdef class SequenceFile:
             `ValueError`: if this methods is called after the file was closed.
 
         """
-
         cdef int ty
         cdef int status
         cdef Alphabet alphabet
@@ -1048,7 +1179,9 @@ cdef class SequenceFile:
         return None
 
     cpdef void set_digital(self, Alphabet alphabet):
-        """Set the `SequenceFile` to read in digital mode with ``alphabet``.
+        """set_digital(self, alphabet)\n--
+
+        Set the `SequenceFile` to read in digital mode with ``alphabet``.
 
         This method can be called even after the first sequences have been
         read; it only affects subsequent sequences in the file.
@@ -1084,6 +1217,15 @@ cdef class SSIReader:
         self._ssi = NULL
 
     def __init__(self, str file):
+        """__init__(self, file)\n--
+
+        Create a new SSI file reader for the file at the given location.
+
+        Arguments:
+            file (`str`): The path to a sequence/subsequence index file to
+                read.
+
+        """
         cdef int      status
         cdef bytes    fspath = os.fsencode(file)
 
@@ -1110,6 +1252,11 @@ cdef class SSIReader:
     # --- Methods ------------------------------------------------------------
 
     def file_info(self, uint16_t fd):
+        """file_info(self, fd)\n--
+
+        Retrieve the `~pyhmmer.easel.SSIReader.FileInfo` of the descriptor.
+
+        """
         cdef int   status
         cdef char* filename
         cdef int   format
@@ -1126,6 +1273,11 @@ cdef class SSIReader:
             raise UnexpectedError(status, "esl_ssi_FileInfo")
 
     def find_name(self, bytes key):
+        """find_name(self, key)\n--
+
+        Retrieve the `~pyhmmer.easel.SSIReader.Entry` for the given name.
+
+        """
         cdef uint16_t ret_fh
         cdef off_t    ret_roff
         cdef off_t    opt_doff
@@ -1149,6 +1301,11 @@ cdef class SSIReader:
             raise UnexpectedError(status, "esl_ssi_FindName")
 
     cpdef void close(self):
+        """close(self)\n--
+
+        Close the SSI file reader.
+
+        """
         libeasel.ssi.esl_ssi_Close(self._ssi)
         self._ssi = NULL
 
@@ -1163,6 +1320,21 @@ cdef class SSIWriter:
         self._newssi = NULL
 
     def __init__(self, str file, bint exclusive = False):
+        """__init__(self, file)\n--
+
+        Create a new SSI file write for the file at the given location.
+
+        Arguments:
+            file (`str`): The path to a sequence/subsequence index file to
+                write.
+            exclusive (`bool`): Whether or not to create a file if one does
+                not exist.
+
+        Raises:
+            `FileNotFoundError`: When the path to the file cannot be resolved.
+            `FileExistsError`: When the file exists and ``exclusive`` is `True`.
+
+        """
         cdef int   status
         cdef bytes fspath = os.fsencode(file)
 
@@ -1200,7 +1372,9 @@ cdef class SSIWriter:
     # --- Methods ------------------------------------------------------------
 
     cpdef uint16_t add_file(self, str filename, int format = 0):
-        """Add a new file to the index.
+        """add_file(self, filename, format=0)\n--
+
+        Add a new file to the index.
 
         Arguments:
             filename (str): The name of the file to register.
@@ -1231,6 +1405,11 @@ cdef class SSIWriter:
         off_t data_offset = 0,
         int64_t record_length = 0
     ):
+        """add_key(self, key, fd, record_offset, data_offset=0, record_length=0)\n--
+
+        Add a new entry to the index with the given ``key``.
+
+        """
         cdef int status
 
         self._on_write()
@@ -1246,6 +1425,11 @@ cdef class SSIWriter:
             raise UnexpectedError(status, "esl_newssi_AddKey")
 
     cpdef void add_alias(self, bytes alias, bytes key):
+        """add_alias(self, alias, key)\n--
+
+        Make ``alias`` an alias of ``key`` in the index.
+
+        """
         cdef int status
 
         self._on_write()
@@ -1260,6 +1444,11 @@ cdef class SSIWriter:
             raise UnexpectedError(status, "esl_newssi_AddAlias")
 
     def close(self):
+        """close(self)\n--
+
+        Close the SSI file writer.
+
+        """
         cdef int status
 
         if not self.closed:
