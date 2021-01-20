@@ -162,14 +162,33 @@ class TestHmmpress(unittest.TestCase):
 
 class TestPhmmer(unittest.TestCase):
 
+    @staticmethod
+    def table(name):
+        bin_stream = pkg_resources.resource_stream(__name__, "data/tables/{}".format(name))
+        return io.TextIOWrapper(bin_stream)
+
     def test_pksi(self):
         alphabet = Alphabet.amino()
         path = pkg_resources.resource_filename(__name__, "data/seqs/PKSI.faa")
         with SequenceFile(path) as f:
             seqs = [seq.digitize(alphabet) for seq in f]
+            hits = next(pyhmmer.phmmer(seqs[-1:], seqs, cpus=1))
+            hits.sort()
 
-        query = seqs[-1]
-        hits = next(pyhmmer.phmmer([query], seqs, cpus=1))
-        self.assertGreater(len(hits), 1)
-
-        self.assertEqual(hits[0].domains[0].alignment.hmm_name, query.name)
+        with self.table("A0A089QRB9.tbl") as table:
+            lines = iter(filter(lambda line: not line.startswith("#"), table))
+            it = ((hit, domain) for hit in hits for domain in hit.domains)
+            for line, (hit, domain) in itertools.zip_longest(lines, it):
+                fields = list(filter(None, line.strip().split(" ")))
+                self.assertIsNot(line, None)
+                self.assertIsNot(hit, None)
+                self.assertEqual(hit.name.decode(), fields[0])
+                self.assertAlmostEqual(hit.score, float(fields[7]), delta=0.1)
+                self.assertAlmostEqual(hit.bias, float(fields[8]), delta=0.1)
+                self.assertAlmostEqual(hit.evalue, float(fields[6]), delta=0.1)
+                self.assertAlmostEqual(domain.i_evalue, float(fields[12]), delta=0.1)
+                self.assertAlmostEqual(domain.score, float(fields[13]), delta=0.1)
+                self.assertEqual(domain.alignment.hmm_from, int(fields[15]))
+                self.assertEqual(domain.alignment.hmm_to, int(fields[16]))
+                self.assertEqual(domain.alignment.target_from, int(fields[17]))
+                self.assertEqual(domain.alignment.target_to, int(fields[18]))
