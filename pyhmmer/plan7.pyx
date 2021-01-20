@@ -110,42 +110,62 @@ cdef class Alignment:
 
     @property
     def hmm_from(self):
+        """`int`: The start coordinate of the alignment in the query HMM.
+        """
         return self._ad.hmmfrom
 
     @property
     def hmm_to(self):
+        """`int`: The end coordinate of the alignment in the query HMM.
+        """
         return self._ad.hmmto
 
     @property
     def hmm_name(self):
+        """`bytes`: The name of the query HMM.
+        """
         return <bytes> self._ad.hmmname
 
     @property
     def hmm_accession(self):
+        """`bytes`: The accession of the query, or its name if it has none.
+        """
         return <bytes> self._ad.hmmacc
 
     @property
     def hmm_sequence(self):
+        """`str`: The sequence of the query HMM in the alignment.
+        """
         return self._ad.model.decode('ascii')
 
     @property
     def target_from(self):
+        """`int`: The start coordinate of the alignment in the target sequence.
+        """
         return self._ad.sqfrom
 
     @property
     def target_name(self):
+        """`bytes`: The name of the target sequence.
+        """
         return <bytes> self._ad.sqname
 
     @property
     def target_sequence(self):
+        """`str`: The sequence of the target sequence in the alignment.
+        """
         return self._ad.aseq.decode('ascii')
 
     @property
     def target_to(self):
+        """`int`: The end coordinate of the alignment in the target sequence.
+        """
         return self._ad.sqto
 
     @property
     def identity_sequence(self):
+        """`str`: The identity sequence between the query and the target.
+        """
         return self._ad.mline.decode('ascii')
 
 
@@ -158,9 +178,20 @@ cdef class Background:
     def __cinit__(self):
         self._bg = NULL
         self.alphabet = None
+        self.uniform = False
 
     def __init__(self, Alphabet alphabet, bint uniform=False):
+        """Create a new background model for the given ``alphabet``.
+
+        Arguments:
+          alphabet (`pyhmmer.easel.Alphabet`): The alphabet to create the
+              background model with.
+          uniform (`bool`): Whether or not to create the null model with
+              uniform frequencies. Defaults to `False`.
+
+        """
         self.alphabet = alphabet
+        self.uniform = uniform
         with nogil:
             if uniform:
                 self._bg = libhmmer.p7_bg.p7_bg_CreateUniform(alphabet._abc)
@@ -179,6 +210,8 @@ cdef class Background:
 
     @property
     def L(self):
+        """`int`: The mean of the null model length distribution, in residues.
+        """
         assert self._bg != NULL
         return <int> ceil(self._bg.p1 / (1 - self._bg.p1))
 
@@ -197,9 +230,13 @@ cdef class Background:
     # --- Methods ------------------------------------------------------------
 
     cpdef Background copy(self):
+        """Create a copy of the null model with the same parameters.
+        """
         cdef Background new = Background.__new__(Background)
         new.alphabet = self.alphabet
-        new._bg = libhmmer.p7_bg.p7_bg_Clone(self._bg)
+        new.uniform = self.uniform
+        with nogil:
+            new._bg = libhmmer.p7_bg.p7_bg_Clone(self._bg)
         if new._bg == NULL:
             raise AllocationError("P7_BG")
         return new
@@ -333,12 +370,17 @@ cdef class Builder:
     @property
     def seed(self):
         """`int`: The seed used by the internal random number generator.
+
+        Setting the seed will effectively reinitialize the internal RNG. In
+        the special case the seed is *0*, a one-time arbitrary seed will be
+        chosen and the RNG will no be reseeded for reproducibility.
         """
         return libeasel.random.esl_randomness_GetSeed(self._bld.r)
 
     @seed.setter
     def seed(self, uint32_t seed):
-        status = libeasel.random.esl_randomness_Init(self._bld.r, seed)
+        with nogil:
+            status = libeasel.random.esl_randomness_Init(self._bld.r, seed)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_randomness_Init")
         self._bld.do_reseeding = seed != 0
@@ -380,7 +422,7 @@ cdef class Builder:
             raise ValueError("background does not have the right alphabet")
 
         # load score matrix
-        # TODO: allow changing from the default values
+        # TODO: allow changing from the default scoring matrix
         # TODO: allow caching the parameter values to avoid resetting
         #       everytime `build` is called.
         with nogil:
@@ -506,6 +548,8 @@ cdef class Domain:
 
     @property
     def c_evalue(self):
+        """`float`: The independent e-value for the domain.
+        """
         assert self._dom != NULL
         if self.hit.hits.long_targets:
             return exp(self._dom.lnP)
@@ -514,6 +558,8 @@ cdef class Domain:
 
     @property
     def i_evalue(self):
+        """`float`: The independent e-value for the domain.
+        """
         assert self._dom != NULL
         if self.hit.hits.long_targets:
             return exp(self._dom.lnP)
@@ -555,12 +601,16 @@ cdef class Hit:
 
     @property
     def name(self):
+        """`bytes`: The name of the database hit.
+        """
         assert self._hit != NULL
         assert self._hit.name != NULL
         return <bytes> self._hit.name
 
     @property
     def accession(self):
+        """`bytes` or `None`: The accession of the database hit, if any.
+        """
         assert self._hit != NULL
         if self._hit.acc == NULL:
             return None
@@ -568,6 +618,8 @@ cdef class Hit:
 
     @property
     def description(self):
+        """`bytes` or `None`: The description of the database hit, if any.
+        """
         assert self._hit != NULL
         if self._hit.desc == NULL:
             return None
@@ -582,7 +634,7 @@ cdef class Hit:
 
     @property
     def pre_score(self):
-        """`float`: Bit score of the sequence before null2 correction.
+        """`float`: Bit score of the sequence before *null2* correction.
         """
         assert self._hit != NULL
         return self._hit.pre_score
@@ -594,10 +646,14 @@ cdef class Hit:
 
     @property
     def domains(self):
+        """`Domains`: The list of domains aligned to this hit.
+        """
         return Domains(self)
 
     @property
     def evalue(self):
+        """`float`: The e-value of the hit.
+        """
         assert self._hit != NULL
         if self.hits.long_targets:
             return exp(self._hit.lnP)
@@ -633,6 +689,13 @@ cdef class HMM:
         self._hmm = NULL
 
     def __init__(self, int M, Alphabet alphabet):
+        """Create a new HMM from scratch.
+
+        Arguments:
+            M (`int`): The length of the model (i.e. the number of nodes).
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
+
+        """
         self.alphabet = alphabet
         with nogil:
             self._hmm = libhmmer.p7_hmm.p7_hmm_Create(M, alphabet._abc)
@@ -728,7 +791,8 @@ cdef class HMM:
     cpdef void zero(self):
         """Set all parameters to zero (including model composition).
         """
-        libhmmer.p7_hmm.p7_hmm_Zero(self._hmm)
+        with nogil:
+            libhmmer.p7_hmm.p7_hmm_Zero(self._hmm)
 
 
 cdef class HMMFile:
@@ -761,6 +825,16 @@ cdef class HMMFile:
         self._hfp = NULL
 
     def __init__(self, object file, bint db = True):
+        """Create a new HMM reader from the given file.
+
+        Arguments:
+            file (`str` or file-like object): Either the path to a file
+                containing the HMMs to read, or a file-like object opened in
+                binary-mode.
+            db (`bool`): Set to `False` to force the parser to ignore the
+                pressed HMM database if it finds one. Defaults to `False`.
+
+        """
         cdef int       status
         cdef bytes     fspath
         cdef bytearray errbuf = bytearray(eslERRBUFSIZE)
@@ -841,7 +915,11 @@ cdef class HMMFile:
     cpdef void close(self):
         """Close the HMM file and free resources.
 
-        This method has no effect if the file is already closed.
+        This method has no effect if the file is already closed. It called
+        automatically if the `HMMFile` was used in a context::
+
+            >>> with HMMFile("tests/data/hmms/bin/PKSI-AT.h3m") as hmm_file:
+            ...     hmm = next(hmm_file)
         """
         if self._hfp:
             libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
@@ -953,10 +1031,23 @@ cdef class OptimizedProfile:
         self._om = NULL
         self.alphabet = None
 
-    def __init__(self, int m, Alphabet alphabet):
+    def __init__(self, int M, Alphabet alphabet):
+        """Create a new optimized profile from scratch.
+
+        Optimized profiles use platform-specific code to accelerate the
+        various algorithms. Although you can allocate an optimized profile
+        yourself, the only way to obtain a fully configured profile is to
+        create it with the `Profile.optimized` method, after having
+        configured the profile for a given HMM with `Profile.configure`.
+
+        Arguments:
+            M (`int`): The length of the model (i.e. the number of nodes).
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
+
+        """
         self.alphabet = alphabet
         with nogil:
-            self._om = p7_oprofile.p7_oprofile_Create(m, alphabet._abc)
+            self._om = p7_oprofile.p7_oprofile_Create(M, alphabet._abc)
         if self._om == NULL:
             raise AllocationError("P7_OPROFILE")
 
@@ -1146,6 +1237,14 @@ cdef class Pipeline:
 
     @property
     def Z(self):
+        """`float` or `None`: The number of effective targets searched.
+
+        It is used to compute the independent e-value for each domain, and
+        for an entire hit. If `None, the parameter number will be set
+        automatically after all the comparisons have been done. Otherwise, it
+        can be set to an arbitrary number.
+
+        """
         return self._Z
 
     @Z.setter
@@ -1161,6 +1260,14 @@ cdef class Pipeline:
 
     @property
     def domZ(self):
+        """`float`: The number of significant targets among searched targets.
+
+        It is used to compute the conditional e-value for each domain. If
+        `None, the parameter number will be set automatically after all the
+        comparisons have been done, and all hits have been thresholded.
+        Otherwise, it can be set to an arbitrary number.
+
+        """
         return self._domZ
 
     @domZ.setter

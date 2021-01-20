@@ -36,8 +36,9 @@ cdef class Alignment:
 
 
 cdef class Background:
+    cdef readonly bint     uniform
     cdef readonly Alphabet alphabet
-    cdef P7_BG* _bg
+    cdef          P7_BG*   _bg
 
     cpdef Background copy(self)
 
