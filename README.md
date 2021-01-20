@@ -52,7 +52,7 @@ HMMER internals, which has the following advantages over CLI wrappers
   [`Bio.SearchIO.HmmerIO`](https://biopython.org/docs/dev/api/Bio.SearchIO.HmmerIO.html)
   is struggling on some sequences).
 - **efficient**: Using `pyhmmer` to launch `hmmsearch` on sequences
-  and HMMs in disk storage is typically not slower than directly using the
+  and HMMs in disk storage is typically faster than directly using the
   `hmmsearch` binary (see the [Benchmarks section](#%EF%B8%8F-benchmarks)).
   `pyhmmer.hmmsearch` uses a different parallelisation strategy compared to
   the `hmmsearch` binary from HMMER, which helps getting the most of
@@ -60,7 +60,7 @@ HMMER internals, which has the following advantages over CLI wrappers
 
 *This library is still a work-in-progress, and in a very experimental stage,
 but it should already pack enough features to run simple biological analyses
-involving `hmmsearch`.*
+involving `hmmsearch` or `phmmer`.*
 
 
 ## 🔧 Installing
@@ -76,11 +76,12 @@ Compilation for UNIX PowerPC is not tested in CI, but should work out of the
 box. Other architectures (e.g. Arm) and OSes (e.g. Windows) are not
 supported by HMMER.
 
-A [Bioconda](https://bioconda.github.io/) package is also available, 
+A [Bioconda](https://bioconda.github.io/) package is also available,
 but only for Linux:
 ```console
 $ conda install -c bioconda pyhmmer
 ```
+
 
 ## 📖 Documentation
 
@@ -112,10 +113,7 @@ with pyhmmer.plan7.HMMFile("Pfam.hmm") as hmms:
 ```
 
 Processing happens in parallel using Python threads, and a ``TopHits``
-object is yielded for every ``HMM`` passed in the input iterable. *Note that
-for optimal performance, you should pass the number of **physical** cores to
-the `cpus` argument of the `pyhmmer.hmmsearch` function, as HMMER requires
-too many SIMD registers to benefit from hyperthreading*.
+object is yielded for every ``HMM`` passed in the input iterable.
 
 
 ## 💭 Feedback
@@ -134,24 +132,22 @@ Contributions are more than welcome! See [`CONTRIBUTING.md`](https://github.com/
 
 ## ⏱️ Benchmarks
 
-Benchmarks were run on a i7-8550U CPU running at 1.80GHz, using a FASTA file
-containing 2100 protein sequences
-([`tests/data/seqs/938293.PRJEB85.HG003687.faa`](https://github.com/althonos/pyhmmer/blob/master/tests/data/seqs/938293.PRJEB85.HG003687.faa))
-and a subset of the [Pfam](https://pfam.xfam.org/) HMM library containing
-2873 domains. Commands were run 20 times.
+Benchmarks were run on a [i7-10710U CPU](https://ark.intel.com/content/www/us/en/ark/products/196448/intel-core-i7-10710u-processor-12m-cache-up-to-4-70-ghz.html) running 1.10GHz with 6 physical / 12
+logical cores, using a FASTA file containing 2100 protein sequences extracted
+from the genome of *Anaerococcus provencensis*
+([`938293.PRJEB85.HG003687.faa`](https://github.com/althonos/pyhmmer/blob/master/tests/data/seqs/938293.PRJEB85.HG003687.faa))
+and the version 33.1 of the [Pfam](https://pfam.xfam.org/) HMM library containing
+18,259 domains. Commands were run 4 times on a warm SSD. *Plain lines show
+the times for pressed HMMs, and dashed-lines the times for HMMs in text format.*
 
-| Command                       | # CPUs | mean (s) | σ (ms) | min (s) | max (s) | Speedup |
-|-------------------------------|--------|----------|--------|---------|---------|---------|
-| `python -m pyhmmer hmmsearch` |      4 |  20.706  |  316   |  19.960 |  42.457 |   x1.00 |
-| `python -m pyhmmer hmmsearch` |      2 |  24.076  |  842   |  22.289 |  21.118 |   x1.16 |
-| `hmmsearch`                   |      2 |  35.046  |  161   |  34.734 |  35.183 |   x1.69 |
-| `hmmsearch`                   |      4 |  37.721  |   78   |  37.605 |  37.847 |   x1.82 |
-| `python -m pyhmmer hmmsearch` |      1 |  39.022  | 1346   |  36.081 |  40.644 |   x1.88 |
-| `hmmsearch`                   |      1 |  44.360  |  243   |  44.184 |  45.018 |   x2.14 |
-| `hmmscan`                     |      2 | 102.248  |  381   | 101.479 | 102.765 |   x4.93 |
-| `hmmscan`                     |      4 | 106.779  |  375   | 106.197 | 107.482 |   x5.15 |
-| `hmmscan`                     |      1 | 107.945  |  326   | 107.460 | 108.502 |   x5.21 |
+![Benchmarks](https://raw.github.com/althonos/pyhmmer/phmmer/benches/benchmarks.svg)
 
+Raw numbers can be found in the [`benches` folder](https://github.com/althonos/pyhmmer/blob/master/benches/).
+They suggest that `phmmer` should be run with the number of *logical* cores,
+while `hmmsearch` should be run with the number of *physical* cores (or less).
+A possible explanation for this observation would be that HMMER
+platform-specific code requires too many [SIMD](https://en.wikipedia.org/wiki/SIMD)
+registers per thread to benefit from [simultaneous multi-threading](https://en.wikipedia.org/wiki/Simultaneous_multithreading).
 
 ## ⚖️ License
 
