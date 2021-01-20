@@ -363,7 +363,7 @@ def phmmer(
 
     """
     _cpus = cpus if cpus > 0 else multiprocessing.cpu_count()
-    _builder = Builder(next(iter(sequences)).alphabet) if builder is None else builder
+    _builder = Builder(Alphabet.amino()) if builder is None else builder
     if _cpus > 1:
         return _phmmer_multithreaded(
             queries, sequences, _cpus, _builder, callback, **options
