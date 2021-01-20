@@ -12,6 +12,8 @@ import typing
 import os
 import multiprocessing
 
+import psutil
+
 from .easel import Alphabet, DigitalSequence, TextSequence, SequenceFile, SSIWriter
 from .plan7 import Builder, Background, Pipeline, TopHits, HMM, HMMFile, Profile
 
@@ -207,8 +209,8 @@ def hmmsearch(
             database of sequences to query.
         cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
             run everything in the main thread, ``0`` to automatically
-            select a suitable number (using `multiprocessing.cpu_count`),
-            or any positive number otherwise.
+            select a suitable number (using `psutil.cpu_count`), or any
+            positive number otherwise.
         callback (callable): A callback that is called everytime a query is
             processed with two arguments: the query, and the total number
             of queries. This can be used to display progress in UI.
@@ -223,7 +225,7 @@ def hmmsearch(
 
     """
     # count the number of CPUs to use
-    _cpus = cpus if cpus > 0 else multiprocessing.cpu_count()
+    _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or multiprocessing.cpu_count()
     if _cpus > 1:
         return _hmmsearch_multithreaded(queries, sequences, _cpus, callback, **options)
     else:
@@ -344,8 +346,8 @@ def phmmer(
             database of sequences to query.
         cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
             run everything in the main thread, ``0`` to automatically
-            select a suitable number (using `multiprocessing.cpu_count`),
-            or any positive number otherwise.
+            select a suitable number (using `psutil.cpu_count`), or any
+            positive number otherwise.
         callback (callable): A callback that is called everytime a query is
             processed with two arguments: the query, and the total number
             of queries. This can be used to display progress in UI.
@@ -362,7 +364,7 @@ def phmmer(
         passed transparently to the `~pyhmmer.plan7.Pipeline` to be created.
 
     """
-    _cpus = cpus if cpus > 0 else multiprocessing.cpu_count()
+    _cpus = cpus if cpus > 0 else psutil.cpu_count() or multiprocessing.cpu_count()
     _builder = Builder(Alphabet.amino()) if builder is None else builder
     if _cpus > 1:
         return _phmmer_multithreaded(
