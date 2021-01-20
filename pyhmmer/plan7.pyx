@@ -181,7 +181,9 @@ cdef class Background:
         self.uniform = False
 
     def __init__(self, Alphabet alphabet, bint uniform=False):
-        """Create a new background model for the given ``alphabet``.
+        """__init__(self, alphabet, uniform=False)\n--
+
+        Create a new background model for the given ``alphabet``.
 
         Arguments:
           alphabet (`pyhmmer.easel.Alphabet`): The alphabet to create the
@@ -230,7 +232,10 @@ cdef class Background:
     # --- Methods ------------------------------------------------------------
 
     cpdef Background copy(self):
-        """Create a copy of the null model with the same parameters.
+        """copy(self)\n--
+
+        Create a copy of the null model with the same parameters.
+
         """
         cdef Background new = Background.__new__(Background)
         new.alphabet = self.alphabet
@@ -295,6 +300,15 @@ cdef class Builder:
         int seed=42,
         object ere=None,
     ):
+        """__init__(self, alphabet, *, architecture="fast", weighting="pb", effective_number="entropy", prior_scheme="alpha", symfrac=0.5, fragthresh=0.5, wid=0.62, esigma=45.0, eid=0.62, EmL=200, EmN=200, EvL=200, EvN=200, EfL=100, EfN=200, Eft=0.04, seed=42, ere=None)\n--
+
+        Create a new sequence builder with the given configuration.
+
+        Arguments:
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet the builder
+                expects the sequences to be in.
+
+        """
         # extract alphabet and create raw P7_BUILDER object
         self.alphabet = alphabet
         self._bld = libhmmer.p7_builder.p7_builder_Create(NULL, alphabet._abc)
@@ -394,7 +408,9 @@ cdef class Builder:
         float popen = 0.02,
         float pextend = 0.4
     ):
-        """Build a new HMM from ``sequence`` using the builder configuration.
+        """build(self, sequence, background, popen=0.02, pextend=0.4)\n--
+
+        Build a new HMM from ``sequence`` using the builder configuration.
 
         Arguments:
             sequence (`~pyhmmer.easel.DigitalSequence`): A single biological
@@ -456,7 +472,10 @@ cdef class Builder:
         return (hmm, profile, opti)
 
     cpdef Builder copy(self):
-        """Create a duplicate `Builder` instance with the same arguments.
+        """copy(self)\n--
+
+        Create a duplicate `Builder` instance with the same arguments.
+
         """
         assert self._bld != NULL
         return Builder(
@@ -689,7 +708,9 @@ cdef class HMM:
         self._hmm = NULL
 
     def __init__(self, int M, Alphabet alphabet):
-        """Create a new HMM from scratch.
+        """__init__(self, M, alphabet)\n--
+
+        Create a new HMM from scratch.
 
         Arguments:
             M (`int`): The length of the model (i.e. the number of nodes).
@@ -761,7 +782,9 @@ cdef class HMM:
     # --- Methods ------------------------------------------------------------
 
     cpdef void write(self, object fh, bint binary=False) except *:
-        """Write the HMM to a file handle.
+        """write(self, fh, binary=False)\n--
+
+        Write the HMM to a file handle.
 
         Arguments:
             fh (`io.IOBase`): A Python file handle, opened in binary mode
@@ -789,7 +812,10 @@ cdef class HMM:
             raise UnexpectedError(status, "p7_hmmfile_WriteASCII")
 
     cpdef void zero(self):
-        """Set all parameters to zero (including model composition).
+        """zero(self)\n--
+
+        Set all parameters to zero, including model composition.
+
         """
         with nogil:
             libhmmer.p7_hmm.p7_hmm_Zero(self._hmm)
@@ -825,7 +851,9 @@ cdef class HMMFile:
         self._hfp = NULL
 
     def __init__(self, object file, bint db = True):
-        """Create a new HMM reader from the given file.
+        """__init__(self, file, db=True)\n--
+
+        Create a new HMM reader from the given file.
 
         Arguments:
             file (`str` or file-like object): Either the path to a file
@@ -913,7 +941,9 @@ cdef class HMMFile:
     # --- Methods ------------------------------------------------------------
 
     cpdef void close(self):
-        """Close the HMM file and free resources.
+        """close(self)\n--
+
+        Close the HMM file and free resources.
 
         This method has no effect if the file is already closed. It called
         automatically if the `HMMFile` was used in a context::
@@ -1032,7 +1062,9 @@ cdef class OptimizedProfile:
         self.alphabet = None
 
     def __init__(self, int M, Alphabet alphabet):
-        """Create a new optimized profile from scratch.
+        """__init__(self, M, alphabet)\n--
+
+        Create a new optimized profile from scratch.
 
         Optimized profiles use platform-specific code to accelerate the
         various algorithms. Although you can allocate an optimized profile
@@ -1062,12 +1094,20 @@ cdef class OptimizedProfile:
         return _Offsets.__new__(_Offsets, self)
 
     cpdef bint is_local(self):
-        """Returns whether or not the profile is in a local alignment mode.
+        """is_local(self)\n--
+
+        Return whether or not the profile is in a local alignment mode.
+
         """
         assert self._om != NULL
         return p7_oprofile.p7_oprofile_IsLocal(self._om)
 
     cpdef OptimizedProfile copy(self):
+        """copy(self)\n--
+
+        Create an exact copy of the optimized profile.
+
+        """
         assert self._om != NULL
         cdef OptimizedProfile new = OptimizedProfile.__new__(OptimizedProfile)
         new.alphabet = self.alphabet
@@ -1078,7 +1118,9 @@ cdef class OptimizedProfile:
         return new
 
     cpdef void write(self, object fh_filter, object fh_profile):
-        """Write an optimized profile to two separate files.
+        """write(self, fh_filter, fh_profile)\n--
+
+        Write an optimized profile to two separate files.
 
         HMMER implements an acceleration pipeline using several scoring
         algorithms. Parameters for MSV (the *Multi ungapped Segment Viterbi*)
@@ -1178,7 +1220,9 @@ cdef class Pipeline:
         object Z=None,
         object domZ=None,
     ):
-        """Instantiate and configure a new accelerated comparison pipeline.
+        """__init__(self, alphabet, background=None, *, bias_filter=True, report_e=10.0, null2=True, seed=42, Z=None, domZ=None)\n--
+
+        Instantiate and configure a new accelerated comparison pipeline.
 
         Arguments:
             alphabet (`~pyhmmer.easel.Alphabet`): The biological alphabet the
@@ -1240,7 +1284,7 @@ cdef class Pipeline:
         """`float` or `None`: The number of effective targets searched.
 
         It is used to compute the independent e-value for each domain, and
-        for an entire hit. If `None, the parameter number will be set
+        for an entire hit. If `None`, the parameter number will be set
         automatically after all the comparisons have been done. Otherwise, it
         can be set to an arbitrary number.
 
@@ -1260,10 +1304,10 @@ cdef class Pipeline:
 
     @property
     def domZ(self):
-        """`float`: The number of significant targets among searched targets.
+        """`float` or `None`: The number of significant targets.
 
         It is used to compute the conditional e-value for each domain. If
-        `None, the parameter number will be set automatically after all the
+        `None`, the parameter number will be set automatically after all the
         comparisons have been done, and all hits have been thresholded.
         Otherwise, it can be set to an arbitrary number.
 
@@ -1297,7 +1341,9 @@ cdef class Pipeline:
     # --- Methods ------------------------------------------------------------
 
     cpdef void clear(self):
-        """Reset the pipeline configuration to its default state.
+        """clear(self)\n--
+
+        Reset the pipeline configuration to its default state.
         """
         cdef int      status
 
@@ -1441,14 +1487,17 @@ cdef class Pipeline:
         self._pli.errbuf[0]       = b'\0'
 
     cpdef TopHits search_hmm(self, HMM query, object sequences):
-        """Run the pipeline using a query HMM against a sequence database.
+        """search_hmm(self, query, sequences)\n--
+
+        Run the pipeline using a query HMM against a sequence database.
 
         Arguments:
             query (`~pyhmmer.plan7.HMM`): The HMM object to use to query the
                 sequence database.
-            sequences (`Iterable` of `~pyhmmer.easel.DigitalSequence`): The
-                sequences to query with the HMMs. Pass a `~SequenceFile`
-                instance in digital mode to iteratively read from disk.
+            sequences (iterable of `~pyhmmer.easel.DigitalSequence`): The
+                sequences to query with the HMM. For instance, pass a
+                `~pyhmmer.easel.SequenceFile` in digital mode to read from
+                disk iteratively.
 
         Returns:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
@@ -1573,14 +1622,19 @@ cdef class Pipeline:
         object sequences,
         Builder builder = None,
     ):
-        """Run the pipeline using a query sequence against a sequence database.
+        """search_seq(self, query, sequences, builder=None)\n--
+
+        Run the pipeline using a query sequence against a sequence database.
 
         Arguments:
             query (`~pyhmmer.plan7.DigitalSequence`): The sequence object to
                 use to query the sequence database.
-            sequences (`Iterable` of `~pyhmmer.easel.DigitalSequence`): The
-                sequences to query with the HMMs. Pass a `~SequenceFile`
-                instance in digital mode to iteratively read from disk.
+            sequences (iterable of `~pyhmmer.easel.DigitalSequence`): The
+                sequences to query. Pass a `~pyhmmer.easel.SequenceFile`
+                instance in digital mode to read from disk iteratively.
+            builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
+                use to convert the query to a `~pyhmmer.plan7.HMM`. If `None`
+                is given, it will use a default one.
 
         Returns:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
@@ -1707,6 +1761,16 @@ cdef class Profile:
         self.alphabet = None
 
     def __init__(self, int M, Alphabet alphabet):
+        """__init__(self, M, alphabet)\n--
+
+        Create a new profile for the given ``alphabet``.
+
+        Arguments:
+            M (`int`): The length of the profile, i.e. the number of nodes.
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet to use with
+                this profile.
+
+        """
         self.alphabet = alphabet
         self._gm = libhmmer.p7_profile.p7_profile_Create(M, alphabet._abc)
         if not self._gm:
@@ -1719,7 +1783,10 @@ cdef class Profile:
         return self.copy()
 
     cpdef void clear(self):
-        """Clear internal buffers to reuse the profile without reallocation.
+        """clear(self)\n--
+
+        Clear internal buffers to reuse the profile without reallocation.
+
         """
         assert self._gm != NULL
         cdef int status = libhmmer.p7_profile.p7_profile_Reuse(self._gm)
@@ -1727,7 +1794,9 @@ cdef class Profile:
             raise UnexpectedError(status, "p7_profile_Reuse")
 
     cpdef void configure(self, HMM hmm, Background background, int L, bint multihit=True, bint local=True):
-        """Configure a search profile using the given models.
+        """configure(self, hmm, background, L, multihit=True, local=True)\n--
+
+        Configure a search profile using the given models.
 
         Arguments:
             hmm (`pyhmmer.plan7.HMM`): The model HMM with core probabilities.
@@ -1759,6 +1828,11 @@ cdef class Profile:
             raise UnexpectedError(status, "p7_ProfileConfig")
 
     cpdef Profile copy(self):
+        """copy(self)\n--
+
+        Return a copy of the profile with the exact same configuration.
+
+        """
         assert self._gm != NULL
 
         cdef Profile new = Profile.__new__(Profile)
@@ -1774,19 +1848,32 @@ cdef class Profile:
             raise UnexpectedError(status, "p7_profile_Copy")
 
     cpdef bint is_local(self):
-        """Returns whether or not the profile is in a local alignment mode.
+        """is_local(self)\n--
+
+        Return whether or not the profile is in a local alignment mode.
+
         """
         assert self._gm != NULL
         return libhmmer.p7_profile.p7_profile_IsLocal(self._gm)
 
     cpdef bint is_multihit(self):
-        """Returns whether or not the profile is in a multihit alignment mode.
+        """is_multihit(self)\n--
+
+        Returns whether or not the profile is in a multihit alignment mode.
+
         """
         assert self._gm != NULL
         return libhmmer.p7_profile.p7_profile_IsMultihit(self._gm)
 
     cpdef OptimizedProfile optimized(self):
-        """Convert the profile to a platform-specific optimized profile.
+        """optimized(self)\n--
+
+        Convert the profile to a platform-specific optimized profile.
+
+        Returns:
+            `OptimizedProfile`: The platform-specific optimized profile built
+            using the configuration of this profile.
+
         """
         cdef int              status
         cdef OptimizedProfile opt
@@ -1831,6 +1918,11 @@ cdef class TopHits:
     """
 
     def __init__(self):
+        """__init__(self)\n--
+
+        Create an empty `TopHits` instance.
+
+        """
         assert self._th == NULL, "called TopHits.__init__ more than once"
         self._th = libhmmer.p7_tophits.p7_tophits_Create()
         if self._th == NULL:
@@ -1867,7 +1959,9 @@ cdef class TopHits:
         return self._th.nincluded
 
     cdef void threshold(self, Pipeline pipeline):
-        """Apply score and e-value thresholds using pipeline parameters.
+        """threshold(self, pipeline)\n--
+
+        Apply score and e-value thresholds using pipeline parameters.
 
         This function is automatically called in `Pipeline.search_hmm` or
         `Pipeline.search_seq`, and is therefore not exposed in the Python API.
@@ -1888,7 +1982,10 @@ cdef class TopHits:
         self.long_targets = pli.long_targets
 
     cpdef void clear(self):
-        """Free internals to allow reusing for a new pipeline run.
+        """clear(self)\n--
+
+        Free internals to allow reusing for a new pipeline run.
+
         """
         assert self._th != NULL
         cdef int status = p7_tophits_Reuse(self._th)
@@ -1896,6 +1993,16 @@ cdef class TopHits:
             raise UnexpectedError(status, "p7_tophits_Reuse")
 
     cpdef void sort(self, str by="key"):
+        """sort(self, by="key")\n--
+
+        Sort hits in the current instance using the given method.
+
+        Arguments:
+            by (`str`): The comparison method to use to compare hits.
+                Allowed values are: ``key`` (the default) to sort by key, or
+                ``seqidx`` to sort by sequence index and alignment position.
+
+        """
         assert self._th != NULL
 
         cdef P7_TOPHITS* th = self._th
@@ -1918,6 +2025,14 @@ cdef class TopHits:
             raise UnexpectedError(status, function)
 
     cpdef bint is_sorted(self, str by="key"):
+        """is_sorted(self, by="key")\n--
+
+        Check whether or not the hits are sorted with the given method.
+
+        See `~pyhmmer.plan7.TopHits.sort` for a list of allowed values for
+        the ``by`` argument.
+
+        """
         assert self._th != NULL
 
         if by == "key":
