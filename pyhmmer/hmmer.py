@@ -79,11 +79,11 @@ class _SequencePipelineThread(_PipelineThread[DigitalSequence]):
     def __init__(
         self,
         sequences: typing.Iterable[DigitalSequence],
-        query_queue: "queue.Queue[typing.Optional[typing.Tuple[int, _Q]]]",
+        query_queue: "queue.Queue[typing.Optional[typing.Tuple[int, DigitalSequence]]]",
         query_count: multiprocessing.Value,  # type: ignore
         hits_queue: "queue.PriorityQueue[typing.Tuple[int, TopHits]]",
         kill_switch: threading.Event,
-        callback: typing.Optional[typing.Callable[[_Q, int], None]],
+        callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]],
         options: typing.Dict[str, typing.Any],
         builder: Builder,
     ) -> None:
@@ -205,10 +205,10 @@ def hmmsearch(
 
 
 def _phmmer_singlethreaded(
-    queries: typing.Iterable[HMM],
+    queries: typing.Iterable[DigitalSequence],
     sequences: typing.Sequence[DigitalSequence],
     builder: Builder,
-    callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
+    callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
     **options,  # type: typing.Any
 ) -> typing.Iterator[TopHits]:
     # create the queues to pass the HMM objects around, as well as atomic
@@ -250,11 +250,11 @@ def _phmmer_singlethreaded(
 
 
 def _phmmer_multithreaded(
-    queries: typing.Iterable[HMM],
+    queries: typing.Iterable[DigitalSequence],
     sequences: typing.Sequence[DigitalSequence],
     cpus: int,
     builder: Builder,
-    callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
+    callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
     **options,  # type: typing.Any
 ) -> typing.Iterator[TopHits]:
 
@@ -308,7 +308,7 @@ def phmmer(
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
     builder: typing.Optional[Builder] = None,
-    **options,
+    **options: typing.Any,
 ) -> typing.Iterator[TopHits]:
     _cpus = cpus if cpus > 0 else multiprocessing.cpu_count()
     _builder = Builder(sequences[0].alphabet) if builder is None else builder
@@ -417,7 +417,7 @@ if __name__ == "__main__":
                 seq.clear()
 
         with SequenceFile(args.seqfile) as queries:
-            queries_d = (q.digitize(alphabet) for q in queries)
+            queries_d = (q.digitize(alphabet) for q in queries) # type: ignore
             hits_list = phmmer(queries_d, sequences, cpus=args.jobs)
 
             for hits in hits_list:
