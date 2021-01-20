@@ -2,7 +2,7 @@ from libc.stdio cimport FILE
 from libc.stdint cimport uint32_t
 
 
-cdef extern from "esl_random.h":
+cdef extern from "esl_random.h" nogil:
 
     cdef enum esl_randomness_type:
         eslRND_FAST = 0
