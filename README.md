@@ -38,9 +38,11 @@ HMMER internals, which has the following advantages over CLI wrappers
   your project, and stop worrying about the HMMER binaries being properly
   setup on the end-user machine.
 - **no intermediate files**: Everything happens in memory, in Python objects
-  you have control on, making it easier to format your inputs to pass to
-  HMMER without needing to write them to a file. Output retrieval is also
-  done in memory, through instances of the `pyhmmer.plan7.TopHits` class.
+  you have control on, making it easier to pass your inputs to HMMER without 
+  needing to write them to a temporary file. Output retrieval is also done 
+  in memory, via instances of the 
+  [`pyhmmer.plan7.TopHits`](https://pyhmmer.readthedocs.io/en/stable/api/plan7.html#pyhmmer.plan7.TopHits)
+  class.
 - **no input formatting**: The Easel object model is exposed in the `pyhmmer.easel`
   module, and you have the possibility to build a `Sequence` object yourself
   to pass to the HMMER pipeline. This is useful if your sequences are already
@@ -58,8 +60,8 @@ HMMER internals, which has the following advantages over CLI wrappers
   the `hmmsearch` binary from HMMER, which helps getting the most of
   multiple CPUs.
 
-*This library is still a work-in-progress, and in a very experimental stage,
-but it should already pack enough features to run simple biological analyses
+*This library is still a work-in-progress, and in an experimental stage,
+but it should already pack enough features to run biological analyses
 involving `hmmsearch` or `phmmer`.*
 
 
@@ -98,7 +100,7 @@ $ pydoc pyhmmer.plan7
 ## 💡 Example
 
 Use `pyhmmer` to run `hmmsearch`, and obtain an iterable over
-[`TopHits`](https://pyhmmer.readthedocs.io/en/latest/api/plan7.html#pyhmmer.plan7.TopHits)
+[`TopHits`](https://pyhmmer.readthedocs.io/en/stable/api/plan7.html#pyhmmer.plan7.TopHits)
 that can be used for further sorting/querying in Python:
 
 ```python
@@ -140,7 +142,7 @@ and the version 33.1 of the [Pfam](https://pfam.xfam.org/) HMM library containin
 18,259 domains. Commands were run 4 times on a warm SSD. *Plain lines show
 the times for pressed HMMs, and dashed-lines the times for HMMs in text format.*
 
-![Benchmarks](https://raw.github.com/althonos/pyhmmer/phmmer/benches/benchmarks.svg)
+![Benchmarks](https://raw.github.com/althonos/pyhmmer/master/benches/benchmarks.svg)
 
 Raw numbers can be found in the [`benches` folder](https://github.com/althonos/pyhmmer/blob/master/benches/).
 They suggest that `phmmer` should be run with the number of *logical* cores,
@@ -148,6 +150,15 @@ while `hmmsearch` should be run with the number of *physical* cores (or less).
 A possible explanation for this observation would be that HMMER
 platform-specific code requires too many [SIMD](https://en.wikipedia.org/wiki/SIMD)
 registers per thread to benefit from [simultaneous multi-threading](https://en.wikipedia.org/wiki/Simultaneous_multithreading).
+
+
+## 🔍 See Also
+
+If despite of all the advantages listed earlier, you would rather use HMMER through its CLI, 
+this package will not be of great help. You should then check the 
+[`hmmer-py`](https://github.com/EBI-Metagenomics/hmmer-py) package developed 
+by [Danilo Horta](https://github.com/horta) at the [EMBL-EBI](https://www.ebi.ac.uk).
+
 
 ## ⚖️ License
 
