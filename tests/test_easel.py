@@ -25,6 +25,11 @@ class TestSequenceFile(unittest.TestCase):
             __file__, os.pardir, os.pardir, "vendor", "easel", "formats"
         ))
 
+    def test_guess_alphabet(self):
+        embl = os.path.join(self.formats_folder, "embl")
+        with easel.SequenceFile(embl, "embl") as f:
+            self.assertEqual(f.guess_alphabet(), easel.Alphabet.dna())
+
     def test_init_error_unknownformat(self):
         with self.assertRaises(ValueError):
             _file = easel.SequenceFile("file.x", format="nonsense")
