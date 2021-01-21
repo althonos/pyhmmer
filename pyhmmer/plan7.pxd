@@ -6,6 +6,7 @@
 from libc.stdint cimport uint32_t
 from posix.types cimport off_t
 
+from libeasel.sq cimport ESL_SQ
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_bg cimport P7_BG
 from libhmmer.p7_builder cimport P7_BUILDER
@@ -125,9 +126,18 @@ cdef class Pipeline:
     cdef OptimizedProfile _optimized
     cdef P7_PIPELINE* _pli
 
-    cpdef void clear(self)
+    cpdef void    clear(self)
     cpdef TopHits search_hmm(self, HMM query, object seqs)
     cpdef TopHits search_seq(self, DigitalSequence query, object seqs, Builder builder = ?)
+    cdef  void    _search_loop(
+        self,
+        P7_PIPELINE* pli,
+        P7_OPROFILE* om,
+        P7_BG*       bg,
+        ESL_SQ*      sq,
+        P7_TOPHITS*  th,
+        object       seqs_iter,
+    )
 
 
 cdef class Profile:

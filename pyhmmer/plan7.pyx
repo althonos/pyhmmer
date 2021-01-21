@@ -1334,7 +1334,7 @@ cdef class Pipeline:
         """clear(self)\n--
 
         Reset the pipeline configuration to its default state.
-        
+
         """
         cdef int      status
         cdef uint32_t seed   = self.seed
@@ -1505,14 +1505,6 @@ cdef class Pipeline:
         cdef Profile              profile = self.profile
         cdef OptimizedProfile     opt
         cdef TopHits              hits    = TopHits()
-        cdef ESL_ALPHABET*        abc     = self.alphabet._abc
-        cdef P7_BG*               bg      = self.background._bg
-        cdef P7_HMM*              hm      = query._hmm
-        cdef P7_OPROFILE*         om
-        cdef P7_TOPHITS*          th      = hits._th
-        cdef P7_PIPELINE*         pli     = self._pli
-        cdef ESL_SQ*              sq      = NULL
-        cdef size_t               nseq    = 1
 
         assert self._pli != NULL
 
@@ -1538,68 +1530,28 @@ cdef class Pipeline:
                 self.alphabet,
                 seq.alphabet,
             ))
-        sq = seq._sq
 
         # build the profile from the HMM, using the first sequence length
         # as a hint for the model configuration, or reuse the profile we
         # cached if it is large enough to hold the new HMM
-        if profile is None or profile._gm.allocM < hm.M:
-            profile = self.profile = Profile(hm.M, self.alphabet)
+        if profile is None or profile._gm.allocM < query.M:
+            profile = self.profile = Profile(query.M, self.alphabet)
         else:
             profile.clear()
-        profile.configure(query, self.background, sq.n)
+        profile.configure(query, self.background, len(seq))
 
         # build the optimized model from the profile
         opt = profile.optimized()
-        om = opt._om
 
-        # release the GIL for as long as possible to allow several search
-        # pipelines to run in true parallel mode even in Python threads
-        with nogil:
-
-            # configure the pipeline for the current HMM
-            status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
-            if status == libeasel.eslEINVAL:
-                raise ValueError("model does not have bit score thresholds expected by the pipeline")
-            elif status != libeasel.eslOK:
-                raise UnexpectedError(status, "p7_pli_NewModel")
-
-            # run the inner loop on all sequences
-            while sq != NULL:
-
-                # configure the profile, background and pipeline for the new sequence
-                status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq)
-                if status != libeasel.eslOK:
-                    raise UnexpectedError(status, "p7_pli_NewSeq")
-                status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq.n)
-                if status != libeasel.eslOK:
-                    raise UnexpectedError(status, "p7_bg_SetLength")
-                status = p7_oprofile.p7_oprofile_ReconfigLength(om, sq.n)
-                if status != libeasel.eslOK:
-                    raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
-
-                # run the pipeline on the sequence
-                status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, sq, NULL, th)
-                if status == libeasel.eslEINVAL:
-                    raise ValueError("model does not have bit score thresholds expected by the pipeline")
-                elif status == libeasel.eslERANGE:
-                    raise OverflowError("numerical overflow in the optimized vector implementation")
-                elif status != libeasel.eslOK:
-                    raise UnexpectedError(status, "p7_Pipeline")
-
-                # clear pipeline for reuse for next target
-                libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
-
-                # acquire the GIL just long enough to get the next sequence
-                with gil:
-                    seq = next(seqs_iter, None)
-                    sq = NULL if seq is None else seq._sq
-                    nseq += seq is not None
-                    if seq is not None and seq.alphabet != self.alphabet:
-                        raise ValueError("Wrong alphabet in input sequence: expected {!r}, found {!r}".format(
-                            self.alphabet,
-                            seq.alphabet,
-                        ))
+        # run the search loop on all database sequences while recycling memory
+        self._search_loop(
+            self._pli,
+            opt._om,
+            self.background._bg,
+            seq._sq,
+            hits._th,
+            seqs_iter
+        )
 
         # threshold hits
         hits.sort(by="key")
@@ -1636,21 +1588,12 @@ cdef class Pipeline:
                 match the alphabet of the given query.
 
         """
-        cdef int                  status
         cdef int                  allocM
         cdef DigitalSequence      seq
         cdef Profile              profile
         cdef HMM                  hmm
         cdef OptimizedProfile     opt
         cdef TopHits              hits    = TopHits()
-        cdef ESL_ALPHABET*        abc     = self.alphabet._abc
-        cdef P7_BG*               bg      = self.background._bg
-        cdef P7_HMM*              hm
-        cdef P7_OPROFILE*         om
-        cdef P7_TOPHITS*          th      = hits._th
-        cdef P7_PIPELINE*         pli     = self._pli
-        cdef ESL_SQ*              sq      = NULL
-        cdef size_t               nseq    = 1
 
         assert self._pli != NULL
 
@@ -1679,19 +1622,42 @@ cdef class Pipeline:
                 self.alphabet,
                 seq.alphabet,
             ))
-        sq = seq._sq
 
         # build the HMM and the profile from the query sequence, using the first
         # as a hint for the model configuration, or reuse the profile we
         # cached if it is large enough to hold the new HMM
         hmm, profile, opt = builder.build(query, self.background)
-        hm = hmm._hmm
-        om = opt._om
 
-        # release the GIL for as long as possible to allow several search
-        # pipelines to run in true parallel mode even in Python threads
+        # run the search loop on all database sequences while recycling memory
+        self._search_loop(
+            self._pli,
+            opt._om,
+            self.background._bg,
+            seq._sq,
+            hits._th,
+            seqs_iter
+        )
+
+        # threshold hits
+        hits.sort(by="key")
+        hits.threshold(self)
+
+        # return the hits
+        return hits
+
+    cdef  void    _search_loop(
+        self,
+        P7_PIPELINE* pli,
+        P7_OPROFILE* om,
+        P7_BG*       bg,
+        ESL_SQ*      sq,
+        P7_TOPHITS*  th,
+        object       seqs_iter,
+    ):
+        cdef int      status
+        cdef Sequence seq
+
         with nogil:
-
             # configure the pipeline for the current HMM
             status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
             if status == libeasel.eslEINVAL:
@@ -1701,7 +1667,6 @@ cdef class Pipeline:
 
             # run the inner loop on all sequences
             while sq != NULL:
-
                 # configure the profile, background and pipeline for the new sequence
                 status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq)
                 if status != libeasel.eslOK:
@@ -1728,20 +1693,15 @@ cdef class Pipeline:
                 # acquire the GIL just long enough to get the next sequence
                 with gil:
                     seq = next(seqs_iter, None)
-                    sq = NULL if seq is None else seq._sq
-                    nseq += seq is not None
-                    if seq is not None and seq.alphabet != self.alphabet:
-                        raise ValueError("Wrong alphabet in input sequence: expected {!r}, found {!r}".format(
-                            self.alphabet,
-                            seq.alphabet,
-                        ))
-
-        # threshold hits
-        hits.sort(by="key")
-        hits.threshold(self)
-
-        # return the hits
-        return hits
+                    if seq is not None:
+                        sq = seq._sq
+                        if seq.alphabet != self.alphabet:
+                            raise ValueError("Wrong alphabet in input sequence: expected {!r}, found {!r}".format(
+                                self.alphabet,
+                                seq.alphabet,
+                            ))
+                    else:
+                        sq = NULL
 
 
 cdef class Profile:
