@@ -187,6 +187,9 @@ class _Offsets(object):
     def profile(self, profile: typing.Optional[int]) -> None: ...
 
 class Pipeline(object):
+    M_HINT: typing.ClassVar[int] = 100
+    L_HINT: typing.ClassVar[int] = 100
+    LONG_TARGETS: typing.ClassVar[bool] = False
     alphabet: Alphabet
     background: Background
     profile: typing.Optional[Profile]

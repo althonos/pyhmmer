@@ -311,7 +311,8 @@ cdef class Builder:
         """
         # extract alphabet and create raw P7_BUILDER object
         self.alphabet = alphabet
-        self._bld = libhmmer.p7_builder.p7_builder_Create(NULL, alphabet._abc)
+        with nogil:
+            self._bld = libhmmer.p7_builder.p7_builder_Create(NULL, alphabet._abc)
         if self._bld == NULL:
             raise AllocationError("P7_BG")
 
@@ -366,12 +367,13 @@ cdef class Builder:
 
         # set the prior scheme
         self.prior_scheme = prior_scheme
-        if prior_scheme is None:
-            self._bld.prior = NULL
-        elif prior_scheme == "laplace":
-            self._bld.prior = libhmmer.p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
-        elif prior_scheme != "alphabet":
-            raise ValueError("Invalid value for 'prior_scheme': {prior_scheme}")
+        with nogil:
+            if prior_scheme is None:
+                self._bld.prior = NULL
+            elif prior_scheme == "laplace":
+                self._bld.prior = libhmmer.p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
+            elif prior_scheme != "alphabet":
+                raise ValueError("Invalid value for 'prior_scheme': {prior_scheme}")
 
     def __dealloc__(self):
         libhmmer.p7_builder.p7_builder_Destroy(self._bld)
@@ -495,7 +497,7 @@ cdef class Builder:
             EvN=self._bld.EvN,
             EfL=self._bld.EfN,
             Eft=self._bld.Eft,
-            seed=libeasel.random.esl_randomness_GetSeed(self._bld.r),
+            seed=self.seed,
             ere=self._bld.re_target,
         )
 
@@ -1226,6 +1228,11 @@ cdef class Pipeline:
                 `None` to keep the default seed from HMMER.
 
         """
+        # extract default parameters from the class attributes
+        cdef int  m_hint       = self.M_HINT
+        cdef int  l_hint       = self.L_HINT
+        cdef bint long_targets = self.LONG_TARGETS
+
         # store a reference to the alphabet to avoid deallocation
         self.alphabet = alphabet
 
@@ -1236,13 +1243,14 @@ cdef class Pipeline:
             self.background = background.copy()
 
         # allocate the pipeline
-        self._pli = libhmmer.p7_pipeline.p7_pipeline_Create(
-            NULL,
-            self.M_HINT,
-            self.L_HINT,
-            self.LONG_TARGETS,
-            p7_pipemodes_e.p7_SEARCH_SEQS
-        )
+        with nogil:
+            self._pli = libhmmer.p7_pipeline.p7_pipeline_Create(
+                NULL,
+                m_hint,
+                l_hint,
+                long_targets,
+                p7_pipemodes_e.p7_SEARCH_SEQS
+            )
         if self._pli == NULL:
             raise AllocationError("P7_PIPELINE")
 
@@ -1313,7 +1321,9 @@ cdef class Pipeline:
 
     @seed.setter
     def seed(self, uint32_t seed):
-        status = libeasel.random.esl_randomness_Init(self._pli.r, seed)
+        cdef int status
+        with nogil:
+            status = libeasel.random.esl_randomness_Init(self._pli.r, seed)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_randomness_Init")
         self._pli.do_reseeding = self._pli.ddef.do_reseeding = seed != 0
@@ -1326,6 +1336,7 @@ cdef class Pipeline:
         Reset the pipeline configuration to its default state.
         """
         cdef int      status
+        cdef uint32_t seed   = self.seed
 
         # reset the Z and domZ values from the CLI
         self.Z = self._Z
@@ -1335,14 +1346,14 @@ cdef class Pipeline:
         self._pli.do_alignment_score_calc = 0
         self._pli.long_targets = self.LONG_TARGETS
 
-        # reinitialize the random number generator
-        if self._pli.do_reseeding:
-            status = libeasel.random.esl_randomness_Init(self._pli.r, self.seed)
-            if status != libeasel.eslOK:
-                raise UnexpectedError(status, "esl_randomness_Init")
-
-        # reinitialize the domaindef
-        libhmmer.p7_domaindef.p7_domaindef_Reuse(self._pli.ddef)
+        with nogil:
+            # reinitialize the random number generator
+            if self._pli.do_reseeding:
+                status = libeasel.random.esl_randomness_Init(self._pli.r, seed)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "esl_randomness_Init")
+            # reinitialize the domaindef
+                libhmmer.p7_domaindef.p7_domaindef_Reuse(self._pli.ddef)
 
         # Configure reporting thresholds
         self._pli.by_E            = True
@@ -1752,7 +1763,8 @@ cdef class Profile:
 
         """
         self.alphabet = alphabet
-        self._gm = libhmmer.p7_profile.p7_profile_Create(M, alphabet._abc)
+        with nogil:
+            self._gm = libhmmer.p7_profile.p7_profile_Create(M, alphabet._abc)
         if not self._gm:
             raise AllocationError("P7_PROFILE")
 
@@ -1769,7 +1781,9 @@ cdef class Profile:
 
         """
         assert self._gm != NULL
-        cdef int status = libhmmer.p7_profile.p7_profile_Reuse(self._gm)
+        cdef int status
+        with nogil:
+            status = libhmmer.p7_profile.p7_profile_Reuse(self._gm)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_profile_Reuse")
 
@@ -1815,13 +1829,16 @@ cdef class Profile:
         """
         assert self._gm != NULL
 
+        cdef int status
         cdef Profile new = Profile.__new__(Profile)
         new.alphabet = self.alphabet
-        new._gm = libhmmer.p7_profile.p7_profile_Create(self._gm.allocM, self.alphabet._abc)
+        with nogil:
+            new._gm = libhmmer.p7_profile.p7_profile_Create(self._gm.allocM, self.alphabet._abc)
         if not new._gm:
             raise AllocationError("P7_PROFILE")
 
-        cdef int status = libhmmer.p7_profile.p7_profile_Copy(self._gm, new._gm)
+        with nogil:
+            status = libhmmer.p7_profile.p7_profile_Copy(self._gm, new._gm)
         if status == libeasel.eslOK:
             return new
         else:
@@ -1904,7 +1921,8 @@ cdef class TopHits:
 
         """
         assert self._th == NULL, "called TopHits.__init__ more than once"
-        self._th = libhmmer.p7_tophits.p7_tophits_Create()
+        with nogil:
+            self._th = libhmmer.p7_tophits.p7_tophits_Create()
         if self._th == NULL:
             raise AllocationError("P7_TOPHITS")
 
@@ -1953,7 +1971,8 @@ cdef class TopHits:
 
         assert self._th != NULL
 
-        status = libhmmer.p7_tophits.p7_tophits_Threshold(th, pli)
+        with nogil:
+            status = libhmmer.p7_tophits.p7_tophits_Threshold(th, pli)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tophits_Threshold")
 
