@@ -586,9 +586,9 @@ cdef class Sequence:
 
     def __len__(self):
         assert self._sq != NULL
-        if self._sq.L == -1:
+        if self._sq.n == -1:
             return 0
-        return <int> self._sq.L
+        return <int> self._sq.n
 
     def __copy__(self):
         return self.copy()
