@@ -29,10 +29,12 @@ cimport libeasel.getopts
 cimport libeasel.vec
 cimport libhmmer.modelconfig
 cimport libhmmer.p7_hmm
+cimport libhmmer.p7_builder
 cimport libhmmer.p7_bg
 cimport libhmmer.p7_domaindef
 cimport libhmmer.p7_hmmfile
 cimport libhmmer.p7_pipeline
+cimport libhmmer.p7_prior
 cimport libhmmer.p7_profile
 cimport libhmmer.p7_tophits
 from libeasel cimport eslERRBUFSIZE, eslCONST_LOG2R
@@ -41,6 +43,7 @@ from libeasel.getopts cimport ESL_GETOPTS, ESL_OPTIONS
 from libeasel.sq cimport ESL_SQ
 from libhmmer cimport p7_LOCAL, p7_offsets_e
 from libhmmer.logsum cimport p7_FLogsumInit
+from libhmmer.p7_builder cimport P7_BUILDER, p7_archchoice_e, p7_wgtchoice_e, p7_effnchoice_e
 from libhmmer.p7_hmmfile cimport p7_hmmfile_formats_e
 from libhmmer.p7_tophits cimport p7_hitflags_e
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
@@ -107,42 +110,62 @@ cdef class Alignment:
 
     @property
     def hmm_from(self):
+        """`int`: The start coordinate of the alignment in the query HMM.
+        """
         return self._ad.hmmfrom
 
     @property
     def hmm_to(self):
+        """`int`: The end coordinate of the alignment in the query HMM.
+        """
         return self._ad.hmmto
 
     @property
     def hmm_name(self):
+        """`bytes`: The name of the query HMM.
+        """
         return <bytes> self._ad.hmmname
 
     @property
     def hmm_accession(self):
+        """`bytes`: The accession of the query, or its name if it has none.
+        """
         return <bytes> self._ad.hmmacc
 
     @property
     def hmm_sequence(self):
+        """`str`: The sequence of the query HMM in the alignment.
+        """
         return self._ad.model.decode('ascii')
 
     @property
     def target_from(self):
+        """`int`: The start coordinate of the alignment in the target sequence.
+        """
         return self._ad.sqfrom
 
     @property
     def target_name(self):
+        """`bytes`: The name of the target sequence.
+        """
         return <bytes> self._ad.sqname
 
     @property
     def target_sequence(self):
+        """`str`: The sequence of the target sequence in the alignment.
+        """
         return self._ad.aseq.decode('ascii')
 
     @property
     def target_to(self):
+        """`int`: The end coordinate of the alignment in the target sequence.
+        """
         return self._ad.sqto
 
     @property
     def identity_sequence(self):
+        """`str`: The identity sequence between the query and the target.
+        """
         return self._ad.mline.decode('ascii')
 
 
@@ -155,9 +178,22 @@ cdef class Background:
     def __cinit__(self):
         self._bg = NULL
         self.alphabet = None
+        self.uniform = False
 
     def __init__(self, Alphabet alphabet, bint uniform=False):
+        """__init__(self, alphabet, uniform=False)\n--
+
+        Create a new background model for the given ``alphabet``.
+
+        Arguments:
+          alphabet (`pyhmmer.easel.Alphabet`): The alphabet to create the
+              background model with.
+          uniform (`bool`): Whether or not to create the null model with
+              uniform frequencies. Defaults to `False`.
+
+        """
         self.alphabet = alphabet
+        self.uniform = uniform
         with nogil:
             if uniform:
                 self._bg = libhmmer.p7_bg.p7_bg_CreateUniform(alphabet._abc)
@@ -176,6 +212,8 @@ cdef class Background:
 
     @property
     def L(self):
+        """`int`: The mean of the null model length distribution, in residues.
+        """
         assert self._bg != NULL
         return <int> ceil(self._bg.p1 / (1 - self._bg.p1))
 
@@ -194,12 +232,274 @@ cdef class Background:
     # --- Methods ------------------------------------------------------------
 
     cpdef Background copy(self):
+        """copy(self)\n--
+
+        Create a copy of the null model with the same parameters.
+
+        """
         cdef Background new = Background.__new__(Background)
         new.alphabet = self.alphabet
-        new._bg = libhmmer.p7_bg.p7_bg_Clone(self._bg)
+        new.uniform = self.uniform
+        with nogil:
+            new._bg = libhmmer.p7_bg.p7_bg_Clone(self._bg)
         if new._bg == NULL:
             raise AllocationError("P7_BG")
         return new
+
+
+cdef class Builder:
+    """A factory for constructing new HMMs from raw sequences.
+    """
+
+    _ARCHITECTURE_STRATEGY = {
+        "fast": p7_archchoice_e.p7_ARCH_FAST,
+        "hand": p7_archchoice_e.p7_ARCH_HAND,
+    }
+
+    _WEIGHTING_STRATEGY = {
+        "pb": p7_wgtchoice_e.p7_WGT_PB,
+        "gsc": p7_wgtchoice_e.p7_WGT_GSC,
+        "blosum": p7_wgtchoice_e.p7_WGT_BLOSUM,
+        "none": p7_wgtchoice_e.p7_WGT_NONE,
+        "given": p7_wgtchoice_e.p7_WGT_GIVEN,
+    }
+
+    _EFFECTIVE_STRATEGY = {
+        "entropy": p7_effnchoice_e.p7_EFFN_ENTROPY,
+        "exp": p7_effnchoice_e.p7_EFFN_ENTROPY_EXP,
+        "clust": p7_effnchoice_e.p7_EFFN_CLUST,
+        "none": p7_effnchoice_e.p7_EFFN_NONE,
+    }
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __cinit__(self):
+        self._bld = NULL
+        self.alphabet = None
+
+    def __init__(
+        self,
+        Alphabet alphabet,
+        *,
+        str architecture="fast",
+        str weighting="pb",
+        str effective_number="entropy",
+        str prior_scheme="alphabet",
+        float symfrac=0.5,
+        float fragthresh=0.5,
+        float wid=0.62,
+        float esigma=45.0,
+        float eid=0.62,
+        int EmL=200,
+        int EmN=200,
+        int EvL=200,
+        int EvN=200,
+        int EfL=100,
+        int EfN=200,
+        float Eft=0.04,
+        int seed=42,
+        object ere=None,
+    ):
+        """__init__(self, alphabet, *, architecture="fast", weighting="pb", effective_number="entropy", prior_scheme="alpha", symfrac=0.5, fragthresh=0.5, wid=0.62, esigma=45.0, eid=0.62, EmL=200, EmN=200, EvL=200, EvN=200, EfL=100, EfN=200, Eft=0.04, seed=42, ere=None)\n--
+
+        Create a new sequence builder with the given configuration.
+
+        Arguments:
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet the builder
+                expects the sequences to be in.
+
+        """
+        # extract alphabet and create raw P7_BUILDER object
+        self.alphabet = alphabet
+        with nogil:
+            self._bld = libhmmer.p7_builder.p7_builder_Create(NULL, alphabet._abc)
+        if self._bld == NULL:
+            raise AllocationError("P7_BG")
+
+        # set numeric parameters
+        self._bld.symfrac = symfrac
+        self._bld.fragthresh = fragthresh
+        self._bld.wid = wid
+        self._bld.esigma = esigma
+        self._bld.eid = eid
+        self._bld.EmL = EmL
+        self._bld.EmN = EmN
+        self._bld.EvL = EvL
+        self._bld.EvN = EvN
+        self._bld.EfL = EfL
+        self._bld.EfN = EfN
+        self._bld.Eft = Eft
+
+        # reset the random number generator
+        self.seed = seed
+
+        # set the architecture strategy
+        self.architecture = architecture
+        _arch = self._ARCHITECTURE_STRATEGY.get(architecture)
+        if _arch is not None:
+            self._bld.arch_strategy = _arch
+        else:
+            raise ValueError(f"Invalid value for 'architecture': {architecture}")
+
+        # set the weighting strategy
+        self.weighting = weighting
+        _weighting = self._WEIGHTING_STRATEGY.get(weighting)
+        if _weighting is not None:
+            self._bld.wgt_strategy = _weighting
+        else:
+            raise ValueError(f"Invalid value for 'weighting': {weighting}")
+
+        # set the effective sequence number strategy
+        self.effective_number = effective_number
+        if isinstance(effective_number, (int, float)):
+            self._bld.effn_strategy = p7_effnchoice_e.p7_EFFN_SET
+            self._bld.eset = effective_number
+        else:
+            _effn = self._EFFECTIVE_STRATEGY.get(effective_number)
+            if _effn is not None:
+                self._bld.effn_strategy = _effn
+            else:
+                raise ValueError(f"Invalid value for 'effective_number': {effective_number}")
+
+        # set the RE target if given one
+        if ere is not None:
+            self._bld.re_target = ere
+
+        # set the prior scheme
+        self.prior_scheme = prior_scheme
+        with nogil:
+            if prior_scheme is None:
+                self._bld.prior = NULL
+            elif prior_scheme == "laplace":
+                self._bld.prior = libhmmer.p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
+            elif prior_scheme != "alphabet":
+                raise ValueError("Invalid value for 'prior_scheme': {prior_scheme}")
+
+    def __dealloc__(self):
+        libhmmer.p7_builder.p7_builder_Destroy(self._bld)
+
+    def __copy__(self):
+        return self.copy()
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def seed(self):
+        """`int`: The seed used by the internal random number generator.
+
+        Setting the seed will effectively reinitialize the internal RNG. In
+        the special case the seed is *0*, a one-time arbitrary seed will be
+        chosen and the RNG will no be reseeded for reproducibility.
+        """
+        return libeasel.random.esl_randomness_GetSeed(self._bld.r)
+
+    @seed.setter
+    def seed(self, uint32_t seed):
+        with nogil:
+            status = libeasel.random.esl_randomness_Init(self._bld.r, seed)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_randomness_Init")
+        self._bld.do_reseeding = seed != 0
+
+    # --- Methods ------------------------------------------------------------
+
+    cpdef tuple build(
+        self,
+        DigitalSequence sequence,
+        Background background,
+        float popen = 0.02,
+        float pextend = 0.4
+    ):
+        """build(self, sequence, background, popen=0.02, pextend=0.4)\n--
+
+        Build a new HMM from ``sequence`` using the builder configuration.
+
+        Arguments:
+            sequence (`~pyhmmer.easel.DigitalSequence`): A single biological
+                sequence in digital mode to build a HMM with.
+            background (`pyhmmer.plan7.background`): The background model to
+                use to create the HMM.
+            popen (`float`): The *gap open* probability to use with the score
+                system. Defaults to *0.02*.
+            pextend (`float`): The *gap extend* probability to use with the
+                score system. Defaults to *0.4*.
+
+        Raises:
+            `ValueError`: When either ``sequence`` or ``background`` have the
+                wrong alphabet for this builder.
+
+        """
+        cdef int              status
+        cdef HMM              hmm     = HMM.__new__(HMM)
+        cdef Profile          profile = Profile.__new__(Profile)
+        cdef OptimizedProfile opti    = OptimizedProfile.__new__(OptimizedProfile)
+
+        # check alphabet and assign it to newly created objects
+        hmm.alphabet = profile.alphabet = opti.alphabet = self.alphabet
+        if background.alphabet != self.alphabet:
+            raise ValueError("background does not have the right alphabet")
+
+        # load score matrix
+        # TODO: allow changing from the default scoring matrix
+        # TODO: allow caching the parameter values to avoid resetting
+        #       everytime `build` is called.
+        with nogil:
+            status = libhmmer.p7_builder.p7_builder_SetScoreSystem(
+                self._bld,
+                NULL, # --mxfile
+                NULL, # env
+                popen, # popen
+                pextend,  # pextend
+                background._bg
+            )
+            if status == libeasel.eslENOTFOUND:
+                raise FileNotFoundError("could not open substitution score matrix file")
+            elif status == libeasel.eslEINVAL:
+                raise ValueError("cannot convert matrix to conditional probabilities")
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_builder_SetScoreSystem")
+
+            # build HMM and profiles
+            status = libhmmer.p7_builder.p7_SingleBuilder(
+                self._bld,
+                sequence._sq,
+                background._bg,
+                &hmm._hmm, # HMM
+                NULL, # traceback
+                &profile._gm, # profile,
+                &opti._om, # optimized profile
+            )
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_SingleBuilder")
+        return (hmm, profile, opti)
+
+    cpdef Builder copy(self):
+        """copy(self)\n--
+
+        Create a duplicate `Builder` instance with the same arguments.
+
+        """
+        assert self._bld != NULL
+        return Builder(
+            self.alphabet,
+            architecture=self.architecture,
+            weighting=self.weighting,
+            effective_number=self.effective_number,
+            prior_scheme=self.prior_scheme,
+            symfrac=self._bld.symfrac,
+            fragthresh=self._bld.fragthresh,
+            wid=self._bld.wid,
+            esigma=self._bld.esigma,
+            eid=self._bld.eid,
+            EmL=self._bld.EmL,
+            EmN=self._bld.EmN,
+            EvL=self._bld.EvL,
+            EvN=self._bld.EvN,
+            EfL=self._bld.EfN,
+            Eft=self._bld.Eft,
+            seed=self.seed,
+            ere=self._bld.re_target,
+        )
 
 
 cdef class Domain:
@@ -226,26 +526,6 @@ cdef class Domain:
         return self._dom.jenv
 
     @property
-    def ali_from(self):
-        assert self._dom != NULL
-        return self._dom.iali
-
-    @property
-    def ali_to(self):
-        assert self._dom != NULL
-        return self._dom.jali
-
-    @property
-    def hmm_from(self):
-        assert self._dom != NULL
-        return self._dom.iorf
-
-    @property
-    def hmm_to(self):
-        assert self._dom != NULL
-        return self._dom.jorf
-
-    @property
     def score(self):
         """`float`: The overall score in bits, null-corrected.
         """
@@ -269,6 +549,8 @@ cdef class Domain:
 
     @property
     def c_evalue(self):
+        """`float`: The independent e-value for the domain.
+        """
         assert self._dom != NULL
         if self.hit.hits.long_targets:
             return exp(self._dom.lnP)
@@ -277,6 +559,8 @@ cdef class Domain:
 
     @property
     def i_evalue(self):
+        """`float`: The independent e-value for the domain.
+        """
         assert self._dom != NULL
         if self.hit.hits.long_targets:
             return exp(self._dom.lnP)
@@ -318,12 +602,16 @@ cdef class Hit:
 
     @property
     def name(self):
+        """`bytes`: The name of the database hit.
+        """
         assert self._hit != NULL
         assert self._hit.name != NULL
         return <bytes> self._hit.name
 
     @property
     def accession(self):
+        """`bytes` or `None`: The accession of the database hit, if any.
+        """
         assert self._hit != NULL
         if self._hit.acc == NULL:
             return None
@@ -331,6 +619,8 @@ cdef class Hit:
 
     @property
     def description(self):
+        """`bytes` or `None`: The description of the database hit, if any.
+        """
         assert self._hit != NULL
         if self._hit.desc == NULL:
             return None
@@ -345,7 +635,7 @@ cdef class Hit:
 
     @property
     def pre_score(self):
-        """`float`: Bit score of the sequence before null2 correction.
+        """`float`: Bit score of the sequence before *null2* correction.
         """
         assert self._hit != NULL
         return self._hit.pre_score
@@ -357,10 +647,14 @@ cdef class Hit:
 
     @property
     def domains(self):
+        """`Domains`: The list of domains aligned to this hit.
+        """
         return Domains(self)
 
     @property
     def evalue(self):
+        """`float`: The e-value of the hit.
+        """
         assert self._hit != NULL
         if self.hits.long_targets:
             return exp(self._hit.lnP)
@@ -396,10 +690,19 @@ cdef class HMM:
         self._hmm = NULL
 
     def __init__(self, int M, Alphabet alphabet):
+        """__init__(self, M, alphabet)\n--
+
+        Create a new HMM from scratch.
+
+        Arguments:
+            M (`int`): The length of the model (i.e. the number of nodes).
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
+
+        """
         self.alphabet = alphabet
         with nogil:
             self._hmm = libhmmer.p7_hmm.p7_hmm_Create(M, alphabet._abc)
-        if not self.hmm:
+        if not self._hmm:
             raise AllocationError("P7_HMM")
 
     def __dealloc__(self):
@@ -461,7 +764,9 @@ cdef class HMM:
     # --- Methods ------------------------------------------------------------
 
     cpdef void write(self, object fh, bint binary=False) except *:
-        """Write the HMM to a file handle.
+        """write(self, fh, binary=False)\n--
+
+        Write the HMM to a file handle.
 
         Arguments:
             fh (`io.IOBase`): A Python file handle, opened in binary mode
@@ -489,9 +794,13 @@ cdef class HMM:
             raise UnexpectedError(status, "p7_hmmfile_WriteASCII")
 
     cpdef void zero(self):
-        """Set all parameters to zero (including model composition).
+        """zero(self)\n--
+
+        Set all parameters to zero, including model composition.
+
         """
-        libhmmer.p7_hmm.p7_hmm_Zero(self._hmm)
+        with nogil:
+            libhmmer.p7_hmm.p7_hmm_Zero(self._hmm)
 
 
 cdef class HMMFile:
@@ -524,6 +833,18 @@ cdef class HMMFile:
         self._hfp = NULL
 
     def __init__(self, object file, bint db = True):
+        """__init__(self, file, db=True)\n--
+
+        Create a new HMM reader from the given file.
+
+        Arguments:
+            file (`str` or file-like object): Either the path to a file
+                containing the HMMs to read, or a file-like object opened in
+                binary-mode.
+            db (`bool`): Set to `False` to force the parser to ignore the
+                pressed HMM database if it finds one. Defaults to `False`.
+
+        """
         cdef int       status
         cdef bytes     fspath
         cdef bytearray errbuf = bytearray(eslERRBUFSIZE)
@@ -602,9 +923,15 @@ cdef class HMMFile:
     # --- Methods ------------------------------------------------------------
 
     cpdef void close(self):
-        """Close the HMM file and free resources.
+        """close(self)\n--
 
-        This method has no effect if the file is already closed.
+        Close the HMM file and free resources.
+
+        This method has no effect if the file is already closed. It called
+        automatically if the `HMMFile` was used in a context::
+
+            >>> with HMMFile("tests/data/hmms/bin/PKSI-AT.h3m") as hmm_file:
+            ...     hmm = next(hmm_file)
         """
         if self._hfp:
             libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
@@ -714,11 +1041,27 @@ cdef class OptimizedProfile:
 
     def __cinit__(self):
         self._om = NULL
+        self.alphabet = None
 
-    def __init__(self, int m, Alphabet alphabet):
+    def __init__(self, int M, Alphabet alphabet):
+        """__init__(self, M, alphabet)\n--
+
+        Create a new optimized profile from scratch.
+
+        Optimized profiles use platform-specific code to accelerate the
+        various algorithms. Although you can allocate an optimized profile
+        yourself, the only way to obtain a fully configured profile is to
+        create it with the `Profile.optimized` method, after having
+        configured the profile for a given HMM with `Profile.configure`.
+
+        Arguments:
+            M (`int`): The length of the model (i.e. the number of nodes).
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
+
+        """
         self.alphabet = alphabet
         with nogil:
-            self._om = p7_oprofile.p7_oprofile_Create(m, alphabet._abc)
+            self._om = p7_oprofile.p7_oprofile_Create(M, alphabet._abc)
         if self._om == NULL:
             raise AllocationError("P7_OPROFILE")
 
@@ -733,12 +1076,20 @@ cdef class OptimizedProfile:
         return _Offsets.__new__(_Offsets, self)
 
     cpdef bint is_local(self):
-        """Returns whether or not the profile is in a local alignment mode.
+        """is_local(self)\n--
+
+        Return whether or not the profile is in a local alignment mode.
+
         """
         assert self._om != NULL
         return p7_oprofile.p7_oprofile_IsLocal(self._om)
 
     cpdef OptimizedProfile copy(self):
+        """copy(self)\n--
+
+        Create an exact copy of the optimized profile.
+
+        """
         assert self._om != NULL
         cdef OptimizedProfile new = OptimizedProfile.__new__(OptimizedProfile)
         new.alphabet = self.alphabet
@@ -749,7 +1100,9 @@ cdef class OptimizedProfile:
         return new
 
     cpdef void write(self, object fh_filter, object fh_profile):
-        """Write an optimized profile to two separate files.
+        """write(self, fh_filter, fh_profile)\n--
+
+        Write an optimized profile to two separate files.
 
         HMMER implements an acceleration pipeline using several scoring
         algorithms. Parameters for MSV (the *Multi ungapped Segment Viterbi*)
@@ -849,7 +1202,9 @@ cdef class Pipeline:
         object Z=None,
         object domZ=None,
     ):
-        """Instantiate and configure a new accelerated comparison pipeline.
+        """__init__(self, alphabet, background=None, *, bias_filter=True, report_e=10.0, null2=True, seed=42, Z=None, domZ=None)\n--
+
+        Instantiate and configure a new accelerated comparison pipeline.
 
         Arguments:
             alphabet (`~pyhmmer.easel.Alphabet`): The biological alphabet the
@@ -873,6 +1228,11 @@ cdef class Pipeline:
                 `None` to keep the default seed from HMMER.
 
         """
+        # extract default parameters from the class attributes
+        cdef int  m_hint       = self.M_HINT
+        cdef int  l_hint       = self.L_HINT
+        cdef bint long_targets = self.LONG_TARGETS
+
         # store a reference to the alphabet to avoid deallocation
         self.alphabet = alphabet
 
@@ -883,23 +1243,24 @@ cdef class Pipeline:
             self.background = background.copy()
 
         # allocate the pipeline
-        self._pli = libhmmer.p7_pipeline.p7_pipeline_Create(
-            NULL,
-            self.M_HINT,
-            self.L_HINT,
-            self.LONG_TARGETS,
-            p7_pipemodes_e.p7_SEARCH_SEQS
-        )
+        with nogil:
+            self._pli = libhmmer.p7_pipeline.p7_pipeline_Create(
+                NULL,
+                m_hint,
+                l_hint,
+                long_targets,
+                p7_pipemodes_e.p7_SEARCH_SEQS
+            )
         if self._pli == NULL:
             raise AllocationError("P7_PIPELINE")
 
         # configure the pipeline with the additional keyword arguments
-        self.seed = seed
         self.null2 = null2
         self.bias_filter = bias_filter
         self.report_e = report_e
         self.Z = Z
         self.domZ = domZ
+        self.seed = seed
 
     def __dealloc__(self):
         libhmmer.p7_pipeline.p7_pipeline_Destroy(self._pli)
@@ -908,6 +1269,14 @@ cdef class Pipeline:
 
     @property
     def Z(self):
+        """`float` or `None`: The number of effective targets searched.
+
+        It is used to compute the independent e-value for each domain, and
+        for an entire hit. If `None`, the parameter number will be set
+        automatically after all the comparisons have been done. Otherwise, it
+        can be set to an arbitrary number.
+
+        """
         return self._Z
 
     @Z.setter
@@ -923,6 +1292,14 @@ cdef class Pipeline:
 
     @property
     def domZ(self):
+        """`float` or `None`: The number of significant targets.
+
+        It is used to compute the conditional e-value for each domain. If
+        `None`, the parameter number will be set automatically after all the
+        comparisons have been done, and all hits have been thresholded.
+        Otherwise, it can be set to an arbitrary number.
+
+        """
         return self._domZ
 
     @domZ.setter
@@ -936,10 +1313,32 @@ cdef class Pipeline:
             self._pli.domZ_setby = p7_zsetby_e.p7_ZSETBY_OPTION
             self._pli.domZ = self._domZ = domZ
 
+    @property
+    def seed(self):
+        """`int`: The seed used by the internal random number generator.
+        """
+        return libeasel.random.esl_randomness_GetSeed(self._pli.r)
+
+    @seed.setter
+    def seed(self, uint32_t seed):
+        cdef int status
+        with nogil:
+            status = libeasel.random.esl_randomness_Init(self._pli.r, seed)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_randomness_Init")
+        self._pli.do_reseeding = self._pli.ddef.do_reseeding = seed != 0
 
     # --- Methods ------------------------------------------------------------
 
     cpdef void clear(self):
+        """clear(self)\n--
+
+        Reset the pipeline configuration to its default state.
+
+        """
+        cdef int      status
+        cdef uint32_t seed   = self.seed
+
         # reset the Z and domZ values from the CLI
         self.Z = self._Z
         self.domZ = self._domZ
@@ -948,15 +1347,14 @@ cdef class Pipeline:
         self._pli.do_alignment_score_calc = 0
         self._pli.long_targets = self.LONG_TARGETS
 
-        # Dynamic programming matrices -> these are automatically resized if needed
-
-        # reinitialize the random number generator
-        libeasel.random.esl_randomness_Destroy(self._pli.r)
-        self._pli.r = libeasel.random.esl_randomness_CreateFast(self.seed)
-        self._pli.do_reseeding = self.seed != 0
-        libhmmer.p7_domaindef.p7_domaindef_Destroy(self._pli.ddef)
-        self._pli.ddef = libhmmer.p7_domaindef.p7_domaindef_Create(self._pli.r)
-        self._pli.ddef.do_reseeding = self._pli.do_reseeding
+        with nogil:
+            # reinitialize the random number generator
+            if self._pli.do_reseeding:
+                status = libeasel.random.esl_randomness_Init(self._pli.r, seed)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "esl_randomness_Init")
+            # reinitialize the domaindef
+            libhmmer.p7_domaindef.p7_domaindef_Reuse(self._pli.ddef)
 
         # Configure reporting thresholds
         self._pli.by_E            = True
@@ -1080,26 +1478,21 @@ cdef class Pipeline:
         self._pli.hfp             = NULL
         self._pli.errbuf[0]       = b'\0'
 
-    cpdef TopHits search(self, HMM hmm, object sequences, TopHits hits = None):
-        """Run the pipeline using a query HMM against a sequence database.
+    cpdef TopHits search_hmm(self, HMM query, object sequences):
+        """search_hmm(self, query, sequences)\n--
+
+        Run the pipeline using a query HMM against a sequence database.
 
         Arguments:
-            hmm (`~pyhmmer.plan7.HMM`): The HMM object to use to query the
+            query (`~pyhmmer.plan7.HMM`): The HMM object to use to query the
                 sequence database.
-            sequences (`Iterable` of `~pyhmmer.easel.DigitalSequence`): The
-                sequences to query with the HMMs. Pass a `~SequenceFile`
-                instance in digital mode to iteratively read from disk.
-            hits (`~pyhmmer.plan7.TopHits`, optional): A hit collection to
-                store results in, if any. If `None`, a new collection will
-                be allocated. Use a non-`None` value if you are running
-                several HMMs sequentially and want to aggregate the results,
-                or if you are able to recycle a `~pyhmmer.plan7.TopHits`
-                instance with `TopHits.clear`.
+            sequences (iterable of `~pyhmmer.easel.DigitalSequence`): The
+                sequences to query with the HMM. For instance, pass a
+                `~pyhmmer.easel.SequenceFile` in digital mode to read from
+                disk iteratively.
 
         Returns:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
-            If an instance was passed via the ``hits`` argument, it is safe
-            to ignore the return value and to access it by reference.
 
         Raises:
             `ValueError`: When the alphabet of the current pipeline does not
@@ -1111,30 +1504,19 @@ cdef class Pipeline:
         cdef DigitalSequence      seq
         cdef Profile              profile = self.profile
         cdef OptimizedProfile     opt
-        cdef ESL_ALPHABET*        abc     = self.alphabet._abc
-        cdef P7_BG*               bg      = self.background._bg
-        cdef P7_HMM*              hm      = hmm._hmm
-        cdef P7_OPROFILE*         om
-        cdef P7_TOPHITS*          th
-        cdef P7_PIPELINE*         pli     = self._pli
-        cdef ESL_SQ*              sq      = NULL
-        cdef size_t               nseq    = 1
+        cdef TopHits              hits    = TopHits()
 
         assert self._pli != NULL
 
         # check the pipeline was configure with the same alphabet
-        if hmm.alphabet != self.alphabet:
+        if query.alphabet != self.alphabet:
             raise ValueError("Wrong alphabet in input HMM: expected {!r}, found {!r}".format(
                 self.alphabet,
-                hmm.alphabet
+                query.alphabet
             ))
 
         # make sure the pipeline is set to search mode and ready for a new HMM
         self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
-
-        # get a pointer to the P7_TOPHITS struct to use
-        hits = TopHits() if hits is None else hits
-        th = hits._th
 
         # get an iterator over the input sequences, with an early return if
         # no sequences were given, and extract the raw pointer to the sequence
@@ -1144,29 +1526,138 @@ cdef class Pipeline:
         if seq is None:
             return hits
         if seq.alphabet != self.alphabet:
-            raise ValueError("Wrong alphabet in input HMM: expected {!r}, found {!r}".format(
-              self.alphabet,
-              seq.alphabet,
+            raise ValueError("Wrong alphabet in input sequence: expected {!r}, found {!r}".format(
+                self.alphabet,
+                seq.alphabet,
             ))
-        sq = seq._sq
 
         # build the profile from the HMM, using the first sequence length
         # as a hint for the model configuration, or reuse the profile we
         # cached if it is large enough to hold the new HMM
-        if profile is None or profile._gm.allocM < hm.M:
-            profile = self.profile = Profile(hm.M, self.alphabet)
+        if profile is None or profile._gm.allocM < query.M:
+            profile = self.profile = Profile(query.M, self.alphabet)
         else:
             profile.clear()
-        profile.configure(hmm, self.background, 100)
+        profile.configure(query, self.background, len(seq))
 
         # build the optimized model from the profile
         opt = profile.optimized()
-        om = opt._om
 
-        # release the GIL for as long as possible to allow several search
-        # pipelines to run in true parallel mode even in Python threads
+        # run the search loop on all database sequences while recycling memory
+        self._search_loop(
+            self._pli,
+            opt._om,
+            self.background._bg,
+            seq._sq,
+            hits._th,
+            seqs_iter
+        )
+
+        # threshold hits
+        hits.sort(by="key")
+        hits.threshold(self)
+
+        # return the hits
+        return hits
+
+    cpdef TopHits search_seq(
+        self,
+        DigitalSequence query,
+        object sequences,
+        Builder builder = None,
+    ):
+        """search_seq(self, query, sequences, builder=None)\n--
+
+        Run the pipeline using a query sequence against a sequence database.
+
+        Arguments:
+            query (`~pyhmmer.plan7.DigitalSequence`): The sequence object to
+                use to query the sequence database.
+            sequences (iterable of `~pyhmmer.easel.DigitalSequence`): The
+                sequences to query. Pass a `~pyhmmer.easel.SequenceFile`
+                instance in digital mode to read from disk iteratively.
+            builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
+                use to convert the query to a `~pyhmmer.plan7.HMM`. If `None`
+                is given, it will use a default one.
+
+        Returns:
+            `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
+
+        Raises:
+            `ValueError`: When the alphabet of the current pipeline does not
+                match the alphabet of the given query.
+
+        """
+        cdef int                  allocM
+        cdef DigitalSequence      seq
+        cdef Profile              profile
+        cdef HMM                  hmm
+        cdef OptimizedProfile     opt
+        cdef TopHits              hits    = TopHits()
+
+        assert self._pli != NULL
+
+        # check the pipeline was configure with the same alphabet
+        if query.alphabet != self.alphabet:
+            raise ValueError("Wrong alphabet in query sequence: expected {!r}, found {!r}".format(
+                self.alphabet,
+                query.alphabet
+            ))
+
+        # make sure the pipeline is set to search mode and ready for a new HMM
+        self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
+
+        # use a default HMM builder if none was given
+        builder = Builder(self.alphabet) if builder is None else builder
+
+        # get an iterator over the input sequences, with an early return if
+        # no sequences were given, and extract the raw pointer to the sequence
+        # from the Python object
+        seqs_iter = iter(sequences)
+        seq = next(seqs_iter, None)
+        if seq is None:
+            return hits
+        if seq.alphabet != self.alphabet:
+            raise ValueError("Wrong alphabet in database sequence: expected {!r}, found {!r}".format(
+                self.alphabet,
+                seq.alphabet,
+            ))
+
+        # build the HMM and the profile from the query sequence, using the first
+        # as a hint for the model configuration, or reuse the profile we
+        # cached if it is large enough to hold the new HMM
+        hmm, profile, opt = builder.build(query, self.background)
+
+        # run the search loop on all database sequences while recycling memory
+        self._search_loop(
+            self._pli,
+            opt._om,
+            self.background._bg,
+            seq._sq,
+            hits._th,
+            seqs_iter
+        )
+
+        # threshold hits
+        hits.sort(by="key")
+        hits.threshold(self)
+
+        # return the hits
+        return hits
+
+    cdef  void    _search_loop(
+        self,
+        P7_PIPELINE* pli,
+        P7_OPROFILE* om,
+        P7_BG*       bg,
+        ESL_SQ*      sq,
+        P7_TOPHITS*  th,
+        object       seqs_iter,
+    ):
+        cdef int      status
+        cdef Sequence seq
+
         with nogil:
-
             # configure the pipeline for the current HMM
             status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
             if status == libeasel.eslEINVAL:
@@ -1176,7 +1667,6 @@ cdef class Pipeline:
 
             # run the inner loop on all sequences
             while sq != NULL:
-
                 # configure the profile, background and pipeline for the new sequence
                 status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq)
                 if status != libeasel.eslOK:
@@ -1203,20 +1693,15 @@ cdef class Pipeline:
                 # acquire the GIL just long enough to get the next sequence
                 with gil:
                     seq = next(seqs_iter, None)
-                    sq = NULL if seq is None else seq._sq
-                    nseq += seq is not None
-                    if seq is not None and seq.alphabet != self.alphabet:
-                        raise ValueError("Wrong alphabet in input HMM: expected {!r}, found {!r}".format(
-                          self.alphabet,
-                          seq.alphabet,
-                        ))
-
-        # threshold hits
-        hits.sort(by="key")
-        hits.threshold(self)
-
-        # return the hits
-        return hits
+                    if seq is not None:
+                        sq = seq._sq
+                        if seq.alphabet != self.alphabet:
+                            raise ValueError("Wrong alphabet in input sequence: expected {!r}, found {!r}".format(
+                                self.alphabet,
+                                seq.alphabet,
+                            ))
+                    else:
+                        sq = NULL
 
 
 cdef class Profile:
@@ -1225,10 +1710,22 @@ cdef class Profile:
 
     def __cinit__(self):
         self._gm = NULL
+        self.alphabet = None
 
     def __init__(self, int M, Alphabet alphabet):
+        """__init__(self, M, alphabet)\n--
+
+        Create a new profile for the given ``alphabet``.
+
+        Arguments:
+            M (`int`): The length of the profile, i.e. the number of nodes.
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet to use with
+                this profile.
+
+        """
         self.alphabet = alphabet
-        self._gm = libhmmer.p7_profile.p7_profile_Create(M, alphabet._abc)
+        with nogil:
+            self._gm = libhmmer.p7_profile.p7_profile_Create(M, alphabet._abc)
         if not self._gm:
             raise AllocationError("P7_PROFILE")
 
@@ -1239,15 +1736,22 @@ cdef class Profile:
         return self.copy()
 
     cpdef void clear(self):
-        """Clear internal buffers to reuse the profile without reallocation.
+        """clear(self)\n--
+
+        Clear internal buffers to reuse the profile without reallocation.
+
         """
         assert self._gm != NULL
-        cdef int status = libhmmer.p7_profile.p7_profile_Reuse(self._gm)
+        cdef int status
+        with nogil:
+            status = libhmmer.p7_profile.p7_profile_Reuse(self._gm)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_profile_Reuse")
 
     cpdef void configure(self, HMM hmm, Background background, int L, bint multihit=True, bint local=True):
-        """Configure a search profile using the given models.
+        """configure(self, hmm, background, L, multihit=True, local=True)\n--
+
+        Configure a search profile using the given models.
 
         Arguments:
             hmm (`pyhmmer.plan7.HMM`): The model HMM with core probabilities.
@@ -1279,34 +1783,55 @@ cdef class Profile:
             raise UnexpectedError(status, "p7_ProfileConfig")
 
     cpdef Profile copy(self):
+        """copy(self)\n--
+
+        Return a copy of the profile with the exact same configuration.
+
+        """
         assert self._gm != NULL
 
+        cdef int status
         cdef Profile new = Profile.__new__(Profile)
         new.alphabet = self.alphabet
-        new._gm = libhmmer.p7_profile.p7_profile_Create(self._gm.allocM, self.alphabet._abc)
+        with nogil:
+            new._gm = libhmmer.p7_profile.p7_profile_Create(self._gm.allocM, self.alphabet._abc)
         if not new._gm:
             raise AllocationError("P7_PROFILE")
 
-        cdef int status = libhmmer.p7_profile.p7_profile_Copy(self._gm, new._gm)
+        with nogil:
+            status = libhmmer.p7_profile.p7_profile_Copy(self._gm, new._gm)
         if status == libeasel.eslOK:
             return new
         else:
             raise UnexpectedError(status, "p7_profile_Copy")
 
     cpdef bint is_local(self):
-        """Returns whether or not the profile is in a local alignment mode.
+        """is_local(self)\n--
+
+        Return whether or not the profile is in a local alignment mode.
+
         """
         assert self._gm != NULL
         return libhmmer.p7_profile.p7_profile_IsLocal(self._gm)
 
     cpdef bint is_multihit(self):
-        """Returns whether or not the profile is in a multihit alignment mode.
+        """is_multihit(self)\n--
+
+        Returns whether or not the profile is in a multihit alignment mode.
+
         """
         assert self._gm != NULL
         return libhmmer.p7_profile.p7_profile_IsMultihit(self._gm)
 
     cpdef OptimizedProfile optimized(self):
-        """Convert the profile to a platform-specific optimized profile.
+        """optimized(self)\n--
+
+        Convert the profile to a platform-specific optimized profile.
+
+        Returns:
+            `OptimizedProfile`: The platform-specific optimized profile built
+            using the configuration of this profile.
+
         """
         cdef int              status
         cdef OptimizedProfile opt
@@ -1336,12 +1861,12 @@ cdef class TopHits:
     sorted by key when you obtain them from a `Pipeline` instance::
 
         >>> abc = thioesterase.alphabet
-        >>> hits = Pipeline(abc).search(thioesterase, proteins)
+        >>> hits = Pipeline(abc).search_hmm(thioesterase, proteins)
         >>> hits.is_sorted()
         True
 
     Use `len` to query the number of top hits, and the usual indexing notation
-    to extract a particular hit::
+    to extract a particular `Hit`::
 
         >>> len(hits)
         1
@@ -1351,8 +1876,14 @@ cdef class TopHits:
     """
 
     def __init__(self):
+        """__init__(self)\n--
+
+        Create an empty `TopHits` instance.
+
+        """
         assert self._th == NULL, "called TopHits.__init__ more than once"
-        self._th = libhmmer.p7_tophits.p7_tophits_Create()
+        with nogil:
+            self._th = libhmmer.p7_tophits.p7_tophits_Create()
         if self._th == NULL:
             raise AllocationError("P7_TOPHITS")
 
@@ -1387,10 +1918,12 @@ cdef class TopHits:
         return self._th.nincluded
 
     cdef void threshold(self, Pipeline pipeline):
-        """Apply score and e-value thresholds using pipeline parameters.
+        """threshold(self, pipeline)\n--
 
-        This function is automatically called in `Pipeline.search`, and
-        therefore not exposed in the Python API.
+        Apply score and e-value thresholds using pipeline parameters.
+
+        This function is automatically called in `Pipeline.search_hmm` or
+        `Pipeline.search_seq`, and is therefore not exposed in the Python API.
 
         """
         cdef int          status
@@ -1399,7 +1932,8 @@ cdef class TopHits:
 
         assert self._th != NULL
 
-        status = libhmmer.p7_tophits.p7_tophits_Threshold(th, pli)
+        with nogil:
+            status = libhmmer.p7_tophits.p7_tophits_Threshold(th, pli)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tophits_Threshold")
 
@@ -1408,7 +1942,10 @@ cdef class TopHits:
         self.long_targets = pli.long_targets
 
     cpdef void clear(self):
-        """Free internals to allow reusing for a new pipeline run.
+        """clear(self)\n--
+
+        Free internals to allow reusing for a new pipeline run.
+
         """
         assert self._th != NULL
         cdef int status = p7_tophits_Reuse(self._th)
@@ -1416,6 +1953,16 @@ cdef class TopHits:
             raise UnexpectedError(status, "p7_tophits_Reuse")
 
     cpdef void sort(self, str by="key"):
+        """sort(self, by="key")\n--
+
+        Sort hits in the current instance using the given method.
+
+        Arguments:
+            by (`str`): The comparison method to use to compare hits.
+                Allowed values are: ``key`` (the default) to sort by key, or
+                ``seqidx`` to sort by sequence index and alignment position.
+
+        """
         assert self._th != NULL
 
         cdef P7_TOPHITS* th = self._th
@@ -1438,6 +1985,14 @@ cdef class TopHits:
             raise UnexpectedError(status, function)
 
     cpdef bint is_sorted(self, str by="key"):
+        """is_sorted(self, by="key")\n--
+
+        Check whether or not the hits are sorted with the given method.
+
+        See `~pyhmmer.plan7.TopHits.sort` for a list of allowed values for
+        the ``by`` argument.
+
+        """
         assert self._th != NULL
 
         if by == "key":

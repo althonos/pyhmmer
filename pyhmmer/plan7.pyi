@@ -4,7 +4,7 @@ import os
 import types
 import typing
 
-from .easel import Alphabet, Sequence
+from .easel import Alphabet, Sequence, DigitalSequence
 
 class Alignment(collections.abc.Sized):
     domain: Domain
@@ -39,6 +39,40 @@ class Background(object):
     def L(self, L: int) -> None: ...
     def copy(self) -> Background: ...
 
+class Builder(object):
+    def __init__(
+        self,
+        alphabet: Alphabet,
+        *,
+        architecture: str = "fast",
+        weighting: str = "pb",
+        effective_number: typing.Union[str, int, float] = "entropy",
+        prior_scheme: typing.Optional[str] = "alphabet",
+        symfrac: float = 0.5,
+        fragthresh: float = 0.5,
+        wid: float = 0.62,
+        esigma: float = 45.0,
+        eid: float = 0.62,
+        EmL: int = 200,
+        EmN: int = 200,
+        EvL: int = 200,
+        EvN: int = 200,
+        EfL: int = 100,
+        EfN: int = 200,
+        Eft: float = 0.04,
+        seed: int = 42,
+        ere: typing.Optional[float] = None,
+    ) -> None: ...
+    def __copy__(self) -> Builder: ...
+    def build(
+        self,
+        sequence: DigitalSequence,
+        background: Background,
+        popen: float = 0.02,
+        pextend: float = 0.4,
+    ) -> typing.Tuple[HMM, Profile, OptimizedProfile]: ...
+    def copy(self) -> Builder: ...
+
 class Domain(object):
     alignment: Alignment
     hit: Hit
@@ -46,14 +80,6 @@ class Domain(object):
     def env_from(self) -> int: ...
     @property
     def env_to(self) -> int: ...
-    @property
-    def ali_from(self) -> int: ...
-    @property
-    def ali_to(self) -> int: ...
-    @property
-    def hmm_from(self) -> int: ...
-    @property
-    def hmm_to(self) -> int: ...
     @property
     def score(self) -> float: ...
     @property
@@ -137,7 +163,7 @@ class HMMFile(typing.ContextManager[HMMFile], typing.Iterator[HMM]):
     def close(self) -> None: ...
 
 class OptimizedProfile(object):
-    def __init__(self, m: int, abc: Alphabet) -> None: ...
+    def __init__(self, M: int, abc: Alphabet) -> None: ...
     def __copy__(self) -> OptimizedProfile: ...
     def is_local(self) -> bool: ...
     def copy(self) -> OptimizedProfile: ...
@@ -161,6 +187,9 @@ class _Offsets(object):
     def profile(self, profile: typing.Optional[int]) -> None: ...
 
 class Pipeline(object):
+    M_HINT: typing.ClassVar[int] = 100
+    L_HINT: typing.ClassVar[int] = 100
+    LONG_TARGETS: typing.ClassVar[bool] = False
     alphabet: Alphabet
     background: Background
     profile: typing.Optional[Profile]
@@ -185,11 +214,16 @@ class Pipeline(object):
     @domZ.setter
     def domZ(self, domZ: typing.Optional[float]) -> None: ...
     def clear(self) -> None: ...
-    def search(
+    def search_hmm(
         self,
-        hmm: HMM,
-        sequences: typing.Iterable[Sequence],
-        hits: typing.Optional[TopHits] = None,
+        query: HMM,
+        sequences: typing.Iterable[DigitalSequence],
+    ) -> TopHits: ...
+    def search_seq(
+        self,
+        query: DigitalSequence,
+        sequences: typing.Iterable[DigitalSequence],
+        builder: typing.Optional[Builder] = None,
     ) -> TopHits: ...
 
 class Profile(object):

@@ -25,6 +25,11 @@ class TestSequenceFile(unittest.TestCase):
             __file__, os.pardir, os.pardir, "vendor", "easel", "formats"
         ))
 
+    def test_guess_alphabet(self):
+        embl = os.path.join(self.formats_folder, "embl")
+        with easel.SequenceFile(embl, "embl") as f:
+            self.assertEqual(f.guess_alphabet(), easel.Alphabet.dna())
+
     def test_init_error_unknownformat(self):
         with self.assertRaises(ValueError):
             _file = easel.SequenceFile("file.x", format="nonsense")
@@ -62,10 +67,25 @@ class TestSequenceFile(unittest.TestCase):
         with easel.SequenceFile(fasta) as f:
             seq = f.read()
             self.assertEqual(seq.name, b"SNRPA_DROME")
+            self.assertNotEqual(seq.sequence, "")
 
         with easel.SequenceFile(fasta) as f:
             seq = f.read(skip_info=True)
             self.assertEqual(seq.name, b"")
+            self.assertNotEqual(seq.sequence, "")
+
+    def test_read_skip_sequence(self):
+        fasta = os.path.join(self.formats_folder, "fasta")
+
+        with easel.SequenceFile(fasta) as f:
+            seq = f.read()
+            self.assertEqual(seq.name, b"SNRPA_DROME")
+            self.assertNotEqual(seq.sequence, "")
+
+        with easel.SequenceFile(fasta) as f:
+            seq = f.read(skip_sequence=True)
+            self.assertEqual(seq.name, b"SNRPA_DROME")
+            self.assertEqual(seq.sequence, "")
 
     def test_readformat_fasta(self):
         for filename in ["fasta", "fasta.2", "fasta.odd.1"]:
@@ -74,12 +94,12 @@ class TestSequenceFile(unittest.TestCase):
             # check reading a FASTA file works
             with easel.SequenceFile(fasta, "fasta") as f:
                 seq = f.read()
-                self.assertTrue(seq.name)
+                self.assertNotEqual(seq.name, b"")
 
             # check reading a FASTA file without specifying the format works too
             with easel.SequenceFile(fasta) as f:
                 seq2 = f.read()
-                self.assertTrue(seq2.name)
+                self.assertNotEqual(seq2.name, b"")
 
             # check reading a FASTA file while giving another format fails
             with easel.SequenceFile(fasta, "embl") as f:
@@ -96,15 +116,32 @@ class TestSequenceFile(unittest.TestCase):
         # check reading an EMBL file works
         with easel.SequenceFile(embl, "embl") as f:
             seq = f.read()
-            self.assertTrue(seq.accession)
+            self.assertNotEqual(seq.accession, b"")
 
         # check reading an EMBL file without specifying the format works too
         with easel.SequenceFile(embl) as f:
             seq2 = f.read()
-            self.assertTrue(seq2.accession)
+            self.assertNotEqual(seq2.accession, b"")
 
         # check reading an EMBL file while giving another format fails
         with easel.SequenceFile(embl, "fasta") as f:
+            self.assertRaises(ValueError, f.read)
+
+    def test_readformat_genbank(self):
+        gbk = os.path.join(self.formats_folder, "genbank")
+
+        # check reading an EMBL file works
+        with easel.SequenceFile(gbk, "genbank") as f:
+            seq = f.read()
+            self.assertNotEqual(seq.accession, b"")
+
+        # check reading an GenBank file without specifying the format works too
+        with easel.SequenceFile(gbk) as f:
+            seq2 = f.read()
+            self.assertNotEqual(seq2.accession, b"")
+
+        # check reading an GenBank file while giving another format fails
+        with easel.SequenceFile(gbk, "fasta") as f:
             self.assertRaises(ValueError, f.read)
 
 

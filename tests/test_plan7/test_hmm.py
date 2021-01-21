@@ -8,8 +8,8 @@ import pkg_resources
 
 import pyhmmer
 from pyhmmer.errors import EaselError
-from pyhmmer.easel import SequenceFile
-from pyhmmer.plan7 import HMMFile, Pipeline
+from pyhmmer.easel import Alphabet, SequenceFile
+from pyhmmer.plan7 import HMM, HMMFile, Pipeline
 
 
 class TestHMM(unittest.TestCase):
@@ -19,6 +19,30 @@ class TestHMM(unittest.TestCase):
         cls.hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/Thioesterase.hmm")
         with HMMFile(cls.hmm_path) as hmm_file:
             cls.hmm = next(hmm_file)
+
+    def test_name(self):
+        abc = Alphabet.amino()
+        hmm = HMM(100, abc)
+
+        self.assertIs(hmm.name, None)
+        hmm.name = b"Test"
+        self.assertEqual(hmm.name, b"Test")
+        hmm.name = b""
+        self.assertEqual(hmm.name, b"")
+        hmm.name = None
+        self.assertEqual(hmm.name, None)
+
+    def test_accession(self):
+        abc = Alphabet.amino()
+        hmm = HMM(100, abc)
+
+        self.assertIs(hmm.accession, None)
+        hmm.accession = b"TST001"
+        self.assertEqual(hmm.accession, b"TST001")
+        hmm.accession = b""
+        self.assertEqual(hmm.accession, b"")
+        hmm.accession = None
+        self.assertEqual(hmm.accession, None)
 
     def test_write(self):
         buffer = io.BytesIO()

@@ -59,7 +59,8 @@ class _TestSearch(metaclass=abc.ABCMeta):
         with self.hmm_file("Thioesterase") as hmm_file:
             hmm = next(hmm_file)
         with self.seqs_file("938293.PRJEB85.HG003687") as seqs_file:
-            seqs = [seq.digitize(hmm.alphabet) for seq in seqs_file]
+            seqs_file.set_digital(hmm.alphabet)
+            seqs = list(seqs_file)
 
         hits = self.get_hits(hmm, seqs)
         self.assertEqual(len(hits), 1)
@@ -78,8 +79,10 @@ class _TestSearch(metaclass=abc.ABCMeta):
         self.assertAlmostEqual(domain.bias, 1.5, delta=0.1)
         self.assertAlmostEqual(domain.i_evalue, 0.14, delta=0.01)  # printed with %9.2g
         self.assertAlmostEqual(domain.c_evalue, 6.5e-05, delta=0.1e-5)  # printed with %9.2g
-        self.assertEqual(domain.ali_from, 115)
-        self.assertEqual(domain.ali_to, 129)
+        self.assertEqual(domain.alignment.target_from, 115)
+        self.assertEqual(domain.alignment.target_to, 129)
+        self.assertEqual(domain.alignment.hmm_from, 79)
+        self.assertEqual(domain.alignment.hmm_to, 93)
         self.assertEqual(domain.env_from, 115)
         self.assertEqual(domain.env_to, 129)
 
@@ -87,10 +90,11 @@ class _TestSearch(metaclass=abc.ABCMeta):
         with self.hmm_file("PF02826") as hmm_file:
             hmm = next(hmm_file)
         with self.seqs_file("938293.PRJEB85.HG003687") as seqs_file:
-            seqs = [seq.digitize(hmm.alphabet) for seq in seqs_file]
+            seqs_file.set_digital(hmm.alphabet)
+            seqs = list(seqs_file)
 
         pipeline = Pipeline(alphabet=hmm.alphabet)
-        hits = pipeline.search(hmm, seqs)
+        hits = pipeline.search_hmm(hmm, seqs)
         self.assertEqual(len(hits), 22)
 
         hits.sort()
@@ -132,23 +136,69 @@ class TestPipelinesearch(_TestSearch, unittest.TestCase):
 
     def get_hits(self, hmm, seqs):
         pipeline = Pipeline(alphabet=hmm.alphabet)
-        hits = pipeline.search(hmm, seqs)
+        hits = pipeline.search_hmm(hmm, seqs)
         return hits
 
 
 class TestHmmpress(unittest.TestCase):
 
-    def test_roundtrip(self):
+    def setUp(self):
+        self.tmp = tempfile.NamedTemporaryFile(suffix=".hmm", delete=False).name
 
-         self.tmp = tempfile.NamedTemporaryFile(suffix=".hmm", delete=False).name
-         self.hmm = pkg_resources.resource_filename(__name__, "data/hmms/txt/Thioesterase.hmm")
-         self.h3p = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3p")
-         self.h3m = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3m")
-         self.h3f = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3f")
-         self.h3i = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3i")
-         with HMMFile(self.hmm) as hmms:
-             n = pyhmmer.hmmer.hmmpress(hmms, self.tmp)
-             self.assertEqual(n, 1)
-         with HMMFile(self.tmp) as hmm_file:
-             hmm = next(hmm_file)
-             self.assertEqual(hmm.name, b"Thioesterase")
+    def tearDown(self):
+        for ext in ['', '.h3m', '.h3p', '.h3i', '.h3f']:
+            if os.path.exists(self.tmp + ext):
+                os.remove(self.tmp + ext)
+
+    def test_roundtrip(self):
+        self.hmm = pkg_resources.resource_filename(__name__, "data/hmms/txt/Thioesterase.hmm")
+        self.h3p = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3p")
+        self.h3m = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3m")
+        self.h3f = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3f")
+        self.h3i = pkg_resources.resource_filename(__name__, "data/hmms/db/Thioesterase.hmm.h3i")
+        with HMMFile(self.hmm) as hmms:
+            n = pyhmmer.hmmer.hmmpress(hmms, self.tmp)
+            self.assertEqual(n, 1)
+        with HMMFile(self.tmp) as hmm_file:
+            hmm = next(hmm_file)
+            self.assertEqual(hmm.name, b"Thioesterase")
+
+
+class TestPhmmer(unittest.TestCase):
+
+    @staticmethod
+    def table(name):
+        bin_stream = pkg_resources.resource_stream(__name__, "data/tables/{}".format(name))
+        return io.TextIOWrapper(bin_stream)
+
+    def test_pksi(self):
+        alphabet = Alphabet.amino()
+        path = pkg_resources.resource_filename(__name__, "data/seqs/PKSI.faa")
+        with SequenceFile(path) as seqs_file:
+            seqs_file.set_digital(alphabet)
+            seqs = list(seqs_file)
+            hits = next(pyhmmer.phmmer(seqs[-1:], seqs, cpus=1))
+            hits.sort()
+
+        with self.table("A0A089QRB9.tbl") as table:
+            lines = iter(filter(lambda line: not line.startswith("#"), table))
+            it = ((hit, domain) for hit in hits for domain in hit.domains)
+            for line, (hit, domain) in itertools.zip_longest(lines, it):
+                fields = list(filter(None, line.strip().split(" ")))
+                self.assertIsNot(line, None)
+                self.assertIsNot(hit, None)
+
+                self.assertEqual(hit.name.decode(), fields[0])
+                self.assertAlmostEqual(hit.score, float(fields[7]), delta=0.1)
+                self.assertAlmostEqual(hit.bias, float(fields[8]), delta=0.1)
+                self.assertAlmostEqual(hit.evalue, float(fields[6]), delta=0.1)
+
+                self.assertAlmostEqual(domain.i_evalue, float(fields[12]), delta=0.1)
+                self.assertAlmostEqual(domain.score, float(fields[13]), delta=0.1)
+
+                self.assertEqual(domain.alignment.hmm_from, int(fields[15]))
+                self.assertEqual(domain.alignment.hmm_to, int(fields[16]))
+                self.assertEqual(domain.alignment.target_from, int(fields[17]))
+                self.assertEqual(domain.alignment.target_to, int(fields[18]))
+                self.assertEqual(domain.env_from, int(fields[19]))
+                self.assertEqual(domain.env_to, int(fields[20]))

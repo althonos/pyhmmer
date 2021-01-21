@@ -8,7 +8,7 @@ from libeasel.keyhash cimport ESL_KEYHASH
 from libeasel.random cimport ESL_RANDOMNESS
 
 
-cdef extern from "esl_msa.h":
+cdef extern from "esl_msa.h" nogil:
 
     cdef enum:
         eslMSA_TC1 = 0

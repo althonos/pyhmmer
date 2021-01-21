@@ -21,6 +21,13 @@ Background Model
    :members:
 
 
+Builder
+-------
+
+.. autoclass:: pyhmmer.plan7.Builder
+   :members:
+
+
 Domains
 -------
 

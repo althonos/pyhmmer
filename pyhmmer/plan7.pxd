@@ -6,8 +6,10 @@
 from libc.stdint cimport uint32_t
 from posix.types cimport off_t
 
+from libeasel.sq cimport ESL_SQ
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_bg cimport P7_BG
+from libhmmer.p7_builder cimport P7_BUILDER
 from libhmmer.p7_domain cimport P7_DOMAIN
 from libhmmer.p7_hmm cimport P7_HMM
 from libhmmer.p7_hmmfile cimport P7_HMMFILE
@@ -20,7 +22,7 @@ IF HMMER_IMPL == "VMX":
 ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
-from .easel cimport Alphabet
+from .easel cimport Alphabet, DigitalSequence
 
 
 cdef extern from "hmmer.h" nogil:
@@ -35,10 +37,23 @@ cdef class Alignment:
 
 
 cdef class Background:
+    cdef readonly bint     uniform
     cdef readonly Alphabet alphabet
-    cdef P7_BG* _bg
+    cdef          P7_BG*   _bg
 
     cpdef Background copy(self)
+
+
+cdef class Builder:
+    cdef readonly object prior_scheme
+    cdef readonly object effective_number
+    cdef readonly object architecture
+    cdef readonly object weighting
+    cdef readonly Alphabet alphabet
+    cdef P7_BUILDER* _bld
+
+    cpdef tuple build(self, DigitalSequence sequence, Background background, float popen=?, float pextend=?)
+    cpdef Builder copy(self)
 
 
 cdef class Domain:
@@ -98,7 +113,6 @@ cdef class _Offsets:
 
 
 cdef class Pipeline:
-    cdef public   uint32_t   seed
     cdef public   bint       null2
     cdef public   bint       bias_filter
     cdef public   float      report_e
@@ -112,8 +126,18 @@ cdef class Pipeline:
     cdef OptimizedProfile _optimized
     cdef P7_PIPELINE* _pli
 
-    cpdef void clear(self)
-    cpdef TopHits search(self, HMM hmm, object seqs, TopHits hits=?)
+    cpdef void    clear(self)
+    cpdef TopHits search_hmm(self, HMM query, object seqs)
+    cpdef TopHits search_seq(self, DigitalSequence query, object seqs, Builder builder = ?)
+    cdef  void    _search_loop(
+        self,
+        P7_PIPELINE* pli,
+        P7_OPROFILE* om,
+        P7_BG*       bg,
+        ESL_SQ*      sq,
+        P7_TOPHITS*  th,
+        object       seqs_iter,
+    )
 
 
 cdef class Profile:

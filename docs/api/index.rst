@@ -7,6 +7,7 @@ API Reference
    errors <errors>
    easel <easel>
    plan7 <plan7>
+   hmmer <hmmer>
 
 
 .. currentmodule:: pyhmmer
@@ -15,6 +16,17 @@ API Reference
 
 
 .. only:: html
+
+    HMMER
+    -----
+
+    .. autosummary::
+        :nosignatures:
+
+        pyhmmer.hmmer.hmmsearch
+        pyhmmer.hmmer.phmmer
+        pyhmmer.hmmer.hmmpress
+
 
     Easel
     -----

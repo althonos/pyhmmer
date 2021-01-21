@@ -24,7 +24,7 @@ class TestTopHits(unittest.TestCase):
             self.seqs = [seq.digitize(self.hmm.alphabet) for seq in seqs_file]
 
         self.pipeline = Pipeline(alphabet=self.hmm.alphabet)
-        self.hits = self.pipeline.search(self.hmm, self.seqs)
+        self.hits = self.pipeline.search_hmm(self.hmm, self.seqs)
 
     def test_bool(self):
         self.assertFalse(pyhmmer.plan7.TopHits())

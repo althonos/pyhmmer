@@ -16,9 +16,6 @@ variables:
     key: ${CI_COMMIT_REF_SLUG}-${CI_JOB_STAGE}
     paths:
     - build
-  only:
-  - master
-  - tags
   before_script:
     - $python -m pip install -U pip
     - $python -m pip install -U -r ci/requirements.txt
@@ -53,7 +50,7 @@ variables:
     paths:
       - dist/*.whl
   only:
-  - tags
+    - tags
   before_script:
     - $python -m pip install -U -r ci/requirements.txt
   script:
