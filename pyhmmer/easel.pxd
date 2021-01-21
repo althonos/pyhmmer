@@ -77,7 +77,7 @@ cdef class DigitalSequence(Sequence):
 
 cdef class SequenceFile:
     cdef ESL_SQFILE* _sqfp
-    cdef Alphabet _alphabet
+    cdef readonly Alphabet alphabet
 
     cpdef Sequence read(self, bint skip_info=*, bint skip_sequence=*)
     cpdef Sequence readinto(self, Sequence, bint skip_info=*, bint skip_sequence=*)

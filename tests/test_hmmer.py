@@ -59,7 +59,8 @@ class _TestSearch(metaclass=abc.ABCMeta):
         with self.hmm_file("Thioesterase") as hmm_file:
             hmm = next(hmm_file)
         with self.seqs_file("938293.PRJEB85.HG003687") as seqs_file:
-            seqs = [seq.digitize(hmm.alphabet) for seq in seqs_file]
+            seqs_file.set_digital(hmm.alphabet)
+            seqs = list(seqs_file)
 
         hits = self.get_hits(hmm, seqs)
         self.assertEqual(len(hits), 1)
@@ -89,7 +90,8 @@ class _TestSearch(metaclass=abc.ABCMeta):
         with self.hmm_file("PF02826") as hmm_file:
             hmm = next(hmm_file)
         with self.seqs_file("938293.PRJEB85.HG003687") as seqs_file:
-            seqs = [seq.digitize(hmm.alphabet) for seq in seqs_file]
+            seqs_file.set_digital(hmm.alphabet)
+            seqs = list(seqs_file)
 
         pipeline = Pipeline(alphabet=hmm.alphabet)
         hits = pipeline.search_hmm(hmm, seqs)
@@ -172,8 +174,9 @@ class TestPhmmer(unittest.TestCase):
     def test_pksi(self):
         alphabet = Alphabet.amino()
         path = pkg_resources.resource_filename(__name__, "data/seqs/PKSI.faa")
-        with SequenceFile(path) as f:
-            seqs = [seq.digitize(alphabet) for seq in f]
+        with SequenceFile(path) as seqs_file:
+            seqs_file.set_digital(alphabet)
+            seqs = list(seqs_file)
             hits = next(pyhmmer.phmmer(seqs[-1:], seqs, cpus=1))
             hits.sort()
 

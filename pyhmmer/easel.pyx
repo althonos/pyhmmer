@@ -1030,7 +1030,7 @@ cdef class SequenceFile:
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
-        self._alphabet = None
+        self.alphabet = None
         self._sqfp = NULL
 
     def __init__(self, str file, str format=None):
@@ -1119,7 +1119,11 @@ cdef class SequenceFile:
             if you can to recycle the internal buffers.
 
         """
-        cdef TextSequence seq = TextSequence()
+        cdef Sequence seq
+        if self.alphabet is None:
+            seq = TextSequence()
+        else:
+            seq = DigitalSequence(self.alphabet)
         return self.readinto(seq, skip_info=skip_info, skip_sequence=skip_sequence)
 
     cpdef Sequence readinto(self, Sequence seq, bint skip_info=False, bint skip_sequence=False):
@@ -1264,7 +1268,7 @@ cdef class SequenceFile:
 
         cdef int status = libeasel.sqio.esl_sqfile_SetDigital(self._sqfp, alphabet._abc)
         if status == libeasel.eslOK:
-            self._alphabet = alphabet
+            self.alphabet = alphabet
         else:
             raise UnexpectedError(status, "esl_sqfile_SetDigital")
 
