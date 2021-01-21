@@ -565,15 +565,12 @@ cdef class Sequence:
 
     @property
     def accession(self):
-        """`str` or `None`: The accession of the sequence, if any.
+        """`bytes`: The accession of the sequence.
         """
-        accession = <bytes> self._sq.acc
-        return accession or None
+        return <bytes> self._sq.acc
 
     @accession.setter
-    def accession(self, accession):
-        if accession is None:
-            accession = b""
+    def accession(self, bytes accession):
         cdef int status = libeasel.sq.esl_sq_SetAccession(self._sq, <const char*> accession)
         if status == libeasel.eslEMEM:
             raise AllocationError("char*")
@@ -601,7 +598,7 @@ cdef class Sequence:
         return <bytes> self._sq.desc
 
     @description.setter
-    def description(self, desc):
+    def description(self, bytes desc):
         cdef int status = libeasel.sq.esl_sq_SetDesc(self._sq, <const char*> desc)
         if status == libeasel.eslEMEM:
             raise AllocationError("char*")
@@ -615,9 +612,7 @@ cdef class Sequence:
         return <bytes> self._sq.source
 
     @source.setter
-    def source(self, src):
-        if src is None:
-            src = b""
+    def source(self, bytes src):
         cdef int status = libeasel.sq.esl_sq_SetSource(self._sq, <const char*> src)
         if status == libeasel.eslEMEM:
             raise AllocationError("char*")
