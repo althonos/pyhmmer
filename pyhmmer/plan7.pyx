@@ -1334,6 +1334,7 @@ cdef class Pipeline:
         """clear(self)\n--
 
         Reset the pipeline configuration to its default state.
+        
         """
         cdef int      status
         cdef uint32_t seed   = self.seed
@@ -1353,7 +1354,7 @@ cdef class Pipeline:
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "esl_randomness_Init")
             # reinitialize the domaindef
-                libhmmer.p7_domaindef.p7_domaindef_Reuse(self._pli.ddef)
+            libhmmer.p7_domaindef.p7_domaindef_Reuse(self._pli.ddef)
 
         # Configure reporting thresholds
         self._pli.by_E            = True
