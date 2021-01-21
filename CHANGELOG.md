@@ -6,7 +6,32 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.2.0...HEAD
+
+
+## [v0.2.0] - 2021-01-21
+[v0.2.0]: https://github.com/althonos/pyhmmer/compare/v0.1.4...v0.2.0
+
+### Added
+- `pyhmmer.plan7.Builder` class to handle building a HMM from a sequence.
+- `Pipeline.search_seq` to query a sequence against a sequence database.
+- `psutil` dependency to detect the most efficient thread count for `hmmsearch` based on the number of *physical* CPUs.
+- `pyhmmer.hmmer.phmmer` function to run a search of query sequences against a sequence database.
+
+### Changed
+- `Pipeline.search` was renamed to `Pipeline.search_hmm` for disambiguation.
+- `libeasel.random` sequences do not require the GIL anymore.
+- Public API now have proper signature annotations.
+
+### Fixed
+- Inaccurate exception messages in `Pipeline.search_hmm`.
+- Unneeded RNG reallocation, replaced with re-initialisation where possible.
+- `SequenceFile.__next__` not working after being set in digital mode.
+- `sequences` argument of `hmmsearch` now only requires a `typing.Collection[DigitalSequence]` instead of a `typing.Collection[Sequence]` (not more `__getitem__` needed).
+
+### Removed
+- `hits` argument to `Pipeline.search_hmm` to reduce risk of issues with `TopHits` reuse.
+- Broken alignment coordinates on `Domain` classes.
 
 
 ## [v0.1.4] - 2021-01-15

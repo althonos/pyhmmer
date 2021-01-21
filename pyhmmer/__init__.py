@@ -25,13 +25,14 @@ from .hmmer import hmmsearch, hmmpress, phmmer
 
 __author__ = "Martin Larralde <martin.larralde@embl.de>"
 __license__ = "MIT"
-__version__ = "0.1.4"
+__version__ = "0.2.0"
 __all__ = [
     errors.__name__,
     easel.__name__,
     plan7.__name__,
     hmmsearch.__name__,
-    hmmpress.__name__
+    hmmpress.__name__,
+    phmmer.__name__,
 ]
 
 # Small addition to the docstring: we want to show a link redirecting to the
