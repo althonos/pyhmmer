@@ -78,8 +78,10 @@ class _TestSearch(metaclass=abc.ABCMeta):
         self.assertAlmostEqual(domain.bias, 1.5, delta=0.1)
         self.assertAlmostEqual(domain.i_evalue, 0.14, delta=0.01)  # printed with %9.2g
         self.assertAlmostEqual(domain.c_evalue, 6.5e-05, delta=0.1e-5)  # printed with %9.2g
-        self.assertEqual(domain.ali_from, 115)
-        self.assertEqual(domain.ali_to, 129)
+        self.assertEqual(domain.alignment.target_from, 115)
+        self.assertEqual(domain.alignment.target_to, 129)
+        self.assertEqual(domain.alignment.hmm_from, 79)
+        self.assertEqual(domain.alignment.hmm_to, 93)
         self.assertEqual(domain.env_from, 115)
         self.assertEqual(domain.env_to, 129)
 
@@ -182,13 +184,18 @@ class TestPhmmer(unittest.TestCase):
                 fields = list(filter(None, line.strip().split(" ")))
                 self.assertIsNot(line, None)
                 self.assertIsNot(hit, None)
+
                 self.assertEqual(hit.name.decode(), fields[0])
                 self.assertAlmostEqual(hit.score, float(fields[7]), delta=0.1)
                 self.assertAlmostEqual(hit.bias, float(fields[8]), delta=0.1)
                 self.assertAlmostEqual(hit.evalue, float(fields[6]), delta=0.1)
+
                 self.assertAlmostEqual(domain.i_evalue, float(fields[12]), delta=0.1)
                 self.assertAlmostEqual(domain.score, float(fields[13]), delta=0.1)
+
                 self.assertEqual(domain.alignment.hmm_from, int(fields[15]))
                 self.assertEqual(domain.alignment.hmm_to, int(fields[16]))
                 self.assertEqual(domain.alignment.target_from, int(fields[17]))
                 self.assertEqual(domain.alignment.target_to, int(fields[18]))
+                self.assertEqual(domain.env_from, int(fields[19]))
+                self.assertEqual(domain.env_to, int(fields[20]))

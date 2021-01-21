@@ -524,26 +524,6 @@ cdef class Domain:
         return self._dom.jenv
 
     @property
-    def ali_from(self):
-        assert self._dom != NULL
-        return self._dom.iali
-
-    @property
-    def ali_to(self):
-        assert self._dom != NULL
-        return self._dom.jali
-
-    @property
-    def hmm_from(self):
-        assert self._dom != NULL
-        return self._dom.iorf
-
-    @property
-    def hmm_to(self):
-        assert self._dom != NULL
-        return self._dom.jorf
-
-    @property
     def score(self):
         """`float`: The overall score in bits, null-corrected.
         """
