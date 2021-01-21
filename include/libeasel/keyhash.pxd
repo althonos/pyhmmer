@@ -4,7 +4,7 @@ from libc.stdint cimport uint32_t
 from libeasel cimport esl_pos_t
 
 
-cdef extern from "esl_keyhash.h":
+cdef extern from "esl_keyhash.h" nogil:
 
     ctypedef struct ESL_KEYHASH:
         int* hashtable

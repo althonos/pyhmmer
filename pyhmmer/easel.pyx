@@ -216,7 +216,8 @@ cdef class Bitfield:
         Create a new bitfield with the given ``length``.
 
         """
-        self._b = libeasel.bitfield.esl_bitfield_Create(length)
+        with nogil:
+            self._b = libeasel.bitfield.esl_bitfield_Create(length)
         if not self._b:
             raise AllocationError("ESL_BITFIELD")
 
@@ -261,8 +262,9 @@ cdef class Bitfield:
 
         """
         assert self._b != NULL
-
-        cdef size_t count_ = libeasel.bitfield.esl_bitfield_Count(self._b)
+        cdef size_t count_
+        with nogil:
+            count_ = libeasel.bitfield.esl_bitfield_Count(self._b)
         return count_ if value else self._b.nb - count_
 
     cpdef void toggle(self, int index):
@@ -284,7 +286,8 @@ cdef class Bitfield:
         """
         assert self._b != NULL
         cdef size_t index_ = self._wrap_index(index)
-        libeasel.bitfield.esl_bitfield_Toggle(self._b, index_)
+        with nogil:
+            libeasel.bitfield.esl_bitfield_Toggle(self._b, index_)
 
 
 cdef class KeyHash:
@@ -303,7 +306,8 @@ cdef class KeyHash:
         Create a new empty key-hash collection.
 
         """
-        self._kh = libeasel.keyhash.esl_keyhash_Create()
+        with nogil:
+            self._kh = libeasel.keyhash.esl_keyhash_Create()
         if not self._kh:
             raise AllocationError("ESL_KEYHASH")
 
@@ -314,19 +318,20 @@ cdef class KeyHash:
         assert self._kh != NULL
         return libeasel.keyhash.esl_keyhash_GetNumber(self._kh)
 
-    def __contains__(self, value):
+    def __contains__(self, bytes value):
         assert self._kh != NULL
-        if isinstance(bytes, value):
-            status = libeasel.keyhash.esl_keyhash_Lookup(self._kh, <const char*> value, len(value), NULL)
-            if status == libeasel.eslOK:
-                return True
-            elif status == libeasel.eslENOTFOUND:
-                return False
-            else:
-                raise UnexpectedError(status, "esl_keyhash_Lookup")
+
+        cdef const char*  key    = value
+        cdef       size_t length = len(value)
+
+        with nogil:
+            status = libeasel.keyhash.esl_keyhash_Lookup(self._kh, key, length, NULL)
+        if status == libeasel.eslOK:
+            return True
+        elif status == libeasel.eslENOTFOUND:
+            return False
         else:
-            ty = type(value).__name__
-            raise TypeError("'in <KeyHash>' requires string as left operand, not {}".format(ty))
+            raise UnexpectedError(status, "esl_keyhash_Lookup")
 
     cpdef void clear(self):
         """clear(self)\n--
@@ -334,7 +339,9 @@ cdef class KeyHash:
         Remove all entries from the collection.
 
         """
-        cdef int status = libeasel.keyhash.esl_keyhash_Reuse(self._kh)
+        cdef int status
+        with nogil:
+            status = libeasel.keyhash.esl_keyhash_Reuse(self._kh)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_keyhash_Reuse")
 
@@ -346,7 +353,8 @@ cdef class KeyHash:
         """
         assert self._kh != NULL
         cdef KeyHash new = KeyHash.__new__(KeyHash)
-        new._kh = libeasel.keyhash.esl_keyhash_Clone(self._kh)
+        with nogil:
+            new._kh = libeasel.keyhash.esl_keyhash_Clone(self._kh)
         if not new._kh:
             raise AllocationError("ESL_KEYHASH")
         return new
@@ -387,7 +395,9 @@ cdef class MSA:
 
         """
         cdef uint32_t checksum = 0
-        cdef int status = libeasel.msa.esl_msa_Checksum(self._msa, &checksum)
+        cdef int status
+        with nogil:
+            status = libeasel.msa.esl_msa_Checksum(self._msa, &checksum)
         if status == libeasel.eslOK:
             return checksum
         else:
@@ -407,7 +417,8 @@ cdef class TextMSA(MSA):
 
         """
         cdef int64_t alen = length if length is not None else -1
-        self._msa = libeasel.msa.esl_msa_Create(nsequences, alen)
+        with nogil:
+            self._msa = libeasel.msa.esl_msa_Create(nsequences, alen)
         if self._msa == NULL:
             raise AllocationError("ESL_MSA")
 
@@ -422,12 +433,15 @@ cdef class TextMSA(MSA):
         assert self._msa != NULL
         assert not (self._msa.flags & libeasel.msa.eslMSA_DIGITAL)
 
+        cdef int status
         cdef TextMSA new = TextMSA.__new__(TextMSA)
-        new._msa = libeasel.msa.esl_msa_Create(self._msa.nseq, self._msa.alen)
+        with nogil:
+            new._msa = libeasel.msa.esl_msa_Create(self._msa.nseq, self._msa.alen)
         if new._msa == NULL:
             raise AllocationError("ESL_MSA")
 
-        cdef int status = libeasel.msa.esl_msa_Copy(self._msa, new._msa)
+        with nogil:
+            status = libeasel.msa.esl_msa_Copy(self._msa, new._msa)
         if status == libeasel.eslOK:
             return new
         else:
@@ -447,13 +461,18 @@ cdef class TextMSA(MSA):
         cdef DigitalMSA new
 
         new = DigitalMSA.__new__(DigitalMSA, alphabet)
-        new._msa = libeasel.msa.esl_msa_CreateDigital(alphabet._abc, self._msa.nseq, self._msa.alen)
-        if new._msa == NULL:
-            raise AllocationError("ESL_MSA")
+        with nogil:
+            new._msa = libeasel.msa.esl_msa_CreateDigital(
+                alphabet._abc,
+                self._msa.nseq,
+                self._msa.alen
+            )
+            if new._msa == NULL:
+                raise AllocationError("ESL_MSA")
 
-        status = libeasel.msa.esl_msa_Copy(self._msa, new._msa)
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "esl_msa_Copy")
+            status = libeasel.msa.esl_msa_Copy(self._msa, new._msa)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_msa_Copy")
 
         assert new._msa.flags & libeasel.msa.eslMSA_DIGITAL
         return new
@@ -489,7 +508,12 @@ cdef class DigitalMSA(MSA):
 
         """
         cdef int64_t alen = length if length is not None else -1
-        self._msa = libeasel.msa.esl_msa_CreateDigital(alphabet._abc, nsequences, alen)
+        with nogil:
+            self._msa = libeasel.msa.esl_msa_CreateDigital(
+                alphabet._abc,
+                nsequences,
+                alen
+            )
         if self._msa == NULL:
             raise AllocationError("ESL_MSA")
 
@@ -501,12 +525,20 @@ cdef class DigitalMSA(MSA):
         assert self._msa != NULL
         assert self._msa.flags & libeasel.msa.eslMSA_DIGITAL
 
-        cdef DigitalMSA new = DigitalMSA.__new__(DigitalMSA, self.alphabet)
-        new._msa = libeasel.msa.esl_msa_CreateDigital(self.alphabet._abc, self._msa.nseq, self._msa.alen)
-        if new._msa == NULL:
-            raise AllocationError("ESL_MSA")
+        cdef int           status
+        cdef ESL_ALPHABET* abc    = self.alphabet._abc
+        cdef DigitalMSA    new    = DigitalMSA.__new__(DigitalMSA, self.alphabet)
 
-        cdef int status = libeasel.msa.esl_msa_Copy(self._msa, new._msa)
+        with nogil:
+            new._msa = libeasel.msa.esl_msa_CreateDigital(
+                abc,
+                self._msa.nseq,
+                self._msa.alen
+            )
+            if new._msa == NULL:
+                raise AllocationError("ESL_MSA")
+            status = libeasel.msa.esl_msa_Copy(self._msa, new._msa)
+
         if status == libeasel.eslOK:
             return new
         else:
@@ -543,9 +575,9 @@ cdef class Sequence:
         libeasel.sq.esl_sq_Destroy(self._sq)
 
     def __eq__(self, object other):
-        cdef Sequence other_sq
-
         assert self._sq != NULL
+
+        cdef Sequence other_sq
 
         if isinstance(other, Sequence):
             other_sq = other
@@ -567,11 +599,18 @@ cdef class Sequence:
     def accession(self):
         """`bytes`: The accession of the sequence.
         """
+        assert self._sq != NULL
         return <bytes> self._sq.acc
 
     @accession.setter
     def accession(self, bytes accession):
-        cdef int status = libeasel.sq.esl_sq_SetAccession(self._sq, <const char*> accession)
+        assert self._sq != NULL
+
+        cdef       int   status
+        cdef const char* acc    = accession
+
+        with nogil:
+            status = libeasel.sq.esl_sq_SetAccession(self._sq, acc)
         if status == libeasel.eslEMEM:
             raise AllocationError("char*")
         elif status != libeasel.eslOK:
@@ -581,11 +620,18 @@ cdef class Sequence:
     def name(self):
         """`bytes`: The name of the sequence.
         """
+        assert self._sq != NULL
         return <bytes> self._sq.name
 
     @name.setter
     def name(self, bytes name):
-        cdef int status = libeasel.sq.esl_sq_SetName(self._sq, <const char*> name)
+        assert self._sq != NULL
+
+        cdef       int   status
+        cdef const char* nm     = name
+
+        with nogil:
+            status = libeasel.sq.esl_sq_SetName(self._sq, nm)
         if status == libeasel.eslEMEM:
             raise AllocationError("char*")
         elif status != libeasel.eslOK:
@@ -595,11 +641,18 @@ cdef class Sequence:
     def description(self):
         """`bytes`: The description of the sequence.
         """
+        assert self._sq != NULL
         return <bytes> self._sq.desc
 
     @description.setter
-    def description(self, bytes desc):
-        cdef int status = libeasel.sq.esl_sq_SetDesc(self._sq, <const char*> desc)
+    def description(self, bytes description):
+        assert self._sq != NULL
+
+        cdef       int   status
+        cdef const char* desc   = description
+
+        with nogil:
+            status = libeasel.sq.esl_sq_SetDesc(self._sq, desc)
         if status == libeasel.eslEMEM:
             raise AllocationError("char*")
         elif status != libeasel.eslOK:
@@ -612,8 +665,14 @@ cdef class Sequence:
         return <bytes> self._sq.source
 
     @source.setter
-    def source(self, bytes src):
-        cdef int status = libeasel.sq.esl_sq_SetSource(self._sq, <const char*> src)
+    def source(self, bytes source):
+        assert self._sq != NULL
+
+        cdef       int   status
+        cdef const char* src    = source
+
+        with nogil:
+            status = libeasel.sq.esl_sq_SetSource(self._sq, src)
         if status == libeasel.eslEMEM:
             raise AllocationError("char*")
         elif status != libeasel.eslOK:
@@ -627,8 +686,13 @@ cdef class Sequence:
         Calculate a 32-bit checksum for the sequence.
 
         """
+        assert self._sq != NULL
+
+        cdef int      status
         cdef uint32_t checksum = 0
-        cdef int status = libeasel.sq.esl_sq_Checksum(self._sq, &checksum)
+
+        with nogil:
+            status = libeasel.sq.esl_sq_Checksum(self._sq, &checksum)
         if status == libeasel.eslOK:
             return checksum
         else:
@@ -642,7 +706,10 @@ cdef class Sequence:
         """
         assert self._sq != NULL
 
-        cdef int status = libeasel.sq.esl_sq_Reuse(self._sq)
+        cdef int status
+
+        with nogil:
+            status = libeasel.sq.esl_sq_Reuse(self._sq)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_Reuse")
 
@@ -715,17 +782,18 @@ cdef class TextSequence(Sequence):
         assert self._sq != NULL
         assert libeasel.sq.esl_sq_IsText(self._sq)
 
-        cdef int status
-        cdef DigitalSequence new
+        cdef int             status
+        cdef ESL_ALPHABET*   abc    = alphabet._abc
+        cdef DigitalSequence new    = DigitalSequence.__new__(DigitalSequence, alphabet)
 
-        new = DigitalSequence.__new__(DigitalSequence, alphabet)
-        new._sq = libeasel.sq.esl_sq_CreateDigital(alphabet._abc)
-        if new._sq == NULL:
-            raise AllocationError("ESL_SQ")
+        with nogil:
+            new._sq = libeasel.sq.esl_sq_CreateDigital(abc)
+            if new._sq == NULL:
+                raise AllocationError("ESL_SQ")
 
-        status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "esl_sq_Copy")
+            status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_sq_Copy")
 
         assert libeasel.sq.esl_sq_IsDigital(new._sq)
         return new
@@ -739,18 +807,21 @@ cdef class TextSequence(Sequence):
         assert self._sq != NULL
         assert libeasel.sq.esl_sq_IsText(self._sq)
 
-        cdef TextSequence new = TextSequence.__new__(TextSequence)
-        new._sq = libeasel.sq.esl_sq_Create()
-        if new._sq == NULL:
-            raise AllocationError("ESL_SQ")
-        new._sq.abc = NULL
+        cdef int          status
+        cdef TextSequence new    = TextSequence.__new__(TextSequence)
 
-        cdef int status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
-        if status == libeasel.eslOK:
-            assert libeasel.sq.esl_sq_IsText(new._sq)
-            return new
-        else:
-            raise UnexpectedError(status, "esl_sq_Copy")
+        with nogil:
+            new._sq = libeasel.sq.esl_sq_Create()
+            if new._sq == NULL:
+                raise AllocationError("ESL_SQ")
+            new._sq.abc = NULL
+
+            status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_sq_Copy")
+
+        assert libeasel.sq.esl_sq_IsText(new._sq)
+        return new
 
 
 cdef class DigitalSequence(Sequence):
@@ -798,14 +869,16 @@ cdef class DigitalSequence(Sequence):
         #     the `esl_sq_CreateDigitalFrom` but copy the sequence with different
         #     offsets.
         if sequence is not None:
-            # grow the sequence buffer so it can hold `len(sequence)` residues
-            n = sequence.shape[0]
-            status = libeasel.sq.esl_sq_GrowTo(self._sq, n)
-            if status != libeasel.eslOK:
-                raise UnexpectedError(status, "esl_sq_GrowTo")
-            # update the digital sequence buffer
-            self._sq.dsq[0] = self._sq.dsq[n+1] = libeasel.eslDSQ_SENTINEL
-            memcpy(<void*> &self._sq.dsq[1], <const void*> &sequence[0], n)
+            # we can release the GIL while copying memory
+            with nogil:
+                # grow the sequence buffer so it can hold `n` residues
+                n = sequence.shape[0]
+                status = libeasel.sq.esl_sq_GrowTo(self._sq, n)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "esl_sq_GrowTo")
+                # update the digital sequence buffer
+                self._sq.dsq[0] = self._sq.dsq[n+1] = libeasel.eslDSQ_SENTINEL
+                memcpy(<void*> &self._sq.dsq[1], <const void*> &sequence[0], n)
             # set the coor bookkeeping like it would happend
             self._sq.start = 1
             self._sq.C = 0
@@ -846,17 +919,21 @@ cdef class DigitalSequence(Sequence):
         assert self._sq != NULL
         assert libeasel.sq.esl_sq_IsDigital(self._sq)
 
-        cdef DigitalSequence new = DigitalSequence.__new__(DigitalSequence, self.alphabet)
-        new._sq = libeasel.sq.esl_sq_CreateDigital(self.alphabet._abc)
-        if new._sq == NULL:
-            raise AllocationError("ESL_SQ")
+        cdef int             status
+        cdef ESL_ALPHABET*   abc    = self.alphabet._abc
+        cdef DigitalSequence new    = DigitalSequence.__new__(DigitalSequence, self.alphabet)
 
-        cdef int status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
-        if status == libeasel.eslOK:
-            assert libeasel.sq.esl_sq_IsDigital(new._sq)
-            return new
-        else:
-            raise UnexpectedError(status, "esl_sq_Copy")
+        with nogil:
+            new._sq = libeasel.sq.esl_sq_CreateDigital(abc)
+            if new._sq == NULL:
+                raise AllocationError("ESL_SQ")
+
+            status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_sq_Copy")
+
+        assert libeasel.sq.esl_sq_IsDigital(new._sq)
+        return new
 
     cpdef TextSequence textize(self):
         """textize(self)\n--
@@ -870,17 +947,17 @@ cdef class DigitalSequence(Sequence):
         assert self._sq != NULL
         assert libeasel.sq.esl_sq_IsDigital(self._sq)
 
-        cdef int status
-        cdef TextSequence new
+        cdef int          status
+        cdef TextSequence new    = TextSequence.__new__(TextSequence)
 
-        new = TextSequence.__new__(TextSequence)
-        new._sq = libeasel.sq.esl_sq_Create()
-        if new._sq == NULL:
-            raise AllocationError("ESL_SQ")
+        with nogil:
+            new._sq = libeasel.sq.esl_sq_Create()
+            if new._sq == NULL:
+                raise AllocationError("ESL_SQ")
 
-        status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "esl_sq_Copy")
+            status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_sq_Copy")
 
         assert libeasel.sq.esl_sq_IsText(new._sq)
         return new
