@@ -747,6 +747,12 @@ cdef class HMM:
             raise UnexpectedError(err, "p7_hmm_SetAccession")
 
     @property
+    def checksum(self):
+        """`int`: The 32-bit checksum of the HMM.
+        """
+        return self._hmm.checksum
+
+    @property
     def description(self):
         """`bytes` or `None`: The description of the HMM, if any.
         """
