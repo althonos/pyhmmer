@@ -6,7 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.2.1...HEAD
+
+
+## [v0.2.1] - 2021-01-29
+[v0.2.1]: https://github.com/althonos/pyhmmer/compare/v0.2.0...v0.2.1
+
+### Added
+- `pyhmmer.plan7.HMM.checksum` property to get the 32-bit checksum of an HMM.
 
 
 ## [v0.2.0] - 2021-01-21
