@@ -18,9 +18,6 @@
 [![Downloads](https://img.shields.io/badge/dynamic/json?style=flat-square&color=303f9f&maxAge=86400&label=downloads&query=%24.total_downloads&url=https%3A%2F%2Fapi.pepy.tech%2Fapi%2Fprojects%2Fpyhmmer)](https://pepy.tech/project/pyhmmer)
 [![DOI](https://img.shields.io/badge/doi-10.5281%2Fzenodo.4270012-purple?style=flat-square&maxAge=86400)](https://doi.org/10.5281/zenodo.4270012)
 
-<!-- [![AppVeyor](https://img.shields.io/appveyor/build/althonos/pyhmmer/master.svg?logo=appveyor&maxAge=600&style=flat-square)](https://ci.appveyor.com/project/althonos/pyhmmer/history) -->
-<!-- [![Bioconda](https://img.shields.io/conda/vn/bioconda/pyhmmer?style=flat-square&maxAge=3600)](https://anaconda.org/bioconda/pyhmmer) -->
-
 
 ## 🗺️ Overview
 
@@ -38,9 +35,9 @@ HMMER internals, which has the following advantages over CLI wrappers
   your project, and stop worrying about the HMMER binaries being properly
   setup on the end-user machine.
 - **no intermediate files**: Everything happens in memory, in Python objects
-  you have control on, making it easier to pass your inputs to HMMER without 
-  needing to write them to a temporary file. Output retrieval is also done 
-  in memory, via instances of the 
+  you have control on, making it easier to pass your inputs to HMMER without
+  needing to write them to a temporary file. Output retrieval is also done
+  in memory, via instances of the
   [`pyhmmer.plan7.TopHits`](https://pyhmmer.readthedocs.io/en/stable/api/plan7.html#pyhmmer.plan7.TopHits)
   class.
 - **no input formatting**: The Easel object model is exposed in the `pyhmmer.easel`
@@ -154,9 +151,9 @@ registers per thread to benefit from [simultaneous multi-threading](https://en.w
 
 ## 🔍 See Also
 
-If despite of all the advantages listed earlier, you would rather use HMMER through its CLI, 
-this package will not be of great help. You should then check the 
-[`hmmer-py`](https://github.com/EBI-Metagenomics/hmmer-py) package developed 
+If despite of all the advantages listed earlier, you would rather use HMMER through its CLI,
+this package will not be of great help. You should then check the
+[`hmmer-py`](https://github.com/EBI-Metagenomics/hmmer-py) package developed
 by [Danilo Horta](https://github.com/horta) at the [EMBL-EBI](https://www.ebi.ac.uk).
 
 

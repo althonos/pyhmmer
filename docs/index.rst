@@ -8,17 +8,20 @@ pyHMMER |Stars|
 *Cython bindings and Python interface to* `HMMER3 <http://hmmer.org/>`_.
 
 
-|TravisCI| |Coverage| |PyPI| |Wheel| |Versions| |Implementations| |License| |Source| |Mirror| |Issues| |Docs| |Changelog| |Downloads| |DOI|
+|GitLabCI| |Coverage| |PyPI| |Bioconda| |Wheel| |Versions| |Implementations| |License| |Source| |Mirror| |Issues| |Docs| |Changelog| |Downloads| |DOI|
 
 
-.. |TravisCI| image:: https://img.shields.io/travis/com/althonos/pyhmmer/master.svg?&maxAge=600&style=flat-square
-   :target: https://travis-ci.com/althonos/pyhmmer/branches
+.. |GitLabCI| image:: https://img.shields.io/gitlab/pipeline/larralde/pyhmmer/master?gitlab_url=https%3A%2F%2Fgit.embl.de&logo=gitlab&style=flat-square&maxAge=600
+   :target: https://git.embl.de/larralde/pyhmmer/-/pipelines
 
 .. |Coverage| image:: https://img.shields.io/codecov/c/gh/althonos/pyhmmer?style=flat-square&maxAge=600
    :target: https://codecov.io/gh/althonos/pyhmmer/
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/pyhmmer.svg?style=flat-square&maxAge=3600
    :target: https://pypi.python.org/pypi/pyhmmer
+
+.. |Bioconda| image:: https://img.shields.io/conda/vn/bioconda/pyhmmer?style=flat-square&maxAge=3600
+   :target: https://anaconda.org/bioconda/pyhmmer
 
 .. |Wheel| image:: https://img.shields.io/pypi/wheel/pyhmmer?style=flat-square&maxAge=3600
    :target: https://pypi.org/project/pyhmmer/#files
