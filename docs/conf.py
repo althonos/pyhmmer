@@ -147,7 +147,7 @@ html_theme_options = {
     ] + [
         (k, v, True)
         for k, v in project_urls.items()
-        if k not in {"Documentation", "Changelog"}
+        if k in {"Zenodo", "PyPI"}
     ],
     "admonition_use_panel": True,
 }
