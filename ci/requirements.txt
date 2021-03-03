@@ -1,5 +1,6 @@
 # build dependencies
 setuptools >=46.4
+wheel >=0.35.0
 cython ~=0.29.16
 
 # run dependencies

@@ -129,6 +129,12 @@ class build_ext(_build_ext):
             if sys.implementation.name == "cpython":
                 ext.define_macros.append(("CYTHON_TRACE_NOGIL", 1))
 
+        # on OSX, force to build the library sources to fix linking issues
+        if sys.platform == "darwin":
+            for libname in ext.libraries:
+                lib = next(lib for lib in _clib_cmd.libraries if lib.name == libname)
+                ext.sources.extend(lib.sources)
+
         # build the rest of the extension as normal
         _build_ext.build_extension(self, ext)
 
