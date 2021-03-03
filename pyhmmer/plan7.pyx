@@ -434,6 +434,12 @@ cdef class Builder:
         cdef Profile          profile = Profile.__new__(Profile)
         cdef OptimizedProfile opti    = OptimizedProfile.__new__(OptimizedProfile)
 
+        # reseed RNG used by the builder if needed
+        if self._bld.do_reseeding:
+            status = libeasel.random.esl_randomness_Init(self._bld.r, self.seed)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_randomness_Init")
+
         # check alphabet and assign it to newly created objects
         hmm.alphabet = profile.alphabet = opti.alphabet = self.alphabet
         if background.alphabet != self.alphabet:
@@ -1614,7 +1620,7 @@ cdef class Pipeline:
         self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
 
         # use a default HMM builder if none was given
-        builder = Builder(self.alphabet) if builder is None else builder
+        builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
 
         # get an iterator over the input sequences, with an early return if
         # no sequences were given, and extract the raw pointer to the sequence
