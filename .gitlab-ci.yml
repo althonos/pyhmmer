@@ -101,80 +101,80 @@ test:pypy3.7:
   <<: *test-pypy
 
 
-sdist:
-  variables:
-    python: /opt/python/cp39-cp39/bin/python
-  image: quay.io/pypa/manylinux2010_x86_64
-  stage: dist
-  only:
-    - tags
-  artifacts:
-    paths:
-      - dist/*.tar.gz
-  before_script:
-    - $python -m pip install -U -r ci/requirements.txt
-  script:
-    - $python setup.py sdist
-    - $python -m pip install pyhmmer dist/*.tar.gz
-
-bdist:python3.6:
-  variables:
-    python: /opt/python/cp36-cp36m/bin/python
-  <<: *bdist-cpython
-
-bdist:python3.7:
-  variables:
-    python: /opt/python/cp37-cp37m/bin/python
-  <<: *bdist-cpython
-
-bdist:python3.8:
-  variables:
-    python: /opt/python/cp38-cp38/bin/python
-  <<: *bdist-cpython
-
-bdist:python3.9:
-  variables:
-    python: /opt/python/cp39-cp39/bin/python
-  <<: *bdist-cpython
-
-bdist:pypy3.6:
-  variables:
-    python: /opt/pypy/pypy3.6-7.3.3/bin/python
-  <<: *bdist-pypy
-
-bdist:pypy3.7:
-  variables:
-    python: /opt/pypy/pypy3.7-7.3.3/bin/python
-  <<: *bdist-pypy
-
-
-twine:
-  variables:
-    python: /opt/python/cp39-cp39/bin/python
-  image: quay.io/pypa/manylinux2010_x86_64
-  stage: deploy
-  only:
-    - tags
-  dependencies:
-    - sdist
-    - bdist:python3.6
-    - bdist:python3.7
-    - bdist:python3.8
-    - bdist:python3.9
-    - bdist:pypy3.6
-    - bdist:pypy3.7
-  before_script:
-    - $python -m pip install -U auditwheel twine
-  script:
-      - for whl in dist/*.whl; do auditwheel repair "$whl" -w dist && rm "$whl"; done
-      - $python -m twine upload dist/*
-
-release:
-  image: ruby
-  stage: release
-  only:
-    - tags
-  before_script:
-    - gem install chandler
-  script:
-    - chandler push --github="althonos/pyhmmer" --changelog="CHANGELOG.md"
+# sdist:
+#   variables:
+#     python: /opt/python/cp39-cp39/bin/python
+#   image: quay.io/pypa/manylinux2010_x86_64
+#   stage: dist
+#   only:
+#     - tags
+#   artifacts:
+#     paths:
+#       - dist/*.tar.gz
+#   before_script:
+#     - $python -m pip install -U -r ci/requirements.txt
+#   script:
+#     - $python setup.py sdist
+#     - $python -m pip install pyhmmer dist/*.tar.gz
+#
+# bdist:python3.6:
+#   variables:
+#     python: /opt/python/cp36-cp36m/bin/python
+#   <<: *bdist-cpython
+#
+# bdist:python3.7:
+#   variables:
+#     python: /opt/python/cp37-cp37m/bin/python
+#   <<: *bdist-cpython
+#
+# bdist:python3.8:
+#   variables:
+#     python: /opt/python/cp38-cp38/bin/python
+#   <<: *bdist-cpython
+#
+# bdist:python3.9:
+#   variables:
+#     python: /opt/python/cp39-cp39/bin/python
+#   <<: *bdist-cpython
+#
+# bdist:pypy3.6:
+#   variables:
+#     python: /opt/pypy/pypy3.6-7.3.3/bin/python
+#   <<: *bdist-pypy
+#
+# bdist:pypy3.7:
+#   variables:
+#     python: /opt/pypy/pypy3.7-7.3.3/bin/python
+#   <<: *bdist-pypy
+#
+#
+# twine:
+#   variables:
+#     python: /opt/python/cp39-cp39/bin/python
+#   image: quay.io/pypa/manylinux2010_x86_64
+#   stage: deploy
+#   only:
+#     - tags
+#   dependencies:
+#     - sdist
+#     - bdist:python3.6
+#     - bdist:python3.7
+#     - bdist:python3.8
+#     - bdist:python3.9
+#     - bdist:pypy3.6
+#     - bdist:pypy3.7
+#   before_script:
+#     - $python -m pip install -U auditwheel twine
+#   script:
+#       - for whl in dist/*.whl; do auditwheel repair "$whl" -w dist && rm "$whl"; done
+#       - $python -m twine upload dist/*
+#
+# release:
+#   image: ruby
+#   stage: release
+#   only:
+#     - tags
+#   before_script:
+#     - gem install chandler
+#   script:
+#     - chandler push --github="althonos/pyhmmer" --changelog="CHANGELOG.md"
