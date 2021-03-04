@@ -6,7 +6,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.2.2...HEAD
+
+
+## [v0.2.2] - 2021-03-04
+[v0.2.2]: https://github.com/althonos/pyhmmer/compare/v0.2.1...v0.2.2
+
+### Fixed
+- Linking issues on OSX caused by aggressive stripping of intermediate libraries.
+- `plan7.Builder` RNG not reseeding between different HMMs.
 
 
 ## [v0.2.1] - 2021-01-29

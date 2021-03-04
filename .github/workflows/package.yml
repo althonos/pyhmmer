@@ -37,7 +37,7 @@ jobs:
         shell: bash
         run: |
           ${{ matrix.pyo3-python }} -m pip install -U -r /io/ci/requirements.txt
-          ${{ matrix.pyo3-python }} -m pip wheel -vv /io -w /tmp
+          ${{ matrix.pyo3-python }} -m pip wheel --no-deps -vv /io -w /tmp
           for whl in /tmp/*.whl; do ${{ matrix.pyo3-python }} -m auditwheel repair $whl -w /io/dist; done
     - name: Store built wheels
       uses: actions/upload-artifact@v2
