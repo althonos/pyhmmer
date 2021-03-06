@@ -15,6 +15,7 @@ from cpython.buffer cimport PyBUF_READ, PyBUF_WRITE
 from cpython.memoryview cimport PyMemoryView_FromMemory
 from cpython.unicode cimport PyUnicode_FromUnicode
 from libc.stdint cimport int64_t, uint16_t, uint32_t
+from libc.stdio cimport fclose
 from libc.stdlib cimport malloc
 from libc.string cimport memcpy, memmove, strdup, strlen
 from posix.types cimport off_t
@@ -27,10 +28,16 @@ cimport libeasel.msa
 cimport libeasel.msafile
 cimport libeasel.sq
 cimport libeasel.sqio
+cimport libeasel.sqio.ascii
 cimport libeasel.ssi
 from libeasel cimport ESL_DSQ, esl_pos_t
 
 DEF eslERRBUFSIZE = 128
+
+IF UNAME_SYSNAME == "Linux":
+    include "fileobj/linux.pxi"
+ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
+    include "fileobj/bsd.pxi"
 
 # --- Python imports ---------------------------------------------------------
 
@@ -48,10 +55,11 @@ cdef class Alphabet:
 
     This type is used to share an alphabet to several objects in the `easel`
     and `plan7` modules. Reference counting helps sharing the same instance
-    everywhere, instead of reallocating memory every time an alphabet is needed.
+    everywhere, instead of reallocating memory every time an alphabet is
+    needed.
 
-    Use the factory class methods to obtain a default `Alphabet` for one of the
-    three biological alphabets::
+    Use the factory class methods to obtain a default `Alphabet` for one of
+    the three standard biological alphabets::
 
         >>> dna = Alphabet.dna()
         >>> rna = Alphabet.rna()
@@ -623,6 +631,36 @@ cdef class MSA:
         else:
             raise UnexpectedError(status, "esl_msa_Checksum")
 
+    cpdef void write(self, object fh, str format) except *:
+        """write(self, fh, format)\n--
+
+        Write the multiple sequence alignement to a file handle.
+
+        Arguments:
+            fh (`io.IOBase`): A Python file handle, opened in binary mode.
+            format (`str`): The name of the multiple sequence alignment
+                file format to use.
+
+        .. versionadded:: 0.3.0
+
+        """
+        assert self._msa != NULL
+
+        cdef int    status
+        cdef int    fmt
+        cdef FILE*  file
+
+        if format not in MSAFile._formats:
+            raise ValueError("Invalid MSA format: {!r}".format(format))
+
+        fmt = MSAFile._formats[format]
+        file = fopen_obj(fh, mode="w")
+        status = libeasel.msafile.esl_msafile_Write(file, self._msa, fmt)
+        fclose(file)
+
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_sqascii_WriteFasta")
+
 
 cdef class TextMSA(MSA):
     """A multiple sequence alignement stored in text mode.
@@ -1110,6 +1148,27 @@ cdef class Sequence:
             status = libeasel.sq.esl_sq_Reuse(self._sq)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_Reuse")
+
+    cpdef void write(self, object fh) except *:
+        """write(self, fh)\n--
+
+        Write the sequence alignement to a file handle, in FASTA format.
+
+        Arguments:
+            fh (`io.IOBase`): A Python file handle, opened in binary mode.
+
+        .. versionadded:: 0.3.0
+
+        """
+        assert self._sq != NULL
+
+        cdef int    status
+        cdef FILE*  file   = fopen_obj(fh, mode="w")
+
+        status = libeasel.sqio.ascii.esl_sqascii_WriteFasta(file, self._sq, False)
+        fclose(file)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_sqascii_WriteFasta")
 
 
 cdef class TextSequence(Sequence):

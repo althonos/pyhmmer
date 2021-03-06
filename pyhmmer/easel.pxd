@@ -45,6 +45,7 @@ cdef class MSA:
     cdef ESL_MSA* _msa
 
     cpdef uint32_t checksum(self)
+    cpdef void write(self, object fh, str format) except *
 
 
 cdef class TextMSA(MSA):
@@ -74,6 +75,7 @@ cdef class Sequence:
 
     cpdef void clear(self)
     cpdef uint32_t checksum(self)
+    cpdef void write(self, object fh) except *
 
 
 cdef class TextSequence(Sequence):

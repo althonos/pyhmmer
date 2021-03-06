@@ -1,5 +1,6 @@
 import copy
 import gc
+import io
 import os
 import unittest
 import tempfile
@@ -25,6 +26,34 @@ class TestBitfield(unittest.TestCase):
             bitfield[9] = 1
         with self.assertRaises(IndexError):
             bitfield[-9] = 1
+
+
+class TestMSA(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.formats_folder = os.path.realpath(os.path.join(
+            __file__, os.pardir, os.pardir, "vendor", "easel", "formats"
+        ))
+
+    def test_write_roundtrip_stockholm(self):
+        sto = os.path.join(self.formats_folder, "stockholm.1")
+        with easel.MSAFile(sto, "stockholm") as msa_file:
+            msa = msa_file.read()
+        with io.BytesIO() as buffer:
+            msa.write(buffer, "stockholm")
+            actual = buffer.getvalue().decode()
+        with open(sto) as f:
+            expected = f.read()
+        self.assertMultiLineEqual(actual, expected)
+
+    def test_write_invalid_format(self):
+        sto = os.path.join(self.formats_folder, "stockholm.1")
+        with easel.MSAFile(sto, "stockholm") as msa_file:
+            msa = msa_file.read()
+
+        self.assertRaises(ValueError, msa.write, io.BytesIO(), "invalidformat")
+
 
 
 class TestMSAFile(unittest.TestCase):
@@ -62,6 +91,28 @@ class TestMSAFile(unittest.TestCase):
         # check reading while giving another file format fails
         with easel.MSAFile(stockholm, "clustal") as f:
             self.assertRaises(ValueError, f.read)
+
+
+class TestSequence(unittest.TestCase):
+
+    def test_write_roundtrip(self):
+        ecori = os.path.realpath(os.path.join(
+            __file__,
+            os.pardir,
+            os.pardir,
+            "vendor",
+            "hmmer",
+            "testsuite",
+            "ecori.fa"
+        ))
+        with easel.SequenceFile(ecori, "fasta") as seq_file:
+            seq = seq_file.read()
+        with io.BytesIO() as buffer:
+            seq.write(buffer)
+            actual = buffer.getvalue().decode()
+        with open(ecori) as f:
+            expected = f.read()
+        self.assertMultiLineEqual(actual, expected)
 
 
 class TestSequenceFile(unittest.TestCase):
