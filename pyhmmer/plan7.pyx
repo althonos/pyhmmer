@@ -830,18 +830,23 @@ cdef class HMM:
     def M(self):
         """`int`: The length of the model (i.e. the number of nodes).
         """
+        assert self._hmm != NULL
         return self._hmm.M
 
     @property
     def name(self):
         """`bytes` or `None`: The name of the HMM, if any.
         """
+        assert self._hmm != NULL
         return None if self._hmm.name == NULL else <bytes> self._hmm.name
 
     @name.setter
     def name(self, bytes name):
+        assert self._hmm != NULL
+
         cdef char* name_ = NULL if name is None else <char*> name
         cdef int err = libhmmer.p7_hmm.p7_hmm_SetName(self._hmm, name_)
+
         if err == libeasel.eslEMEM:
             raise AllocationError("char*")
         elif err != libeasel.eslOK:
@@ -851,12 +856,16 @@ cdef class HMM:
     def accession(self):
         """`bytes` or `None`: The accession of the HMM, if any.
         """
+        assert self._hmm != NULL
         return None if self._hmm.acc == NULL else <bytes> self._hmm.acc
 
     @accession.setter
     def accession(self, bytes accession):
+        assert self._hmm != NULL
+
         cdef char* acc = NULL if accession is None else <char*> accession
         cdef int err = libhmmer.p7_hmm.p7_hmm_SetAccession(self._hmm, acc)
+
         if err == libeasel.eslEMEM:
             raise AllocationError("char*")
         elif err != libeasel.eslOK:
@@ -866,18 +875,23 @@ cdef class HMM:
     def checksum(self):
         """`int`: The 32-bit checksum of the HMM.
         """
+        assert self._hmm != NULL
         return self._hmm.checksum
 
     @property
     def description(self):
         """`bytes` or `None`: The description of the HMM, if any.
         """
+        assert self._hmm != NULL
         return None if self._hmm.desc == NULL else <bytes> self._hmm.desc
 
     @description.setter
     def description(self, bytes description):
+        assert self._hmm != NULL
+
         cdef char* desc = NULL if description is None else <char*> description
         cdef int err = libhmmer.p7_hmm.p7_hmm_SetDescription(self._hmm, desc)
+
         if err == libeasel.eslEMEM:
             raise AllocationError("char*")
         elif err != libeasel.eslOK:
@@ -1830,6 +1844,8 @@ cdef class Profile:
     """A Plan7 search profile.
     """
 
+    # --- Magic methods ------------------------------------------------------
+
     def __cinit__(self):
         self._gm = NULL
         self.alphabet = None
@@ -1856,6 +1872,73 @@ cdef class Profile:
 
     def __copy__(self):
         return self.copy()
+
+    def __eq__(self, object other):
+        assert self._gm != NULL
+
+        if not isinstance(other, Profile):
+            return False
+
+        cdef Profile      p = <Profile> other
+        cdef int     status = libhmmer.p7_profile.p7_profile_Compare(self._gm, p._gm, 0.0)
+
+        if status == libeasel.eslOK:
+            return True
+        elif status == libeasel.eslFAIL:
+            return False
+        else:
+            raise UnexpectedError(status, "p7_profile_Compare")
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def M(self):
+        """`int`: The length of the profile (i.e. the number of nodes).
+
+        .. versionadded:: 0.3.0
+
+        """
+        assert self._gm != NULL
+        return self._gm.M
+
+    @property
+    def L(self):
+        """`int`: The current configured target sequence length.
+        """
+        assert self._gm != NULL
+        return self._gm.L
+
+    @property
+    def accession(self):
+        """`bytes` or `None`: The accession of the profile, if any.
+
+        .. versionadded:: 0.3.0
+
+        """
+        assert self._gm != NULL
+        return None if self._gm.acc == NULL else <bytes> self._gm.acc
+
+    @property
+    def name(self):
+        """`bytes` or `None`: The name of the profile, if any.
+
+        .. versionadded:: 0.3.0
+
+        """
+        assert self._gm != NULL
+        return None if self._gm.name == NULL else <bytes> self._gm.name
+
+    @property
+    def description(self):
+        """`bytes` or `None`: The description of the profile, if any.
+
+        .. versionadded:: 0.3.0
+
+        """
+        assert self._gm != NULL
+        return None if self._gm.desc == NULL else <bytes> self._gm.desc
+
+    # --- Methods ------------------------------------------------------------
 
     cpdef void clear(self):
         """clear(self)\n--
