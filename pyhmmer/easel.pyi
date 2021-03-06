@@ -76,6 +76,7 @@ class MSA(abc.ABC):
     def write(self, fh: typing.BinaryIO, format: str) -> None: ...
 
 class _TextMSASequences(_MSASequences, typing.Sequence[TextSequence]):
+    def __init__(self, msa: TextMSA) -> None: ...
     def __getitem__(self, idx: int) -> TextSequence: ...  # type: ignore
 
 class TextMSA(MSA):
@@ -90,6 +91,7 @@ class TextMSA(MSA):
 
 class _DigitalMSASequences(_MSASequences, typing.Sequence[DigitalSequence]):
     alphabet: Alphabet
+    def __init__(self, msa: DigitalMSA) -> None: ... 
     def __getitem__(self, idx: int) -> DigitalSequence: ...  # type: ignore
 
 class DigitalMSA(MSA):

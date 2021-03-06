@@ -494,7 +494,10 @@ cdef class _MSASequences:
     """A read-only view over the individual sequences of an MSA.
     """
 
-    def __cinit__(self, MSA msa):
+    def __cinit__(self):
+        self.msa = None
+
+    def __init__(self, MSA msa):
         self.msa = msa
 
     def __len__(self):
@@ -685,6 +688,9 @@ cdef class _TextMSASequences(_MSASequences):
     """A read-only view over the sequences of an MSA in text mode.
     """
 
+    def __init__(self, TextMSA msa):
+        self.msa = msa
+
     def __getitem__(self, int idx):
         assert self.msa._msa != NULL
 
@@ -732,7 +738,7 @@ cdef class TextMSA(MSA):
         .. versionadded:: 0.3.0
 
         """
-        return _TextMSASequences.__new__(_TextMSASequences, self)
+        return _TextMSASequences(self)
 
     # --- Methods ------------------------------------------------------------
 
@@ -796,11 +802,9 @@ cdef class _DigitalMSASequences(_MSASequences):
     """A read-only view over the sequences of an MSA in digital mode.
     """
 
-    def __cinit__(self, MSA msa):
+    def __init__(self, DigitalMSA msa):
         self.msa = msa
-
-    def __init__(self, MSA msa, Alphabet alphabet):
-        self.alphabet = alphabet
+        self.alphabet = msa.alphabet
 
     def __getitem__(self, int idx):
         assert self.msa._msa != NULL
@@ -813,7 +817,7 @@ cdef class _DigitalMSASequences(_MSASequences):
         if idx >= self.msa._msa.nseq:
             raise IndexError("list index out of range")
 
-        seq = DigitalSequence.__new__(DigitalMSA, self.alphabet)
+        seq = DigitalSequence.__new__(DigitalSequence, self.alphabet)
         status = libeasel.sq.esl_sq_FetchFromMSA(self.msa._msa, idx, &seq._sq)
 
         if status == libeasel.eslOK:
@@ -861,8 +865,6 @@ cdef class DigitalMSA(MSA):
         if self._msa == NULL:
             raise AllocationError("ESL_MSA")
 
-        self.sequences = _DigitalMSASequences(self, self.alphabet)
-
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -872,7 +874,7 @@ cdef class DigitalMSA(MSA):
         .. versionadded:: 0.3.0
 
         """
-        return _DigitalMSASequences.__new__(_DigitalMSASequences, self, self.alphabet)
+        return _DigitalMSASequences(self)
 
     # --- Methods ------------------------------------------------------------
 
