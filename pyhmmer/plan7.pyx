@@ -636,7 +636,7 @@ cdef class Domain:
 
     @property
     def c_evalue(self):
-        """`float`: The independent e-value for the domain.
+        """`float`: The conditional e-value for the domain.
         """
         assert self._dom != NULL
         if self.hit.hits.long_targets:
@@ -1020,7 +1020,7 @@ cdef class HMMFile:
 
         Close the HMM file and free resources.
 
-        This method has no effect if the file is already closed. It called
+        This method has no effect if the file is already closed. It is called
         automatically if the `HMMFile` was used in a context::
 
             >>> with HMMFile("tests/data/hmms/bin/PKSI-AT.h3m") as hmm_file:
