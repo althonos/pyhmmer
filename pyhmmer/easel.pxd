@@ -28,7 +28,7 @@ cdef class Alphabet:
 cdef class Bitfield:
     cdef ESL_BITFIELD* _b
 
-    cdef size_t _wrap_index(self, int index)
+    cdef size_t _wrap_index(self, int index) except *
     cpdef size_t count(self, bint value=*)
     cpdef void toggle(self, int index)
 

@@ -239,7 +239,7 @@ cdef class Bitfield:
         else:
             libeasel.bitfield.esl_bitfield_Clear(self._b, index_)
 
-    cdef size_t _wrap_index(self, int index):
+    cdef size_t _wrap_index(self, int index) except *:
         if index < 0:
             index += self._b.nb
         if index >= self._b.nb or index < 0:
