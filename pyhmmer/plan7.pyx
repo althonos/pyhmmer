@@ -299,6 +299,8 @@ cdef class Builder:
         float Eft=0.04,
         int seed=42,
         object ere=None,
+        object popen=None,
+        object pextend=None,
     ):
         """__init__(self, alphabet, *, architecture="fast", weighting="pb", effective_number="entropy", prior_scheme="alpha", symfrac=0.5, fragthresh=0.5, wid=0.62, esigma=45.0, eid=0.62, EmL=200, EmN=200, EvL=200, EvN=200, EfL=100, EfN=200, Eft=0.04, seed=42, ere=None)\n--
 
@@ -311,6 +313,7 @@ cdef class Builder:
         """
         # extract alphabet and create raw P7_BUILDER object
         self.alphabet = alphabet
+        abcty = alphabet._abc.type
         with nogil:
             self._bld = libhmmer.p7_builder.p7_builder_Create(NULL, alphabet._abc)
         if self._bld == NULL:
@@ -372,8 +375,23 @@ cdef class Builder:
                 self._bld.prior = NULL
             elif prior_scheme == "laplace":
                 self._bld.prior = libhmmer.p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
+            elif prior_scheme == "alphabet":
+                if abcty == libeasel.alphabet.eslAMINO:
+                    self._bld.prior = libhmmer.p7_prior.p7_prior_CreateAmino()
+                elif abcty == libeasel.alphabet.eslDNA or abcty == libeasel.alphabet.eslRNA:
+                    self._bld.prior = libhmmer.p7_prior.p7_prior_CreateNucleic()
+                else:
+                    self._bld.prior = libhmmer.p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
             elif prior_scheme != "alphabet":
                 raise ValueError("Invalid value for 'prior_scheme': {prior_scheme}")
+
+        # set the probability using alphabet-specific defaults or given values
+        if abcty == libeasel.alphabet.eslDNA or abcty == libeasel.alphabet.eslRNA:
+            self.popen = 0.03125 if popen is None else popen
+            self.pextend = 0.75 if pextend is None else pextend
+        else:
+            self.popen = 0.02 if popen is None else popen
+            self.pextend = 0.4 if pextend is None else pextend
 
     def __dealloc__(self):
         libhmmer.p7_builder.p7_builder_Destroy(self._bld)
@@ -407,8 +425,6 @@ cdef class Builder:
         self,
         DigitalSequence sequence,
         Background background,
-        float popen = 0.02,
-        float pextend = 0.4
     ):
         """build(self, sequence, background, popen=0.02, pextend=0.4)\n--
 
@@ -434,6 +450,10 @@ cdef class Builder:
         cdef Profile          profile = Profile.__new__(Profile)
         cdef OptimizedProfile opti    = OptimizedProfile.__new__(OptimizedProfile)
 
+        # use given probabilities
+        self._bld.popen = self.popen
+        self._bld.pextend = self.pextend
+
         # reseed RNG used by the builder if needed
         if self._bld.do_reseeding:
             status = libeasel.random.esl_randomness_Init(self._bld.r, self.seed)
@@ -444,6 +464,8 @@ cdef class Builder:
         hmm.alphabet = profile.alphabet = opti.alphabet = self.alphabet
         if background.alphabet != self.alphabet:
             raise ValueError("background does not have the right alphabet")
+        if sequence.alphabet != self.alphabet:
+            raise ValueError("MSA does not have the right alphabet")
 
         # load score matrix
         # TODO: allow changing from the default scoring matrix
@@ -454,8 +476,8 @@ cdef class Builder:
                 self._bld,
                 NULL, # --mxfile
                 NULL, # env
-                popen, # popen
-                pextend,  # pextend
+                self.popen, # popen
+                self.pextend,  # pextend
                 background._bg
             )
             if status == libeasel.eslENOTFOUND:
@@ -464,7 +486,6 @@ cdef class Builder:
                 raise ValueError("cannot convert matrix to conditional probabilities")
             elif status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_builder_SetScoreSystem")
-
             # build HMM and profiles
             status = libhmmer.p7_builder.p7_SingleBuilder(
                 self._bld,
@@ -475,9 +496,14 @@ cdef class Builder:
                 &profile._gm, # profile,
                 &opti._om, # optimized profile
             )
-            if status != libeasel.eslOK:
-                raise UnexpectedError(status, "p7_SingleBuilder")
-        return (hmm, profile, opti)
+        if status == libeasel.eslOK:
+          return (hmm, profile, opti)
+        elif status == libeasel.eslEINVAL:
+            msg = <bytes> self._bld.errbuf
+            raise ValueError("Could not build HMM: {}".format(msg.decode()))
+        else:
+            raise UnexpectedError(status, "p7_SingleBuilder")
+
 
     cpdef Builder copy(self):
         """copy(self)\n--
@@ -501,10 +527,13 @@ cdef class Builder:
             EmN=self._bld.EmN,
             EvL=self._bld.EvL,
             EvN=self._bld.EvN,
-            EfL=self._bld.EfN,
+            EfL=self._bld.EfL,
+            EfN=self._bld.EfN,
             Eft=self._bld.Eft,
             seed=self.seed,
             ere=self._bld.re_target,
+            popen=self.popen,
+            pextend=self.pextend
         )
 
 
