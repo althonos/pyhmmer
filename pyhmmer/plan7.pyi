@@ -4,7 +4,7 @@ import os
 import types
 import typing
 
-from .easel import Alphabet, Sequence, DigitalSequence
+from .easel import Alphabet, Sequence, DigitalSequence, MSA, DigitalMSA
 
 class Alignment(collections.abc.Sized):
     domain: Domain
@@ -266,3 +266,10 @@ class TopHits(typing.Sequence[Hit]):
     def clear(self) -> None: ...
     def sort(self, by: str = "key") -> None: ...
     def is_sorted(self, by: str = "key") -> bool: ...
+    def to_msa(
+        self,
+        alphabet: Alphabet,
+        trim: bool = False,
+        digitize: bool = False,
+        all_consensus_cols: bool = False
+    ) -> MSA: ...

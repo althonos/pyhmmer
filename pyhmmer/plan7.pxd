@@ -22,7 +22,7 @@ IF HMMER_IMPL == "VMX":
 ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
-from .easel cimport Alphabet, DigitalSequence, DigitalMSA
+from .easel cimport Alphabet, DigitalSequence, DigitalMSA, MSA
 
 
 cdef extern from "hmmer.h" nogil:
@@ -166,3 +166,4 @@ cdef class TopHits:
     cpdef void clear(self)
     cpdef void sort(self, str by=*)
     cpdef bint is_sorted(self, str by=*)
+    cpdef MSA to_msa(self, Alphabet alphabet, bint trim=*, bint digitize=?, bint all_consensus_cols=?)

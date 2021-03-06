@@ -59,7 +59,7 @@ ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
     from libhmmer.impl_sse.io cimport p7_oprofile_Write
 
-from .easel cimport Alphabet, Sequence, DigitalSequence
+from .easel cimport Alphabet, Sequence, DigitalSequence, MSA, TextMSA, DigitalMSA
 from .reexports.p7_tophits cimport p7_tophits_Reuse
 from .reexports.p7_hmmfile cimport (
     read_asc20hmm,
@@ -302,13 +302,21 @@ cdef class Builder:
         object popen=None,
         object pextend=None,
     ):
-        """__init__(self, alphabet, *, architecture="fast", weighting="pb", effective_number="entropy", prior_scheme="alpha", symfrac=0.5, fragthresh=0.5, wid=0.62, esigma=45.0, eid=0.62, EmL=200, EmN=200, EvL=200, EvN=200, EfL=100, EfN=200, Eft=0.04, seed=42, ere=None)\n--
+        """__init__(self, alphabet, *, architecture="fast", weighting="pb", effective_number="entropy", prior_scheme="alpha", symfrac=0.5, fragthresh=0.5, wid=0.62, esigma=45.0, eid=0.62, EmL=200, EmN=200, EvL=200, EvN=200, EfL=100, EfN=200, Eft=0.04, seed=42, ere=None, popen=None, pextend=None)\n--
 
         Create a new sequence builder with the given configuration.
 
         Arguments:
             alphabet (`~pyhmmer.easel.Alphabet`): The alphabet the builder
                 expects the sequences to be in.
+
+        Keyword Arguments:
+            popen (`float`): The *gap open* probability to use with the score
+                system. Default depends on the alphabet: *0.02* for proteins,
+                *0.03125* for nucleotides.
+            pextend (`float`): The *gap extend* probability to use with the
+                score system. Default depends on the alphabet: *0.4* for
+                proteins, *0.75* for nucleotides.
 
         """
         # extract alphabet and create raw P7_BUILDER object
@@ -409,14 +417,20 @@ cdef class Builder:
         the special case the seed is *0*, a one-time arbitrary seed will be
         chosen and the RNG will no be reseeded for reproducibility.
         """
+        assert self._bld != NULL
         return libeasel.random.esl_randomness_GetSeed(self._bld.r)
 
     @seed.setter
     def seed(self, uint32_t seed):
+        assert self._bld != NULL
+
+        cdef int status
+
         with nogil:
             status = libeasel.random.esl_randomness_Init(self._bld.r, seed)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_randomness_Init")
+
         self._bld.do_reseeding = seed != 0
 
     # --- Methods ------------------------------------------------------------
@@ -426,25 +440,23 @@ cdef class Builder:
         DigitalSequence sequence,
         Background background,
     ):
-        """build(self, sequence, background, popen=0.02, pextend=0.4)\n--
+        """build(self, sequence, background)\n--
 
         Build a new HMM from ``sequence`` using the builder configuration.
 
         Arguments:
             sequence (`~pyhmmer.easel.DigitalSequence`): A single biological
                 sequence in digital mode to build a HMM with.
-            background (`pyhmmer.plan7.background`): The background model to
-                use to create the HMM.
-            popen (`float`): The *gap open* probability to use with the score
-                system. Defaults to *0.02*.
-            pextend (`float`): The *gap extend* probability to use with the
-                score system. Defaults to *0.4*.
+            background (`pyhmmer.plan7.background`): The background model
+                to use to create the HMM.
 
         Raises:
-            `ValueError`: When either ``sequence`` or ``background`` have the
-                wrong alphabet for this builder.
+            `ValueError`: When either ``sequence`` or ``background`` have
+                the wrong alphabet for this builder.
 
         """
+        assert self._bld != NULL
+
         cdef int              status
         cdef HMM              hmm     = HMM.__new__(HMM)
         cdef Profile          profile = Profile.__new__(Profile)
@@ -509,6 +521,23 @@ cdef class Builder:
         DigitalMSA msa,
         Background background,
     ):
+        """build_msa(self, msa, background)\n--
+
+        Build a new HMM from ``msa`` using the builder configuration.
+
+        Arguments:
+            msa (`~pyhmmer.easel.DigitalMSA`): A multiple sequence
+                alignment in digital mode to build a HMM with.
+            background (`pyhmmer.plan7.background`): The background model
+                to use to create the HMM.
+
+        Raises:
+            `ValueError`: When either ``msa`` or ``background`` have
+                the wrong alphabet for this builder.
+
+        """
+        assert self._bld != NULL
+
         cdef int              status
         cdef HMM              hmm     = HMM.__new__(HMM)
         cdef Profile          profile = Profile.__new__(Profile)
@@ -656,7 +685,7 @@ cdef class Domain:
 
 
 cdef class Domains:
-    """A sequence of domains corresponding to a single `~pyhmmer.plan7.Hit`.
+    """A read-only view over the domains of a single `~pyhmmer.plan7.Hit`.
     """
 
     def __cinit__(self, Hit hit):
@@ -665,7 +694,7 @@ cdef class Domains:
     def __len__(self):
         return self.hit._hit.ndom
 
-    def __getitem__(self, index):
+    def __getitem__(self, int index):
         if index < 0:
             index += self.hit._hit.ndom
         if index >= self.hit._hit.ndom or index < 0:
@@ -1221,7 +1250,7 @@ cdef class OptimizedProfile:
 
 
 cdef class _Offsets:
-    """A view over the disk offsets of an optimized profile.
+    """A mutable view over the disk offsets of an optimized profile.
     """
 
     def __cinit__(self, OptimizedProfile opt):
@@ -1968,6 +1997,8 @@ cdef class TopHits:
 
     """
 
+    # --- Magic methods ------------------------------------------------------
+
     def __init__(self):
         """__init__(self)\n--
 
@@ -2002,6 +2033,8 @@ cdef class TopHits:
             raise IndexError("list index out of range")
         return Hit(self, index)
 
+    # --- Properties ---------------------------------------------------------
+
     @property
     def reported(self):
         return self._th.nreported
@@ -2009,6 +2042,8 @@ cdef class TopHits:
     @property
     def included(self):
         return self._th.nincluded
+
+    # --- Methods ------------------------------------------------------------
 
     cdef void threshold(self, Pipeline pipeline):
         """threshold(self, pipeline)\n--
@@ -2094,6 +2129,65 @@ cdef class TopHits:
             return self._th.is_sorted_by_seqidx
 
         raise ValueError("Invalid value for `by` argument: {!r}".format(by))
+
+    cpdef MSA to_msa(self, Alphabet alphabet, bint trim=False, bint digitize=False, bint all_consensus_cols=False):
+        """to_msa(self, alphabet, trim=False, digitize=False, all_consensus_cols=False)\n--
+
+        Create multiple alignment of all included domains.
+
+        Arguments:
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the
+                HMM this `TopHits` was obtained from. It is required to
+                convert back hits to single sequences.
+            trim (`bool`): Trim off any residues that get assigned to
+                flanking :math:`N` and :math:`C` states (in profile traces)
+                or :math:`I_0` and :math:`I_m` (in core traces).
+            digitize (`bool`): If set to `True`, returns a `DigitalMSA`
+                instead of a `TextMSA`.
+            all_consensus_cols (`bool`): Force a column to be created for
+                every consensus column in the model, even if it means having
+                all gap character in a column.
+
+        Returns:
+            `~pyhmmer.easel.MSA`: A multiple sequence alignment containing
+            the reported hits, either a `TextMSA` or a `DigitalMSA`
+            depending on the value of the ``digitize`` argument.
+
+        .. versionadded:: 0.3.0
+
+        """
+        assert self._th != NULL
+
+        cdef int status
+        cdef int flags  = libhmmer.p7_DEFAULT
+        cdef MSA msa
+
+        if trim:
+            flags |= libhmmer.p7_TRIM
+        if all_consensus_cols:
+            flags |= libhmmer.p7_ALL_CONSENSUS_COLS
+        if digitize:
+            flags |= libhmmer.p7_DIGITIZE
+            msa = DigitalMSA.__new__(DigitalMSA, alphabet)
+        else:
+            msa = TextMSA.__new__(TextMSA)
+
+        status = libhmmer.p7_tophits.p7_tophits_Alignment(
+            self._th,
+            alphabet._abc,
+            NULL, # inc_sqarr
+            NULL, # inc_trarr
+            0,    # inc_n
+            flags,
+            &msa._msa
+        )
+
+        if status == libeasel.eslOK:
+            return msa
+        elif status == libeasel.eslFAIL:
+            raise ValueError("No included domains found")
+        else:
+            raise UnexpectedError(status, "p7_tophits_Alignment")
 
 
 # --- Module init code -------------------------------------------------------

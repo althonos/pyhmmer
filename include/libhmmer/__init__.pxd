@@ -37,3 +37,8 @@ cdef extern from "hmmer.h" nogil:
         p7_MOFFSET = 0
         p7_FOFFSET = 1
         p7_POFFSET = 2
+
+    cdef int p7_DEFAULT            =     0
+    cdef int p7_DIGITIZE           = (1<<0)
+    cdef int p7_ALL_CONSENSUS_COLS = (1<<1)
+    cdef int p7_TRIM               = (1<<2)
