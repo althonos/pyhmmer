@@ -243,9 +243,9 @@ cdef class Bitfield:
         assert self._b != NULL
         return self._b.nb
 
-    def __getitem__(self, index):
+    def __getitem__(self, int idx):
         assert self._b != NULL
-        cdef size_t index_ = self._wrap_index(index)
+        cdef size_t index_ = self._wrap_index(idx)
         return libeasel.bitfield.esl_bitfield_IsSet(self._b, index_)
 
     def __setitem__(self, index, value):
@@ -490,8 +490,27 @@ cdef class KeyHash:
         return new
 
 
+cdef class _MSASequences:
+    """A read-only view over the individual sequences of an MSA.
+    """
+
+    def __cinit__(self, MSA msa):
+        self.msa = msa
+
+    def __len__(self):
+        assert self.msa._msa != NULL
+        return self.msa._msa.nseq
+
+
+@cython.freelist(4)
 cdef class MSA:
     """An abstract alignment of multiple sequences.
+
+    Hint:
+        Use ``len(msa)`` to get the number of columns in the alignment,
+        and ``len(msa.sequences)`` to get the number of sequences (i.e.
+        the number of rows).
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -662,6 +681,30 @@ cdef class MSA:
             raise UnexpectedError(status, "esl_sqascii_WriteFasta")
 
 
+cdef class _TextMSASequences(_MSASequences):
+    """A read-only view over the sequences of an MSA in text mode.
+    """
+
+    def __getitem__(self, int idx):
+        assert self.msa._msa != NULL
+
+        cdef int          status
+        cdef TextSequence seq
+
+        if idx < 0:
+            idx += self.msa._msa.nseq
+        if idx >= self.msa._msa.nseq:
+            raise IndexError("list index out of range")
+
+        seq = TextSequence.__new__(TextSequence)
+        status = libeasel.sq.esl_sq_FetchFromMSA(self.msa._msa, idx, &seq._sq)
+
+        if status == libeasel.eslOK:
+            return seq
+        else:
+            raise UnexpectedError(status, "esl_sq_FetchFromMSA")
+
+
 cdef class TextMSA(MSA):
     """A multiple sequence alignement stored in text mode.
     """
@@ -679,6 +722,17 @@ cdef class TextMSA(MSA):
             self._msa = libeasel.msa.esl_msa_Create(nsequences, alen)
         if self._msa == NULL:
             raise AllocationError("ESL_MSA")
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def sequences(self):
+        """`_TextMSASequences`: A view of the sequences in the alignment.
+
+        .. versionadded:: 0.3.0
+
+        """
+        return _TextMSASequences.__new__(_TextMSASequences, self)
 
     # --- Methods ------------------------------------------------------------
 
@@ -736,6 +790,36 @@ cdef class TextMSA(MSA):
         return new
 
 
+cdef class _DigitalMSASequences(_MSASequences):
+    """A read-only view over the sequences of an MSA in digital mode.
+    """
+
+    def __cinit__(self, MSA msa):
+        self.msa = msa
+
+    def __init__(self, MSA msa, Alphabet alphabet):
+        self.alphabet = alphabet
+
+    def __getitem__(self, int idx):
+        assert self.msa._msa != NULL
+
+        cdef int             status
+        cdef DigitalSequence seq
+
+        if idx < 0:
+            idx += self.msa._msa.nseq
+        if idx >= self.msa._msa.nseq:
+            raise IndexError("list index out of range")
+
+        seq = DigitalSequence.__new__(DigitalMSA, self.alphabet)
+        status = libeasel.sq.esl_sq_FetchFromMSA(self.msa._msa, idx, &seq._sq)
+
+        if status == libeasel.eslOK:
+            return seq
+        else:
+            raise UnexpectedError(status, "esl_sq_FetchFromMSA")
+
+
 cdef class DigitalMSA(MSA):
     """A multiple sequence alignment stored in digital mode.
 
@@ -774,6 +858,19 @@ cdef class DigitalMSA(MSA):
             )
         if self._msa == NULL:
             raise AllocationError("ESL_MSA")
+
+        self.sequences = _DigitalMSASequences(self, self.alphabet)
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def sequences(self):
+        """`_DigitalMSASequences`: A view of the sequences in the alignment.
+
+        .. versionadded:: 0.3.0
+
+        """
+        return _DigitalMSASequences.__new__(_DigitalMSASequences, self, self.alphabet)
 
     # --- Methods ------------------------------------------------------------
 

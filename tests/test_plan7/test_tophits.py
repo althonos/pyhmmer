@@ -67,6 +67,11 @@ class TestTopHits(unittest.TestCase):
             self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_187")
 
     def test_threshold(self):
-        # after thresholding, one of the htis will not be included.
+        # after thresholding, one of the hits will not be included.
         self.assertEqual(self.hits.included, 15)
         self.assertEqual(self.hits.reported, 22)
+
+    def test_to_msa(self):
+        msa = self.hits.to_msa(self.hmm.alphabet)
+        unique_names = { seq.name.split(b"/")[0] for seq in msa.sequences }
+        self.assertEqual(len(unique_names), self.hits.included)

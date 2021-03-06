@@ -41,6 +41,10 @@ cdef class KeyHash:
     cpdef KeyHash copy(self)
 
 
+cdef class _MSASequences:
+    cdef MSA msa
+
+
 cdef class MSA:
     cdef ESL_MSA* _msa
 
@@ -48,9 +52,17 @@ cdef class MSA:
     cpdef void write(self, object fh, str format) except *
 
 
+cdef class _TextMSASequences(_MSASequences):
+    pass
+
+
 cdef class TextMSA(MSA):
     cpdef DigitalMSA digitize(self, Alphabet alphabet)
     cpdef TextMSA copy(self)
+
+
+cdef class _DigitalMSASequences(_MSASequences):
+    cdef readonly Alphabet alphabet
 
 
 cdef class DigitalMSA(MSA):
