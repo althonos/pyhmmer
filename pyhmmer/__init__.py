@@ -54,6 +54,7 @@ if __doc__ is not None:
 # not required with later versions of Python)
 _collections_abc.Iterator.register(easel.SequenceFile)
 _collections_abc.Iterator.register(plan7.HMMFile)
+_collections_abc.Mapping.register(easel.KeyHash)
 _collections_abc.Sized.register(plan7.Alignment)
 _collections_abc.Sequence.register(easel.Bitfield)
 _collections_abc.Sequence.register(plan7.Domains)

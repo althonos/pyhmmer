@@ -201,6 +201,15 @@ cdef class Bitfield:
         >>> bitfield[0]
         False
 
+    Use indexing to access and edit individual bits::
+
+        >>> bitfield[0] = True
+        >>> bitfield[0]
+        True
+        >>> bitfield[0] = False
+        >>> bitfield[0]
+        False
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -292,7 +301,41 @@ cdef class Bitfield:
 
 
 cdef class KeyHash:
-    """A dynamically resized container to store string keys using a hash table.
+    """A dynamically resized container to store byte keys using a hash table.
+
+    Internally uses Bob Jenkins' *one at a time* hash, a simple and
+    efficient hash function published in 1997 that exhibits
+    `avalanche <https://en.wikipedia.org/wiki/Avalanche_effect>`_
+    behaviour.
+
+    Example:
+        Add new keys to the key hash using the `~KeyHash.add` method
+        like you would with a Python `set`::
+
+            >>> kh = KeyHash()
+            >>> kh.add(b"key")
+            0
+
+        Check if a key hash contains a given key::
+
+            >>> b"key" in kh
+            True
+            >>> b"missing" in kh
+            False
+
+        Get the index associated with a key using the indexing notation::
+
+            >>> kh[b"key"]
+            0
+            >>> kh[b"missing"]
+            Traceback (most recent call last):
+              ...
+            KeyError: b'missing'
+
+    See Also:
+        The Wikipedia article for Bob Jenkins' hash functions:
+        https://en.wikipedia.org/wiki/Jenkins_hash_function
+
     """
 
     def __cinit__(self):
@@ -319,8 +362,11 @@ cdef class KeyHash:
         assert self._kh != NULL
         return libeasel.keyhash.esl_keyhash_GetNumber(self._kh)
 
-    def __contains__(self, bytes value):
+    def __contains__(self, object value):
         assert self._kh != NULL
+
+        if not isinstance(value, bytes):
+            return False
 
         cdef const char*  key    = value
         cdef       size_t length = len(value)
@@ -333,6 +379,73 @@ cdef class KeyHash:
             return False
         else:
             raise UnexpectedError(status, "esl_keyhash_Lookup")
+
+    def __getitem__(self, bytes item):
+        assert self._kh != NULL
+
+        cdef const char*  key    = item
+        cdef       size_t length = len(item)
+        cdef       int    index
+
+        with nogil:
+            status = libeasel.keyhash.esl_keyhash_Lookup(self._kh, key, length, &index)
+        if status == libeasel.eslOK:
+            return index
+        elif status == libeasel.eslENOTFOUND:
+            raise KeyError(item)
+        else:
+            raise UnexpectedError(status, "esl_keyhash_Lookup")
+
+    def __iter__(self):
+        assert self._kh != NULL
+
+        cdef int   i
+        cdef int   offset
+        cdef char* key
+
+        for i in range(libeasel.keyhash.esl_keyhash_GetNumber(self._kh)):
+            offset = self._kh.key_offset[i]
+            key = &self._kh.smem[offset]
+            yield <bytes> key
+
+    cpdef int add(self, bytes key) except -1:
+        """add(self, item)\n--
+
+        Add a new key to the hash table, and return its index.
+
+        If ``key`` was already in the hash table, the previous index is
+        returned::
+
+            >>> kh = KeyHash()
+            >>> kh.add(b"first")
+            0
+            >>> kh.add(b"second")
+            1
+            >>> kh.add(b"first")
+            0
+
+        Arguments:
+            key (`bytes`): The key to add to the hash table.
+
+        Returns:
+            `int`: The index corresponding to the added ``key``.
+
+        .. versionadded:: 0.3.0
+
+        """
+        assert self._kh != NULL
+
+        cdef       int    status
+        cdef       int    index
+        cdef const char*  k      = key
+        cdef       size_t length = len(key)
+
+        with nogil:
+            status = libeasel.keyhash.esl_keyhash_Store(self._kh, k, length, &index)
+        if status == libeasel.eslOK or status == libeasel.eslEDUP:
+            return index
+        else:
+            raise UnexpectedError(status, "esl_keyhash_Store")
 
     cpdef void clear(self):
         """clear(self)\n--
@@ -350,6 +463,14 @@ cdef class KeyHash:
         """copy(self)\n--
 
         Create and return an exact copy of this mapping.
+
+        Example:
+            >>> kh = KeyHash()
+            >>> kh.add(b"key")
+            0
+            >>> copy = kh.copy()
+            >>> b"key" in copy
+            True
 
         """
         assert self._kh != NULL

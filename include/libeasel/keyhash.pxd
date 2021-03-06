@@ -28,5 +28,5 @@ cdef extern from "esl_keyhash.h" nogil:
     void         esl_keyhash_Destroy(ESL_KEYHASH *kh)
     void         esl_keyhash_Dump(FILE *fp, const ESL_KEYHASH *kh)
 
-    int  esl_keyhash_Store (      ESL_KEYHASH *kh, const char *key, esl_pos_t n, int *ret_index)
+    int  esl_keyhash_Store (      ESL_KEYHASH *kh, const char *key, esl_pos_t n, int *ret_index) except -1
     int  esl_keyhash_Lookup(const ESL_KEYHASH *kh, const char *key, esl_pos_t n, int *ret_index)
