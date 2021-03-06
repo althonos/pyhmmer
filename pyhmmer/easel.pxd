@@ -57,8 +57,8 @@ cdef class _TextMSASequences(_MSASequences):
 
 
 cdef class TextMSA(MSA):
-    cpdef DigitalMSA digitize(self, Alphabet alphabet)
     cpdef TextMSA copy(self)
+    cpdef DigitalMSA digitize(self, Alphabet alphabet)
 
 
 cdef class _DigitalMSASequences(_MSASequences):
@@ -69,6 +69,7 @@ cdef class DigitalMSA(MSA):
     cdef readonly Alphabet alphabet
 
     cpdef DigitalMSA copy(self)
+    cpdef TextMSA textize(self)
 
 
 cdef class MSAFile:

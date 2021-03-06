@@ -769,6 +769,8 @@ cdef class TextMSA(MSA):
             sequences digitized with ``alphabet``.
 
         """
+        assert self._msa != NULL
+
         cdef int status
         cdef DigitalMSA new
 
@@ -898,6 +900,38 @@ cdef class DigitalMSA(MSA):
             return new
         else:
             raise UnexpectedError(status, "esl_msa_Copy")
+
+    cpdef TextMSA textize(self):
+        """textize(self)\n--
+
+        Convert the digital alignment to a text alignment.
+
+        Returns:
+            `TextMSA`: A copy of the alignment in text-mode.
+
+        .. versionadded:: 0.3.0
+
+        """
+        assert self._msa != NULL
+
+        cdef int     status
+        cdef TextMSA new
+
+        new = TextMSA.__new__(TextMSA)
+        with nogil:
+            new._msa = libeasel.msa.esl_msa_Create(
+                self._msa.nseq,
+                self._msa.alen
+            )
+            if new._msa == NULL:
+                raise AllocationError("ESL_MSA")
+
+            status = libeasel.msa.esl_msa_Copy(self._msa, new._msa)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_msa_Copy")
+
+        assert not (new._msa.flags & libeasel.msa.eslMSA_DIGITAL)
+        return new
 
 
 cdef class MSAFile:
