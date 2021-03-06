@@ -11,6 +11,7 @@ from libeasel.alphabet cimport ESL_ALPHABET
 from libeasel.bitfield cimport ESL_BITFIELD
 from libeasel.keyhash cimport ESL_KEYHASH
 from libeasel.msa cimport ESL_MSA
+from libeasel.msafile cimport ESL_MSAFILE
 from libeasel.sq cimport ESL_SQ
 from libeasel.sqio cimport ESL_SQFILE
 from libeasel.ssi cimport ESL_SSI, ESL_NEWSSI
@@ -54,6 +55,17 @@ cdef class DigitalMSA(MSA):
     cdef readonly Alphabet alphabet
 
     cpdef DigitalMSA copy(self)
+
+
+cdef class MSAFile:
+    cdef ESL_MSAFILE* _msaf
+    cdef readonly Alphabet alphabet
+
+    cpdef MSA read(self)
+
+    cpdef void close(self)
+    cpdef Alphabet guess_alphabet(self)
+    cpdef void set_digital(self, Alphabet)
 
 
 cdef class Sequence:

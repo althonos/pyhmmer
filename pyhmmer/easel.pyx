@@ -24,10 +24,11 @@ cimport libeasel.alphabet
 cimport libeasel.bitfield
 cimport libeasel.keyhash
 cimport libeasel.msa
+cimport libeasel.msafile
 cimport libeasel.sq
 cimport libeasel.sqio
 cimport libeasel.ssi
-from libeasel cimport ESL_DSQ
+from libeasel cimport ESL_DSQ, esl_pos_t
 
 DEF eslERRBUFSIZE = 128
 
@@ -386,6 +387,104 @@ cdef class MSA:
         except TypeError:
             return False
 
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def accession(self):
+        """`bytes` or `None`: The accession of the alignment, if any.
+        """
+        assert self._msa != NULL
+        if self._msa.acc == NULL:
+            return None
+        return <bytes> self._msa.acc
+
+    @accession.setter
+    def accession(self, bytes accession):
+        assert self._msa != NULL
+
+        cdef       int       status
+        cdef       esl_pos_t length = len(accession)
+        cdef const char*     acc    = accession
+
+        with nogil:
+            status = libeasel.msa.esl_msa_SetAccession(self._msa, acc, length)
+        if status == libeasel.eslEMEM:
+            raise AllocationError("char*")
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_msa_SetAccession")
+
+    @property
+    def author(self):
+        """`bytes` or `None`: The author of the alignment, if any.
+        """
+        assert self._msa != NULL
+        if self._msa.au == NULL:
+            return None
+        return <bytes> self._msa.au
+
+    @author.setter
+    def author(self, bytes author):
+        assert self._msa != NULL
+
+        cdef       int       status
+        cdef       esl_pos_t length = len(author)
+        cdef const char*     au   = author
+
+        with nogil:
+            status = libeasel.msa.esl_msa_SetAuthor(self._msa, au, length)
+        if status == libeasel.eslEMEM:
+            raise AllocationError("char*")
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_msa_SetAuthor")
+
+    @property
+    def name(self):
+        """`bytes` or `None`: The name of the alignment, if any.
+        """
+        assert self._msa != NULL
+        if self._msa.name == NULL:
+            return None
+        return <bytes> self._msa.name
+
+    @name.setter
+    def name(self, bytes name):
+        assert self._msa != NULL
+
+        cdef       int       status
+        cdef       esl_pos_t length = len(name)
+        cdef const char*     nm     = name
+
+        with nogil:
+            status = libeasel.msa.esl_msa_SetName(self._msa, nm, length)
+        if status == libeasel.eslEMEM:
+            raise AllocationError("char*")
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_msa_SetName")
+
+    @property
+    def description(self):
+        """`bytes` or `None`: The description of the sequence, if any.
+        """
+        assert self._msa != NULL
+        if self._msa.desc == NULL:
+            return None
+        return <bytes> self._msa.desc
+
+    @description.setter
+    def description(self, bytes description):
+        assert self._msa != NULL
+
+        cdef       int       status
+        cdef       esl_pos_t length = len(description)
+        cdef const char*     desc   = description
+
+        with nogil:
+            status = libeasel.msa.esl_msa_SetDesc(self._msa, desc, length)
+        if status == libeasel.eslEMEM:
+            raise AllocationError("char*")
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_msa_SetDesc")
+
     # --- Methods ------------------------------------------------------------
 
     cpdef uint32_t checksum(self):
@@ -543,6 +642,184 @@ cdef class DigitalMSA(MSA):
             return new
         else:
             raise UnexpectedError(status, "esl_msa_Copy")
+
+
+cdef class MSAFile:
+    """A wrapper around a multiple-alignment file.
+
+    This class supports reading sequences stored in different formats, such
+    as Stockholm, A2M, PSI-BLAST or Clustal.
+
+    """
+
+    _formats = {
+        "stockholm": libeasel.msafile.eslMSAFILE_STOCKHOLM,
+        "pfam": libeasel.msafile.eslMSAFILE_PFAM,
+        "a2m": libeasel.msafile.eslMSAFILE_A2M,
+        "psiblast": libeasel.msafile.eslMSAFILE_PSIBLAST,
+        "selex": libeasel.msafile.eslMSAFILE_SELEX,
+        "afa": libeasel.msafile.eslMSAFILE_AFA,
+        "clustal": libeasel.msafile.eslMSAFILE_CLUSTAL,
+        "clustallike": libeasel.msafile.eslMSAFILE_CLUSTALLIKE,
+        "phylip": libeasel.msafile.eslMSAFILE_PHYLIP,
+        "phylips": libeasel.msafile.eslMSAFILE_PHYLIPS,
+    }
+
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __cinit__(self):
+        self.alphabet = None
+        self._msaf = NULL
+
+    def __init__(self, str file, str format = None):
+        cdef int fmt = libeasel.msafile.eslMSAFILE_UNKNOWN
+        if format is not None:
+            format_ = format.lower()
+            if format_ not in self._formats:
+                raise ValueError("Invalid MSA format: {!r}".format(format))
+            fmt = self._formats[format_]
+
+        cdef bytes fspath = os.fsencode(file)
+        cdef int status = libeasel.msafile.esl_msafile_Open(NULL, fspath, NULL, fmt, NULL, &self._msaf)
+        if status == libeasel.eslENOTFOUND:
+            raise FileNotFoundError(2, "No such file or directory: {!r}".format(file))
+        elif status == libeasel.eslEMEM:
+            raise AllocationError("ESL_MSAFILE")
+        elif status == libeasel.eslEFORMAT:
+            if format is None:
+                raise ValueError("Could not determine format of file: {!r}".format(file))
+            else:
+                raise EOFError("Sequence file is empty")
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_msafile_Open")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        seq = self.read()
+        if seq is None:
+            raise StopIteration()
+        return seq
+
+
+    # --- Read methods -------------------------------------------------------
+
+    cpdef MSA read(self):
+        """read(self)\n--
+
+        Read the next alignment from the file.
+
+        Returns:
+            `MSA`: The next alignment in the file, or `None` if all the
+            alignments were read from the file already.
+
+        Raises:
+            `ValueError`: When attempting to read an alignment from a closed
+                file, or when the file could not be parsed.
+
+        Hint:
+            This method allocates a new alignment, which is not efficient in
+            case the sequences are being read within a tight loop. Use
+            `SequenceFile.readinto` with an already initialized `Sequence`
+            if you can to recycle the internal buffers.
+
+        """
+        cdef MSA msa
+
+        if self.alphabet is not None:
+            msa = DigitalMSA.__new__(DigitalMSA, self.alphabet)
+        else:
+            msa = TextMSA.__new__(TextMSA)
+
+        if self._msaf == NULL:
+            raise ValueError("I/O operation on closed file.")
+        else:
+            status = libeasel.msafile.esl_msafile_Read(self._msaf, &msa._msa)
+
+        if status == libeasel.eslOK:
+            return msa
+        elif status == libeasel.eslEOF:
+            return None
+        elif status == libeasel.eslEFORMAT:
+            msg = <bytes> self._msaf.errmsg
+            raise ValueError("Could not parse file: {}".format(msg.decode()))
+        else:
+            raise UnexpectedError(status, "esl_msafile_Read")
+
+
+    # --- Utils --------------------------------------------------------------
+
+    cpdef void close(self):
+        """close(self)\n--
+
+        Close the file and free the resources used by the parser.
+
+        """
+        libeasel.msafile.esl_msafile_Close(self._msaf)
+        self._msaf = NULL
+
+    cpdef Alphabet guess_alphabet(self):
+        """guess_alphabet(self)\n--
+
+        Guess the alphabet of an open `MSAFile`.
+
+        This method tries to guess the alphabet of a multiple-alignment file
+        by inspecting the first entry in the file. It returns the alphabet,
+        or `None` if the file alphabet cannot be reliably guessed.
+
+        Raises:
+            `EOFError`: if the file is empty.
+            `OSError`: if a parse error occurred.
+            `ValueError`: if this methods is called after the file was closed.
+
+        """
+        cdef int ty
+        cdef int status
+        cdef Alphabet alphabet
+
+        if self._msaf == NULL:
+            raise ValueError("I/O operation on closed file.")
+
+        status = libeasel.msafile.esl_msafile_GuessAlphabet(self._msaf, &ty)
+        if status == libeasel.eslOK:
+            alphabet = Alphabet.__new__(Alphabet)
+            alphabet._init_default(ty)
+            return alphabet
+        elif status == libeasel.eslENOALPHABET:
+            return None
+        elif status == libeasel.eslENODATA:
+            raise EOFError("Sequence file appears to be empty.")
+        elif status == libeasel.eslEFORMAT:
+            msg = <bytes> self._msaf.errmsg
+            raise ValueError("Could not parse file: {}".format(msg.decode()))
+        else:
+            raise UnexpectedError(status, "esl_msafile_GuessAlphabet")
+
+    cpdef void set_digital(self, Alphabet alphabet):
+        """set_digital(self, alphabet)\n--
+
+        Set the `MSAFile` to read in digital mode with ``alphabet``.
+
+        This method can be called even after the first alignment have been
+        read; it only affects subsequent sequences in the file.
+
+        """
+        if self._msaf == NULL:
+            raise ValueError("I/O operation on closed file.")
+
+        cdef int status = libeasel.msafile.esl_msafile_SetDigital(self._msaf, alphabet._abc)
+        if status == libeasel.eslOK:
+            self.alphabet = alphabet
+        else:
+            raise UnexpectedError(status, "esl_msafile_SetDigital")
 
 
 @cython.freelist(4)
@@ -1066,7 +1343,7 @@ cdef class SequenceFile:
             else:
                 raise EOFError("Sequence file is empty")
         elif status != libeasel.eslOK:
-            raise UnexpectedError(status, "esl_sq_Checksum")
+            raise UnexpectedError(status, "esl_sqfile_Open")
 
     def __enter__(self):
         return self
@@ -1251,8 +1528,8 @@ cdef class SequenceFile:
         elif status == libeasel.eslEFORMAT:
             msg = <bytes> libeasel.sqio.esl_sqfile_GetErrorBuf(self._sqfp)
             raise ValueError("Could not parse file: {}".format(msg.decode()))
-
-        return None
+        else:
+            raise UnexpectedError(status, "esl_sqfile_GuessAlphabet")
 
     cpdef void set_digital(self, Alphabet alphabet):
         """set_digital(self, alphabet)\n--
