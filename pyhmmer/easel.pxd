@@ -95,8 +95,8 @@ cdef class SequenceFile:
     cpdef Sequence read(self, bint skip_info=*, bint skip_sequence=*)
     cpdef Sequence readinto(self, Sequence, bint skip_info=*, bint skip_sequence=*)
 
-    cpdef Sequence fetch(self, bytes key, bint skip_info=*, bint skip_sequence=*)
-    cpdef Sequence fetchinto(self, Sequence seq, bytes key, bint skip_info=*, bint skip_sequence=*)
+    # cpdef Sequence fetch(self, bytes key, bint skip_info=*, bint skip_sequence=*)
+    # cpdef Sequence fetchinto(self, Sequence seq, bytes key, bint skip_info=*, bint skip_sequence=*)
 
     cpdef void close(self)
     cpdef Alphabet guess_alphabet(self)

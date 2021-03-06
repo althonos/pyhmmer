@@ -1596,12 +1596,12 @@ cdef class SequenceFile:
 
     # --- Fetch methods ------------------------------------------------------
 
-    cpdef Sequence fetch(self, bytes key, bint skip_info=False, bint skip_sequence=False):
-        cdef Sequence seq = TextSequence()
-        return self.fetchinto(seq, key, skip_info=skip_info, skip_sequence=skip_sequence)
-
-    cpdef Sequence fetchinto(self, Sequence seq, bytes key, bint skip_info=False, bint skip_sequence=False):
-        raise NotImplementedError("TODO SequenceFile.fetchinto")
+    # cpdef Sequence fetch(self, bytes key, bint skip_info=False, bint skip_sequence=False):
+    #     cdef Sequence seq = TextSequence()
+    #     return self.fetchinto(seq, key, skip_info=skip_info, skip_sequence=skip_sequence)
+    #
+    # cpdef Sequence fetchinto(self, Sequence seq, bytes key, bint skip_info=False, bint skip_sequence=False):
+    #     raise NotImplementedError("TODO SequenceFile.fetchinto")
 
 
     # --- Utils --------------------------------------------------------------
