@@ -22,7 +22,7 @@ IF HMMER_IMPL == "VMX":
 ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
-from .easel cimport Alphabet, DigitalSequence
+from .easel cimport Alphabet, DigitalSequence, DigitalMSA
 
 
 cdef extern from "hmmer.h" nogil:
@@ -49,10 +49,13 @@ cdef class Builder:
     cdef readonly object effective_number
     cdef readonly object architecture
     cdef readonly object weighting
+    cdef readonly float  popen
+    cdef readonly float  pextend
     cdef readonly Alphabet alphabet
     cdef P7_BUILDER* _bld
 
-    cpdef tuple build(self, DigitalSequence sequence, Background background, float popen=?, float pextend=?)
+    cpdef tuple build(self, DigitalSequence sequence, Background background)
+    cpdef tuple build_msa(self, DigitalMSA msa, Background background)
     cpdef Builder copy(self)
 
 

@@ -62,14 +62,19 @@ class Builder(object):
         Eft: float = 0.04,
         seed: int = 42,
         ere: typing.Optional[float] = None,
+        popen: typing.Optional[float] = None,
+        pextend: typing.Optional[float] = None,
     ) -> None: ...
     def __copy__(self) -> Builder: ...
     def build(
         self,
         sequence: DigitalSequence,
         background: Background,
-        popen: float = 0.02,
-        pextend: float = 0.4,
+    ) -> typing.Tuple[HMM, Profile, OptimizedProfile]: ...
+    def build_msa(
+        self,
+        msa: DigitalMSA,
+        background: Background,
     ) -> typing.Tuple[HMM, Profile, OptimizedProfile]: ...
     def copy(self) -> Builder: ...
 

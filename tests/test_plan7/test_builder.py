@@ -8,7 +8,7 @@ import pkg_resources
 
 import pyhmmer
 from pyhmmer.errors import EaselError
-from pyhmmer.easel import Alphabet, SequenceFile
+from pyhmmer.easel import Alphabet, SequenceFile, MSAFile
 from pyhmmer.plan7 import HMMFile, Pipeline, Builder, Background
 
 
@@ -16,7 +16,7 @@ class TestBuilder(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.ecori_fa = os.path.realpath(os.path.join(
+        cls.testdata = os.path.realpath(os.path.join(
             __file__,
             os.pardir,
             os.pardir,
@@ -24,8 +24,9 @@ class TestBuilder(unittest.TestCase):
             "vendor",
             "hmmer",
             "testsuite",
-            "ecori.fa"
         ))
+
+        cls.ecori_fa = os.path.join(cls.testdata, "ecori.fa")
         with SequenceFile(cls.ecori_fa) as seqf:
             cls.dna = next(seqf)
 
@@ -63,3 +64,19 @@ class TestBuilder(unittest.TestCase):
         self.assertEqual(profile.alphabet, abc)
         self.assertEqual(opt.alphabet, abc)
         self.assertEqual(hmm.M, self.ecori.M)
+
+    def test_build_msa_dna(self):
+        abc = Alphabet.dna()
+        builder = Builder(alphabet=abc)
+
+        with MSAFile(os.path.join(self.testdata, "3box.sto")) as msa_file:
+            msa_file.set_digital(abc)
+            msa = next(msa_file)
+            msa.name = b"3box"
+
+        with HMMFile(os.path.join(self.testdata, "3box.hmm")) as hmm_file:
+            hmm_exp = next(hmm_file)
+
+        hmm, profile, opt = builder.build_msa(msa, Background(abc))
+        self.assertEqual(hmm.name, b"3box")
+        self.assertEqual(hmm.M, hmm_exp.M)

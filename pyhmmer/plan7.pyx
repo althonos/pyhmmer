@@ -504,6 +504,58 @@ cdef class Builder:
         else:
             raise UnexpectedError(status, "p7_SingleBuilder")
 
+    cpdef tuple build_msa(
+        self,
+        DigitalMSA msa,
+        Background background,
+    ):
+        cdef int              status
+        cdef HMM              hmm     = HMM.__new__(HMM)
+        cdef Profile          profile = Profile.__new__(Profile)
+        cdef OptimizedProfile opti    = OptimizedProfile.__new__(OptimizedProfile)
+
+        # use given probabilities
+        self._bld.popen = self.popen
+        self._bld.pextend = self.pextend
+
+        # reseed RNG used by the builder if needed
+        if self._bld.do_reseeding:
+            status = libeasel.random.esl_randomness_Init(self._bld.r, self.seed)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_randomness_Init")
+
+        # check alphabet and assign it to newly created objects
+        hmm.alphabet = profile.alphabet = opti.alphabet = self.alphabet
+        if background.alphabet != self.alphabet:
+            raise ValueError("background does not have the right alphabet")
+        if msa.alphabet != self.alphabet:
+            raise ValueError("MSA does not have the right alphabet")
+
+        with nogil:
+            if status == libeasel.eslENOTFOUND:
+                raise FileNotFoundError("could not open substitution score matrix file")
+            elif status == libeasel.eslEINVAL:
+                raise ValueError("cannot convert matrix to conditional probabilities")
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_builder_SetScoreSystem")
+            # build HMM and profiles
+            status = libhmmer.p7_builder.p7_Builder(
+                self._bld,
+                msa._msa,
+                background._bg,
+                &hmm._hmm, # HMM
+                NULL, # traceback
+                &profile._gm, # profile,
+                &opti._om, # optimized profile
+                NULL # modified msa
+            )
+        if status == libeasel.eslOK:
+          return (hmm, profile, opti)
+        elif status == libeasel.eslEINVAL:
+            msg = <bytes> self._bld.errbuf
+            raise ValueError("Could not build HMM: {}".format(msg.decode()))
+        else:
+            raise UnexpectedError(status, "p7_Builder")
 
     cpdef Builder copy(self):
         """copy(self)\n--
