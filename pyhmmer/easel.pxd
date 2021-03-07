@@ -48,6 +48,7 @@ cdef class _MSASequences:
 cdef class MSA:
     cdef ESL_MSA* _msa
 
+    cdef int _rehash(self) nogil except 1
     cpdef uint32_t checksum(self)
     cpdef void write(self, object fh, str format) except *
 
@@ -55,8 +56,8 @@ cdef class MSA:
 cdef class _TextMSASequences(_MSASequences):
     pass
 
-
 cdef class TextMSA(MSA):
+    cdef int _set_sequence(self, int idx, ESL_SQ* seq) nogil except 1
     cpdef TextMSA copy(self)
     cpdef DigitalMSA digitize(self, Alphabet alphabet)
 

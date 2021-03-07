@@ -47,13 +47,14 @@ class _MSASequences(typing.Sequence[Sequence], abc.ABC):
     @abc.abstractmethod
     def __getitem__(self, idx: int) -> Sequence: ...  # type: ignore
 
-class MSA(abc.ABC):
+class MSA(abc.ABC, typing.Sized):
     @abc.abstractmethod
     def __init__(
         self, nsequences: int, length: typing.Optional[int] = None
     ) -> None: ...
     def __copy__(self) -> MSA: ...
     def __eq__(self, other: object) -> bool: ...
+    def __len__(self) -> int: ...
     @property
     def accession(self) -> typing.Optional[bytes]: ...
     @accession.setter
@@ -78,10 +79,16 @@ class MSA(abc.ABC):
 class _TextMSASequences(_MSASequences, typing.Sequence[TextSequence]):
     def __init__(self, msa: TextMSA) -> None: ...
     def __getitem__(self, idx: int) -> TextSequence: ...  # type: ignore
+    def __setitem__(self, idx: int, item: TextSequence) -> None: ...
 
 class TextMSA(MSA):
     def __init__(
-        self, nsequences: int, length: typing.Optional[int] = None
+        self,
+        name: typing.Optional[bytes] = None,
+        description: typing.Optional[bytes] = None,
+        accession: typing.Optional[bytes] = None,
+        sequences: typing.Optional[typing.Iterable[TextSequence]] = None,
+        author: typing.Optional[bytes] = None,
     ) -> None: ...
     def __copy__(self) -> TextMSA: ...
     def copy(self) -> TextMSA: ...
@@ -91,7 +98,7 @@ class TextMSA(MSA):
 
 class _DigitalMSASequences(_MSASequences, typing.Sequence[DigitalSequence]):
     alphabet: Alphabet
-    def __init__(self, msa: DigitalMSA) -> None: ... 
+    def __init__(self, msa: DigitalMSA) -> None: ...
     def __getitem__(self, idx: int) -> DigitalSequence: ...  # type: ignore
 
 class DigitalMSA(MSA):

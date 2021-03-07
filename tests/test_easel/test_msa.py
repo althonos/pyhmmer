@@ -17,14 +17,6 @@ class TestMSA(object):
             )
         )
 
-    def test_eq(self):
-        sto = os.path.join(self.formats_folder, "stockholm.1")
-        msa = self.read_msa(sto)
-        msa2 = copy.copy(msa)
-        self.assertEqual(msa, msa2)
-        msa2.name = b"name"
-        self.assertNotEqual(msa, msa2)
-
     def test_write_roundtrip_stockholm(self):
         sto = os.path.join(self.formats_folder, "stockholm.1")
         msa = self.read_msa(sto)
@@ -36,8 +28,7 @@ class TestMSA(object):
         self.assertMultiLineEqual(actual, expected)
 
     def test_write_invalid_format(self):
-        sto = os.path.join(self.formats_folder, "stockholm.1")
-        msa = self.read_msa(sto)
+        msa = easel.TextMSA()
         self.assertRaises(ValueError, msa.write, io.BytesIO(), "invalidformat")
 
     def test_sequences(self):
@@ -54,6 +45,55 @@ class TestTextMSA(TestMSA, unittest.TestCase):
     def read_msa(sto):
         with easel.MSAFile(sto, "stockholm") as msa_file:
             return msa_file.read()
+
+    def test_eq(self):
+        s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")
+        s2 = easel.TextSequence(name=b"seq2", sequence="ATGG")
+        msa = easel.TextMSA(sequences=[s1, s2])
+        msa2 = easel.TextMSA(sequences=[s1, s2])
+        self.assertEqual(msa, msa2)
+
+        print("A")
+
+        msa2.name = b"other"
+        self.assertNotEqual(msa, msa2)
+
+        print("B")
+
+        self.assertNotEqual(msa, 1)
+        self.assertNotEqual(msa, [s1, s2])
+
+        print("C")
+
+    def test_eq_copy(self):
+        s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")
+        s2 = easel.TextSequence(name=b"seq2", sequence="ATGG")
+        msa = easel.TextMSA(sequences=[s1, s2])
+        self.assertEqual(msa, msa.copy())
+        self.assertEqual(msa, copy.copy(msa))
+
+    def test_init_empty(self):
+        msa = easel.TextMSA()
+        self.assertEqual(len(msa), 0)
+        self.assertEqual(len(msa.sequences), 0)
+        self.assertFalse(msa)
+
+    def test_init_sequences(self):
+        s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")
+        msa = easel.TextMSA(sequences=[s1])
+        self.assertEqual(len(msa), 4)
+        self.assertEqual(len(msa.sequences), 1)
+        self.assertTrue(msa)
+
+    def test_init_length_mismatch(self):
+        s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")
+        s2 = easel.TextSequence(name=b"seq2", sequence="AT")
+        self.assertRaises(ValueError, easel.TextMSA, sequences=[s1, s2])
+
+    def test_init_duplicate_names(self):
+        s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")
+        s2 = easel.TextSequence(name=b"seq1", sequence="ATTC")
+        self.assertRaises(ValueError, easel.TextMSA, sequences=[s1, s2])
 
 
 class TestDigitalMSA(TestMSA, unittest.TestCase):

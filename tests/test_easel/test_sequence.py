@@ -86,6 +86,12 @@ class TestDigitalSequence(unittest.TestCase):
         seq4 = easel.DigitalSequence(self.abc, name=b"TEST", sequence=arr2)
         self.assertNotEqual(seq1, seq4)
 
+    def test_eq_not_seq(self):
+        arr = bytearray([0, 1, 2, 3])
+        seq1 = easel.DigitalSequence(self.abc, name=b"TEST", sequence=arr)
+        self.assertNotEqual(seq1, 1)
+        self.assertNotEqual(seq1, b"hello")
+
     def test_digitize_roundtrip(self):
         arr = bytearray([0, 1, 2, 3])
         dsq1 = easel.DigitalSequence(self.abc, name=b"TEST", sequence=arr)
@@ -158,6 +164,11 @@ class TestTextSequence(unittest.TestCase):
 
         seq4 = easel.TextSequence(name=b"TEST", sequence="ATGT")
         self.assertNotEqual(seq1, seq4)
+
+    def test_eq_not_seq(self):
+        seq1 = easel.TextSequence(name=b"TEST", sequence="ATGC")
+        self.assertNotEqual(seq1, 1)
+        self.assertNotEqual(seq1, b"hello")
 
     def test_digitize_roundtrip(self):
         seq1 = easel.TextSequence(name=b"TEST", sequence="ATGC")
