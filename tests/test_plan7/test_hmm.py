@@ -28,6 +28,13 @@ class TestHMM(unittest.TestCase):
         self.assertEqual(self.hmm.description, hmm2.description)
         self.assertEqual(self.hmm.consensus, hmm2.consensus)
 
+    def test_eq(self):
+        abc = Alphabet.amino()
+        self.assertEqual(self.hmm, self.hmm)
+        self.assertEqual(self.hmm, self.hmm.copy())
+        self.assertNotEqual(self.hmm, HMM(100, abc))
+        self.assertNotEqual(self.hmm, 1)
+
     def test_name(self):
         abc = Alphabet.amino()
         hmm = HMM(100, abc)
