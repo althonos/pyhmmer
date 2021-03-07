@@ -132,8 +132,9 @@ cdef class Pipeline:
 
     cpdef void    clear(self)
     cpdef TopHits search_hmm(self, HMM query, object seqs)
+    cpdef TopHits search_msa(self, DigitalMSA query, object seqs, Builder builder = ?)
     cpdef TopHits search_seq(self, DigitalSequence query, object seqs, Builder builder = ?)
-    cdef  void    _search_loop(
+    cdef  int    _search_loop(
         self,
         P7_PIPELINE* pli,
         P7_OPROFILE* om,
@@ -141,7 +142,7 @@ cdef class Pipeline:
         ESL_SQ*      sq,
         P7_TOPHITS*  th,
         object       seqs_iter,
-    )
+    ) except 1
 
 
 cdef class Profile:

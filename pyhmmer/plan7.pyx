@@ -1470,8 +1470,8 @@ cdef class Pipeline:
 
         It is used to compute the independent e-value for each domain, and
         for an entire hit. If `None`, the parameter number will be set
-        automatically after all the comparisons have been done. Otherwise, it
-        can be set to an arbitrary number.
+        automatically after all the comparisons have been done. Otherwise,
+        it can be set to an arbitrary number.
 
         """
         return self._Z
@@ -1492,8 +1492,8 @@ cdef class Pipeline:
         """`float` or `None`: The number of significant targets.
 
         It is used to compute the conditional e-value for each domain. If
-        `None`, the parameter number will be set automatically after all the
-        comparisons have been done, and all hits have been thresholded.
+        `None`, the parameter number will be set automatically after all
+        the comparisons have been done, and all hits have been thresholded.
         Otherwise, it can be set to an arbitrary number.
 
         """
@@ -1762,6 +1762,90 @@ cdef class Pipeline:
         # return the hits
         return hits
 
+    cpdef TopHits search_msa(
+        self,
+        DigitalMSA query,
+        object sequences,
+        Builder builder = None,
+    ):
+        """search_msa(self, query, sequences, builder=None)\n--
+
+        Run the pipeline using a query alignment against a sequence database.
+
+        Arguments:
+            query (`~pyhmmer.easel.DigitalMSA`): The multiple sequence
+                alignment to use to query the sequence database.
+            sequences (iterable of `~pyhmmer.easel.DigitalSequence`): The
+                sequences to query. Pass a `~pyhmmer.easel.SequencesFile`
+                instance in digital mode to read from disk iteratively.
+            builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
+                use to convert the query to a `~pyhmmer.plan7.HMM`. If
+                `None` is given, it will use a default one.
+
+        Returns:
+            `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
+
+        Raises:
+            `ValueError`: When the alphabet of the current pipeline does not
+                match the alphabet of the given query.
+
+        .. versionadded:: 0.3.0
+
+        """
+        cdef int                  allocM
+        cdef DigitalSequence      seq
+        cdef Profile              profile
+        cdef HMM                  hmm
+        cdef OptimizedProfile     opt
+        cdef TopHits              hits    = TopHits()
+
+        assert self._pli != NULL
+
+        # check the pipeline was configure with the same alphabet
+        if query.alphabet != self.alphabet:
+            raise ValueError("Wrong alphabet in query MSA: expected {!r}, found {!r}".format(
+                self.alphabet,
+                query.alphabet
+            ))
+
+        # make sure the pipeline is set to search mode and ready for a new HMM
+        self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
+
+        # use a default HMM builder if none was given
+        builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
+
+        # get an iterator over the input sequences, with an early return if
+        # no sequences were given
+        seqs_iter = iter(sequences)
+        seq = next(seqs_iter, None)
+        if seq is None:
+            return hits
+        if seq.alphabet != self.alphabet:
+            raise ValueError("Wrong alphabet in database sequence: expected {!r}, found {!r}".format(
+                self.alphabet,
+                seq.alphabet,
+            ))
+
+        # build the HMM and the profile from the query MSA
+        hmm, profile, opt = builder.build_msa(query, self.background)
+
+        # run the search loop on all database sequences while recycling memory
+        self._search_loop(
+            self._pli,
+            opt._om,
+            self.background._bg,
+            seq._sq,
+            hits._th,
+            seqs_iter
+        )
+
+        # threshold hits
+        hits.sort(by="key")
+        hits.threshold(self)
+
+        # return the hits
+        return hits
+
     cpdef TopHits search_seq(
         self,
         DigitalSequence query,
@@ -1773,14 +1857,14 @@ cdef class Pipeline:
         Run the pipeline using a query sequence against a sequence database.
 
         Arguments:
-            query (`~pyhmmer.plan7.DigitalSequence`): The sequence object to
+            query (`~pyhmmer.easel.DigitalSequence`): The sequence object to
                 use to query the sequence database.
             sequences (iterable of `~pyhmmer.easel.DigitalSequence`): The
                 sequences to query. Pass a `~pyhmmer.easel.SequenceFile`
                 instance in digital mode to read from disk iteratively.
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
-                use to convert the query to a `~pyhmmer.plan7.HMM`. If `None`
-                is given, it will use a default one.
+                use to convert the query to a `~pyhmmer.plan7.HMM`. If
+                `None` is given, it will use a default one.
 
         Returns:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
@@ -1849,7 +1933,7 @@ cdef class Pipeline:
         # return the hits
         return hits
 
-    cdef  void    _search_loop(
+    cdef int _search_loop(
         self,
         P7_PIPELINE* pli,
         P7_OPROFILE* om,
@@ -1857,7 +1941,7 @@ cdef class Pipeline:
         ESL_SQ*      sq,
         P7_TOPHITS*  th,
         object       seqs_iter,
-    ):
+    ) except 1:
         cdef int      status
         cdef Sequence seq
 
@@ -1906,6 +1990,9 @@ cdef class Pipeline:
                             ))
                     else:
                         sq = NULL
+
+        # Return 0 to indicate success
+        return 0
 
 
 cdef class Profile:
