@@ -360,8 +360,11 @@ def phmmer(
         in the same order the queries were passed in the input.
 
     Note:
-        Any additional arguments passed to the `phmmer` function will be
-        passed transparently to the `~pyhmmer.plan7.Pipeline` to be created.
+        Any additional keyword arguments passed to the `phmmer` function
+        will be passed transparently to the `~pyhmmer.plan7.Pipeline` to
+        be created in each worker thread.
+
+    .. versionadded:: 0.2.0
 
     """
     _cpus = cpus if cpus > 0 else psutil.cpu_count() or multiprocessing.cpu_count()

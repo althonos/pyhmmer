@@ -129,6 +129,9 @@ cdef class Alignment:
     @property
     def hmm_accession(self):
         """`bytes`: The accession of the query, or its name if it has none.
+
+        .. versionadded:: 0.1.4
+
         """
         return <bytes> self._ad.hmmacc
 
@@ -249,6 +252,9 @@ cdef class Background:
 
 cdef class Builder:
     """A factory for constructing new HMMs from raw sequences.
+
+    .. versionadded:: 0.2.0
+
     """
 
     _ARCHITECTURE_STRATEGY = {
@@ -534,6 +540,8 @@ cdef class Builder:
         Raises:
             `ValueError`: When either ``msa`` or ``background`` have
                 the wrong alphabet for this builder.
+
+        .. versionadded:: 0.3.0
 
         """
         assert self._bld != NULL
@@ -893,6 +901,9 @@ cdef class HMM:
     @property
     def checksum(self):
         """`int`: The 32-bit checksum of the HMM.
+
+        .. versionadded:: 0.2.1
+
         """
         assert self._hmm != NULL
         return self._hmm.checksum
@@ -987,7 +998,6 @@ cdef class HMM:
         if not new._hmm:
             raise AllocationError("P7_HMM")
         return new
-
 
 
 cdef class HMMFile:
@@ -1503,6 +1513,9 @@ cdef class Pipeline:
     @property
     def seed(self):
         """`int`: The seed used by the internal random number generator.
+
+        .. versionadded:: 0.2.0
+
         """
         return libeasel.random.esl_randomness_GetSeed(self._pli.r)
 
@@ -1685,6 +1698,8 @@ cdef class Pipeline:
             `ValueError`: When the alphabet of the current pipeline does not
                 match the alphabet of the given HMM.
 
+        .. versionadded:: 0.2.0
+
         """
         cdef int                  status
         cdef int                  allocM
@@ -1773,6 +1788,8 @@ cdef class Pipeline:
         Raises:
             `ValueError`: When the alphabet of the current pipeline does not
                 match the alphabet of the given query.
+
+        .. versionadded:: 0.2.0
 
         """
         cdef int                  allocM

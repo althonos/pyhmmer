@@ -1444,6 +1444,8 @@ cdef class DigitalSequence(Sequence):
 
         Create a new digital-mode sequence with the given attributes.
 
+        .. versionadded:: 0.1.4
+
         """
         cdef int     status
         cdef int64_t n
@@ -1533,6 +1535,8 @@ cdef class DigitalSequence(Sequence):
         Returns:
             `TextSequence`: A copy of the sequence in text-mode.
 
+        .. versionadded:: 0.1.4
+
         """
         assert self._sq != NULL
         assert libeasel.sq.esl_sq_IsDigital(self._sq)
@@ -1560,6 +1564,9 @@ cdef class SequenceFile:
     as FASTA, GenBank or EMBL. The format of each file can be automatically
     detected, but it is also possible to pass an explicit format specifier
     when the `SequenceFile` is instantiated.
+
+    .. versionadded:: 0.2.0
+       The ``alphabet`` attribute.
 
     """
 
