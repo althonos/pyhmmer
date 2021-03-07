@@ -1,3 +1,4 @@
+import copy
 import io
 import itertools
 import os
@@ -19,6 +20,13 @@ class TestHMM(unittest.TestCase):
         cls.hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/Thioesterase.hmm")
         with HMMFile(cls.hmm_path) as hmm_file:
             cls.hmm = next(hmm_file)
+
+    def test_copy(self):
+        hmm2 = copy.copy(self.hmm)
+        self.assertEqual(self.hmm.name, hmm2.name)
+        self.assertEqual(self.hmm.accession, hmm2.accession)
+        self.assertEqual(self.hmm.description, hmm2.description)
+        self.assertEqual(self.hmm.consensus, hmm2.consensus)
 
     def test_name(self):
         abc = Alphabet.amino()
@@ -43,6 +51,15 @@ class TestHMM(unittest.TestCase):
         self.assertEqual(hmm.accession, b"")
         hmm.accession = None
         self.assertEqual(hmm.accession, None)
+
+    def test_consensus(self):
+        # if not set, HMM is None
+        abc = Alphabet.amino()
+        hmm = HMM(100, abc)
+        self.assertIs(hmm.consensus, None)
+        # if the HMM is fully configured, the consensus should be as
+        # long as the number of nodes
+        self.assertEqual(len(self.hmm.consensus), self.hmm.M)
 
     def test_write(self):
         buffer = io.BytesIO()

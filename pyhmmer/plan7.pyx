@@ -824,6 +824,25 @@ cdef class HMM:
     def __dealloc__(self):
         libhmmer.p7_hmm.p7_hmm_Destroy(self._hmm)
 
+    def __eq__(self, object other):
+        assert self._hmm != NULL
+
+        if not isinstance(other, HMM):
+            return False
+
+        cdef HMM o = <HMM> other
+        cdef int status = libhmmer.p7_hmm.p7_hmm_Compare(self._hmm, o._hmm, 0.0)
+
+        if status == libeasel.eslOK:
+            return True
+        elif status == libeasel.eslFAIL:
+            return False
+        else:
+            raise UnexpectedError(status, "p7_profile_Compare")
+
+    def __copy__(self):
+        return self.copy()
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -877,6 +896,18 @@ cdef class HMM:
         """
         assert self._hmm != NULL
         return self._hmm.checksum
+
+    @property
+    def consensus(self):
+        """`str` or `None`: The consensus residue line of the HMM, if set.
+
+        .. versionadded: 0.3.0
+
+        """
+        assert self._hmm != NULL
+        if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CONS):
+            return None
+        return (<bytes> (&self._hmm.consensus[1])).decode("ascii")
 
     @property
     def description(self):
@@ -937,6 +968,26 @@ cdef class HMM:
         """
         with nogil:
             libhmmer.p7_hmm.p7_hmm_Zero(self._hmm)
+
+    cpdef HMM copy(self):
+        """copy(self)\n--
+
+        Return a copy of the HMM with the exact same configuration.
+
+        .. versionadded:: 0.3.0
+
+        """
+        assert self._hmm != NULL
+
+        cdef HMM new = HMM.__new__(HMM)
+        new.alphabet = self.alphabet
+
+        with nogil:
+            new._hmm = libhmmer.p7_hmm.p7_hmm_Clone(self._hmm)
+        if not new._hmm:
+            raise AllocationError("P7_HMM")
+        return new
+
 
 
 cdef class HMMFile:

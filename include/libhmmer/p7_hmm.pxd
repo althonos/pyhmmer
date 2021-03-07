@@ -25,6 +25,26 @@ cdef extern from "hmmer.h" nogil:
         p7H_DM = 5
         p7H_DD = 6
 
+    cdef enum:
+        p7H_HASBITS = (1<<0)
+        p7H_HASBITS = (1<<0)
+        p7H_DESC    = (1<<1)
+        p7H_RF      = (1<<2)
+        p7H_CS      = (1<<3)
+        p7H_XRAY    = (1<<4)
+        p7H_HASPROB = (1<<5)
+        p7H_HASDNA  = (1<<6)
+        p7H_STATS   = (1<<7)
+        p7H_MAP     = (1<<8)
+        p7H_ACC     = (1<<9)
+        p7H_GA      = (1<<10)
+        p7H_TC      = (1<<11)
+        p7H_NC      = (1<<12)
+        p7H_CA      = (1<<13)
+        p7H_COMPO   = (1<<14)
+        p7H_CHKSUM  = (1<<15)
+        p7H_CONS    = (1<<16)  
+        p7H_MMASK   = (1<<17)
 
     ctypedef p7_hmm_s P7_HMM
     cdef struct p7_hmm_s:
