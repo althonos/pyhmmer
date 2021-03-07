@@ -69,6 +69,7 @@ cdef class _DigitalMSASequences(_MSASequences):
 cdef class DigitalMSA(MSA):
     cdef readonly Alphabet alphabet
 
+    cdef int _set_sequence(self, int idx, ESL_SQ* seq) nogil except 1
     cpdef DigitalMSA copy(self)
     cpdef TextMSA textize(self)
 

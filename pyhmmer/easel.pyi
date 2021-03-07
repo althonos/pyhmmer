@@ -100,11 +100,18 @@ class _DigitalMSASequences(_MSASequences, typing.Sequence[DigitalSequence]):
     alphabet: Alphabet
     def __init__(self, msa: DigitalMSA) -> None: ...
     def __getitem__(self, idx: int) -> DigitalSequence: ...  # type: ignore
+    def __setitem__(self, idx: int, item: DigitalSequence) -> None: ...
 
 class DigitalMSA(MSA):
     alphabet: Alphabet
     def __init__(
-        self, alphabet: Alphabet, nsequences: int, length: typing.Optional[int] = None
+        self,
+        alphabet: Alphabet,
+        name: typing.Optional[bytes] = None,
+        description: typing.Optional[bytes] = None,
+        accession: typing.Optional[bytes] = None,
+        sequences: typing.Optional[typing.Iterable[DigitalSequence]] = None,
+        author: typing.Optional[bytes] = None,
     ) -> None: ...
     def __copy__(self) -> DigitalMSA: ...
     def copy(self) -> DigitalMSA: ...

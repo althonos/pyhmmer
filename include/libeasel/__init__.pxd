@@ -70,7 +70,7 @@ cdef extern from "easel.h" nogil:
     # extern int  esl_fgets(char **buf, int *n, FILE *fp);
     # extern int  esl_fprintf(FILE *fp, const char *format, ...);
     # extern int  esl_printf(const char *format, ...);
-    extern int  esl_strdup(const char *s, int64_t n, char **ret_dup);
+    # extern int  esl_strdup(const char *s, int64_t n, char **ret_dup);
     # extern int  esl_strcat(char **dest, int64_t ldest, const char *src, int64_t lsrc);
     # extern int  esl_strmapcat        (const ESL_DSQ *inmap, char **dest, int64_t *ldest, const char *src, esl_pos_t lsrc);
     # extern int  esl_strmapcat_noalloc(const ESL_DSQ *inmap,  char *dest, int64_t *ldest, const char *src, esl_pos_t lsrc);
