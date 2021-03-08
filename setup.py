@@ -61,6 +61,12 @@ class build_ext(_build_ext):
     """A `build_ext` that disables optimizations if compiled in debug mode.
     """
 
+    def finalize_options(self):
+        _build_ext.finalize_options(self)
+        self._clib_cmd = self.get_finalized_command("build_clib")
+        self._clib_cmd.force = self.force
+        self._clib_cmd.debug = self.debug
+
     def run(self):
         # check `cythonize` is available
         if isinstance(cythonize, ImportError):
@@ -95,31 +101,28 @@ class build_ext(_build_ext):
             cython_args["compiler_directives"]["warn.unused_arg"] = True
             cython_args["compiler_directives"]["warn.unused_result"] = True
             cython_args["compiler_directives"]["warn.multiple_declarators"] = True
+            cython_args["compiler_directives"]["profile"] = True
         else:
             cython_args["compiler_directives"]["boundscheck"] = False
             cython_args["compiler_directives"]["wraparound"] = False
             cython_args["compiler_directives"]["cdivision"] = True
 
-        # cythonize the extensions
+        # cythonize and patch the extensions
         self.extensions = cythonize(self.extensions, **cython_args)
-
-        # patch the extensions (needed for `_build_ext.run` to work)
         for ext in self.extensions:
             ext._needs_stub = False
+
+        # # update the compiler include and link dirs to use the
+        # # temporary build folder so that the platform-specific headers
+        # # and static libs can be found
+
+        # check the libraroes have been built already
+        self._clib_cmd.run()
 
         # build the extensions as normal
         _build_ext.run(self)
 
     def build_extension(self, ext):
-        # make sure the C libraries have been built already
-        self.run_command("build_clib")
-        _clib_cmd = self.get_finalized_command("build_clib")
-
-        # update the extension C flags to use the temporary build folder
-        # so that the platform-specific headers and static libs can be found
-        ext.include_dirs.append(_clib_cmd.build_clib)
-        ext.library_dirs.append(_clib_cmd.build_clib)
-
         # update compile flags if compiling in debug mode
         if self.debug:
             if self.compiler.compiler_type in {"unix", "cygwin", "mingw32"}:
@@ -128,6 +131,15 @@ class build_ext(_build_ext):
                 ext.extra_compile_args.append("/Od")
             if sys.implementation.name == "cpython":
                 ext.define_macros.append(("CYTHON_TRACE_NOGIL", 1))
+        else:
+            ext.define_macros.append(("CYTHON_WITHOUT_ASSERTIONS", 1))
+
+        # update link and include directories
+        ext.include_dirs.append(self._clib_cmd.build_clib)
+        ext.library_dirs.append(self._clib_cmd.build_clib)
+        for name in ext.libraries:
+            lib = self._clib_cmd.get_library(name)
+            ext.include_dirs.extend(lib.include_dirs)
 
         # on OSX, force to build the library sources to fix linking issues
         if sys.platform == "darwin":
@@ -308,6 +320,13 @@ class build_clib(_build_clib):
     """A custom `build_clib` that compiles out of source.
     """
 
+    # --- Distutils command interface ---
+
+    def finalize_options(self):
+        _build_clib.finalize_options(self)
+        self._configure_cmd = self.get_finalized_command("configure")
+        self._configure_cmd.force = self.force
+
     # --- Compatibility with base `build_clib` command ---
 
     def check_library_list(self, libraries):
@@ -319,11 +338,16 @@ class build_clib(_build_clib):
     def get_source_files(self):
         return [ source for lib in self.libraries for source in lib.sources ]
 
+    # --- Helpers ---
+
+    def get_library(self, name):
+        return next(lib for lib in self.libraries if lib.name == name)
+
     # --- Build code ---
 
     def run(self):
         # make sure the C headers were generated already
-        self.run_command("configure")
+        self._configure_cmd.run()
 
         # patch the `p7_hmmfile.c` so that we can use functions it otherwise
         # declares as `static`
@@ -467,13 +491,11 @@ extensions = [
         "pyhmmer.errors",
         [os.path.join("pyhmmer", "errors.pyx")],
         libraries=["easel"],
-        include_dirs=[os.path.join("vendor", "easel")]
     ),
     Extension(
         "pyhmmer.easel",
         [os.path.join("pyhmmer", "easel.pyx")],
         libraries=["easel"],
-        include_dirs=[os.path.join("vendor", "easel")],
         define_macros=platform_define_macros,
         extra_compile_args=platform_compile_args,
     ),
@@ -483,10 +505,6 @@ extensions = [
         libraries=["hmmer", "easel", "divsufsort"],
         define_macros=platform_define_macros,
         extra_compile_args=platform_compile_args,
-        include_dirs=[
-            os.path.join("vendor", "easel"),
-            os.path.join("vendor", "hmmer", "src")
-        ],
     ),
 ]
 
