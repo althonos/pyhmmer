@@ -207,8 +207,8 @@ def hmmsearch(
             search in the database.
         sequences (collection of `~pyhmmer.easel.DigitalSequence`): A
             database of sequences to query.
-        cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
-            run everything in the main thread, ``0`` to automatically
+        cpus (`int`): The number of threads to run in parallel. Pass ``1``
+            to run everything in the main thread, ``0`` to automatically
             select a suitable number (using `psutil.cpu_count`), or any
             positive number otherwise.
         callback (callable): A callback that is called everytime a query is
@@ -216,8 +216,8 @@ def hmmsearch(
             of queries. This can be used to display progress in UI.
 
     Yields:
-        `~pyhmmer.plan7.TopHits`: A *top hits* instance for each query,
-        in the same order the queries were passed in the input.
+        `~pyhmmer.plan7.TopHits`: An object reporting *top hits* for each
+        query, in the same order the queries were passed in the input.
 
     Note:
         Any additional arguments passed to the `hmmsearch` function will be
@@ -449,12 +449,8 @@ if __name__ == "__main__":
             if alphabet is None:
                 print("could not guess alphabet of input, exiting", file=sys.stderr)
                 return 1
-
-            seq = TextSequence()
-            sequences = []
-            while seqfile.readinto(seq) is not None:
-                sequences.append(seq.digitize(alphabet))
-                seq.clear()
+            seqfile.set_digital(alphabet)
+            sequences = list(seqfile)
 
         with HMMFile(args.hmmfile) as hmms:
             hits_list = hmmsearch(hmms, sequences, cpus=args.jobs)
@@ -476,20 +472,13 @@ if __name__ == "__main__":
 
     def _phmmer(args: argparse.Namespace) -> int:
         with SequenceFile(args.seqdb) as seqfile:
-            alphabet = seqfile.guess_alphabet()
-            if alphabet is None:
-                print("could not guess alphabet of input, exiting", file=sys.stderr)
-                return 1
-
-            seq = TextSequence()
-            sequences = []
-            while seqfile.readinto(seq) is not None:
-                sequences.append(seq.digitize(alphabet))
-                seq.clear()
+            alphabet = seqfile.guess_alphabet() or Alphabet.amino()
+            seqfile.set_digital(alphabet)
+            sequences = list(seqfile)
 
         with SequenceFile(args.seqfile) as queries:
-            queries_d = (q.digitize(alphabet) for q in queries) # type: ignore
-            hits_list = phmmer(queries_d, sequences, cpus=args.jobs)
+            queries.set_digital(alphabet)
+            hits_list = phmmer(queries, sequences, cpus=args.jobs)  # type: ignore
 
             for hits in hits_list:
                 for hit in hits:
