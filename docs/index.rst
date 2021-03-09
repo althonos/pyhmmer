@@ -7,8 +7,11 @@ pyHMMER |Stars|
 
 *Cython bindings and Python interface to* `HMMER3 <http://hmmer.org/>`_.
 
-|GitLabCI| |Coverage| |PyPI| |Bioconda| |Wheel| |Versions| |Implementations| |License| |Source| |Mirror| |Issues| |Docs| |Changelog| |Downloads| |DOI|
+|Actions| |Coverage| |PyPI| |Bioconda| |Wheel| |Versions| |Implementations| |License| |Source| |Mirror| |Issues| |Docs| |Changelog| |Downloads| |DOI|
 
+
+.. |Actions| image:: https://img.shields.io/github/workflow/status/althonos/pyhmmer/Test/master?logo=github&style=flat-square&maxAge=300
+   :target: https://github.com/althonos/pyhmmer/actions
 
 .. |GitLabCI| image:: https://img.shields.io/gitlab/pipeline/larralde/pyhmmer/master?gitlab_url=https%3A%2F%2Fgit.embl.de&logo=gitlab&style=flat-square&maxAge=600
    :target: https://git.embl.de/larralde/pyhmmer/-/pipelines

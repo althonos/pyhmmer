@@ -116,8 +116,9 @@ class build_ext(_build_ext):
         # # temporary build folder so that the platform-specific headers
         # # and static libs can be found
 
-        # check the libraroes have been built already
-        self._clib_cmd.run()
+        # check the libraries have been built already
+        if not self.distribution.have_run["build_clib"]:
+            self._clib_cmd.run()
 
         # build the extensions as normal
         _build_ext.run(self)
@@ -146,7 +147,7 @@ class build_ext(_build_ext):
         # on OSX, force to build the library sources to fix linking issues
         if sys.platform == "darwin":
             for libname in ext.libraries:
-                lib = next(lib for lib in _clib_cmd.libraries if lib.name == libname)
+                lib = next(lib for lib in self._clib_cmd.libraries if lib.name == libname)
                 ext.sources.extend(lib.sources)
 
         # build the rest of the extension as normal
@@ -307,7 +308,6 @@ class configure(_build_clib):
             if self._has_function(func):
                 defines["HAVE_{}".format(func.upper())] = 1
 
-
         # write the header file
         slug = re.sub("[./-]", "_", filename).upper()
         with open(os.path.join(self.build_clib, filename), "w") as f:
@@ -349,7 +349,8 @@ class build_clib(_build_clib):
 
     def run(self):
         # make sure the C headers were generated already
-        self._configure_cmd.run()
+        if not self.distribution.have_run["configure"]:
+            self._configure_cmd.run()
 
         # patch the `p7_hmmfile.c` so that we can use functions it otherwise
         # declares as `static`
