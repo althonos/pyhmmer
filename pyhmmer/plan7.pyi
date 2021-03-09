@@ -231,12 +231,13 @@ class Pipeline(object):
     ) -> TopHits: ...
     def search_msa(
         self,
-        query: HMM,
+        query: DigitalMSA,
         sequences: typing.Iterable[DigitalSequence],
+        builder: typing.Optional[Builder] = None,
     ) -> TopHits: ...
     def search_seq(
         self,
-        query: DigitalMSA,
+        query: DigitalSequence,
         sequences: typing.Iterable[DigitalSequence],
         builder: typing.Optional[Builder] = None,
     ) -> TopHits: ...
