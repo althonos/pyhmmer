@@ -201,6 +201,7 @@ autosummary_generate = []
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "psutil": ("https://psutil.readthedocs.io/en/latest/", None),
+    "biopython": ("https://biopython.org/docs/latest/api/", None),
 }
 
 # -- Options for recommonmark extension --------------------------------------

@@ -53,7 +53,7 @@ HMMER internals, which has the following advantages over CLI wrappers
 - **efficient**: Using `pyhmmer` to launch `hmmsearch` on sequences
   and HMMs in disk storage is typically faster than directly using the
   `hmmsearch` binary (see the [Benchmarks section](#%EF%B8%8F-benchmarks)).
-  `pyhmmer.hmmsearch` uses a different parallelisation strategy compared to
+  `pyhmmer.hmmer.hmmsearch` uses a different parallelisation strategy compared to
   the `hmmsearch` binary from HMMER, which helps getting the most of
   multiple CPUs.
 
@@ -75,8 +75,7 @@ Compilation for UNIX PowerPC is not tested in CI, but should work out of the
 box. Other architectures (e.g. Arm) and OSes (e.g. Windows) are not
 supported by HMMER.
 
-A [Bioconda](https://bioconda.github.io/) package is also available,
-but only for Linux:
+A [Bioconda](https://bioconda.github.io/) package is also available:
 ```console
 $ conda install -c bioconda pyhmmer
 ```

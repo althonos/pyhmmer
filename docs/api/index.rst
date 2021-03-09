@@ -4,10 +4,10 @@ API Reference
 .. toctree::
    :hidden:
 
-   errors <errors>
+   hmmer <hmmer>
    easel <easel>
    plan7 <plan7>
-   hmmer <hmmer>
+   errors <errors>
 
 
 .. currentmodule:: pyhmmer

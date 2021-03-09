@@ -7,7 +7,6 @@ pyHMMER |Stars|
 
 *Cython bindings and Python interface to* `HMMER3 <http://hmmer.org/>`_.
 
-
 |GitLabCI| |Coverage| |PyPI| |Bioconda| |Wheel| |Versions| |Implementations| |License| |Source| |Mirror| |Issues| |Docs| |Changelog| |Downloads| |DOI|
 
 
@@ -57,6 +56,46 @@ pyHMMER |Stars|
    :target: https://doi.org/10.5281/zenodo.4270012
 
 
+Overview
+--------
+
+HMMER is a biological sequence analysis tool that uses profile hidden Markov
+models to search for sequence homologs. HMMER3 is maintained by members of the
+the `Eddy/Rivas Laboratory <http://eddylab.org/>`_ at Harvard University.
+
+``pyhmmer`` is a Python module, implemented using the `Cython <https://cython.org/>`_
+language, that provides bindings to HMMER3. It directly interacts with the
+HMMER internals, which has the following advantages over CLI wrappers:
+
+- **single dependency**:
+  If your software or your analysis pipeline is
+  distributed as a Python package, you can add `pyhmmer` as a dependency to
+  your project, and stop worrying about the HMMER binaries being properly
+  setup on the end-user machine.
+- **no intermediate files**:
+  Everything happens in memory, in Python objects
+  you have control on, making it easier to pass your inputs to HMMER without
+  needing to write them to a temporary file. Output retrieval is also done
+  in memory, via instances of the `pyhmmer.plan7.TopHits` class.
+- **no input formatting**:
+  The Easel object model is exposed in the `pyhmmer.easel` module, and you
+  have the possibility to build a `~pyhmmer.easel.Sequence` object yourself to
+  pass to the HMMER pipeline. This is useful if your sequences are already
+  loaded in memory, for instance because you obtained them from another
+  Python library (such as `Pyrodigal <https://github.com/althonos/pyrodigal>`_
+  or `Biopython <https://biopython.org/>`_).
+- **no output formatting**:
+  HMMER3 is notorious for its numerous output files
+  and its fixed-width tabular output, which is hard to parse (even
+  `Bio.SearchIO.HmmerIO` is struggling on some sequences).
+- **efficient**:
+  Using `pyhmmer` to launch ``hmmsearch`` on sequences and HMMs in disk storage
+  is typically faster than directly using the ``hmmsearch`` binary.
+  `pyhmmer.hmmer.hmmsearch` uses a different parallelisation strategy compared to
+  the ``hmmsearch`` binary from HMMER, which helps getting the most of
+  multiple CPUs.
+
+
 Setup
 -----
 
@@ -78,9 +117,25 @@ Library
    Changelog <changes>
 
 
-Indices and tables
-------------------
+Related Project
+---------------
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+If despite of all the advantages listed earlier, you would rather use HMMER through its CLI,
+this package will not be of great help. You should then check the
+`hmmer-py <https://github.com/EBI-Metagenomics/hmmer-py>`_ package developed
+by `Danilo Horta <https://github.com/horta>`_ at the `EMBL-EBI <https://www.ebi.ac.uk>`_.
+
+
+License
+-------
+
+This library is provided under the `MIT License <https://choosealicense.com/licenses/mit/>`_.
+The HMMER3 and Easel code is available under
+the `BSD 3-clause <https://choosealicense.com/licenses/bsd-3-clause/>`_ license,
+which allows redistribution of their sources in the ``pyhmmer`` distribution.
+
+*This project is in no way not affiliated, sponsored, or otherwise endorsed by
+the original* `HMMER <http://hmmer.org>`_ *authors. It was developed by*
+`Martin Larralde <https://github.com/althonos/pyhmmer>`_ *during his PhD project
+at the* `European Molecular Biology Laboratory <https://www.embl.de/>`_
+*in the* `Zeller team <https://github.com/zellerlab>`_.
