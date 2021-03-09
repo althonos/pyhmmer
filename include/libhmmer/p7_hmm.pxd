@@ -27,7 +27,6 @@ cdef extern from "hmmer.h" nogil:
 
     cdef enum:
         p7H_HASBITS = (1<<0)
-        p7H_HASBITS = (1<<0)
         p7H_DESC    = (1<<1)
         p7H_RF      = (1<<2)
         p7H_CS      = (1<<3)
@@ -43,7 +42,7 @@ cdef extern from "hmmer.h" nogil:
         p7H_CA      = (1<<13)
         p7H_COMPO   = (1<<14)
         p7H_CHKSUM  = (1<<15)
-        p7H_CONS    = (1<<16)  
+        p7H_CONS    = (1<<16)
         p7H_MMASK   = (1<<17)
 
     ctypedef p7_hmm_s P7_HMM

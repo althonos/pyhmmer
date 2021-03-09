@@ -22,13 +22,14 @@ from libeasel.ssi cimport ESL_SSI, ESL_NEWSSI
 cdef class Alphabet:
     cdef ESL_ALPHABET* _abc
 
-    cdef _init_default(self, int ty)
+    cdef void _init_default(self, int ty)
+    cdef inline bint _eq(self, Alphabet other) nogil
 
 
 cdef class Bitfield:
     cdef ESL_BITFIELD* _b
 
-    cdef size_t _wrap_index(self, int index) except *
+    cdef size_t _wrap_index(self, int index) except -1
     cpdef size_t count(self, bint value=*)
     cpdef void toggle(self, int index)
 

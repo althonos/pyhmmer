@@ -126,7 +126,9 @@ class build_ext(_build_ext):
         # update compile flags if compiling in debug mode
         if self.debug:
             if self.compiler.compiler_type in {"unix", "cygwin", "mingw32"}:
-                ext.extra_compile_args.append("-O0")
+                ext.extra_compile_args.append("-Og")
+                ext.extra_compile_args.append("--coverage")
+                ext.extra_link_args.append("--coverage")
             elif self.compiler.compiler_type == "msvc":
                 ext.extra_compile_args.append("/Od")
             if sys.implementation.name == "cpython":
@@ -372,6 +374,16 @@ class build_clib(_build_clib):
             )
 
     def build_library(self, library):
+        # update compile flags if compiling in debug or release mode
+        if self.debug:
+            if self.compiler.compiler_type in {"unix", "cygwin", "mingw32"}:
+                library.extra_compile_args.append("-Og")
+                library.extra_compile_args.append("--coverage")
+                library.extra_link_args.append("--coverage")
+            elif self.compiler.compiler_type == "msvc":
+                library.extra_compile_args.append("/Od")
+
+        # build objects and create a static library
         objects = self.compiler.compile(
             library.sources,
             output_dir=self.build_temp,
@@ -399,7 +411,8 @@ class clean(_clean):
 
     def run(self):
 
-        source_dir = os.path.join(os.path.dirname(__file__), "pyhmmer")
+        source_dir_abs = os.path.join(os.path.dirname(__file__), "pyhmmer")
+        source_dir = os.path.relpath(source_dir_abs)
 
         patterns = ["*.html"]
         if self.all:

@@ -142,6 +142,7 @@ cdef class Pipeline:
         ESL_SQ*      sq,
         P7_TOPHITS*  th,
         object       seqs_iter,
+        Alphabet     seq_alphabet,
     ) except 1
 
 

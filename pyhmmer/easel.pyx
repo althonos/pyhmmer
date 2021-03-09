@@ -70,7 +70,7 @@ cdef class Alphabet:
 
     # --- Default constructors -----------------------------------------------
 
-    cdef _init_default(self, int ty):
+    cdef void _init_default(self, int ty):
         with nogil:
             self._abc = libeasel.alphabet.esl_alphabet_Create(ty)
         if not self._abc:
@@ -138,15 +138,11 @@ cdef class Alphabet:
             )
 
     def __eq__(self, object other):
-        cdef Alphabet other_abc
-
         assert self._abc != NULL
-
         # TODO: Update when we implement custom alphabet creation from Python.
         if isinstance(other, Alphabet):
-            other_abc = other
-            return self._abc.type == other_abc._abc.type
-        return False
+            return self._eq(<Alphabet> other)
+        return NotImplemented
 
     def __getstate__(self):
         return {"type": self._abc.type}
@@ -196,6 +192,11 @@ cdef class Alphabet:
         """
         cdef bytes symbols = self._abc.sym[:self._abc.Kp]
         return symbols.decode("ascii")
+
+    # --- Utils --------------------------------------------------------------
+
+    cdef inline bint _eq(self, Alphabet other) nogil:
+        return self._abc.type == other._abc.type
 
 
 cdef class Bitfield:
@@ -257,7 +258,7 @@ cdef class Bitfield:
         else:
             libeasel.bitfield.esl_bitfield_Clear(self._b, index_)
 
-    cdef size_t _wrap_index(self, int index) except *:
+    cdef size_t _wrap_index(self, int index) except -1:
         if index < 0:
             index += self._b.nb
         if index >= self._b.nb or index < 0:
@@ -506,7 +507,7 @@ cdef class _MSASequences:
         return self.msa._msa.nseq
 
 
-@cython.freelist(4)
+@cython.freelist(8)
 cdef class MSA:
     """An abstract alignment of multiple sequences.
 
@@ -1031,7 +1032,7 @@ cdef class _DigitalMSASequences(_MSASequences):
             raise ValueError("sequence does not have the expected length")
 
         # make sure the sequence has the right alphabet
-        if seq.alphabet != self.msa.alphabet:
+        if not self.msa.alphabet._eq(seq.alphabet):
             raise ValueError("sequence and alignment have different alphabets")
 
         # make sure inserting the sequence will not create a name duplicate
@@ -1111,7 +1112,7 @@ cdef class DigitalMSA(MSA):
                 raise TypeError(f"expected DigitalSequence, found {ty}")
             elif len(seq) != alen:
                 raise ValueError("all sequences must have the same length")
-            elif seq.alphabet != alphabet:
+            elif not alphabet._eq(seq.alphabet):
                 raise ValueError("sequence and alignment have different alphabets")
 
         self.alphabet = alphabet
@@ -1413,7 +1414,7 @@ cdef class MSAFile:
             raise UnexpectedError(status, "esl_msafile_SetDigital")
 
 
-@cython.freelist(4)
+@cython.freelist(8)
 cdef class Sequence:
     """An abstract biological sequence with some associated metadata.
 
@@ -1872,6 +1873,9 @@ cdef class SequenceFile:
     as FASTA, GenBank or EMBL. The format of each file can be automatically
     detected, but it is also possible to pass an explicit format specifier
     when the `SequenceFile` is instantiated.
+
+    The following formats are supported: *fasta*, *embl*, *genbank*, *ddbj*,
+    *uniprot*, *ncbi*, *daemon*, *fmindex*.
 
     .. versionadded:: 0.2.0
        The ``alphabet`` attribute.

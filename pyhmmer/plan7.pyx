@@ -12,6 +12,7 @@ See Also:
 
 # --- C imports --------------------------------------------------------------
 
+cimport cython
 from cpython.ref cimport PyObject
 from cpython.exc cimport PyErr_Clear
 from libc.stdlib cimport malloc, realloc, free
@@ -480,9 +481,9 @@ cdef class Builder:
 
         # check alphabet and assign it to newly created objects
         hmm.alphabet = profile.alphabet = opti.alphabet = self.alphabet
-        if background.alphabet != self.alphabet:
+        if not self.alphabet._eq(background.alphabet):
             raise ValueError("background does not have the right alphabet")
-        if sequence.alphabet != self.alphabet:
+        if not self.alphabet._eq(sequence.alphabet):
             raise ValueError("MSA does not have the right alphabet")
 
         # load score matrix
@@ -563,9 +564,9 @@ cdef class Builder:
 
         # check alphabet and assign it to newly created objects
         hmm.alphabet = profile.alphabet = opti.alphabet = self.alphabet
-        if background.alphabet != self.alphabet:
+        if not self.alphabet._eq(background.alphabet):
             raise ValueError("background does not have the right alphabet")
-        if msa.alphabet != self.alphabet:
+        if not self.alphabet._eq(msa.alphabet):
             raise ValueError("MSA does not have the right alphabet")
 
         with nogil:
@@ -803,6 +804,7 @@ cdef class Hit:
         return self._hit.flags & p7_hitflags_e.p7_IS_DUPLICATE
 
 
+@cython.freelist(8)
 cdef class HMM:
     """A data structure storing the Plan7 Hidden Markov Model.
     """
@@ -1711,7 +1713,7 @@ cdef class Pipeline:
         assert self._pli != NULL
 
         # check the pipeline was configure with the same alphabet
-        if query.alphabet != self.alphabet:
+        if not self.alphabet._eq(query.alphabet):
             raise ValueError("Wrong alphabet in input HMM: expected {!r}, found {!r}".format(
                 self.alphabet,
                 query.alphabet
@@ -1727,7 +1729,7 @@ cdef class Pipeline:
         seq = next(seqs_iter, None)
         if seq is None:
             return hits
-        if seq.alphabet != self.alphabet:
+        if not self.alphabet._eq(seq.alphabet):
             raise ValueError("Wrong alphabet in input sequence: expected {!r}, found {!r}".format(
                 self.alphabet,
                 seq.alphabet,
@@ -1752,7 +1754,8 @@ cdef class Pipeline:
             self.background._bg,
             seq._sq,
             hits._th,
-            seqs_iter
+            seqs_iter,
+            seq.alphabet,
         )
 
         # threshold hits
@@ -1802,7 +1805,7 @@ cdef class Pipeline:
         assert self._pli != NULL
 
         # check the pipeline was configure with the same alphabet
-        if query.alphabet != self.alphabet:
+        if not self.alphabet._eq(query.alphabet):
             raise ValueError("Wrong alphabet in query MSA: expected {!r}, found {!r}".format(
                 self.alphabet,
                 query.alphabet
@@ -1820,7 +1823,7 @@ cdef class Pipeline:
         seq = next(seqs_iter, None)
         if seq is None:
             return hits
-        if seq.alphabet != self.alphabet:
+        if not self.alphabet._eq(seq.alphabet):
             raise ValueError("Wrong alphabet in database sequence: expected {!r}, found {!r}".format(
                 self.alphabet,
                 seq.alphabet,
@@ -1836,7 +1839,8 @@ cdef class Pipeline:
             self.background._bg,
             seq._sq,
             hits._th,
-            seqs_iter
+            seqs_iter,
+            seq.alphabet
         )
 
         # threshold hits
@@ -1886,7 +1890,7 @@ cdef class Pipeline:
         assert self._pli != NULL
 
         # check the pipeline was configure with the same alphabet
-        if query.alphabet != self.alphabet:
+        if not self.alphabet._eq(query.alphabet):
             raise ValueError("Wrong alphabet in query sequence: expected {!r}, found {!r}".format(
                 self.alphabet,
                 query.alphabet
@@ -1905,7 +1909,7 @@ cdef class Pipeline:
         seq = next(seqs_iter, None)
         if seq is None:
             return hits
-        if seq.alphabet != self.alphabet:
+        if not self.alphabet._eq(seq.alphabet):
             raise ValueError("Wrong alphabet in database sequence: expected {!r}, found {!r}".format(
                 self.alphabet,
                 seq.alphabet,
@@ -1923,7 +1927,8 @@ cdef class Pipeline:
             self.background._bg,
             seq._sq,
             hits._th,
-            seqs_iter
+            seqs_iter,
+            seq.alphabet
         )
 
         # threshold hits
@@ -1941,11 +1946,19 @@ cdef class Pipeline:
         ESL_SQ*      sq,
         P7_TOPHITS*  th,
         object       seqs_iter,
+        Alphabet     seq_alphabet
     ) except 1:
         cdef int      status
         cdef Sequence seq
 
         with nogil:
+            # verify the alphabet
+            if not self.alphabet._eq(seq_alphabet):
+                raise ValueError("Wrong alphabet in input sequence: expected {!r}, found {!r}".format(
+                    self.alphabet,
+                    seq_alphabet,
+                ))
+
             # configure the pipeline for the current HMM
             status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
             if status == libeasel.eslEINVAL:
@@ -1981,15 +1994,11 @@ cdef class Pipeline:
                 # acquire the GIL just long enough to get the next sequence
                 with gil:
                     seq = next(seqs_iter, None)
-                    if seq is not None:
-                        sq = seq._sq
-                        if seq.alphabet != self.alphabet:
-                            raise ValueError("Wrong alphabet in input sequence: expected {!r}, found {!r}".format(
-                                self.alphabet,
-                                seq.alphabet,
-                            ))
-                    else:
+                    if seq is None:
                         sq = NULL
+                    else:
+                        sq = seq._sq
+                        seq_alphabet = seq.alphabet
 
         # Return 0 to indicate success
         return 0
@@ -2127,7 +2136,7 @@ cdef class Profile:
         cdef P7_BG*      bg     = background._bg
         cdef P7_PROFILE* gm     = self._gm
 
-        if hmm.alphabet != self.alphabet:
+        if not self.alphabet._eq(hmm.alphabet):
             raise ValueError("HMM and profile alphabet don't match")
         elif hm.M > self._gm.allocM:
             raise ValueError("Profile is too small to hold HMM")
