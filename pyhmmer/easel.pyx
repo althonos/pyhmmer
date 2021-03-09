@@ -1874,9 +1874,6 @@ cdef class SequenceFile:
     detected, but it is also possible to pass an explicit format specifier
     when the `SequenceFile` is instantiated.
 
-    The following formats are supported: *fasta*, *embl*, *genbank*, *ddbj*,
-    *uniprot*, *ncbi*, *daemon*, *fmindex*.
-
     .. versionadded:: 0.2.0
        The ``alphabet`` attribute.
 

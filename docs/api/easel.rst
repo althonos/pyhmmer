@@ -18,6 +18,7 @@ Bitfield
 --------
 
 .. autoclass:: pyhmmer.easel.Bitfield
+   :special-members: __init__
    :members:
 
 
@@ -25,6 +26,7 @@ KeyHash
 -------
 
 .. autoclass:: pyhmmer.easel.KeyHash
+   :special-members: __init__
    :members:
 
 
@@ -35,9 +37,11 @@ Multiple Sequence Alignment
    :members:
 
 .. autoclass:: pyhmmer.easel.TextMSA(MSA)
+   :special-members: __init__
    :members:
 
 .. autoclass:: pyhmmer.easel.DigitalMSA(MSA)
+   :special-members: __init__
    :members:
 
 
@@ -48,9 +52,11 @@ Sequence
    :members:
 
 .. autoclass:: pyhmmer.easel.TextSequence(Sequence)
+   :special-members: __init__
    :members:
 
 .. autoclass:: pyhmmer.easel.DigitalSequence(Sequence)
+   :special-members: __init__
    :members:
 
 
@@ -58,6 +64,7 @@ Sequence File
 -------------
 
 .. autoclass:: pyhmmer.easel.SequenceFile
+   :special-members: __init__
    :members:
 
 
@@ -65,7 +72,9 @@ Sequence / Subsequence Index
 ----------------------------
 
 .. autoclass:: pyhmmer.easel.SSIReader
+   :special-members: __init__
    :members:
 
 .. autoclass:: pyhmmer.easel.SSIWriter
+   :special-members: __init__
    :members:
