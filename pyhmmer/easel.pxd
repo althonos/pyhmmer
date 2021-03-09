@@ -97,6 +97,7 @@ cdef class Sequence:
 cdef class TextSequence(Sequence):
     cpdef TextSequence copy(self)
     cpdef DigitalSequence digitize(self, Alphabet alphabet)
+    cpdef TextSequence reverse_complement(self, bint inplace=*)
 
 
 cdef class DigitalSequence(Sequence):
@@ -104,6 +105,7 @@ cdef class DigitalSequence(Sequence):
 
     cpdef DigitalSequence copy(self)
     cpdef TextSequence textize(self)
+    cpdef DigitalSequence reverse_complement(self, bint inplace=*)
 
 
 cdef class SequenceFile:

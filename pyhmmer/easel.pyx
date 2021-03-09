@@ -1471,6 +1471,7 @@ cdef class Sequence:
     def __copy__(self):
         return self.copy()
 
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -1555,6 +1556,18 @@ cdef class Sequence:
             raise AllocationError("char*")
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_SetSource")
+
+
+    # --- Abstract methods ---------------------------------------------------
+
+    def copy(self):
+        """copy(self)\n--
+
+        Duplicate the sequence, and return the copy.
+
+        """
+        raise NotImplementedError("Sequence.copy")
+
 
     # --- Methods ------------------------------------------------------------
 
@@ -1722,19 +1735,71 @@ cdef class TextSequence(Sequence):
         assert libeasel.sq.esl_sq_IsText(new._sq)
         return new
 
+    cpdef TextSequence reverse_complement(self, bint inplace=False):
+        """Build the reverse complement of the sequence.
+
+        This method assumes that the sequence alphabet is IUPAC/DNA. If the
+        sequence contains any unknown letters, they will be replaced by
+        :math:`N` in the reverse-complement.
+
+        Arguments:
+            inplace (`bool`): Whether or not to copy the sequence before
+                computing its reverse complement. With `False` (the default),
+                the method will return a copy of the sequence that has been
+                reverse-complemented. With `True`, it will reverse-complement
+                inplace and return `None`.
+
+        Raises:
+            UserWarning: When the sequence contains unknown characters.
+
+        Example:
+            >>> seq = TextSequence(sequence="ATGC")
+            >>> seq.reverse_complement().sequence
+            'GCAT'
+
+        Caution:
+            The copy made when ``inplace`` is `False` is an exact copy, so
+            the `name`, `description` and `accession` of the copy will be
+            the same. This could lead to duplicates if you're not careful!
+
+        .. versionadded:: 0.3.0
+
+        """
+        assert self._sq != NULL
+
+        cdef TextSequence rc
+        cdef int          status
+
+        if inplace:
+            status = libeasel.sq.esl_sq_ReverseComplement(self._sq)
+        else:
+            rc = self.copy()
+            status = libeasel.sq.esl_sq_ReverseComplement(rc._sq)
+
+        if status == libeasel.eslEINVAL:
+            warnings.warn(
+                "reverse-complementing a text sequence with non-DNA characters",
+                UserWarning,
+                stacklevel=2
+            )
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_sq_ReverseComplement")
+
+        return None if inplace else rc
+
 
 cdef class DigitalSequence(Sequence):
     """A biological sequence stored in digital mode.
+
+    Attributes:
+        alphabet (`Alphabet`, *readonly*): The biological alphabet used to
+            encode this sequence to digits.
 
     Hint:
         Use the ``sequence`` property to access the sequence digits as a
         memory view, allowing to access the individual bytes. This can be
         combined with `numpy.asarray` to get the sequence as an array with
         zero-copy.
-
-    Attributes:
-        alphabet (`Alphabet`, *readonly*): The biological alphabet used to
-            encode this sequence to digits.
 
     """
 
@@ -1864,6 +1929,48 @@ cdef class DigitalSequence(Sequence):
 
         assert libeasel.sq.esl_sq_IsText(new._sq)
         return new
+
+    cpdef DigitalSequence reverse_complement(self, bint inplace=False):
+        """Build the reverse complement of the sequence.
+
+        Arguments:
+            inplace (`bool`): Whether or not to copy the sequence before
+                computing its reverse complement. With `False` (the default),
+                the method will return a copy of the sequence that has been
+                reverse-complemented. With `True`, it will reverse-complement
+                inplace and return `None`.
+
+        Raises:
+            ValueError: When the alphabet of the `DigitalSequence` does
+            not have a complement mapping set (e.g., `Alphabet.amino`).
+
+        Caution:
+            The copy made when ``inplace`` is `False` is an exact copy, so
+            the `name`, `description` and `accession` of the copy will be
+            the same. This could lead to duplicates if you're not careful!
+
+        .. versionadded:: 0.3.0
+
+        """
+        assert self._sq != NULL
+        assert self.alphabet is not None
+
+        cdef DigitalSequence rc
+        cdef int             status
+
+        if self.alphabet._abc.complement == NULL:
+            raise ValueError(f"{self.alphabet} has no defined complement")
+
+        if inplace:
+            status = libeasel.sq.esl_sq_ReverseComplement(self._sq)
+        else:
+            rc = self.copy()
+            status = libeasel.sq.esl_sq_ReverseComplement(rc._sq)
+
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_sq_ReverseComplement")
+
+        return None if inplace else rc
 
 
 cdef class SequenceFile:

@@ -4,6 +4,7 @@ import io
 import os
 import unittest
 import tempfile
+import warnings
 
 from pyhmmer import easel
 
@@ -103,6 +104,22 @@ class TestDigitalSequence(unittest.TestCase):
         self.assertEqual(list(dsq1.sequence), list(dsq2.sequence))
         self.assertEqual(dsq1, dsq2)
 
+    def test_reverse_complement(self):
+        seq = easel.TextSequence(sequence="ATGC").digitize(self.abc)
+        rc = seq.reverse_complement()
+        self.assertEqual(rc.textize().sequence, "GCAT")
+
+    def test_reverse_complement_inplace(self):
+        seq = easel.TextSequence(sequence="ATGC").digitize(self.abc)
+        seq.reverse_complement(inplace=True)
+        self.assertEqual(seq.textize().sequence, "GCAT")
+
+    def test_reverse_complement_protein(self):
+        abc = easel.Alphabet.amino()
+        seq = easel.TextSequence(sequence="MEMLP").digitize(abc)
+        self.assertRaises(ValueError, seq.reverse_complement)
+        self.assertRaises(ValueError, seq.reverse_complement, inplace=True)
+
 
 class TestTextSequence(unittest.TestCase):
     def test_init_empty(self):
@@ -178,3 +195,25 @@ class TestTextSequence(unittest.TestCase):
         seq2 = dsq1.textize()
         self.assertEqual(seq1.name, seq2.name)
         self.assertEqual(seq1, seq2)
+
+    def test_reverse_complement(self):
+        seq = easel.TextSequence(sequence="ATGC")
+        rc = seq.reverse_complement()
+        self.assertEqual(rc.sequence, "GCAT")
+
+    def test_reverse_complement_inplace(self):
+        seq = easel.TextSequence(sequence="ATGC")
+        seq.reverse_complement(inplace=True)
+        self.assertEqual(seq.sequence, "GCAT")
+
+    def test_reverse_complement_protein(self):
+        seq = easel.TextSequence(sequence="MEMLP")
+
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            self.assertRaises(Warning, seq.reverse_complement)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            rc = seq.reverse_complement()
+            self.assertEqual(rc.sequence, "NNKNK")
