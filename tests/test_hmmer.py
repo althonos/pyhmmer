@@ -125,11 +125,25 @@ class TestHmmsearch(_TestSearch, unittest.TestCase):
             hmm = next(hmm_file)
         self.assertRaises(ValueError, self.get_hits, hmm, seqs)
 
+    def test_no_queries(self):
+        with self.seqs_file("938293.PRJEB85.HG003687") as seqs_file:
+            seqs_file.set_digital(seqs_file.guess_alphabet())
+            seqs = list(seqs_file)
+        hits = pyhmmer.hmmsearch([], seqs)
+        self.assertIs(None, next(hits, None))
+
 
 class TestHmmsearchSingle(TestHmmsearch, unittest.TestCase):
 
     def get_hits(self, hmm, seqs):
         return next(pyhmmer.hmmsearch([hmm], seqs, cpus=1))
+
+    def test_no_queries(self):
+        with self.seqs_file("938293.PRJEB85.HG003687") as seqs_file:
+            seqs_file.set_digital(seqs_file.guess_alphabet())
+            seqs = list(seqs_file)
+        hits = pyhmmer.hmmsearch([], seqs)
+        self.assertIs(None, next(hits, None))
 
 
 class TestPipelinesearch(_TestSearch, unittest.TestCase):
@@ -170,6 +184,15 @@ class TestPhmmer(unittest.TestCase):
     def table(name):
         bin_stream = pkg_resources.resource_stream(__name__, "data/tables/{}".format(name))
         return io.TextIOWrapper(bin_stream)
+
+    def test_no_queries(self):
+        alphabet = Alphabet.amino()
+        path = pkg_resources.resource_filename(__name__, "data/seqs/PKSI.faa")
+        with SequenceFile(path) as seqs_file:
+            seqs_file.set_digital(alphabet)
+            seqs = list(seqs_file)
+            hits = pyhmmer.phmmer([], seqs, cpus=1)
+            self.assertIs(None, next(hits, None))
 
     def test_pksi(self):
         alphabet = Alphabet.amino()

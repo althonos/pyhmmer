@@ -1,0 +1,26 @@
+import typing
+
+_Item = typing.TypeVar("_Item")
+
+class peekable(typing.Generic[_Item], typing.Iterator[_Item]):
+
+    _sentinel = object()
+
+    def __init__(self, iterable: typing.Iterable[_Item]):
+        self.it = iter(iterable)
+        self.peeked = self._sentinel
+
+    def __iter__(self) -> peekable[_Item]:
+        return self
+
+    def __next__(self) -> _Item:
+        if self.peeked is not self._sentinel:
+            self.peeked, item = self._sentinel, self.peeked
+        else:
+            item = next(self.it)
+        return item
+
+    def peek(self) -> _Item:
+        if self.peeked is self._sentinel:
+            self.peeked = next(self.it)
+        return self.peeked

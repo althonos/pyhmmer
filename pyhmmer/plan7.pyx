@@ -1939,13 +1939,14 @@ cdef class Pipeline:
         object       seqs_iter,
         Alphabet     seq_alphabet
     ) except 1:
-        cdef int      status
-        cdef Sequence seq
+        cdef int             status
+        cdef DigitalSequence seq
+        cdef Alphabet        self_alphabet = self.alphabet
 
         with nogil:
             # verify the alphabet
-            if not self.alphabet._eq(seq_alphabet):
-                raise AlphabetMismatch(self.alphabet, seq_alphabet)
+            if not self_alphabet._eq(seq_alphabet):
+                raise AlphabetMismatch(self_alphabet, seq_alphabet)
 
             # configure the pipeline for the current HMM
             status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
