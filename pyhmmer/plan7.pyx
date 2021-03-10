@@ -88,7 +88,7 @@ import os
 import sys
 import warnings
 
-from .errors import AllocationError, UnexpectedError
+from .errors import AllocationError, UnexpectedError, AlphabetMismatch
 
 
 # --- Cython classes ---------------------------------------------------------
@@ -482,9 +482,9 @@ cdef class Builder:
         # check alphabet and assign it to newly created objects
         hmm.alphabet = profile.alphabet = opti.alphabet = self.alphabet
         if not self.alphabet._eq(background.alphabet):
-            raise ValueError("background does not have the right alphabet")
+            raise AlphabetMismatch(self.alphabet, background.alphabet)
         if not self.alphabet._eq(sequence.alphabet):
-            raise ValueError("MSA does not have the right alphabet")
+            raise AlphabetMismatch(self.alphabet, sequence.alphabet)
 
         # load score matrix
         # TODO: allow changing from the default scoring matrix
@@ -565,9 +565,9 @@ cdef class Builder:
         # check alphabet and assign it to newly created objects
         hmm.alphabet = profile.alphabet = opti.alphabet = self.alphabet
         if not self.alphabet._eq(background.alphabet):
-            raise ValueError("background does not have the right alphabet")
+            raise AlphabetMismatch(self.alphabet, background.alphabet)
         if not self.alphabet._eq(msa.alphabet):
-            raise ValueError("MSA does not have the right alphabet")
+            raise AlphabetMismatch(self.alphabet, msa.alphabet)
 
         with nogil:
             if status == libeasel.eslENOTFOUND:
@@ -1697,8 +1697,9 @@ cdef class Pipeline:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
 
         Raises:
-            `ValueError`: When the alphabet of the current pipeline does not
-                match the alphabet of the given HMM.
+            `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
+                current pipeline does not match the alphabet of the given
+                HMM.
 
         .. versionadded:: 0.2.0
 
@@ -1730,10 +1731,7 @@ cdef class Pipeline:
         if seq is None:
             return hits
         if not self.alphabet._eq(seq.alphabet):
-            raise ValueError("Wrong alphabet in input sequence: expected {!r}, found {!r}".format(
-                self.alphabet,
-                seq.alphabet,
-            ))
+            raise AlphabetMismatch(self.alphabet, seq.alphabet)
 
         # build the profile from the HMM, using the first sequence length
         # as a hint for the model configuration, or reuse the profile we
@@ -1789,8 +1787,9 @@ cdef class Pipeline:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
 
         Raises:
-            `ValueError`: When the alphabet of the current pipeline does not
-                match the alphabet of the given query.
+            `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
+                current pipeline does not match the alphabet of the given
+                query.
 
         .. versionadded:: 0.3.0
 
@@ -1824,10 +1823,7 @@ cdef class Pipeline:
         if seq is None:
             return hits
         if not self.alphabet._eq(seq.alphabet):
-            raise ValueError("Wrong alphabet in database sequence: expected {!r}, found {!r}".format(
-                self.alphabet,
-                seq.alphabet,
-            ))
+            raise AlphabetMismatch(self.alphabet, seq.alphabet)
 
         # build the HMM and the profile from the query MSA
         hmm, profile, opt = builder.build_msa(query, self.background)
@@ -1874,8 +1870,9 @@ cdef class Pipeline:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
 
         Raises:
-            `ValueError`: When the alphabet of the current pipeline does not
-                match the alphabet of the given query.
+            `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
+                current pipeline does not match the alphabet of the given
+                query.
 
         .. versionadded:: 0.2.0
 
@@ -1891,10 +1888,7 @@ cdef class Pipeline:
 
         # check the pipeline was configure with the same alphabet
         if not self.alphabet._eq(query.alphabet):
-            raise ValueError("Wrong alphabet in query sequence: expected {!r}, found {!r}".format(
-                self.alphabet,
-                query.alphabet
-            ))
+            raise AlphabetMismatch(self.alphabet, query.alphabet)
 
         # make sure the pipeline is set to search mode and ready for a new HMM
         self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
@@ -1910,10 +1904,7 @@ cdef class Pipeline:
         if seq is None:
             return hits
         if not self.alphabet._eq(seq.alphabet):
-            raise ValueError("Wrong alphabet in database sequence: expected {!r}, found {!r}".format(
-                self.alphabet,
-                seq.alphabet,
-            ))
+            raise AlphabetMismatch(self.alphabet, seq.alphabet)
 
         # build the HMM and the profile from the query sequence, using the first
         # as a hint for the model configuration, or reuse the profile we
@@ -1954,10 +1945,7 @@ cdef class Pipeline:
         with nogil:
             # verify the alphabet
             if not self.alphabet._eq(seq_alphabet):
-                raise ValueError("Wrong alphabet in input sequence: expected {!r}, found {!r}".format(
-                    self.alphabet,
-                    seq_alphabet,
-                ))
+                raise AlphabetMismatch(self.alphabet, seq_alphabet)
 
             # configure the pipeline for the current HMM
             status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
@@ -2137,7 +2125,7 @@ cdef class Profile:
         cdef P7_PROFILE* gm     = self._gm
 
         if not self.alphabet._eq(hmm.alphabet):
-            raise ValueError("HMM and profile alphabet don't match")
+            raise AlphabetMismatch(self.alphabet, hmm.alphabet)
         elif hm.M > self._gm.allocM:
             raise ValueError("Profile is too small to hold HMM")
 

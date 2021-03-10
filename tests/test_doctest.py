@@ -66,7 +66,13 @@ def load_tests(loader, tests, ignore):
                 continue
             # import the submodule and add it to the tests
             module = importlib.import_module(".".join([pkg.__name__, subpkgname]))
-            globs = dict(thioesterase=thioesterase, proteins=proteins, **module.__dict__)
+            globs = dict(
+                easel=pyhmmer.easel,
+                plan7=pyhmmer.plan7,
+                thioesterase=thioesterase,
+                proteins=proteins,
+                **module.__dict__
+            )
             tests.addTests(
                 doctest.DocTestSuite(
                     module,

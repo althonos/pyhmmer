@@ -10,6 +10,7 @@ import pkg_resources
 import pyhmmer
 from pyhmmer.plan7 import Background, Builder, Pipeline, HMMFile, TopHits
 from pyhmmer.easel import Alphabet, SequenceFile, TextSequence
+from pyhmmer.errors import AlphabetMismatch
 
 
 class TestPipeline(unittest.TestCase):
@@ -25,11 +26,11 @@ class TestPipeline(unittest.TestCase):
 
         # mismatch between pipeline alphabet and query alphabet
         dsq = TextSequence(sequence="IRGIY").digitize(self.alphabet)
-        self.assertRaises(ValueError, pipeline.search_seq, dsq, self.references)
+        self.assertRaises(AlphabetMismatch, pipeline.search_seq, dsq, self.references)
 
         # mismatch between pipeline alphabet and database alphabet
         dsq = TextSequence(sequence="ATGC").digitize(pipeline.alphabet)
-        self.assertRaises(ValueError, pipeline.search_seq, dsq, self.references)
+        self.assertRaises(AlphabetMismatch, pipeline.search_seq, dsq, self.references)
 
     def test_search_hmm(self):
         seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT")

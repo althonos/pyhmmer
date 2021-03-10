@@ -46,7 +46,7 @@ import os
 import collections
 import warnings
 
-from .errors import AllocationError, UnexpectedError
+from .errors import AllocationError, UnexpectedError, AlphabetMismatch
 
 
 # --- Cython classes ---------------------------------------------------------
@@ -1033,7 +1033,7 @@ cdef class _DigitalMSASequences(_MSASequences):
 
         # make sure the sequence has the right alphabet
         if not self.msa.alphabet._eq(seq.alphabet):
-            raise ValueError("sequence and alignment have different alphabets")
+            raise AlphabetMismatch(self.msa.alphabet, seq.alphabet)
 
         # make sure inserting the sequence will not create a name duplicate
         status = libeasel.keyhash.esl_keyhash_Lookup(
@@ -1113,7 +1113,7 @@ cdef class DigitalMSA(MSA):
             elif len(seq) != alen:
                 raise ValueError("all sequences must have the same length")
             elif not alphabet._eq(seq.alphabet):
-                raise ValueError("sequence and alignment have different alphabets")
+                raise AlphabetMismatch(alphabet, seq.alphabet)
 
         self.alphabet = alphabet
         with nogil:

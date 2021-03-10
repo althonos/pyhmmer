@@ -91,3 +91,39 @@ class EaselError(RuntimeError):
             self.message,
             self.code
         )
+
+
+class AlphabetMismatch(ValueError):
+    """A value error caused by an alphabet mismatch.
+
+    This error is raised on occasions where several arguments to a
+    function have mismatching alphabets. For instance, passing a
+    `~pyhmmer.easel.DigitalSequence` to a `~pyhmmer.plan7.Builder` with
+    different alphabets::
+
+        >>> seq = easel.DigitalSequence(easel.Alphabet.dna())
+        >>> builder = plan7.Builder(easel.Alphabet.amino())
+        >>> builder.build(seq, plan7.Background(seq.alphabet))
+        Traceback (most recent call last):
+          ...
+        pyhmmer.errors.AlphabetMismatch: expected ..., found ...
+
+    .. versionadded:: 0.3.0
+
+    """
+
+    def __init__(self, expected, actual):
+        super().__init__(self)
+        self.expected = expected
+        self.actual = actual
+
+    def __repr__(self):
+        return f"{type(self).__name__}({self.expected}, {self.actual})"
+
+    def __str__(self):
+        return f"expected {self.expected}, found {self.actual}"
+
+    def __eq__(self, other):
+        if not isinstance(other, AlphabetMismatch):
+            return NotImplemented
+        return self.actual == other.actual and self.expected == other.expected
