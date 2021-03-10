@@ -24,7 +24,7 @@ class peekable(typing.Generic[_Item], typing.Iterator[_Item]):
         self.it = iter(iterable)
         self.peeked = self._sentinel
 
-    def __iter__(self) -> peekable[_Item]:
+    def __iter__(self) -> "peekable[_Item]":
         return self
 
     def __next__(self) -> _Item:
