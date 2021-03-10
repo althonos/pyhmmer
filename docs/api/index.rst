@@ -25,6 +25,7 @@ API Reference
 
         pyhmmer.hmmer.hmmsearch
         pyhmmer.hmmer.phmmer
+        pyhmmer.hmmer.nhmmer
         pyhmmer.hmmer.hmmpress
 
 

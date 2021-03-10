@@ -322,7 +322,7 @@ class _MSASearch(_Search[DigitalMSA]):
         )
 
 
-# --- Pipeline threads -------------------------------------------------------
+# --- hmmsearch --------------------------------------------------------------
 
 def hmmsearch(
     queries: typing.Iterable[HMM],
@@ -367,6 +367,19 @@ def hmmsearch(
     return runner.run()
 
 
+# --- phmmer -----------------------------------------------------------------
+
+@typing.overload
+def phmmer(
+    queries: typing.Iterable[DigitalMSA],
+    sequences: typing.Collection[DigitalSequence],
+    cpus: int = 0,
+    callback: typing.Optional[typing.Callable[[DigitalMSA, int], None]] = None,
+    builder: typing.Optional[Builder] = None,
+    **options: typing.Any,
+) -> typing.Iterator[TopHits]:
+    ...
+
 def phmmer(
     queries: typing.Iterable[DigitalSequence],
     sequences: typing.Collection[DigitalSequence],
@@ -404,6 +417,9 @@ def phmmer(
 
     .. versionadded:: 0.2.0
 
+    .. versionchanged:: 0.3.0
+       Allow using `DigitalMSA` queries.
+
     """
     _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or multiprocessing.cpu_count()
     _builder = Builder(Alphabet.amino()) if builder is None else builder
@@ -422,9 +438,59 @@ def phmmer(
         runner = _MSASearch(
             _builder, _queries, sequences, _cpus, callback, **options
         )
-
     return runner.run()
 
+
+# --- nhmmer -----------------------------------------------------------------
+
+@typing.overload
+def nhmmer(
+    queries: typing.Iterable[DigitalMSA],
+    sequences: typing.Collection[DigitalSequence],
+    cpus: int = 0,
+    callback: typing.Optional[typing.Callable[[DigitalMSA, int], None]] = None,
+    builder: typing.Optional[Builder] = None,
+    **options: typing.Any,
+) -> typing.Iterator[TopHits]:
+    ...
+
+def nhmmer(
+    queries: typing.Iterable[DigitalSequence],
+    sequences: typing.Collection[DigitalSequence],
+    cpus: int = 0,
+    callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
+    builder: typing.Optional[Builder] = None,
+    **options: typing.Any,
+) -> typing.Iterator[TopHits]:
+    """Search protein sequences against a sequence database.
+
+    See Also:
+        The equivalent function for proteins, `~pyhmmer.hmmer.phmmer`.
+
+    .. versionadded:: 0.3.0
+
+    """
+    _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or multiprocessing.cpu_count()
+    _builder = Builder(Alphabet.dna()) if builder is None else builder
+
+    try:
+        _queries = peekable(queries)
+        _item = _queries.peek()
+    except StopIteration:
+        _item = None
+
+    if isinstance(_item, DigitalSequence):
+        runner = _SequenceSearch(
+            _builder, _queries, sequences, _cpus, callback, **options
+        )
+    else:
+        runner = _MSASearch(
+            _builder, _queries, sequences, _cpus, callback, **options
+        )
+    return runner.run()
+
+
+# --- hmmpress ---------------------------------------------------------------
 
 def hmmpress(
     hmms: typing.Iterable[HMM], output: typing.Union[str, "os.PathLike[str]"],

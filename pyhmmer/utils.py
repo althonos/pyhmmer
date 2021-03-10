@@ -3,6 +3,20 @@ import typing
 _Item = typing.TypeVar("_Item")
 
 class peekable(typing.Generic[_Item], typing.Iterator[_Item]):
+    """Turn an iterable into a peekable iterable.
+
+    Example:
+        >>> it = peekable(range(3))
+        >>> it.peek()
+        0
+        >>> next(it)
+        0
+        >>> next(it)
+        1
+        >>> it.peek()
+        2
+
+    """
 
     _sentinel = object()
 
