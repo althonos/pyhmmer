@@ -6,7 +6,40 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.3.0...HEAD
+
+
+## [v0.3.0] - 2021-03-11
+[v0.3.0]: https://github.com/althonos/pyhmmer/compare/v0.2.2...v0.3.0
+
+## Added
+- `easel.MSAFile` to read from a file containing
+- `accession`, `author`, `name` and `description` properties to `easel.MSA` objects.
+- `plan7.Builder.build_msa` to build a pHMM from a sequence alignment.
+- Additional methods to `easel.KeyHash`, allowing to use it as a `dict`/`set` hybrid.
+- `Sequence.write` and `MSA.write` methods to format a sequence or an alignment to a file handle.
+- `plan7.TopHist.to_msa` method to convert all the top hits of a query against a database into a multiple sequence alignment.
+- `easel.MSA.sequences` attribute to access individual sequences of an alignment using the `collections.abc.Sequence` interface.
+- `easel.DigitalMSA.textize` method to convert a multiple sequence alignment in digital mode to its text-mode counterpart.
+- Read-only `name`, `accession` and `description` properties to `plan7.Profile` showing attributes inherited from the HMM it was configured with.
+- `plan7.HMM.consensus` property, allowing to access the consensus sequence of a pHMM.
+- `plan7.HMM` equality implementation, using zero tolerance.
+- `plan7.Pipeline.search_msa` to query a MSA against a sequence database.
+- `easel.Sequence.reverse_complement` method allowing to reverse-complement inplace or to build a copy.
+- `errors.AlphabetMismatch` exception for use in cases where an alphabet is expected but not matched by the input.
+- `hmmer.nhmmer` function with the same behaviour as `hmmer.phmmer`, except it expects inputs with a DNA alphabet.
+
+### Fixed
+- `plan7.Builder.copy` not copying some parameters correctly, causing `pyhmmer.hmmer.phmmer` to give inconsistent results in multithreaded mode.
+- `easel.Bitfield` not properly handling index overflows.
+- Documentation not rendering for the `__init__` method of all classes.
+
+### Changed
+- `plan7.Builder` gap-open and gap-extend probabilities are now set on instantiation and depend on the alphabet type.
+- Constructors for `easel.TextMSA` and `easel.DigitalMSA`, which can now be given an iterable of `easel.Sequence` objects to store in the alignment.
+
+### Removed
+- Unimplemented `easel.SequenceFile.fetch` and `easel.SequenceFile.fetchinto` methods.
 
 
 ## [v0.2.2] - 2021-03-04
