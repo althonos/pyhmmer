@@ -26,7 +26,7 @@ _Q = typing.TypeVar("_Q")
 
 class _PipelineThread(typing.Generic[_Q], threading.Thread):
     @staticmethod
-    def _none_callback(hmm: HMM, total: int) -> None:
+    def _none_callback(hmm: _Q, total: int) -> None:
         pass
 
     def __init__(
@@ -59,11 +59,8 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
             else:
                 index, query = args
             try:
-                hits = self.search(query)
-                self.hits_queue.put((index, hits))
+                self.process(index, query)
                 self.query_queue.task_done()
-                self.callback(query, self.query_count.value)  # type: ignore
-                self.pipeline.clear()
             except BaseException as exc:
                 self.error = exc
                 self.kill()
@@ -71,6 +68,12 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
 
     def kill(self) -> None:
         self.kill_switch.set()
+
+    def process(self, index: int, query: _Q) -> None:
+        hits = self.search(query)
+        self.hits_queue.put((index, hits))
+        self.callback(query, self.query_count.value)  # type: ignore
+        self.pipeline.clear()
 
     @abc.abstractmethod
     def search(self, query: _Q) -> TopHits:
@@ -176,22 +179,12 @@ class _Search(typing.Generic[_Q], abc.ABC):
         # create the thread (to recycle code)
         thread = self._new_thread(query_queue, query_count, hits_queue, kill_switch)
 
-        # queue the HMMs passed as arguments
+        # process each HMM iteratively and yield the result
+        # immediately so that the user can iterate over the
+        # TopHits one at a time
         for index, query in enumerate(self.queries):
             query_count.value += 1
-            query_queue.put((index, query))
-
-        # poison-pill the queue so that threads terminate when they
-        # have consumed all the HMMs
-        query_queue.put(None)
-
-        # launch the thread code, but in the main thread
-        thread.run()
-        if thread.error is not None:
-            raise thread.error
-
-        # give back results
-        while not hits_queue.empty():
+            thread.process(index, query)
             yield hits_queue.get_nowait()[1]
 
     def _multi_threaded(self) -> typing.Iterator[TopHits]:
