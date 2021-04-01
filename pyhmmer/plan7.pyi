@@ -241,6 +241,11 @@ class Pipeline(object):
         sequences: typing.Iterable[DigitalSequence],
         builder: typing.Optional[Builder] = None,
     ) -> TopHits: ...
+    def scan_hmm(
+        self,
+        query: DigitalSequence,
+        hmms: typing.Iterable[HMM],
+    ) -> TopHits: ...
 
 class Profile(object):
     alphabet: Alphabet

@@ -1412,8 +1412,7 @@ cdef class Pipeline:
             background (`~pyhmmer.plan7.Background`, optional): The background
                 model to use with the pipeline, or ``None`` to create and use
                 a default one. *The pipeline needs ownership of the background
-                model, so make sure to use* `Background.copy` *if passing a
-                custom background model here.*
+                model, so any background model passed there will be copied.*
 
         Keyword Arguments:
             bias_filter (`bool`): Whether or not to enable composition bias
@@ -1621,9 +1620,9 @@ cdef class Pipeline:
         #     pli->use_bit_cutoffs = p7H_TC;
         #   }
 
-        # Configure search space sizes for E value calculations
-        self._pli.Z       = self._pli.domZ       = 0.0
-        self._pli.Z_setby = self._pli.domZ_setby = p7_zsetby_e.p7_ZSETBY_NTARGETS
+        # # Configure search space sizes for E value calculations
+        # self._pli.Z       = self._pli.domZ       = 0.0
+        # self._pli.Z_setby = self._pli.domZ_setby = p7_zsetby_e.p7_ZSETBY_NTARGETS
         # if (go && esl_opt_IsOn(go, "-Z"))
         #   {
         #     pli->Z_setby = p7_ZSETBY_OPTION;
@@ -1988,6 +1987,165 @@ cdef class Pipeline:
                     else:
                         sq = seq._sq
                         seq_alphabet = seq.alphabet
+
+        # Return 0 to indicate success
+        return 0
+
+    cpdef TopHits scan_seq(
+        self,
+        DigitalSequence query,
+        object hmms,
+    ):
+        """scan_seq(self, query, hmms)\n--
+
+        Run the pipeline using a query sequence against a profile database.
+
+        Arguments:
+            query (`~pyhmmer.easel.DigitalSequence`): The sequence object to
+                use to query the profile database.
+            hmms (iterable of `~pyhmmer.easel.DigitalSequence`): The
+                HMM profiles to query. Pass a `~pyhmmer.easel.HMMFile`
+                instance to read from disk iteratively.
+
+        Returns:
+            `~pyhmmer.plan7.TopHits`: the hits found in the profile database.
+
+        Raises:
+            `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
+                current pipeline does not match the alphabet of the given
+                query or profile.
+
+        Caution:
+            In the current version, this method is not optimized to use
+            the *pressed* database, even if it exists. This will cause the
+            MSV and SSV filters to be rebuilt at each iteration, which could
+            be slow. Consider at least pre-fetching the HMM database if
+            calling this method several times in a row.
+
+        .. versionadded:: v0.4.0
+
+        """
+        cdef int                  allocM
+        cdef Profile              profile
+        cdef HMM                  hmm
+        cdef OptimizedProfile     opt
+        cdef TopHits              hits    = TopHits()
+
+        assert self._pli != NULL
+
+        # check the pipeline was configure with the same alphabet
+        if not self.alphabet._eq(query.alphabet):
+            raise AlphabetMismatch(self.alphabet, query.alphabet)
+
+        # make sure the pipeline is set to scan mode
+        self._pli.mode = p7_pipemodes_e.p7_SCAN_MODELS
+
+        # get an iterator over the input hmms, with an early return if
+        # no sequences were given, and extract the raw pointer to the
+        # HMM from the Python object
+        hmms_iter = iter(hmms)
+        hmm = next(hmms_iter, None)
+        if hmm is None:
+            return hits
+        if not self.alphabet._eq(hmm.alphabet):
+            raise AlphabetMismatch(self.alphabet, hmm.alphabet)
+
+        # run the search loop on all database sequences while recycling memory
+        self._scan_loop(
+            self._pli,
+            query._sq,
+            self.background._bg,
+            hmm._hmm,
+            hits._th,
+            hmms_iter,
+            hmm.alphabet
+        )
+
+        # threshold hits
+        hits.sort(by="key")
+        hits.threshold(self)
+
+        # return the hits
+        return hits
+
+    cdef int _scan_loop(
+        self,
+        P7_PIPELINE* pli,
+        ESL_SQ*      sq,
+        P7_BG*       bg,
+        P7_HMM*      hm,
+        P7_TOPHITS*  th,
+        object       hmm_iter,
+        Alphabet     hmm_alphabet
+    ) except 1:
+        cdef int              status
+        cdef Alphabet         self_alphabet = self.alphabet
+        cdef Profile          profile       = Profile(hm.M, hmm_alphabet)
+        cdef OptimizedProfile optimized     = OptimizedProfile(hm.M, hmm_alphabet)
+        cdef P7_PROFILE*      gm            = profile._gm
+        cdef P7_OPROFILE*     om            = optimized._om
+        cdef HMM              hmm
+
+        with nogil:
+            # verify the alphabet
+            if not self_alphabet._eq(hmm_alphabet):
+                raise AlphabetMismatch(self_alphabet, hmm_alphabet)
+
+            # configure the pipeline for the current sequence
+            status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_pli_NewSeq")
+
+            # run the inner loop on all HMMs
+            while hm != NULL:
+                # reallocate if too small
+                if gm.M < hm.M:
+                    with gil:
+                        profile = Profile(hm.M, hmm_alphabet)
+                        optimized = OptimizedProfile(hm.M, hmm_alphabet)
+                        gm, om = profile._gm, optimized._om
+
+                # configure the new profile
+                status = libhmmer.modelconfig.p7_ProfileConfig(hm, bg, gm, sq.L, p7_LOCAL)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_ProfileConfig")
+
+                # convert the new profile to an optimized one
+                status = p7_oprofile.p7_oprofile_Convert(gm, om)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_oprofile_Convert")
+
+                # configure the profile, background and pipeline for the new HMM
+                status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_pli_NewModel")
+                status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq.n)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_bg_SetLength")
+                status = p7_oprofile.p7_oprofile_ReconfigLength(om, sq.n)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
+
+                # run the pipeline on the sequence
+                status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, sq, NULL, th)
+                if status == libeasel.eslEINVAL:
+                    raise ValueError("model does not have bit score thresholds expected by the pipeline")
+                elif status == libeasel.eslERANGE:
+                    raise OverflowError("numerical overflow in the optimized vector implementation")
+                elif status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_Pipeline")
+
+                # clear pipeline for reuse for next target
+                libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
+
+                # acquire the GIL just long enough to get the next HMM
+                with gil:
+                    hmm = next(hmm_iter, None)
+                    if hmm is None:
+                        hm = NULL
+                    else:
+                        hm = hmm._hmm
+                        hmm_alphabet = hmm.alphabet
 
         # Return 0 to indicate success
         return 0

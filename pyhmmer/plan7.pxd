@@ -144,6 +144,17 @@ cdef class Pipeline:
         object       seqs_iter,
         Alphabet     seq_alphabet,
     ) except 1
+    cpdef TopHits scan_seq(self, DigitalSequence query, object hmms)
+    cdef int _scan_loop(
+        self,
+        P7_PIPELINE* pli,
+        ESL_SQ*      sq,
+        P7_BG*       bg,
+        P7_HMM*      hm,
+        P7_TOPHITS*  th,
+        object       hmm_iter,
+        Alphabet     hmm_alphabet
+    ) except 1
 
 
 cdef class Profile:
