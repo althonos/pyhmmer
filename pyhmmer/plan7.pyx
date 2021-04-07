@@ -909,12 +909,21 @@ cdef class HMM:
 
     @property
     def checksum(self):
-        """`int`: The 32-bit checksum of the HMM.
+        """`int` or `None`: The 32-bit checksum of the HMM, if any.
+
+        The checksum if calculated from the alignment the HMM was created
+        from, and was introduced in more recent HMM formats. This means
+        some `HMM` objects may have a non-`None` checksum.
 
         .. versionadded:: 0.2.1
 
+        .. versionchanged:: 0.3.1
+           Returns `None` if the HMM flag for the checksum is not set.
+
         """
         assert self._hmm != NULL
+        if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CHKSUM):
+            return None
         return self._hmm.checksum
 
     @property
