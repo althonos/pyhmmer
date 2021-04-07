@@ -830,6 +830,13 @@ cdef class HMM:
             self._hmm = libhmmer.p7_hmm.p7_hmm_Create(M, alphabet._abc)
         if not self._hmm:
             raise AllocationError("P7_HMM")
+        # FIXME(@althonos): Remove following block when
+        # https://github.com/EddyRivasLab/hmmer/pull/236
+        # is merged and released in a new HMMER version
+        cdef int status = libhmmer.p7_hmm.p7_hmm_SetConsensus(self._hmm, NULL)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_hmm_SetConsensus")
+        self._hmm.flags &= ~libhmmer.p7_hmm.p7H_CONS
 
     def __dealloc__(self):
         libhmmer.p7_hmm.p7_hmm_Destroy(self._hmm)

@@ -8,11 +8,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 [Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.3.0...HEAD
 
+### Fixed
+- `HMM.write(..., binary=False)` crashing on HMMs without a consensus line.
+  ([#5](https://github.com/althonos/pyhmmer/issues/5)). Fixed upstream in
+  ([EddyRivasLab/HMMER#236](https://github.com/EddyRivasLab/hmmer/pull/236)).
 
 ## [v0.3.0] - 2021-03-11
 [v0.3.0]: https://github.com/althonos/pyhmmer/compare/v0.2.2...v0.3.0
 
-## Added
+### Added
 - `easel.MSAFile` to read from a file containing
 - `accession`, `author`, `name` and `description` properties to `easel.MSA` objects.
 - `plan7.Builder.build_msa` to build a pHMM from a sequence alignment.

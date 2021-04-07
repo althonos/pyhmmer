@@ -81,6 +81,12 @@ class TestHMM(unittest.TestCase):
             for line_written, line_ref in itertools.islice(zip(buffer, f), 1, None):
                 self.assertEqual(line_written, line_ref)
 
+    def test_write_empty(self):
+        buffer = io.BytesIO()
+        hmm = HMM(10, Alphabet.amino())
+        hmm.write(buffer)
+        self.assertGreater(len(buffer.getvalue()), 0)
+
     def test_write_error(self):
         buffer = io.StringIO()
 
