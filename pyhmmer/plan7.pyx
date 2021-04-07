@@ -85,7 +85,6 @@ import collections.abc
 import errno
 import io
 import os
-import shlex
 import sys
 import warnings
 
@@ -517,7 +516,7 @@ cdef class Builder:
                 &opti._om, # optimized profile
             )
         if status == libeasel.eslOK:
-          hmm.command_line = shlex.join(sys.argv)
+          hmm.command_line = " ".join(sys.argv)
           return (hmm, profile, opti)
         elif status == libeasel.eslEINVAL:
             msg = <bytes> self._bld.errbuf
@@ -590,7 +589,7 @@ cdef class Builder:
                 NULL # modified msa
             )
         if status == libeasel.eslOK:
-            hmm.command_line = shlex.join(sys.argv)
+            hmm.command_line = " ".join(sys.argv)
             return (hmm, profile, opti)
         elif status == libeasel.eslEINVAL:
             msg = <bytes> self._bld.errbuf
