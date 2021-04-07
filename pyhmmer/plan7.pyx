@@ -588,7 +588,7 @@ cdef class Builder:
                 NULL # modified msa
             )
         if status == libeasel.eslOK:
-          return (hmm, profile, opti)
+            return (hmm, profile, opti)
         elif status == libeasel.eslEINVAL:
             msg = <bytes> self._bld.errbuf
             raise ValueError("Could not build HMM: {}".format(msg.decode()))
@@ -921,13 +921,70 @@ cdef class HMM:
     def consensus(self):
         """`str` or `None`: The consensus residue line of the HMM, if set.
 
-        .. versionadded: 0.3.0
+        .. versionadded:: 0.3.0
 
         """
         assert self._hmm != NULL
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CONS):
             return None
+        assert self._hmm.consensus != NULL
         return (<bytes> (&self._hmm.consensus[1])).decode("ascii")
+
+    @property
+    def consensus_structure(self):
+        """`str` or `None`: The consensus structure of the HMM, if any.
+
+        .. versionadded:: 0.3.1
+
+        """
+        assert self._hmm != NULL
+        if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CS):
+            return None
+        assert self._hmm.cs != NULL
+        return (<bytes> (&self._hmm.cs[1])).decode("ascii")
+
+    @property
+    def consensus_accessibility(self):
+        """`str` or `None`: The consensus accessibility of the HMM, if any.
+
+        .. versionadded:: 0.3.1
+
+        """
+        assert self._hmm != NULL
+        if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CA):
+            return None
+        assert self._hmm.ca != NULL
+        return (<bytes> (&self._hmm.ca[1])).decode("ascii")
+
+    @property
+    def reference(self):
+        """`str` or `None`: The reference line from the alignment, if any.
+
+        This is relevant if the HMM was built from a multiple sequence
+        alignment (e.g. by `Builder.build_msa`, or by an external
+        ``hmmbuild`` pipeline run).
+
+        .. versionadded:: 0.3.1
+
+        """
+        assert self._hmm != NULL
+        if not (self._hmm.flags & libhmmer.p7_hmm.p7H_RF):
+            return None
+        assert self._hmm.rf != NULL
+        return (<bytes> (&self._hmm.rf[1])).decode("ascii")
+
+    @property
+    def model_mask(self):
+        """`str` or `None`: The model mask line from the alignment, if any.
+
+        .. versionadded:: 0.3.1
+
+        """
+        assert self._hmm != NULL
+        if not (self._hmm.flags & libhmmer.p7_hmm.p7H_MM):
+            return None
+        assert self._hmm.mm != NULL
+        return (<bytes> (&self._hmm.mm[1])).decode("ascii")
 
     @property
     def description(self):
@@ -1022,6 +1079,74 @@ cdef class HMM:
             PyBUF_WRITE
         )
         return mv.cast("f")
+
+    @property
+    def command_line(self):
+        """`str` or `None`: The command line that built the model.
+
+        For HMMs created with `~pyhmmer.plan7.Builder`, this defaults to
+        `sys.argv`. It can however be set to any string, including multiline
+        to show successive commands.
+
+        Example:
+            >>> print(thioesterase.command_line)
+            hmmbuild Thioesterase.hmm Thioesterase.fa
+            hmmcalibrate Thioesterase.hmm
+
+        .. versionadded:: 0.3.1
+
+        """
+        assert self._hmm != NULL
+        if self._hmm.comlog == NULL:
+            return None
+        return (<bytes> self._hmm.comlog).decode("ascii")
+
+    @command_line.setter
+    def command_line(self, object cli):
+        assert self._hmm != NULL
+
+        if cli is None:
+            free(self._hmm.comlog)
+            return
+
+        cdef bytes  cli_ = cli.encode("ascii")
+        cdef size_t n    = len(cli_)
+
+        if self._hmm.comlog == NULL:
+            self._hmm.comlog = strdup(<char*> cli_)
+        else:
+            self._hmm.comlog = <char*> realloc(<void*> self._hmm.comlog, sizeof(char) * (n + 1))
+            if self._hmm.comlog != NULL:
+                strcpy(self._hmm.comlog, <char*> cli_)
+        if self._hmm.comlog == NULL:
+            raise AllocationError("char*")
+
+    @property
+    def nseq(self):
+        """`int` or `None`: The number of training sequences used, if any.
+
+        If the HMM was created from a multiple sequence alignment, this
+        corresponds to the number of sequences in the MSA.
+
+        Example:
+            >>> thioesterase.nseq
+            278
+
+        .. versionadded:: 0.3.1
+
+        """
+        assert self._hmm != NULL
+        return None if self._hmm.nseq == -1 else self._hmm.nseq
+
+    @property
+    def nseq_effective(self):
+        """`float` or `None`: The number of effective sequences used, if any.
+
+        .. versionadded:: 0.3.1
+
+        """
+        assert self._hmm != NULL
+        return None if self._hmm.eff_nseq == -1 else self._hmm.eff_nseq
 
     # --- Methods ------------------------------------------------------------
 

@@ -9,8 +9,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 [Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.3.0...HEAD
 
 ### Added
-- `transition_probabilities`, `match_emissions`, `insert_emissions` properties
-  to the `HMM` class, providing access to the numerical parameters of the HMM.
+- `transition_probabilities`, `match_emissions`, `insert_emissions` properties to the `HMM` class, providing access to the numerical parameters of the HMM.
+- `consensus_structure` and `consensus_accessibility` properties to the `HMM` class to get consensus lines from the source alignment if the HMM was created from a MSA.
+- `nseq` and `nseq_effective` properties to the `HMM` class to get the number of training sequences and effective sequences used to build the HMM.
 
 ### Fixed
 - `HMM.write(..., binary=False)` crashing on HMMs without a consensus line.
