@@ -2,9 +2,11 @@ import io
 import itertools
 import os
 import shutil
+import sys
 import unittest
 import tempfile
 import pkg_resources
+from unittest import mock
 
 import pyhmmer
 from pyhmmer.errors import EaselError
@@ -45,6 +47,16 @@ class TestBuilder(unittest.TestCase):
         self.assertEqual(builder.alphabet, copy.alphabet)
         self.assertEqual(builder.seed, copy.seed)
 
+    def test_build_command_line(self):
+        abc = Alphabet.amino()
+        builder = Builder(alphabet=abc)
+        seq = self.proteins[1].digitize(abc)
+
+        argv = ["mycommand", "--param", "1"]
+        with mock.patch.object(sys, "argv", argv):
+            hmm, profile, opt = builder.build(seq, Background(abc))
+        self.assertEqual(hmm.command_line, " ".join(argv))
+
     def test_build_protein(self):
         abc = Alphabet.amino()
         builder = Builder(alphabet=abc)
@@ -64,6 +76,23 @@ class TestBuilder(unittest.TestCase):
         self.assertEqual(profile.alphabet, abc)
         self.assertEqual(opt.alphabet, abc)
         self.assertEqual(hmm.M, self.ecori.M)
+
+    def test_build_msa_command_line(self):
+        abc = Alphabet.dna()
+        builder = Builder(alphabet=abc)
+
+        with MSAFile(os.path.join(self.testdata, "3box.sto")) as msa_file:
+            msa_file.set_digital(abc)
+            msa = next(msa_file)
+            msa.name = b"3box"
+
+        with HMMFile(os.path.join(self.testdata, "3box.hmm")) as hmm_file:
+            hmm_exp = next(hmm_file)
+
+        argv = ["mycommand", "--param", "1"]
+        with mock.patch.object(sys, "argv", argv):
+            hmm, profile, opt = builder.build_msa(msa, Background(abc))
+        self.assertEqual(hmm.command_line, " ".join(argv))
 
     def test_build_msa_dna(self):
         abc = Alphabet.dna()
