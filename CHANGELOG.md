@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 [Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.3.0...HEAD
 
+### Added
+- `transition_probabilities`, `match_emissions`, `insert_emissions` properties
+  to the `HMM` class, providing access to the numerical parameters of the HMM.
+
 ### Fixed
 - `HMM.write(..., binary=False)` crashing on HMMs without a consensus line.
   ([#5](https://github.com/althonos/pyhmmer/issues/5)). Fixed upstream in

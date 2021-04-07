@@ -16,6 +16,7 @@ cdef extern from "hmmer.h" nogil:
     DEF p7_MAXABET = 20
 
 
+    cdef size_t p7H_NTRANSITIONS = 7
     cdef enum p7h_transitions_e:
         p7H_MM = 0
         p7H_MI = 1

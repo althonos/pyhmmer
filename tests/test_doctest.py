@@ -18,6 +18,20 @@ import pyhmmer.easel
 import pyhmmer.plan7
 
 
+class _numpy_array(object):
+    """A mock `numpy.ndarray` to be used in doctests.
+    """
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def reshape(self, *args, **kwargs):
+        return self
+
+    def __repr__(self):
+        return "array([[...]], dtype=float32)"
+
+
 def _load_tests_from_module(tests, module, globs, setUp=None, tearDown=None):
     """Load tests from module, iterating through submodules.
     """
@@ -67,6 +81,7 @@ def load_tests(loader, tests, ignore):
             # import the submodule and add it to the tests
             module = importlib.import_module(".".join([pkg.__name__, subpkgname]))
             globs = dict(
+                numpy=mock.Mock(asarray=_numpy_array),
                 easel=pyhmmer.easel,
                 plan7=pyhmmer.plan7,
                 thioesterase=thioesterase,

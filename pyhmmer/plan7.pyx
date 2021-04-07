@@ -948,6 +948,81 @@ cdef class HMM:
         elif err != libeasel.eslOK:
             raise UnexpectedError(err, "p7_hmm_SetDescription")
 
+    @property
+    def transition_probabilities(self):
+        """`memoryview` of `float`: The transition probabilities of the model.
+
+        The returned memory view exposes a matrix of dimensions
+        :math:`(M+1, 7)`, with one row per node (plus one extra row for
+        the entry probabilities), and one column per transition.
+
+        Hint:
+            Use `numpy.asarray` to convert the memory view to a 2D array::
+
+                >>> t = thioesterase.transition_probabilities
+                >>> numpy.asarray(t).reshape((thioesterase.M+1, 7))
+                array([[...]], dtype=float32)
+
+        .. versionadded:: 0.3.1
+
+        """
+        cdef object mv = PyMemoryView_FromMemory(
+            <char*> self._hmm.t[0],
+            (self._hmm.M + 1) * libhmmer.p7_hmm.p7H_NTRANSITIONS * sizeof(float),
+            PyBUF_WRITE
+        )
+        return mv.cast("f")
+
+    @property
+    def match_emissions(self):
+        """`memoryview` of `float`: The match emissions of the model.
+
+        The returned memory view exposes a matrix of dimensions
+        :math:`(M, K)`, with one row per node, and one column per
+        alphabet symbol.
+
+        Hint:
+            Use `numpy.asarray` to convert the memory view to a 2D array::
+
+                >>> m = thioesterase.match_emissions
+                >>> numpy.asarray(m).reshape((thioesterase.M, thioesterase.alphabet.K))
+                array([[...]], dtype=float32)
+
+        .. versionadded:: 0.3.1
+
+        """
+        cdef object mv = PyMemoryView_FromMemory(
+            <char*> self._hmm.mat[1],
+            self._hmm.M * self.alphabet.K *  sizeof(float),
+            PyBUF_WRITE
+        )
+        return mv.cast("f")
+
+    @property
+    def insert_emissions(self):
+        """`memoryview` of `float`: The insert emissions of the model.
+
+        The returned memoryview exposes a matrix of dimensions
+        :math:`(M, K)`, with one row per node and one column per
+        alphabet symbol.
+
+        Hint:
+            Use `numpy.asarray` to convert the memoryview to a 2D aray::
+
+                >>> i = thioesterase.insert_emissions
+                >>> numpy.asarray(i).reshape((thioesterase.M, thioesterase.alphabet.K))
+                array([[...]], dtype=float32)
+
+        .. versionadded:: 0.3.1
+
+        """
+        cdef object mv = PyMemoryView_FromMemory(
+            <char*> self._hmm.ins[1],
+            self._hmm.M * self.alphabet.K * sizeof(float),
+            PyBUF_WRITE
+        )
+        return mv.cast("f")
+
     # --- Methods ------------------------------------------------------------
 
     cpdef void write(self, object fh, bint binary=False) except *:
@@ -2438,10 +2513,14 @@ cdef class TopHits:
 
     @property
     def reported(self):
+        """`int`: The number of hits that are above the reporting threshold.
+        """
         return self._th.nreported
 
     @property
     def included(self):
+        """`int`: The number of hits that are above the inclusion threshold.
+        """
         return self._th.nincluded
 
     # --- Methods ------------------------------------------------------------
