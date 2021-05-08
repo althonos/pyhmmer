@@ -6,18 +6,26 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.3.1...HEAD
+
+
+## [v0.3.1] - 2021-05-08
+[v0.3.1]: https://github.com/althonos/pyhmmer/compare/v0.3.0...v0.3.1
 
 ### Added
+- `Pipeline.scan_seq` method to query a database of profiles with one or more sequences.
 - `transition_probabilities`, `match_emissions`, `insert_emissions` properties to the `HMM` class, providing access to the numerical parameters of the HMM.
 - `consensus_structure` and `consensus_accessibility` properties to the `HMM` class to get consensus lines from the source alignment if the HMM was created from a MSA.
 - `nseq` and `nseq_effective` properties to the `HMM` class to get the number of training sequences and effective sequences used to build the HMM.
 
 ### Changed
 - `HMM.checksum` is now `None` if the `p7H_CHKSUM` flag is not set.
+- `Builder` methods will now record `sys.argv` when creating a HMM.
 
 ### Fixed
 - `HMM.write(..., binary=False)` crashing on HMMs without a consensus line. ([#5](https://github.com/althonos/pyhmmer/issues/5)). Fixed upstream in ([EddyRivasLab/HMMER#236](https://github.com/EddyRivasLab/hmmer/pull/236)).
+- `Pipeline.reset` mishandling the `Z` and `domZ` values if those were detected from the number of targets.
+- `pyhmmer.hmmer` functions will not block until all results have been collected anymore when run in multithreaded mode.
 
 
 ## [v0.3.0] - 2021-03-11

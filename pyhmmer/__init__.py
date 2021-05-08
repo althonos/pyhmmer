@@ -20,12 +20,12 @@ from . import errors
 from . import easel
 from . import plan7
 
-from .hmmer import hmmsearch, hmmpress, phmmer
+from .hmmer import hmmsearch, hmmpress, nhmmer, phmmer
 
 
 __author__ = "Martin Larralde <martin.larralde@embl.de>"
 __license__ = "MIT"
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __all__ = [
     errors.__name__,
     easel.__name__,
@@ -33,6 +33,7 @@ __all__ = [
     hmmsearch.__name__,
     hmmpress.__name__,
     phmmer.__name__,
+    nhmmer.__name__,
 ]
 
 # Small addition to the docstring: we want to show a link redirecting to the
