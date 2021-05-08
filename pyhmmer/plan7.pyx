@@ -1758,9 +1758,11 @@ cdef class Pipeline:
         cdef int      status
         cdef uint32_t seed   = self.seed
 
-        # reset the Z and domZ values from the CLI
-        self.Z = self._Z
-        self.domZ = self._domZ
+        # reset the Z and domZ values from the CLI if needed
+        if self._pli.Z_setby == p7_zsetby_e.p7_ZSETBY_NTARGETS:
+          self.Z = None
+        if self._pli.domZ_setby == p7_zsetby_e.p7_ZSETBY_NTARGETS:
+            self.domZ = None
 
         #
         self._pli.do_alignment_score_calc = 0
