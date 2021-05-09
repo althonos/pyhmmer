@@ -6,6 +6,7 @@ import abc
 import contextlib
 import collections
 import ctypes
+import itertools
 import queue
 import time
 import threading
@@ -25,6 +26,41 @@ _Q = typing.TypeVar("_Q")
 # --- Pipeline threads -------------------------------------------------------
 
 class _PipelineThread(typing.Generic[_Q], threading.Thread):
+    """A generic worker thread to parallelize a pipelined search.
+
+    Attributes:
+        sequence (iterable of `DigitalSequence`): The target sequences to
+            search for hits. **Must be able to be iterated upon more than
+            once.**
+        query_queue (`queue.Queue`): The queue used to pass queries between
+            threads. It contains both the query and its index, so that the
+            results can be returned in the same order.
+        query_count (`multiprocessing.Value`): An atomic counter storing
+            the total number of queries that have currently been loaded.
+            Passed to the ``callback`` so that an UI can show the total
+            for a progress bar.
+        hits_queue (`queue.PriorityQueue`): The queue used to pass back
+            the `TopHits` to the main thread. The results are inserted
+            using the index of the query, so that the main thread can
+            pull results in order.
+        kill_switch (`threading.Event`): An event flag shared between
+            all worker threads, used to notify emergency exit.
+        hits_found (`list` of `threading.Event`): A list of event flags,
+            such that ``hits_found[i]`` is set when results have been
+            obtained for the query of index ``i``. This allows the main
+            thread to keep waiting for the right `TopHits` to yield even
+            if subsequent queries have already been treated, and to make
+            sure the next result returned by ``hits_queue.get`` will also
+            be of index ``i``.
+        callback (`callable`, optional): An optional callback to be called
+            after each query has been processed. It should accept two
+            arguments: the query object that was processed, and the total
+            number of queries read until now.
+        options (`dict`): A dictionary of options to be passed to the
+            `pyhmmer.plan7.Pipeline` object wrapped by the worker thread.
+
+    """
+
     @staticmethod
     def _none_callback(hmm: _Q, total: int) -> None:
         pass
@@ -202,9 +238,11 @@ class _Search(typing.Generic[_Q], abc.ABC):
         # values that we use to synchronize the threads
         hits_found: typing.List[threading.Event] = []
         hits_queue = queue.PriorityQueue()  # type: ignore
-        query_queue = queue.Queue()  # type: ignore
         query_count = multiprocessing.Value(ctypes.c_ulong)
         kill_switch = threading.Event()
+        # the query queue is bounded so that we only feed more queries
+        # if the worker threads are waiting for some
+        query_queue = queue.Queue(maxsize=self.cpus)  # type: ignore
 
         # create and launch one pipeline thread per CPU
         threads = []
@@ -215,34 +253,53 @@ class _Search(typing.Generic[_Q], abc.ABC):
 
         # catch exceptions to kill threads in the background before exiting
         try:
-            # queue the HMMs passed as arguments
-            for index, query in enumerate(self.queries):
+            # enumerate queries, so that we now the index of each query
+            # and we can yield the results in the same order
+            queries = enumerate(self.queries)
+            # initially feed one query per thread so that they can start
+            # working before we enter the main loop
+            for (index, query) in itertools.islice(queries, self.cpus):
                 query_count.value += 1
                 hits_found.append(threading.Event())
                 query_queue.put((index, query))
-            # poison-pill the queue so that threads terminate when they
-            # have consumed all the HMMs
+            # alternate between feeding queries to the threads and
+            # yielding back results, if available
+            hits_yielded = 0
+            while hits_yielded < query_count.value:
+                # get the next query
+                try:
+                    index, query = next(queries)
+                    query_count.value += 1
+                    hits_found.append(threading.Event())
+                    query_queue.put((index, query))
+                except StopIteration:
+                    break
+                # yield the top hits for the next query, if available
+                if hits_found[hits_yielded].is_set():
+                    yield hits_queue.get_nowait()[1]
+                    hits_yielded += 1
+            # now that we exhausted all queries, poison pill the
+            # threads so they stop on their own
             for _ in threads:
                 query_queue.put(None)
-            # count the number of hits yielded back until they reach the
-            # number of HMMs - queue.Empty may be raised in case one of
-            # the threads raised an exception
-            try:
-                for index in range(query_count.value):
-                    hits_found[index].wait()
-                    yield hits_queue.get_nowait()[1]
-            except queue.Empty:
-                pass
-        except BaseException:
-            # make sure threads are kill to avoid being stuck e.g. after
-            # a KeyboardInterrupt
-            for thread in threads:
-                thread.kill()
-            raise
-        else:
+            # yield remaining results
+            while hits_yielded < query_count.value:
+                hits_found[hits_yielded].wait()
+                yield hits_queue.get_nowait()[1]
+                hits_yielded += 1
+        except queue.Empty:
+            # the only way we can get queue.Empty is if a thread has set
+            # the flag for `hits_found[i]` without actually putting it in
+            # the queue: this only happens when a background thread raised
+            # an exception, so we must chain it
             for thread in threads:
                 if thread.error is not None:
-                    raise thread.error
+                    raise thread.error from None
+        except BaseException:
+            # make sure threads are killed to avoid being stuck,
+            # e.g. after a KeyboardInterrupt
+            kill_switch.set()
+            raise
 
     def run(self) -> typing.Iterator[TopHits]:
         if self.cpus == 1:
