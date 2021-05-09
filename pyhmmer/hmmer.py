@@ -36,7 +36,7 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
         query_count: multiprocessing.Value,  # type: ignore
         hits_queue: "queue.PriorityQueue[typing.Tuple[int, TopHits]]",
         kill_switch: threading.Event,
-        hits_found: threading.Semaphore,
+        hits_found: typing.List[threading.Event],
         callback: typing.Optional[typing.Callable[[_Q, int], None]],
         options: typing.Dict[str, typing.Any],
     ) -> None:
@@ -68,7 +68,7 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
                 self.kill()
                 return
             finally:
-                self.hits_found.release()
+                self.hits_found[index].set()
 
     def kill(self) -> None:
         self.kill_switch.set()
@@ -97,7 +97,7 @@ class _SequencePipelineThread(_PipelineThread[DigitalSequence]):
         query_count: multiprocessing.Value,  # type: ignore
         hits_queue: "queue.PriorityQueue[typing.Tuple[int, TopHits]]",
         kill_switch: threading.Event,
-        hits_found: threading.Semaphore,
+        hits_found: typing.List[threading.Event],
         callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]],
         options: typing.Dict[str, typing.Any],
         builder: Builder,
@@ -126,7 +126,7 @@ class _MSAPipelineThread(_PipelineThread[DigitalMSA]):
         query_count: multiprocessing.Value,  # type: ignore
         hits_queue: "queue.PriorityQueue[typing.Tuple[int, TopHits]]",
         kill_switch: threading.Event,
-        hits_found: threading.Semaphore,
+        hits_found: typing.List[threading.Event],
         callback: typing.Optional[typing.Callable[[DigitalMSA, int], None]],
         options: typing.Dict[str, typing.Any],
         builder: Builder,
@@ -179,7 +179,7 @@ class _Search(typing.Generic[_Q], abc.ABC):
     def _single_threaded(self) -> typing.Iterator[TopHits]:
         # create the queues to pass the HMM objects around, as well as atomic
         # values that we use to synchronize the threads
-        hits_found = threading.Semaphore(value=0)
+        hits_found = []
         query_queue = queue.Queue()  # type: ignore
         query_count = multiprocessing.Value(ctypes.c_ulong)
         hits_queue = queue.PriorityQueue()  # type: ignore
@@ -199,7 +199,7 @@ class _Search(typing.Generic[_Q], abc.ABC):
     def _multi_threaded(self) -> typing.Iterator[TopHits]:
         # create the queues to pass the HMM objects around, as well as atomic
         # values that we use to synchronize the threads
-        hits_found = threading.Semaphore(value=0)
+        hits_found = []
         hits_queue = queue.PriorityQueue()  # type: ignore
         query_queue = queue.Queue()  # type: ignore
         query_count = multiprocessing.Value(ctypes.c_ulong)
@@ -217,6 +217,7 @@ class _Search(typing.Generic[_Q], abc.ABC):
             # queue the HMMs passed as arguments
             for index, query in enumerate(self.queries):
                 query_count.value += 1
+                hits_found.append(threading.Event())
                 query_queue.put((index, query))
             # poison-pill the queue so that threads terminate when they
             # have consumed all the HMMs
@@ -226,8 +227,8 @@ class _Search(typing.Generic[_Q], abc.ABC):
             # number of HMMs - queue.Empty may be raised in case one of
             # the threads raised an exception
             try:
-                for _ in range(query_count.value):
-                    hits_found.acquire()
+                for index in range(query_count.value):
+                    hits_found[index].wait()
                     yield hits_queue.get_nowait()[1]
             except queue.Empty:
                 pass
@@ -241,7 +242,6 @@ class _Search(typing.Generic[_Q], abc.ABC):
             for thread in threads:
                 if thread.error is not None:
                     raise thread.error
-
 
     def run(self) -> typing.Iterator[TopHits]:
         if self.cpus == 1:
@@ -258,7 +258,7 @@ class _HMMSearch(_Search[HMM]):
         query_count: "multiprocessing.Value[int]",
         hits_queue: "queue.PriorityQueue[typing.Tuple[int, TopHits]]",
         kill_switch: threading.Event,
-        hits_found: threading.Semaphore,
+        hits_found: typing.List[threading.Event],
     ) -> _HMMPipelineThread:
         return _HMMPipelineThread(
             self.sequences,
@@ -292,7 +292,7 @@ class _SequenceSearch(_Search[DigitalSequence]):
         query_count: "multiprocessing.Value[int]",
         hits_queue: "queue.PriorityQueue[typing.Tuple[int, TopHits]]",
         kill_switch: threading.Event,
-        hits_found: threading.Semaphore,
+        hits_found: typing.List[threading.Event],
     ) -> _SequencePipelineThread:
         return _SequencePipelineThread(
             self.sequences,
@@ -327,7 +327,7 @@ class _MSASearch(_Search[DigitalMSA]):
         query_count: "multiprocessing.Value[int]",
         hits_queue: "queue.PriorityQueue[typing.Tuple[int, TopHits]]",
         kill_switch: threading.Event,
-        hits_found: threading.Semaphore,
+        hits_found: typing.List[threading.Event],
     ) -> _MSAPipelineThread:
         return _MSAPipelineThread(
             self.sequences,
