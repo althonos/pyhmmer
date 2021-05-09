@@ -2,7 +2,7 @@ import typing
 
 _Item = typing.TypeVar("_Item")
 
-class peekable(typing.Generic[_Item], typing.Iterator[_Item]):
+class peekable(typing.Iterator[_Item], typing.Generic[_Item]):
     """Turn an iterable into a peekable iterable.
 
     Example:
@@ -32,9 +32,9 @@ class peekable(typing.Generic[_Item], typing.Iterator[_Item]):
             self.peeked, item = self._sentinel, self.peeked
         else:
             item = next(self.it)
-        return item
+        return item  # type: ignore
 
     def peek(self) -> _Item:
         if self.peeked is self._sentinel:
             self.peeked = next(self.it)
-        return self.peeked
+        return self.peeked  # type: ignore

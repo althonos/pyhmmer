@@ -157,7 +157,7 @@ class _Search(typing.Generic[_Q], abc.ABC):
         queries: typing.Iterable[_Q],
         sequences: typing.Collection[DigitalSequence],
         cpus: int = 0,
-        callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
+        callback: typing.Optional[typing.Callable[[_Q, int], None]] = None,
         **options,
     ) -> None:
         self.queries = queries
@@ -173,13 +173,14 @@ class _Search(typing.Generic[_Q], abc.ABC):
         query_count: "multiprocessing.Value[int]",
         hits_queue: "queue.PriorityQueue[typing.Tuple[int, TopHits]]",
         kill_switch: threading.Event,
+        hits_found: typing.List[threading.Event],
     ) -> _PipelineThread[_Q]:
-        return NotImplemented  # type: ignore
+        return NotImplemented
 
     def _single_threaded(self) -> typing.Iterator[TopHits]:
         # create the queues to pass the HMM objects around, as well as atomic
         # values that we use to synchronize the threads
-        hits_found = []
+        hits_found: typing.List[threading.Event] = []
         query_queue = queue.Queue()  # type: ignore
         query_count = multiprocessing.Value(ctypes.c_ulong)
         hits_queue = queue.PriorityQueue()  # type: ignore
@@ -199,7 +200,7 @@ class _Search(typing.Generic[_Q], abc.ABC):
     def _multi_threaded(self) -> typing.Iterator[TopHits]:
         # create the queues to pass the HMM objects around, as well as atomic
         # values that we use to synchronize the threads
-        hits_found = []
+        hits_found: typing.List[threading.Event] = []
         hits_queue = queue.PriorityQueue()  # type: ignore
         query_queue = queue.Queue()  # type: ignore
         query_count = multiprocessing.Value(ctypes.c_ulong)
@@ -400,11 +401,22 @@ def phmmer(
 ) -> typing.Iterator[TopHits]:
     ...
 
+@typing.overload
 def phmmer(
     queries: typing.Iterable[DigitalSequence],
     sequences: typing.Collection[DigitalSequence],
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
+    builder: typing.Optional[Builder] = None,
+    **options: typing.Any,
+) -> typing.Iterator[TopHits]:
+    ...
+
+def phmmer(
+    queries: typing.Union[typing.Iterable[DigitalSequence], typing.Iterable[DigitalMSA]],
+    sequences: typing.Collection[DigitalSequence],
+    cpus: int = 0,
+    callback: typing.Union[typing.Optional[typing.Callable[[DigitalMSA, int], None]], typing.Optional[typing.Callable[[DigitalSequence, int], None]]] = None,
     builder: typing.Optional[Builder] = None,
     **options: typing.Any,
 ) -> typing.Iterator[TopHits]:
@@ -448,15 +460,15 @@ def phmmer(
         _queries = peekable(queries)
         _item = _queries.peek()
     except StopIteration:
-        _item = None
+        _item = None  # type: ignore
 
     if isinstance(_item, DigitalSequence):
         runner = _SequenceSearch(
-            _builder, _queries, sequences, _cpus, callback, **options
+            _builder, _queries, sequences, _cpus, callback, **options   # type: ignore
         )
     else:
         runner = _MSASearch(
-            _builder, _queries, sequences, _cpus, callback, **options
+            _builder, _queries, sequences, _cpus, callback, **options   # type: ignore
         )
     return runner.run()
 
@@ -474,11 +486,22 @@ def nhmmer(
 ) -> typing.Iterator[TopHits]:
     ...
 
+@typing.overload
 def nhmmer(
     queries: typing.Iterable[DigitalSequence],
     sequences: typing.Collection[DigitalSequence],
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
+    builder: typing.Optional[Builder] = None,
+    **options: typing.Any,
+) -> typing.Iterator[TopHits]:
+    ...
+
+def nhmmer(
+    queries: typing.Union[typing.Iterable[DigitalSequence], typing.Iterable[DigitalMSA]],
+    sequences: typing.Collection[DigitalSequence],
+    cpus: int = 0,
+    callback: typing.Union[typing.Optional[typing.Callable[[DigitalSequence, int], None]], typing.Optional[typing.Callable[[DigitalMSA, int], None]]] = None,
     builder: typing.Optional[Builder] = None,
     **options: typing.Any,
 ) -> typing.Iterator[TopHits]:
@@ -497,15 +520,15 @@ def nhmmer(
         _queries = peekable(queries)
         _item = _queries.peek()
     except StopIteration:
-        _item = None
+        _item = None  # type: ignore
 
     if isinstance(_item, DigitalSequence):
         runner = _SequenceSearch(
-            _builder, _queries, sequences, _cpus, callback, **options
+            _builder, _queries, sequences, _cpus, callback, **options   # type: ignore
         )
     else:
         runner = _MSASearch(
-            _builder, _queries, sequences, _cpus, callback, **options
+            _builder, _queries, sequences, _cpus, callback, **options   # type: ignore
         )
     return runner.run()
 
@@ -585,7 +608,7 @@ if __name__ == "__main__":
                 print("could not guess alphabet of input, exiting", file=sys.stderr)
                 return 1
             seqfile.set_digital(alphabet)
-            sequences = list(seqfile)
+            sequences: typing.List[DigitalSequence] = list(seqfile)  # type: ignore
 
         with HMMFile(args.hmmfile) as hmms:
             hits_list = hmmsearch(hmms, sequences, cpus=args.jobs)
