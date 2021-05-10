@@ -1,5 +1,7 @@
+import argparse
 import itertools
 import json
+import os
 import re
 import math
 
@@ -8,9 +10,16 @@ import matplotlib.pyplot as plt
 from palettable.cartocolors.qualitative import Bold_3
 
 plt.rcParams["svg.fonttype"] = "none"
-# plt.xkcd(scale=0.5)
 
-with open("benchmark.hmmsearch.json") as f:
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--folder", required=True)
+args = parser.parse_args()
+
+
+
+
+with open(os.path.join(args.folder, "hmmsearch.json")) as f:
     data = json.load(f)
 
 CPU_RX = re.compile(r"(?:--cpu|--jobs) (\d+)")
@@ -62,7 +71,7 @@ plt.ylabel("Time (s)")
 # plt.show()
 
 
-with open("benchmark.phmmer.json") as f:
+with open(os.path.join(args.folder, "phmmer.json")) as f:
     data = json.load(f)
 
 CPU_RX = re.compile(r"(?:--cpu|--jobs) (\d+)")
@@ -89,5 +98,5 @@ for color, (tool, group) in zip(
 plt.legend()
 plt.xlabel("CPUs")
 plt.ylabel("Time (s)")
-plt.savefig("benchmarks.svg", transparent=True)
+plt.savefig(os.path.join(args.folder, "plot.svg"), transparent=True)
 plt.show()
