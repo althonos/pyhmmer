@@ -128,10 +128,11 @@ in a simple, easily reproducible situation.
 
 Contributions are more than welcome! See [`CONTRIBUTING.md`](https://github.com/althonos/pyhmmer/blob/master/CONTRIBUTING.md) for more details.
 
+
 ## ⏱️ Benchmarks
 
-Benchmarks were run on a [i7-10710U CPU](https://ark.intel.com/content/www/us/en/ark/products/196448/intel-core-i7-10710u-processor-12m-cache-up-to-4-70-ghz.html) running 1.10GHz with 6 physical / 12
-logical cores, using a FASTA file containing 2100 protein sequences extracted
+Benchmarks were run on a [i7-10710U CPU](https://ark.intel.com/content/www/us/en/ark/products/196448/intel-core-i7-10710u-processor-12m-cache-up-to-4-70-ghz.html) running @1.10GHz with 6 physical / 12
+logical cores, using a FASTA file containing 2,100 protein sequences extracted
 from the genome of *Anaerococcus provencensis*
 ([`938293.PRJEB85.HG003687.faa`](https://github.com/althonos/pyhmmer/blob/master/tests/data/seqs/938293.PRJEB85.HG003687.faa))
 and the version 33.1 of the [Pfam](https://pfam.xfam.org/) HMM library containing
@@ -146,6 +147,10 @@ while `hmmsearch` should be run with the number of *physical* cores (or less).
 A possible explanation for this observation would be that HMMER
 platform-specific code requires too many [SIMD](https://en.wikipedia.org/wiki/SIMD)
 registers per thread to benefit from [simultaneous multi-threading](https://en.wikipedia.org/wiki/Simultaneous_multithreading).
+
+To read more about how pyHMMER achieves better parallelism than HMMER for
+many-to-many searches, have a look at the [Performance page](https://pyhmmer.readthedocs.io/en/stable/performance.html)
+of the documentation.
 
 
 ## 🔍 See Also

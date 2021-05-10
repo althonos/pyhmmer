@@ -1,5 +1,5 @@
 # coding: utf-8
-"""Reimplementation of HMMER binaries with the PyHMMER API.
+"""Reimplementation of HMMER binaries with the pyHMMER API.
 """
 
 import abc

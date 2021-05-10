@@ -115,8 +115,10 @@ Library
 
    Installation <install>
    Examples <examples/index>
-   API Reference <api/index>
+   Performance <performance>
    Contributing <contributing>
+   API Reference <api/index>
+   Benchmarks <benchmarks>
    Changelog <changes>
 
 
