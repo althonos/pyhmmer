@@ -47,6 +47,31 @@ class TestSearchPipeline(unittest.TestCase):
         hits = pipeline.search_seq(seq.digitize(self.alphabet), self.references)
         self.assertEqual(len(hits), 1)
 
+    def test_Z(self):
+        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT")
+        bg = Background(self.alphabet)
+        hmm, _, _ = Builder(self.alphabet).build(seq.digitize(self.alphabet), bg)
+
+        # when Z is None, use the number of target sequences
+        pipeline = Pipeline(alphabet=self.alphabet)
+        self.assertIs(pipeline.Z, None)
+        hits = pipeline.search_hmm(hmm, self.references[:100])
+        self.assertEqual(hits.Z, 100)
+        self.assertIs(pipeline.Z, None)
+        # clearing the pipeline will keep the Z number as None
+        pipeline.clear()
+        self.assertIs(pipeline.Z, None)
+
+        # when Z is not None, use the given number
+        pipeline = Pipeline(alphabet=self.alphabet, Z=25)
+        self.assertEqual(pipeline.Z, 25)
+        hits = pipeline.search_hmm(hmm, self.references[:100])
+        self.assertEqual(pipeline.Z, 25)
+        self.assertEqual(hits.Z, 25)
+        # clearing the pipeline will keep the Z number
+        pipeline.clear()
+        self.assertEqual(pipeline.Z, 25)
+
 
 class TestScanPipeline(unittest.TestCase):
 
