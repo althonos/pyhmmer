@@ -1650,13 +1650,12 @@ cdef class Pipeline:
         Background background = None,
         *,
         bint bias_filter=True,
-        float report_e=10.0,
         bint null2=True,
         uint32_t seed=42,
         object Z=None,
         object domZ=None,
     ):
-        """__init__(self, alphabet, background=None, *, bias_filter=True, report_e=10.0, null2=True, seed=42, Z=None, domZ=None)\n--
+        """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None)\n--
 
         Instantiate and configure a new accelerated comparison pipeline.
 
@@ -1674,11 +1673,15 @@ cdef class Pipeline:
                 filter. Defaults to ``True``.
             null2 (`bool`): Whether or not to compute biased composition score
                 corrections. Defaults to ``True``.
-            report_e (`float`): Report hits with e-value lower than or
-                equal to this threshold in output. Defaults to ``10.0``.
             seed (`int`, optional): The seed to use with the random number
                 generator. Pass *0* to use a one-time arbitrary seed, or
                 `None` to keep the default seed from HMMER.
+            Z (`int`, optional): The effective number of comparisons done,
+                for E-value calculation. Leave as `None` to auto-detect by
+                counting the number of sequences queried.
+            domZ (`int`, optional): The number of significant sequences found,
+                for domain E-value calculation. Leave as `None` to auto-detect
+                by counting the number of sequences reported.
 
         """
         # extract default parameters from the class attributes
@@ -1710,7 +1713,6 @@ cdef class Pipeline:
         # configure the pipeline with the additional keyword arguments
         self.null2 = null2
         self.bias_filter = bias_filter
-        self.report_e = report_e
         self.Z = Z
         self.domZ = domZ
         self.seed = seed
