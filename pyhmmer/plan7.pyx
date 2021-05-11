@@ -95,7 +95,11 @@ from .errors import AllocationError, UnexpectedError, AlphabetMismatch
 
 
 cdef class Alignment:
-    """A single alignment of a sequence to a profile.
+    """An alignment of a sequence to a profile.
+
+    Attributes:
+        domain (`Domain`): The domain this alignment corresponds to.
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -175,6 +179,13 @@ cdef class Alignment:
 
 cdef class Background:
     """The null background model of HMMER.
+
+    Attributes:
+        alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the
+            backgound model.
+        uniform (`bool`): Whether or not the null model has been created
+            with uniform frequencies.
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -253,6 +264,10 @@ cdef class Background:
 
 cdef class Builder:
     """A factory for constructing new HMMs from raw sequences.
+
+    Attributes:
+        alphabet (`~pyhmmer.easel.Alphabet`): The alphabet the builder is
+            configured to use to convert sequences to HMMs.
 
     .. versionadded:: 0.2.0
 
@@ -631,6 +646,12 @@ cdef class Builder:
 
 cdef class Domain:
     """A single domain in a query `~pyhmmer.plan7.Hit`.
+
+    Attributes:
+        hit (`~pyhmmer.plan7.Hit`): The hit this domains is part of.
+        alignment (`~pyhmmer.plan7.Alignment`): The alignment of this domain
+            to a target sequence.
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -654,23 +675,29 @@ cdef class Domain:
 
     @property
     def score(self):
-        """`float`: The overall score in bits, null-corrected.
+        """`float`: The overall score in bits, *null2*-corrected.
         """
         assert self._dom != NULL
         return self._dom.bitscore
 
     @property
     def bias(self):
+        """`float`: The *null2* score contribution to the domain score.
+        """
         assert self._dom != NULL
         return self._dom.dombias * libeasel.eslCONST_LOG2R
 
     @property
     def correction(self):
+        """`float`: The *null2* score when calculating a per-domain score.
+        """
         assert self._dom != NULL
         return self._dom.domcorrection * libeasel.eslCONST_LOG2R
 
     @property
     def envelope_score(self):
+        """`float`: The forward score in the envelope, without *null2* correction.
+        """
         assert self._dom != NULL
         return self._dom.envsc * libeasel.eslCONST_LOG2R
 
@@ -697,6 +724,10 @@ cdef class Domain:
 
 cdef class Domains:
     """A read-only view over the domains of a single `~pyhmmer.plan7.Hit`.
+
+    Attributes:
+        hit (`~pyhmmer.plan7.Hit`): The target hit these domains belong hit.
+
     """
 
     def __cinit__(self, Hit hit):
@@ -769,12 +800,14 @@ cdef class Hit:
 
     @property
     def bias(self):
+        """`float`: The *null2* contribution to the uncorrected score.
+        """
         assert self._hit != NULL
         return self._hit.pre_score - self._hit.score
 
     @property
     def domains(self):
-        """`Domains`: The list of domains aligned to this hit.
+        """`~pyhmmer.plan7.Domains`: The list of domains aligned to this hit.
         """
         return Domains(self)
 
@@ -809,6 +842,10 @@ cdef class Hit:
 @cython.freelist(8)
 cdef class HMM:
     """A data structure storing the Plan7 Hidden Markov Model.
+
+    Attributes:
+        alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
+
     """
 
     # --- Magic methods ------------------------------------------------------

@@ -562,7 +562,7 @@ def nhmmer(
     builder: typing.Optional[Builder] = None,
     **options: typing.Any,
 ) -> typing.Iterator[TopHits]:
-    """Search protein sequences against a sequence database.
+    """Search nucleotide sequences against a sequence database.
 
     See Also:
         The equivalent function for proteins, `~pyhmmer.hmmer.phmmer`.
