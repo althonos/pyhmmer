@@ -24,7 +24,7 @@ The main thread has been updated so that it only loads the next HMM from the
 queries when a worker needs a new one, instead of saturating the input queue
 with all queries like previously. This should avoid running the main thread
 and all worker threads at the same time, and help the CPU to run the SIMD code.
-The fastest run is now with 4+1 threads (63.6s), which is still smaller than the
+The fastest run is now with 4+1 threads (45.8s), which is still smaller than the
 total number of physical CPUs (6 cores).
 
 The main thread also now yields result instead of waiting for all HMMs to be
@@ -42,7 +42,7 @@ The small number of proteins renders the HMMER parallelisation useless for
 any number of worker threads higher than 2 (because of the block size being
 set to 1,000 sequences).
 
-The fastest run is obtained with 3+1 threads (71.1s), which is lower than the
+The fastest run is obtained with 3+1 threads (53.8s), which is lower than the
 total number of physical CPUs (6 cores). This could be a hint of hindrance
 between the different threads.
 

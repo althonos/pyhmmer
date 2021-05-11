@@ -38,12 +38,12 @@ sequence targets in either of two modes:
   the results are merged, and the loop advances to the next HMM.
   **However, in HMMER, the block size is set at compile-time (1000 sequences),
   and no load balancing is done between the different worker threads. Consequently,
-  parallelism is only achieved for a large number of queries. The few threads
+  parallelism is only achieved for a large number of targets. The few threads
   to receive a full-sized block will be the bottleneck, while the rest of
   the threads will idle**.
 
 Although the threaded mode removes the potential I/O bottleneck, it only works for
-a sufficiently large number of queries (:math:`1000 \times n_{cpus}`). To achieve
+a sufficiently large number of targets (:math:`1000 \times n_{cpus}`). To achieve
 true parallelism, pyHMMER improves on the threaded mode by switching the worker
 thread logic. Target sequences are pre-fetched in memory before looping
 over the queries, and are passed by reference to all the worker threads. Each
