@@ -91,6 +91,8 @@ cdef class HMM:
     cpdef HMM copy(self)
     cpdef void write(self, object fh, bint binary=*) except *
     cpdef void zero(self)
+    cpdef void renormalize(self)
+    cpdef void scale(self, double scale, bint exponential=?)
 
 
 cdef class HMMFile:

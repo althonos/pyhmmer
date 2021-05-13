@@ -1257,6 +1257,52 @@ cdef class HMM:
             raise AllocationError("P7_HMM")
         return new
 
+    cpdef void renormalize(self):
+        """Renormalize all parameter vectors (emissions and transitions).
+
+        .. versionadded:: 0.3.2
+
+        """
+        assert self._hmm != NULL
+
+        cdef int status
+        with nogil:
+            status = libhmmer.p7_hmm.p7_hmm_Renormalize(self._hmm)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_hmm_Renormalize")
+
+    cpdef void scale(self, double scale, bint exponential=False):
+        """In a model containing counts, rescale counts by a factor.
+
+        This method only affects core probability model emissions and
+        transitions.
+
+        Arguments:
+            scale (`float`): The scaling factor to use (:math:`1.0` for no
+                scaling). Often computed using the ratio of effective
+                sequences (:math:`\frac{n_{eff}}{n_{seq}}`)
+            exponential (`bool`): When set to `True`, use ``scale`` as an
+                exponential factor (:math:`C_i = C_i \exp{s}`) instead of
+                a multiplicative factor (:math: `C_i = C_i \times s`),
+                resulting in a non-uniform scaling across columns. This
+                can be useful when some heavily fragmented sequences are
+                used to reconstruct a family MSA.
+
+        .. versionadded:: 0.3.2
+
+        """
+        assert self._hmm != NULL
+
+        cdef int status
+        with nogil:
+            if exponential:
+                status = libhmmer.p7_hmm.p7_hmm_ScaleExponential(self._hmm, scale)
+            else:
+                status = libhmmer.p7_hmm.p7_hmm_Scale(self._hmm, scale)
+        if status != libeasel.eslOK:
+            func = "p7_hmm_ScaleExponential" if exponential else "p7_hmm_Scale"
+            raise UnexpectedError(status, func)
+
 
 cdef class HMMFile:
     """A wrapper around a file (or database), storing serialized HMMs.
