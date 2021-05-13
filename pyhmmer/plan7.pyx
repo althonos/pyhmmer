@@ -1155,6 +1155,7 @@ cdef class HMM:
 
         if cli is None:
             free(self._hmm.comlog)
+            self._hmm.comlog = NULL
             return
 
         cdef bytes  cli_ = cli.encode("ascii")
