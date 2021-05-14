@@ -11,12 +11,13 @@ to facilitate the development of biological software in C. It is used by
 # --- C imports --------------------------------------------------------------
 
 cimport cython
-from cpython.buffer cimport PyBUF_READ, PyBUF_WRITE
+from cpython cimport Py_buffer
+from cpython.buffer cimport PyBUF_READ, PyBUF_WRITE, PyBUF_FORMAT, PyBUF_F_CONTIGUOUS
 from cpython.memoryview cimport PyMemoryView_FromMemory
 from cpython.unicode cimport PyUnicode_FromUnicode
 from libc.stdint cimport int64_t, uint16_t, uint32_t
 from libc.stdio cimport fclose
-from libc.stdlib cimport malloc, free
+from libc.stdlib cimport calloc, malloc, free
 from libc.string cimport memcpy, memmove, strdup, strlen, strncpy
 from posix.types cimport off_t
 
@@ -30,6 +31,7 @@ cimport libeasel.sq
 cimport libeasel.sqio
 cimport libeasel.sqio.ascii
 cimport libeasel.ssi
+cimport libeasel.vec
 from libeasel cimport ESL_DSQ, esl_pos_t
 from libeasel.sq cimport ESL_SQ
 
@@ -42,14 +44,16 @@ ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
 
 # --- Python imports ---------------------------------------------------------
 
+import abc
 import os
 import collections
+import sys
 import warnings
 
 from .errors import AllocationError, UnexpectedError, AlphabetMismatch
 
 
-# --- Cython classes ---------------------------------------------------------
+# --- Alphabet ---------------------------------------------------------------
 
 cdef class Alphabet:
     """A biological alphabet, including additional marker symbols.
@@ -199,6 +203,8 @@ cdef class Alphabet:
         return self._abc.type == other._abc.type
 
 
+# --- Bitfield ---------------------------------------------------------------
+
 cdef class Bitfield:
     """A statically sized sequence of booleans stored as a packed bitfield.
 
@@ -309,6 +315,8 @@ cdef class Bitfield:
         with nogil:
             libeasel.bitfield.esl_bitfield_Toggle(self._b, index_)
 
+
+# --- KeyHash ----------------------------------------------------------------
 
 cdef class KeyHash:
     """A dynamically resized container to store byte keys using a hash table.
@@ -491,6 +499,301 @@ cdef class KeyHash:
             raise AllocationError("ESL_KEYHASH")
         return new
 
+
+# --- Matrix & Vector --------------------------------------------------------
+
+cdef class Vector:
+    """An abstract 1D vector.
+    """
+
+    def __init__(self, object iterable = None):
+        raise TypeError("Can't instantiate abstract class 'Vector'")
+
+    @classmethod
+    def zeros(cls, int n):
+        raise TypeError("Can't instantiate abstract class 'Vector'")
+
+    def argmax(self):
+        """Return index of the maximum element in the vector.
+        """
+        return NotImplemented
+
+    def argmin(self):
+        """Return index of the minimum element in the vector.
+        """
+        return NotImplemented
+
+    def copy(self):
+        """Create a copy of the vector, allocating a new buffer.
+        """
+        return NotImplemented
+
+    def max(self):
+        """Return value of the maximum element in the vector.
+        """
+        return NotImplemented
+
+    def min(self):
+        """Return value of the minimum element in the vector.
+        """
+        return NotImplemented
+
+    def normalize(self):
+        r"""Normalize a vector so that all elements sum to 1.
+
+        Caution:
+            If sum is zero, sets all elements to :math:`\frac{1}{n}`.
+
+        """
+        return NotImplemented
+
+    def reverse(self):
+        """Reverse the vector, in place.
+        """
+        return NotImplemented
+
+    def sum(self):
+        """Returns the scalar sum of all elements in the vector.
+
+        Floating point summations use Kahan compensated summation, in order
+        to minimize roundoff error accumulation.  Additionally, they are most
+        accurate if the vector is sorted in increasing order, from small to
+        large, so you may consider sorting the vector before summing it.
+
+        """
+        return NotImplemented
+
+
+cdef class VectorF(Vector):
+    """A 1D vector storing single-precision floating point number.
+
+    Objects of this type support the buffer protocol, and can be manipulated
+    with `numpy` as an array:
+
+        >>> import numpy
+        >>> v = VectorF([1, 2, 3])
+        >>> a = numpy.asarray(v)
+        >>> numpy.sum(a)
+        6.0
+
+    """
+
+    # --- Class methods ------------------------------------------------------
+
+    @classmethod
+    def zeros(cls, n):
+        """Create a vector of size ``n`` filled with zeros.
+        """
+        if n <= 0:
+            raise ValueError("Cannot create a vector with negative or null size")
+        cdef VectorF vec = VectorF.__new__(VectorF)
+        vec._n = vec._shape[0] = n
+        vec._data = <float*> calloc(n, sizeof(float))
+
+        if vec._data == NULL:
+            raise AllocationError("float*")
+        return vec
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __cinit__(self):
+        self._data = NULL
+        self._owner = None
+        self._n = 0
+        self._shape = (0,)
+        self._strides = (sizeof(float),)
+
+    def __dealloc__(self):
+        if self._owner is None:
+            free(self._data)
+        self._data = NULL
+
+    def __init__(self, object iterable = None):
+
+        cdef size_t i
+        cdef int    n = len(iterable)
+
+        if n <= 0:
+            raise ValueError("Cannot create a vector with negative or null size")
+
+        self._n = self._shape[0] = n
+        self._data = <float*> malloc(n * sizeof(float))
+        if self._data == NULL:
+            raise AllocationError("float*")
+        for i, item in enumerate(iterable):
+            self._data[i] = item
+
+    def __copy__(self):
+        return self.copy()
+
+    def __len__(self):
+        return self._n
+
+    def __getitem__(self, object index):
+        assert self._data != NULL
+
+        if isinstance(index, slice):
+            return NotImplemented
+
+        cdef int x = index
+        if x < 0:
+            x += self._n
+        if x < 0 or x >= self._n:
+            raise IndexError("vector index out of range")
+        return self._data[x]
+
+    def __getbuffer__(self, Py_buffer* buffer, int flags):
+        assert self._data != NULL
+
+        if flags & PyBUF_FORMAT:
+            buffer.format = "f"
+        else:
+            buffer.format = NULL
+        buffer.buf = <char*> &(self._data[0])
+        buffer.internal = NULL
+        buffer.itemsize = sizeof(float)
+        buffer.len = self._n * sizeof(float)
+        buffer.ndim = 1
+        buffer.obj = self
+        buffer.readonly = 0
+        buffer.shape = self._shape
+        buffer.strides = self._strides
+        buffer.suboffsets = NULL
+
+    def __releasebuffer__(self, Py_buffer* buffer):
+        pass
+
+    def __iadd__(self, object other):
+        assert self._data != NULL
+
+        cdef VectorF other_vec
+        cdef float   other_f
+
+        if isinstance(other, VectorF):
+            other_vec = other
+            assert other_vec._data != NULL
+            if self._n != other_vec._n:
+                raise ValueError("cannot add vectors of different size")
+            with nogil:
+                libeasel.vec.esl_vec_FAdd(self._data, other_vec._data, self._n)
+        else:
+            other_f = other
+            with nogil:
+                libeasel.vec.esl_vec_FIncrement(self._data, self._n, other_f)
+        return self
+
+    def __imul__(self, object other):
+        assert self._data != NULL
+
+        cdef VectorF other_vec
+        cdef float   other_f
+
+        if isinstance(other, VectorF):
+            other_vec = other
+            assert other_vec._data != NULL
+            return NotImplemented
+        else:
+            other_f = other
+            with nogil:
+                libeasel.vec.esl_vec_FScale(self._data, self._n, other_f)
+        return self
+
+    def __matmul__(VectorF self, object other):
+        assert self._data != NULL
+
+        cdef float* other_data
+        cdef float* self_data  = self._data
+        cdef int    n          = self._n
+        cdef float  res
+
+        if isinstance(other, VectorF):
+            other_data = (<VectorF> other)._data
+            assert other_data != NULL
+            if len(self) != len(other):
+                raise ValueError("cannot multiply vectors of different size")
+            with nogil:
+                res = libeasel.vec.esl_vec_FDot(self_data, other_data, n)
+            return res
+
+        return NotImplemented
+
+    def __repr__(self):
+        return f"VectorF({list(self)!r})"
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def __array_interface__(self):
+        return {
+            "version": 3,
+            "data": (<size_t> self._data, False),
+            "shape": self.shape,
+            "typestr": (
+                ("<" if sys.byteorder == "little" else ">")
+                + "f"
+                + str(sizeof(float))
+            )
+        }
+
+    @property
+    def shape(self):
+        """`tuple`: The shape of the vector.
+        """
+        return tuple(self._shape)
+
+    @property
+    def strides(self):
+        """`tuple`: The strides of the vector.
+        """
+        return tuple(self._strides)
+
+    # --- Methods ------------------------------------------------------------
+
+    cpdef int argmax(self):
+        assert self._data != NULL
+        with nogil:
+            return libeasel.vec.esl_vec_FArgMax(self._data, self._n)
+
+    cpdef int argmin(self):
+        assert self._data != NULL
+        with nogil:
+            return libeasel.vec.esl_vec_FArgMin(self._data, self._n)
+
+    cpdef VectorF copy(self):
+        assert self._data != NULL
+
+        cdef VectorF new = VectorF.zeros(self._n)
+        with nogil:
+            libeasel.vec.esl_vec_FCopy(self._data, self._n, new._data)
+        return new
+
+    cpdef float max(self):
+        assert self._data != NULL
+        with nogil:
+            return libeasel.vec.esl_vec_FMax(self._data, self._n)
+
+    cpdef float min(self):
+        assert self._data != NULL
+        with nogil:
+            return libeasel.vec.esl_vec_FMin(self._data, self._n)
+
+    cpdef void normalize(self):
+        assert self._data != NULL
+        with nogil:
+            libeasel.vec.esl_vec_FNorm(self._data, self._n)
+
+    cpdef void reverse(self):
+        assert self._data != NULL
+        with nogil:
+            libeasel.vec.esl_vec_FReverse(self._data, self._data, self._n)
+
+    cpdef float sum(self):
+        assert self._data != NULL
+        with nogil:
+            return libeasel.vec.esl_vec_FSum(self._data, self._n)
+
+
+# --- Multiple Sequences Alignment -------------------------------------------
 
 cdef class _MSASequences:
     """A read-only view over the individual sequences of an MSA.
@@ -1236,6 +1539,8 @@ cdef class DigitalMSA(MSA):
         return new
 
 
+# --- MSA File ---------------------------------------------------------------
+
 cdef class MSAFile:
     """A wrapper around a multiple-alignment file.
 
@@ -1413,6 +1718,8 @@ cdef class MSAFile:
         else:
             raise UnexpectedError(status, "esl_msafile_SetDigital")
 
+
+# --- Sequence ---------------------------------------------------------------
 
 @cython.freelist(8)
 cdef class Sequence:
@@ -1973,6 +2280,8 @@ cdef class DigitalSequence(Sequence):
         return None if inplace else rc
 
 
+# --- Sequence File ----------------------------------------------------------
+
 cdef class SequenceFile:
     """A wrapper around a sequence file, containing unaligned sequences.
 
@@ -2285,6 +2594,8 @@ cdef class SequenceFile:
         else:
             raise UnexpectedError(status, "esl_sqfile_SetDigital")
 
+
+# --- Sequence/Subsequence Index ---------------------------------------------
 
 cdef class SSIReader:
     """A read-only handler for sequence/subsequence index file.

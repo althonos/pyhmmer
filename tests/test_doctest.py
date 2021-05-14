@@ -81,7 +81,7 @@ def load_tests(loader, tests, ignore):
             # import the submodule and add it to the tests
             module = importlib.import_module(".".join([pkg.__name__, subpkgname]))
             globs = dict(
-                numpy=mock.Mock(asarray=_numpy_array),
+                numpy=mock.Mock(asarray=_numpy_array, sum=sum),
                 easel=pyhmmer.easel,
                 plan7=pyhmmer.plan7,
                 thioesterase=thioesterase,

@@ -17,7 +17,8 @@ from libeasel.sqio cimport ESL_SQFILE
 from libeasel.ssi cimport ESL_SSI, ESL_NEWSSI
 
 
-# --- Cython classes ---------------------------------------------------------
+
+# --- Alphabet ---------------------------------------------------------------
 
 cdef class Alphabet:
     cdef ESL_ALPHABET* _abc
@@ -25,6 +26,8 @@ cdef class Alphabet:
     cdef void _init_default(self, int ty)
     cdef inline bint _eq(self, Alphabet other) nogil
 
+
+# --- Bitfield ---------------------------------------------------------------
 
 cdef class Bitfield:
     cdef ESL_BITFIELD* _b
@@ -34,6 +37,8 @@ cdef class Bitfield:
     cpdef void toggle(self, int index)
 
 
+# --- KeyHash ----------------------------------------------------------------
+
 cdef class KeyHash:
     cdef ESL_KEYHASH* _kh
 
@@ -41,6 +46,29 @@ cdef class KeyHash:
     cpdef void clear(self)
     cpdef KeyHash copy(self)
 
+
+# --- Matrix & Vector --------------------------------------------------------
+
+cdef class Vector:
+    cdef object _owner
+
+cdef class VectorF(Vector):
+    cdef int _n
+    cdef float* _data
+    cdef readonly Py_ssize_t _shape[1]
+    cdef readonly Py_ssize_t _strides[1]
+
+    cpdef int argmax(self)
+    cpdef int argmin(self)
+    cpdef VectorF copy(self)
+    cpdef float max(self)
+    cpdef float min(self)
+    cpdef void normalize(self)
+    cpdef void reverse(self)
+    cpdef float sum(self)
+
+
+# --- Multiple Sequences Alignment -------------------------------------------
 
 cdef class _MSASequences:
     cdef MSA msa
@@ -56,6 +84,7 @@ cdef class MSA:
 
 cdef class _TextMSASequences(_MSASequences):
     pass
+
 
 cdef class TextMSA(MSA):
     cdef int _set_sequence(self, int idx, ESL_SQ* seq) nogil except 1
@@ -75,6 +104,8 @@ cdef class DigitalMSA(MSA):
     cpdef TextMSA textize(self)
 
 
+# --- MSA File ---------------------------------------------------------------
+
 cdef class MSAFile:
     cdef ESL_MSAFILE* _msaf
     cdef readonly Alphabet alphabet
@@ -85,6 +116,8 @@ cdef class MSAFile:
     cpdef Alphabet guess_alphabet(self)
     cpdef void set_digital(self, Alphabet)
 
+
+# --- Sequence ---------------------------------------------------------------
 
 cdef class Sequence:
     cdef ESL_SQ* _sq
@@ -108,6 +141,8 @@ cdef class DigitalSequence(Sequence):
     cpdef DigitalSequence reverse_complement(self, bint inplace=*)
 
 
+# --- Sequence File ----------------------------------------------------------
+
 cdef class SequenceFile:
     cdef ESL_SQFILE* _sqfp
     cdef readonly Alphabet alphabet
@@ -122,6 +157,8 @@ cdef class SequenceFile:
     cpdef Alphabet guess_alphabet(self)
     cpdef void set_digital(self, Alphabet)
 
+
+# --- Sequence/Subsequence Index ---------------------------------------------
 
 cdef class SSIReader:
     cdef ESL_SSI* _ssi
