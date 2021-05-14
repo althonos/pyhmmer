@@ -60,7 +60,16 @@ ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
     from libhmmer.impl_sse.io cimport p7_oprofile_Write
 
-from .easel cimport Alphabet, Sequence, DigitalSequence, MSA, TextMSA, DigitalMSA, VectorF
+from .easel cimport (
+    Alphabet,
+    Sequence,
+    DigitalSequence,
+    MSA,
+    TextMSA,
+    DigitalMSA,
+    VectorF,
+    MatrixF
+)
 from .reexports.p7_tophits cimport p7_tophits_Reuse
 from .reexports.p7_hmmfile cimport (
     read_asc20hmm,
@@ -1116,78 +1125,114 @@ cdef class HMM:
 
     @property
     def transition_probabilities(self):
-        """`memoryview` of `float`: The transition probabilities of the model.
+        r"""`~pyhmmer.easel.MatrixF`: The transition probabilities of the model.
 
-        The returned memory view exposes a matrix of dimensions
-        :math:`(M+1, 7)`, with one row per node (plus one extra row for
-        the entry probabilities), and one column per transition.
+        The property exposes a matrix of shape :math:`(M+1, 7)`, with one row
+        per node (plus one extra row for the entry probabilities), and one
+        column per transition.
 
-        Hint:
-            Use `numpy.asarray` to convert the memory view to a 2D array::
+        Columns indices correspond to the following: 0 for :math:`M_n \to M_{n+1}``,
+        1 for :math:`M_n \to I_{n+1}`, 2 for :math:`M_n \to M_{n+1}`,
+        3 for :math:`I_n \to M_{n+1}`, 4 for :math:`I_n \to I_{n+1}`,
+        5 for :math:`D_n \to D_{n+1}`, 6 for :math:`D_n \to D_{n+1}`.
+
+        Example:
+            >>> t = thioesterase.transition_probabilities
+            >>> t[0, 5]  # TDM, 1 by convention
+            1.0
+
+        Caution:
+            If editing this matrix manually, note that some invariants need
+            to hold for the HMM to be valid: :math:`I_n`, :math:`M_n` and
+            :math:`D_n` transition probabilities should only contain
+            probabilities between 0 and 1, and sum to 1::
 
                 >>> t = thioesterase.transition_probabilities
-                >>> numpy.asarray(t).reshape((thioesterase.M+1, 7))
-                array([[...]], dtype=float32)
+                >>> t[50, 0] + t[50, 1] + t[50, 2]  # M_n probabilities
+                1.000...
+                >>> t[50, 3] + t[50, 4]  # I_n probabilities
+                1.000...
+                >>> t[50, 5] + t[50, 6]  # D_n probabilties
+                1.000...
 
         .. versionadded:: 0.3.1
 
+        .. versionchanged:: 0.4.0
+            This property is now a `~pyhmmer.easel.MatrixF`.
+
         """
-        cdef object mv = PyMemoryView_FromMemory(
-            <char*> self._hmm.t[0],
-            (self._hmm.M + 1) * libhmmer.p7_hmm.p7H_NTRANSITIONS * sizeof(float),
-            PyBUF_WRITE
-        )
-        return mv.cast("f")
+        assert self._hmm != NULL
+        cdef MatrixF mat = MatrixF.__new__(MatrixF)
+        mat._m = mat._shape[0] = self._hmm.M + 1
+        mat._n = mat._shape[1] = libhmmer.p7_hmm.p7H_NTRANSITIONS
+        mat._strides = (sizeof(float), mat._m * sizeof(float))
+        mat._owner = self
+        mat._data = self._hmm.t
+        return mat
 
     @property
     def match_emissions(self):
-        """`memoryview` of `float`: The match emissions of the model.
+        """`~pyhmmer.easel.MatrixF`: The match emissions of the model.
 
-        The returned memory view exposes a matrix of dimensions
-        :math:`(M, K)`, with one row per node, and one column per
-        alphabet symbol.
+        The property exposes a matrix of shape :math:`(M+1, K)`, with one
+        row per node and one column per alphabet symbol.
 
-        Hint:
-            Use `numpy.asarray` to convert the memory view to a 2D array::
+        Note:
+            Since the first row corresponds to the entry probabilities, the
+            emissions are unused. By convention, it should still contain
+            valid probabilities, so it will always be set as follow with
+            1 probability for the first symbol, and 0 for the rest::
 
-                >>> m = thioesterase.match_emissions
-                >>> numpy.asarray(m).reshape((thioesterase.M, thioesterase.alphabet.K))
-                array([[...]], dtype=float32)
+                >>> hmm = HMM(100, alphabet=easel.Alphabet.dna())
+                >>> hmm.match_emissions[0]
+                VectorF([1.0, 0.0, 0.0, 0.0])
+
+        Caution:
+            If editing this matrix manually, note that rows must contain
+            valid probabilities for the HMM to be valid: each row must
+            contains values between 0 and 1, and sum to 1.
 
         .. versionadded:: 0.3.1
 
+        .. versionchanged:: 0.4.0
+            This property is now a `~pyhmmer.easel.MatrixF`, and stores row 0.
+
         """
-        cdef object mv = PyMemoryView_FromMemory(
-            <char*> self._hmm.mat[1],
-            self._hmm.M * self.alphabet.K *  sizeof(float),
-            PyBUF_WRITE
-        )
-        return mv.cast("f")
+        assert self._hmm != NULL
+        cdef MatrixF mat = MatrixF.__new__(MatrixF)
+        mat._m = mat._shape[0] = self._hmm.M + 1
+        mat._n = mat._shape[1] = self.alphabet.K
+        mat._strides = (sizeof(float), mat._m * sizeof(float))
+        mat._owner = self
+        mat._data = self._hmm.mat
+        return mat
 
     @property
     def insert_emissions(self):
         """`memoryview` of `float`: The insert emissions of the model.
 
-        The returned memoryview exposes a matrix of dimensions
-        :math:`(M, K)`, with one row per node and one column per
-        alphabet symbol.
+        The property exposes a matrix of shape :math:`(M+1, K)`, with one
+        row per node and one column per alphabet symbol.
 
-        Hint:
-            Use `numpy.asarray` to convert the memoryview to a 2D aray::
-
-                >>> i = thioesterase.insert_emissions
-                >>> numpy.asarray(i).reshape((thioesterase.M, thioesterase.alphabet.K))
-                array([[...]], dtype=float32)
+        Caution:
+            If editing this matrix manually, note that rows must contain
+            valid probabilities for the HMM to be valid: each row must
+            contains values between 0 and 1, and sum to 1.
 
         .. versionadded:: 0.3.1
 
+        .. versionchanged:: 0.4.0
+            This property is now a `~pyhmmer.easel.MatrixF`, and stores row 0.
+
         """
-        cdef object mv = PyMemoryView_FromMemory(
-            <char*> self._hmm.ins[1],
-            self._hmm.M * self.alphabet.K * sizeof(float),
-            PyBUF_WRITE
-        )
-        return mv.cast("f")
+        assert self._hmm != NULL
+        cdef MatrixF mat = MatrixF.__new__(MatrixF)
+        mat._m = mat._shape[0] = self._hmm.M + 1
+        mat._n = mat._shape[1] = self.alphabet.K
+        mat._strides = (sizeof(float), mat._m * sizeof(float))
+        mat._owner = self
+        mat._data = self._hmm.ins
+        return mat
 
     @property
     def command_line(self):
