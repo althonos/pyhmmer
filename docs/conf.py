@@ -202,6 +202,7 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "psutil": ("https://psutil.readthedocs.io/en/latest/", None),
     "biopython": ("https://biopython.org/docs/latest/api/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None)
 }
 
 # -- Options for recommonmark extension --------------------------------------
