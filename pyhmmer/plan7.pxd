@@ -95,6 +95,7 @@ cdef class HMM:
     cpdef void zero(self)
     cpdef void renormalize(self)
     cpdef void scale(self, double scale, bint exponential=?)
+    cpdef void set_composition(self)
 
 
 cdef class HMMFile:

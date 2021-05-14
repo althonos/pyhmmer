@@ -11,10 +11,16 @@ from libeasel.random cimport ESL_RANDOMNESS
 cdef extern from "hmmer.h" nogil:
 
     DEF p7_NEVPARAM = 6
-    DEF p7_NCUTOFFS = 6
-    DEF p7_NOFFSETS = 3
-    DEF p7_MAXABET = 20
+    cdef size_t p7_NEVPARAM
 
+    DEF p7_NCUTOFFS = 6
+    cdef size_t p7_NCUTOFFS
+
+    DEF p7_NOFFSETS = 3
+    cdef size_t p7_NOFFSETS
+
+    DEF p7_MAXABET = 20
+    cdef size_t p7_MAXABET
 
     cdef size_t p7H_NTRANSITIONS = 7
     cdef enum p7h_transitions_e:

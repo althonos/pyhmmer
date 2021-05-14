@@ -1004,6 +1004,30 @@ cdef class HMM:
         return self._hmm.checksum
 
     @property
+    def composition(self):
+        """`~pyhmmer.easel.VectorF` or `None`: The model composition.
+
+        May not be available for freshly-created HMMs. To get the mean
+        residue composition emitted by the model, the `~HMM.set_composition`
+        method must be called to compute the composition from occupancy.
+
+        .. versionadded:: 0.3.2
+
+        """
+        assert self._hmm != NULL
+
+        cdef VectorF comp
+
+        if not (self._hmm.flags & libhmmer.p7_hmm.p7H_COMPO):
+            return None
+        comp = VectorF.__new__(VectorF)
+        comp._data = &(self._hmm.compo[0])
+        comp._owner = self
+        comp._n = comp._shape[0] = libhmmer.p7_hmm.p7_MAXABET
+        return comp
+
+
+    @property
     def consensus(self):
         """`str` or `None`: The consensus residue line of the HMM, if set.
 
@@ -1340,6 +1364,20 @@ cdef class HMM:
         if status != libeasel.eslOK:
             func = "p7_hmm_ScaleExponential" if exponential else "p7_hmm_Scale"
             raise UnexpectedError(status, func)
+
+    cpdef void set_composition(self):
+        """Calculate and set the model composition.
+
+        .. versionadded:: 0.3.2
+
+        """
+        assert self._hmm != NULL
+
+        cdef int status
+        with nogil:
+            status = libhmmer.p7_hmm.p7_hmm_SetComposition(self._hmm)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_hmm_SetComposition")
 
 
 cdef class HMMFile:
