@@ -1,3 +1,5 @@
+from libc.stdint cimport int8_t, int16_t
+
 cdef extern from "esl_matrixops.h" nogil:
     double **esl_mat_DCreate(int M, int N);
     float  **esl_mat_FCreate(int M, int N);

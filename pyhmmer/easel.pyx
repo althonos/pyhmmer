@@ -25,6 +25,7 @@ cimport libeasel
 cimport libeasel.alphabet
 cimport libeasel.bitfield
 cimport libeasel.keyhash
+cimport libeasel.matrixops
 cimport libeasel.msa
 cimport libeasel.msafile
 cimport libeasel.sq
@@ -503,18 +504,46 @@ cdef class KeyHash:
 # --- Matrix & Vector --------------------------------------------------------
 
 cdef class Vector:
-    """An abstract 1D vector.
+    """An abstract 1D array of fixed size.
 
     .. versionadded:: 0.3.2
 
     """
 
-    def __init__(self, object iterable = None):
-        raise TypeError("Can't instantiate abstract class 'Vector'")
+    # --- Class methods ------------------------------------------------------
 
     @classmethod
     def zeros(cls, int n):
+        """Create a vector of size ``n`` filled with zeros.
+        """
         raise TypeError("Can't instantiate abstract class 'Vector'")
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __cinit__(self):
+        self._owner = None
+        self._n = 0
+        self._shape = (0,)
+        self._strides = (sizeof(float),)
+
+    def __init__(self, object iterable = None):
+        raise TypeError("Can't instantiate abstract class 'Vector'")
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def shape(self):
+        """`tuple`: The shape of the vector.
+        """
+        return tuple(self._shape)
+
+    @property
+    def strides(self):
+        """`tuple`: The strides of the vector.
+        """
+        return tuple(self._strides)
+
+    # --- Methods ------------------------------------------------------------
 
     def argmax(self):
         """Return index of the maximum element in the vector.
@@ -560,15 +589,62 @@ cdef class Vector:
 
 
 cdef class VectorF(Vector):
-    """A 1D vector storing single-precision floating point number.
+    """A vector storing single-precision floating point numbers.
 
-    Objects of this type support the buffer protocol, and can be converted
-    into a `numpy` array with the `numpy.asarray` function:
+    Individual elements of a vector can be accessed and modified with
+    the usual indexing notation::
 
-        >>> v = VectorF([1, 2, 3])
-        >>> a = numpy.asarray(v)
-        >>> numpy.sum(a)
-        6.0
+        >>> v = VectorF([1.0, 2.0, 3.0])
+        >>> v[0]
+        1.0
+        >>> v[-1]
+        3.0
+        >>> v[0] = v[-1] = 4.0
+        >>> v
+        VectorF([4.0, 2.0, 4.0])
+
+    Slices are also supported, and they do not copy data (use the
+    `~pyhmmer.easel.VectorF.copy` method to allocate a new vector)::
+
+        >>> v = VectorF(range(10))
+        >>> v[2:5]
+        VectorF([2.0, 3.0, 4.0])
+        >>> v[5:-1] = 10.0
+        >>> v
+        VectorF([0.0, 1.0, 2.0, 3.0, 4.0, 10.0, 10.0, 10.0, 10.0, 9.0])
+
+    Addition and multiplication is support for scalar, in place or not::
+
+        >>> v = VectorF([1.0, 2.0, 3.0])
+        >>> v += 1
+        >>> v
+        VectorF([2.0, 3.0, 4.0])
+        >>> v * 3
+        VectorF([6.0, 9.0, 12.0])
+
+    Pairwise operations can also be performed, but only on vectors of
+    the same dimension and precision::
+
+        >>> v = VectorF([1.0, 2.0, 3.0])
+        >>> v * v
+        VectorF([1.0, 4.0, 9.0])
+        >>> v += VectorF([3.0, 4.0, 5.0])
+        >>> v
+        VectorF([4.0, 6.0, 8.0])
+        >>> v *= VectorF([1.0])
+        Traceback (most recent call last):
+          ...
+        ValueError: cannot pairwise multiply vectors of different size
+
+    Objects of this type support the buffer protocol, and can be viewed
+    as a `numpy.ndarray` of one dimension using the `numpy.asarray`
+    function, and can be passed without copy to most `numpy` functions:
+
+        >>> v = VectorF([1.0, 2.0, 3.0])
+        >>> numpy.asarray(v)
+        array([1., 2., 3.], dtype=float32)
+        >>> numpy.log2(v)
+        array([0.       , 1.       , 1.5849625], dtype=float32)
 
     .. versionadded:: 0.3.2
 
@@ -578,8 +654,6 @@ cdef class VectorF(Vector):
 
     @classmethod
     def zeros(cls, n):
-        """Create a vector of size ``n`` filled with zeros.
-        """
         if n <= 0:
             raise ValueError("Cannot create a vector with negative or null size")
         cdef VectorF vec = VectorF.__new__(VectorF)
@@ -594,17 +668,13 @@ cdef class VectorF(Vector):
 
     def __cinit__(self):
         self._data = NULL
-        self._owner = None
-        self._n = 0
-        self._shape = (0,)
-        self._strides = (sizeof(float),)
 
     def __dealloc__(self):
         if self._owner is None:
             free(self._data)
         self._data = NULL
 
-    def __init__(self, object iterable = None):
+    def __init__(self, object iterable):
 
         cdef size_t i
         cdef int    n = len(iterable)
@@ -613,9 +683,10 @@ cdef class VectorF(Vector):
             raise ValueError("Cannot create a vector with negative or null size")
 
         self._n = self._shape[0] = n
-        self._data = <float*> malloc(n * sizeof(float))
-        if self._data == NULL:
-            raise AllocationError("float*")
+        if self._data == NULL: # avoid realloc if __init__ called more than once
+            self._data = <float*> malloc(n * sizeof(float))
+            if self._data == NULL:
+                raise AllocationError("float*")
         for i, item in enumerate(iterable):
             self._data[i] = item
 
@@ -628,15 +699,41 @@ cdef class VectorF(Vector):
     def __getitem__(self, object index):
         assert self._data != NULL
 
-        if isinstance(index, slice):
-            return NotImplemented
+        cdef VectorF new
+        cdef int     idx
 
-        cdef int x = index
-        if x < 0:
-            x += self._n
-        if x < 0 or x >= self._n:
-            raise IndexError("vector index out of range")
-        return self._data[x]
+        if isinstance(index, slice):
+            start, stop, step = index.indices(self._n)
+            if step != 1:
+                raise ValueError(f"cannot slice a Vector with step other than 1")
+            new = VectorF.__new__(VectorF)
+            new._owner = self
+            new._n = new._shape[0] = stop - start
+            new._data = &(self._data[start])
+            return new
+        else:
+            idx = index
+            if idx < 0:
+                idx += self._n
+            if idx < 0 or idx >= self._n:
+                raise IndexError("vector index out of range")
+            return self._data[idx]
+
+    def __setitem__(self, object index, float value):
+        assert self._data != NULL
+
+        cdef int x
+
+        if isinstance(index, slice):
+            for x in range(*index.indices(self._n)):
+                self._data[x] = value
+        else:
+            x = index
+            if x < 0:
+                x += self._n
+            if x < 0  or x >= self._n:
+                raise IndexError("vector index out of range")
+            self._data[x] = value
 
     def __getbuffer__(self, Py_buffer* buffer, int flags):
         assert self._data != NULL
@@ -645,7 +742,7 @@ cdef class VectorF(Vector):
             buffer.format = "f"
         else:
             buffer.format = NULL
-        buffer.buf = <char*> &(self._data[0])
+        buffer.buf = <void*> &(self._data[0])
         buffer.internal = NULL
         buffer.itemsize = sizeof(float)
         buffer.len = self._n * sizeof(float)
@@ -653,11 +750,16 @@ cdef class VectorF(Vector):
         buffer.obj = self
         buffer.readonly = 0
         buffer.shape = self._shape
-        buffer.strides = self._strides
+        buffer.strides = NULL
         buffer.suboffsets = NULL
 
     def __releasebuffer__(self, Py_buffer* buffer):
         pass
+
+    def __add_(self: VectorF, object other):
+        assert self._data != NULL
+        cdef VectorF new = self.copy()
+        return new.__iadd__(other)
 
     def __iadd__(self, object other):
         assert self._data != NULL
@@ -678,16 +780,27 @@ cdef class VectorF(Vector):
                 libeasel.vec.esl_vec_FIncrement(self._data, self._n, other_f)
         return self
 
+    def __mul__(self: VectorF, object other):
+        assert self._data != NULL
+        cdef VectorF new = self.copy()
+        return new.__imul__(other)
+
     def __imul__(self, object other):
         assert self._data != NULL
 
         cdef VectorF other_vec
         cdef float   other_f
+        cdef int     i
 
         if isinstance(other, VectorF):
             other_vec = other
+            if self._n != other_vec._n:
+                raise ValueError("cannot pairwise multiply vectors of different size")
             assert other_vec._data != NULL
-            return NotImplemented
+            # NB(@althonos): There is no function in `vectorops.h` to do this
+            # for now...
+            for i in range(self._n):
+                self._data[i] *= other_vec._data[i]
         else:
             other_f = other
             with nogil:
@@ -731,18 +844,6 @@ cdef class VectorF(Vector):
             )
         }
 
-    @property
-    def shape(self):
-        """`tuple`: The shape of the vector.
-        """
-        return tuple(self._shape)
-
-    @property
-    def strides(self):
-        """`tuple`: The strides of the vector.
-        """
-        return tuple(self._strides)
-
     # --- Methods ------------------------------------------------------------
 
     cpdef int argmax(self):
@@ -758,7 +859,11 @@ cdef class VectorF(Vector):
     cpdef VectorF copy(self):
         assert self._data != NULL
 
-        cdef VectorF new = VectorF.zeros(self._n)
+        cdef VectorF new = VectorF.__new__(VectorF)
+        new._n = new._shape[0] = self._n
+        new._data = <float*> malloc(self._n * sizeof(float))
+        if new._data == NULL:
+            raise AllocationError("float*")
         with nogil:
             libeasel.vec.esl_vec_FCopy(self._data, self._n, new._data)
         return new
@@ -787,6 +892,372 @@ cdef class VectorF(Vector):
         assert self._data != NULL
         with nogil:
             return libeasel.vec.esl_vec_FSum(self._data, self._n)
+
+
+cdef class Matrix:
+    """An abstract 2D array of fixed size.
+
+    .. versionadded:: 0.3.2
+
+    """
+
+    # --- Class methods ------------------------------------------------------
+
+    @classmethod
+    def zeros(cls, int m, int n):
+        r"""Create a new :math:`m \times n` matrix filled with zeros.
+        """
+        raise TypeError("Can't instantiate abstract class 'Matrix'")
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __cinit__(self):
+        self._owner = None
+        self._n = self._m = 0
+        self._shape = (self._n, self._m)
+        self._strides = (sizeof(float), self._n * sizeof(float))
+
+    def __init__(self, object iterable = None):
+      raise TypeError("Can't instantiate abstract class 'Matrix'")
+
+    def __len__(self):
+        return self._m
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def shape(self):
+        """`tuple`: The shape of the matrix.
+
+        Example:
+            >>> m = MatrixF([ [1.0, 2.0], [3.0, 4.0], [5.0, 6.0] ])
+            >>> m.shape
+            (3, 2)
+
+        """
+        return tuple(self._shape)
+
+    @property
+    def strides(self):
+        """`tuple`: The strides of the matrix.
+        """
+        return tuple(self._strides)
+
+    # --- Methods ------------------------------------------------------------
+
+    def argmax(self):
+        """Return the coordinates of the maximum element in the matrix.
+        """
+
+    def argmin(self):
+        """Return the coordinates of the minimum element in the matrix.
+        """
+
+    def copy(self):
+        """Create a copy of the matrix, allocating a new buffer.
+        """
+
+    def max(self):
+        """Return the value of the maximum element in the matrix.
+        """
+
+    def min(self):
+        """Return the value of the minimum element in the matrix.
+        """
+
+    def sum(self):
+        """Return the sum of all elements in the matrix.
+        """
+
+
+cdef class MatrixF(Matrix):
+    """A matrix storing single-precision floating point numbers.
+
+    Use indexing notation to access and edit individual elements of the
+    matrix::
+
+        >>> m = MatrixF.zeros(2, 2)
+        >>> m[0, 0] = 3.0
+        >>> m
+        MatrixF([[3.0, 0.0], [0.0, 0.0]])
+
+    Indexing can also be performed at the row-level to get a `VectorF`
+    without copying the underlying data::
+
+        >>> m = MatrixF([ [1.0, 2.0], [3.0, 4.0] ])
+        >>> m[0]
+        VectorF([1.0, 2.0])
+
+    Objects of this type support the buffer protocol, and can be viewed
+    as a `numpy.ndarray` with two dimensions using the `numpy.asarray`
+    function, and can be passed without copy to most `numpy` functions::
+
+        >>> m = MatrixF([ [1.0, 2.0], [3.0, 4.0] ])
+        >>> numpy.asarray(m)
+        array([[1., 2.],
+               [3., 4.]], dtype=float32)
+        >>> numpy.log2(m)
+        array([[0.       , 1.       ],
+               [1.5849625, 2.       ]], dtype=float32)
+
+    .. versionadded:: 0.3.2
+
+    """
+
+    # --- Class methods ------------------------------------------------------
+
+    @classmethod
+    def zeros(cls, int m, int n):
+        if n <= 0:
+            raise ValueError("Cannot create a matrix with negative or null dimension")
+        cdef MatrixF mat = MatrixF.__new__(MatrixF)
+        mat._m = mat._shape[0] = m
+        mat._n = mat._shape[1] = n
+        mat._strides = (sizeof(float), mat._m * sizeof(float))
+
+        # allocate the array of pointers
+        mat._data    = <float**> calloc(m, sizeof(float*))
+        if mat._data == NULL:
+            raise AllocationError("float**")
+
+        # allocate the data array
+        mat._data[0] = <float*> calloc(m*n, sizeof(float))
+        if mat._data[0] == NULL:
+            raise AllocationError("float*")
+
+        # update the pointer offsets in the array of pointers
+        cdef int i
+        for i in range(1, m):
+            mat._data[i] = mat._data[0] + i*n
+
+        return mat
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __cinit__(self):
+        self._data = NULL
+
+    def __dealloc__(self):
+        if self._data != NULL:
+            libeasel.matrixops.esl_mat_FDestroy(self._data)
+
+    def __init__(self, object iterable):
+
+        self._m = self._shape[0] = len(iterable)
+        if self._m <= 0:
+            raise ValueError("Cannot create a matrix with null number of columns")
+
+        self._n = self._shape[1] = len(iterable[0])
+        if self._n <= 0:
+            raise ValueError("Cannot create a matrix with null number of rows")
+
+        self._strides = (sizeof(float), self._m * sizeof(float))
+
+        if self._data == NULL:
+            self._data = libeasel.matrixops.esl_mat_FCreate(self._m, self._n)
+            if self._data == NULL:
+                raise AllocationError("float**")
+
+        cdef size_t i
+        cdef size_t j
+        for i, row in enumerate(iterable):
+            if len(row) != self._n:
+                raise ValueError("Inconsistent number of rows in input")
+            for j, val in enumerate(row):
+                self._data[i][j] = val
+
+    def __copy__(self):
+        return self.copy()
+
+    def __iadd__(self, object other):
+        assert self._data != NULL
+
+        cdef MatrixF other_mat
+        cdef float   other_f
+
+        if isinstance(other, MatrixF):
+            other_mat = other
+            assert other_mat._data != NULL
+            if other_mat._m != self._m or other_mat._n != self._n:
+                raise ValueError(f"cannot pairwise add {other_mat.shape} matrix to {self.shape} matrix")
+            with nogil:
+                libeasel.vec.esl_vec_FAdd( self._data[0], other_mat._data[0], self._m * self._n )
+        else:
+            other_f = other
+            with nogil:
+                libeasel.vec.esl_vec_FIncrement(self._data[0], self._m*self._n, other_f)
+        return self
+
+    def __imul__(self, object other):
+        assert self._data != NULL
+
+        cdef MatrixF other_mat
+        cdef float   other_f
+        cdef int     i
+
+        if isinstance(other, MatrixF):
+            other_mat = other
+            assert other_mat._data != NULL
+            if other_mat._m != self._m or other_mat._n != self._n:
+                raise ValueError(f"cannot pairwise multiply {other_mat.shape} matrix with {self.shape} matrix")
+            # NB(@althonos): There is no function in `vectorops.h` to do this
+            # for now...
+            for i in range(self._n * self._m):
+                self._data[0][i] *= other_mat._data[0][i]
+        else:
+            other_f = other
+            with nogil:
+                libeasel.matrixops.esl_mat_FScale(self._data, self._m, self._n, other_f)
+        return self
+
+    def __getitem__(self, object index):
+        assert self._data != NULL
+
+        cdef int x
+        cdef int y
+
+        if isinstance(index, slice):
+            return NotImplemented
+
+        elif isinstance(index, tuple):
+            x, y = index
+            if x < 0:
+                x += self._m
+            if y < 0:
+                y += self._n
+            if x < 0 or x >= self._m:
+                raise IndexError("matrix row index out of range")
+            if y < 0 or y >= self._n:
+                raise IndexError("matrix column index out of range")
+            return self._data[x][y]
+
+        x = index
+        if x < 0:
+            x += self._m
+        if x < 0 or x >= self._m:
+            raise IndexError("vector index out of range")
+
+        cdef VectorF row = VectorF.__new__(VectorF)
+        row._owner = self
+        row._n = row._shape[0] = self._n
+        row._data = self._data[x]
+        return row
+
+    def __setitem__(self, object index, float value):
+        assert self._data != NULL
+
+        cdef int x
+        cdef int y
+
+        if isinstance(index, tuple):
+            x, y = index
+            if x < 0:
+                x += self._m
+            if y < 0:
+                y += self._n
+            if x < 0 or x >= self._m:
+                raise IndexError("matrix row index out of range")
+            if y < 0 or y >= self._n:
+                raise IndexError("matrix column index out of range")
+            self._data[x][y] = value
+
+        else:
+            raise TypeError("Matrix.__setitem__ can only be used with a 2D index")
+
+    def __getbuffer__(self, Py_buffer* buffer, int flags):
+        assert self._data != NULL
+
+        if flags & PyBUF_FORMAT:
+            buffer.format = "f"
+        else:
+            buffer.format = NULL
+        buffer.buf = <void*> self._data[0]
+        buffer.internal = NULL
+        buffer.itemsize = sizeof(float)
+        buffer.len = self._m * self._n * sizeof(float)
+        buffer.ndim = 2
+        buffer.obj = self
+        buffer.readonly = 0
+        buffer.shape = self._shape
+        buffer.strides = NULL
+        buffer.suboffsets = NULL
+
+    def __releasebuffer__(self, Py_buffer* buffer):
+        pass
+
+    def __repr__(self):
+        return f"MatrixF({[list(row) for row in self]!r})"
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def __array_interface__(self):
+        return {
+            "version": 3,
+            "data": (<size_t> self._data[0], False),
+            "shape": self.shape,
+            "typestr": (
+                ("<" if sys.byteorder == "little" else ">")
+                + "f"
+                + str(sizeof(float))
+            )
+        }
+
+    # --- Methods ------------------------------------------------------------
+
+    cpdef tuple argmax(self):
+        assert self._data != NULL
+
+        cdef int n
+        cdef int x
+        cdef int y
+
+        with nogil:
+            n = libeasel.vec.esl_vec_FArgMax(self._data[0], self._m*self._n)
+            x = n // self._m
+            y = n % self._n
+
+        return x, y
+
+    cpdef tuple argmin(self):
+        assert self._data != NULL
+
+        cdef int n
+        cdef int x
+        cdef int y
+
+        with nogil:
+            n = libeasel.vec.esl_vec_FArgMin(self._data[0], self._m*self._n)
+            x = n // self._m
+            y = n % self._n
+
+        return x, y
+
+    cpdef MatrixF copy(self):
+        cdef MatrixF mat = MatrixF.__new__(MatrixF)
+        mat._m = mat._shape[0] = self._m
+        mat._n = mat._shape[1] = self._n
+        mat._strides = self._strides
+        with nogil:
+            mat._data = libeasel.matrixops.esl_mat_FClone(self._data, self._m, self._n)
+        if mat._data == NULL:
+            raise AllocationError("float**")
+        return mat
+
+    cpdef float max(self):
+        assert self._data != NULL
+        with nogil:
+            return libeasel.matrixops.esl_mat_FMax(self._data, self._m, self._n)
+
+    cpdef float min(self):
+        assert self._data != NULL
+        with nogil:
+            return libeasel.vec.esl_vec_FMin(self._data[0], self._m*self._n)
+
+    cpdef float sum(self):
+        assert self._data != NULL
+        with nogil:
+            return libeasel.vec.esl_vec_FSum(self._data[0], self._m*self._n)
 
 
 # --- Multiple Sequences Alignment -------------------------------------------

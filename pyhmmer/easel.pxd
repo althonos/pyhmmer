@@ -51,12 +51,12 @@ cdef class KeyHash:
 
 cdef class Vector:
     cdef object _owner
-
-cdef class VectorF(Vector):
     cdef int _n
-    cdef float* _data
     cdef readonly Py_ssize_t _shape[1]
     cdef readonly Py_ssize_t _strides[1]
+
+cdef class VectorF(Vector):
+    cdef float* _data
 
     cpdef int argmax(self)
     cpdef int argmin(self)
@@ -67,6 +67,23 @@ cdef class VectorF(Vector):
     cpdef void reverse(self)
     cpdef float sum(self)
 
+cdef class Matrix:
+    cdef object _owner
+    cdef int _n
+    cdef int _m
+    cdef readonly Py_ssize_t _shape[2]
+    cdef readonly Py_ssize_t _strides[2]
+
+cdef class MatrixF(Matrix):
+    cdef float** _data
+
+    cpdef tuple argmax(self)
+    cpdef tuple argmin(self)
+    cpdef MatrixF copy(self)
+    cpdef float max(self)
+    cpdef float min(self)
+    cpdef float sum(self)
+    
 
 # --- Multiple Sequences Alignment -------------------------------------------
 
