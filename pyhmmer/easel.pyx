@@ -516,27 +516,22 @@ cdef class Vector:
     def argmax(self):
         """Return index of the maximum element in the vector.
         """
-        return NotImplemented
 
     def argmin(self):
         """Return index of the minimum element in the vector.
         """
-        return NotImplemented
 
     def copy(self):
         """Create a copy of the vector, allocating a new buffer.
         """
-        return NotImplemented
 
     def max(self):
         """Return value of the maximum element in the vector.
         """
-        return NotImplemented
 
     def min(self):
         """Return value of the minimum element in the vector.
         """
-        return NotImplemented
 
     def normalize(self):
         r"""Normalize a vector so that all elements sum to 1.
@@ -545,12 +540,10 @@ cdef class Vector:
             If sum is zero, sets all elements to :math:`\frac{1}{n}`.
 
         """
-        return NotImplemented
 
     def reverse(self):
         """Reverse the vector, in place.
         """
-        return NotImplemented
 
     def sum(self):
         """Returns the scalar sum of all elements in the vector.
@@ -561,7 +554,6 @@ cdef class Vector:
         large, so you may consider sorting the vector before summing it.
 
         """
-        return NotImplemented
 
 
 cdef class VectorF(Vector):
