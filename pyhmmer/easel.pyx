@@ -504,6 +504,9 @@ cdef class KeyHash:
 
 cdef class Vector:
     """An abstract 1D vector.
+
+    .. versionadded:: 0.3.2
+
     """
 
     def __init__(self, object iterable = None):
@@ -567,6 +570,8 @@ cdef class VectorF(Vector):
         >>> a = numpy.asarray(v)
         >>> numpy.sum(a)
         6.0
+
+    .. versionadded:: 0.3.2
 
     """
 

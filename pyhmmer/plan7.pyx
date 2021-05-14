@@ -188,6 +188,9 @@ cdef class Background:
         residue_frequencies (`~pyhmmer.easel.VectorF`): The null1 background
             residue frequencies.
 
+    .. versionchanged:: 0.3.2
+       Added the `residue_frequencies` attribute.
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -257,6 +260,9 @@ cdef class Background:
     @property
     def transition_probability(self):
         r"""`float`: The null1 transition probability (:math:`\frac{L}{L+1}`).
+
+        .. versionadded:: 0.3.2
+
         """
         assert self._bg != NULL
         return self._bg.p1
@@ -264,6 +270,9 @@ cdef class Background:
     @property
     def omega(self):
         """`float`: The *prior* on null2/null3.
+
+        .. versionadded:: 0.3.2
+
         """
         assert self._bg != NULL
         return self._bg.omega
