@@ -1038,8 +1038,9 @@ cdef class MatrixF(Matrix):
         self._data = NULL
 
     def __dealloc__(self):
-        if self._data != NULL:
-            libeasel.matrixops.esl_mat_FDestroy(self._data)
+        if self._owner is None:
+            free(self._data)
+        self._data = NULL
 
     def __init__(self, object iterable):
 
