@@ -188,7 +188,7 @@ cdef class Background:
         residue_frequencies (`~pyhmmer.easel.VectorF`): The null1 background
             residue frequencies.
 
-    .. versionchanged:: 0.3.2
+    .. versionchanged:: 0.4.0
        Added the `residue_frequencies` attribute.
 
     """
@@ -261,7 +261,7 @@ cdef class Background:
     def transition_probability(self):
         r"""`float`: The null1 transition probability (:math:`\frac{L}{L+1}`).
 
-        .. versionadded:: 0.3.2
+        .. versionadded:: 0.4.0
 
         """
         assert self._bg != NULL
@@ -271,7 +271,7 @@ cdef class Background:
     def omega(self):
         """`float`: The *prior* on null2/null3.
 
-        .. versionadded:: 0.3.2
+        .. versionadded:: 0.4.0
 
         """
         assert self._bg != NULL
@@ -1011,7 +1011,7 @@ cdef class HMM:
         residue composition emitted by the model, the `~HMM.set_composition`
         method must be called to compute the composition from occupancy.
 
-        .. versionadded:: 0.3.2
+        .. versionadded:: 0.4.0
 
         """
         assert self._hmm != NULL
@@ -1025,7 +1025,6 @@ cdef class HMM:
         comp._owner = self
         comp._n = comp._shape[0] = libhmmer.p7_hmm.p7_MAXABET
         return comp
-
 
     @property
     def consensus(self):
@@ -1322,7 +1321,7 @@ cdef class HMM:
     cpdef void renormalize(self):
         """Renormalize all parameter vectors (emissions and transitions).
 
-        .. versionadded:: 0.3.2
+        .. versionadded:: 0.4.0
 
         """
         assert self._hmm != NULL
@@ -1334,7 +1333,7 @@ cdef class HMM:
             raise UnexpectedError(status, "p7_hmm_Renormalize")
 
     cpdef void scale(self, double scale, bint exponential=False):
-        """In a model containing counts, rescale counts by a factor.
+        r"""In a model containing counts, rescale counts by a factor.
 
         This method only affects core probability model emissions and
         transitions.
@@ -1350,7 +1349,7 @@ cdef class HMM:
                 can be useful when some heavily fragmented sequences are
                 used to reconstruct a family MSA.
 
-        .. versionadded:: 0.3.2
+        .. versionadded:: 0.4.0
 
         """
         assert self._hmm != NULL
@@ -1368,7 +1367,7 @@ cdef class HMM:
     cpdef void set_composition(self):
         """Calculate and set the model composition.
 
-        .. versionadded:: 0.3.2
+        .. versionadded:: 0.4.0
 
         """
         assert self._hmm != NULL

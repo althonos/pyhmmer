@@ -139,7 +139,7 @@ and the version 33.1 of the [Pfam](https://pfam.xfam.org/) HMM library containin
 18,259 domains. Commands were run 4 times on a warm SSD. *Plain lines show
 the times for pressed HMMs, and dashed-lines the times for HMMs in text format.*
 
-![Benchmarks](https://raw.github.com/althonos/pyhmmer/master/benches/v0.3.2/plot.svg)
+![Benchmarks](https://raw.github.com/althonos/pyhmmer/master/benches/v0.4.0/plot.svg)
 
 Raw numbers can be found in the [`benches` folder](https://github.com/althonos/pyhmmer/blob/master/benches/).
 They suggest that `phmmer` should be run with the number of *logical* cores,

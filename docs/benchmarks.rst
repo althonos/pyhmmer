@@ -12,10 +12,10 @@ and the version 33.1 of the `Pfam <https://pfam.xfam.org/>`_ HMM library contain
 the times for pressed HMMs, and dashed-lines the times for HMMs in text format.*
 
 
-v0.3.2 - Unreleased
--------------------
+Unreleased
+----------
 
-.. image:: _images/bench-v0.3.2.svg
+.. image:: _images/bench-v0.4.0.svg
 
 The overhead of pyHMMER has been reduced, and has a much smaller effect when
 using a high number of threads.

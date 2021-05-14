@@ -506,7 +506,7 @@ cdef class KeyHash:
 cdef class Vector:
     """An abstract 1D array of fixed size.
 
-    .. versionadded:: 0.3.2
+    .. versionadded:: 0.4.0
 
     """
 
@@ -646,7 +646,7 @@ cdef class VectorF(Vector):
         >>> numpy.log2(v)
         array([0.       , 1.       , 1.5849625], dtype=float32)
 
-    .. versionadded:: 0.3.2
+    .. versionadded:: 0.4.0
 
     """
 
@@ -897,7 +897,7 @@ cdef class VectorF(Vector):
 cdef class Matrix:
     """An abstract 2D array of fixed size.
 
-    .. versionadded:: 0.3.2
+    .. versionadded:: 0.4.0
 
     """
 
@@ -1000,7 +1000,7 @@ cdef class MatrixF(Matrix):
         array([[0.       , 1.       ],
                [1.5849625, 2.       ]], dtype=float32)
 
-    .. versionadded:: 0.3.2
+    .. versionadded:: 0.4.0
 
     """
 
