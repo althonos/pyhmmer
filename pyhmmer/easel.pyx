@@ -750,13 +750,13 @@ cdef class VectorF(Vector):
         buffer.obj = self
         buffer.readonly = 0
         buffer.shape = self._shape
-        buffer.strides = NULL
+        buffer.strides = self._strides
         buffer.suboffsets = NULL
 
     def __releasebuffer__(self, Py_buffer* buffer):
         pass
 
-    def __add_(self: VectorF, object other):
+    def __add__(VectorF self, object other):
         assert self._data != NULL
         cdef VectorF new = self.copy()
         return new.__iadd__(other)
@@ -780,7 +780,7 @@ cdef class VectorF(Vector):
                 libeasel.vec.esl_vec_FIncrement(self._data, self._n, other_f)
         return self
 
-    def __mul__(self: VectorF, object other):
+    def __mul__(VectorF self, object other):
         assert self._data != NULL
         cdef VectorF new = self.copy()
         return new.__imul__(other)
@@ -1051,7 +1051,7 @@ cdef class MatrixF(Matrix):
         if self._n <= 0:
             raise ValueError("Cannot create a matrix with null number of rows")
 
-        self._strides = (sizeof(float), self._m * sizeof(float))
+        self._strides = (self._m * sizeof(float), sizeof(float))
 
         if self._data == NULL:
             self._data = libeasel.matrixops.esl_mat_FCreate(self._m, self._n)
@@ -1068,6 +1068,11 @@ cdef class MatrixF(Matrix):
 
     def __copy__(self):
         return self.copy()
+
+    def __add__(MatrixF self, object other):
+        assert self._data != NULL
+        cdef MatrixF new = self.copy()
+        return new.__iadd__(other)
 
     def __iadd__(self, object other):
         assert self._data != NULL
@@ -1087,6 +1092,11 @@ cdef class MatrixF(Matrix):
             with nogil:
                 libeasel.vec.esl_vec_FIncrement(self._data[0], self._m*self._n, other_f)
         return self
+
+    def __mul__(MatrixF self, object other):
+        assert self._data != NULL
+        cdef MatrixF new = self.copy()
+        return new.__imul__(other)
 
     def __imul__(self, object other):
         assert self._data != NULL
@@ -1171,7 +1181,7 @@ cdef class MatrixF(Matrix):
             buffer.format = "f"
         else:
             buffer.format = NULL
-        buffer.buf = <void*> self._data[0]
+        buffer.buf = <void*> &(self._data[0][0])
         buffer.internal = NULL
         buffer.itemsize = sizeof(float)
         buffer.len = self._m * self._n * sizeof(float)
@@ -1179,7 +1189,7 @@ cdef class MatrixF(Matrix):
         buffer.obj = self
         buffer.readonly = 0
         buffer.shape = self._shape
-        buffer.strides = NULL
+        buffer.strides = self._strides
         buffer.suboffsets = NULL
 
     def __releasebuffer__(self, Py_buffer* buffer):
