@@ -3,7 +3,7 @@ import unittest
 from pyhmmer.easel import VectorF
 
 
-class TestVector(unittest.TestCase):
+class TestVectorF(unittest.TestCase):
 
     def test_init(self):
         vec = VectorF([1, 2, 3])
@@ -58,12 +58,23 @@ class TestVector(unittest.TestCase):
         self.assertEqual(vec[1], 2)
         self.assertEqual(vec[2], 1)
 
+    def test_add(self):
+        vec = VectorF([1, 2, 3])
+        vec2 = vec + 1
+        self.assertEqual(vec2[0], 2)
+        self.assertEqual(vec2[1], 3)
+        self.assertEqual(vec2[2], 4)
+
     def test_iadd(self):
         vec = VectorF([1, 2, 3])
         vec += 3
         self.assertEqual(vec[0], 4)
         self.assertEqual(vec[1], 5)
         self.assertEqual(vec[2], 6)
+        vec += VectorF([10, 11, 12])
+        self.assertEqual(vec[0], 14)
+        self.assertEqual(vec[1], 16)
+        self.assertEqual(vec[2], 18)
 
     def test_imul(self):
         vec = VectorF([1, 2, 3])
@@ -80,3 +91,8 @@ class TestVector(unittest.TestCase):
     def test_sum(self):
         vec = VectorF([1, 2, 3])
         self.assertEqual(vec.sum(), 1 + 2 + 3)
+
+    def test_memoryview_tolist(self):
+        vec = VectorF([1, 2, 3])
+        mem = memoryview(vec)
+        self.assertEqual(mem.tolist(), [1.0, 2.0, 3.0])
