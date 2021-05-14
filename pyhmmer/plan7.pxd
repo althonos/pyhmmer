@@ -22,7 +22,7 @@ IF HMMER_IMPL == "VMX":
 ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
-from .easel cimport Alphabet, DigitalSequence, DigitalMSA, MSA
+from .easel cimport Alphabet, DigitalSequence, DigitalMSA, MSA, VectorF
 
 
 cdef extern from "hmmer.h" nogil:
@@ -39,7 +39,9 @@ cdef class Alignment:
 cdef class Background:
     cdef readonly bint     uniform
     cdef readonly Alphabet alphabet
+    cdef readonly VectorF  residue_frequencies
     cdef          P7_BG*   _bg
+    cdef          int      _L
 
     cpdef Background copy(self)
 

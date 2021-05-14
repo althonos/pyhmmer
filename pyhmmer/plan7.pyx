@@ -60,7 +60,7 @@ ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
     from libhmmer.impl_sse.io cimport p7_oprofile_Write
 
-from .easel cimport Alphabet, Sequence, DigitalSequence, MSA, TextMSA, DigitalMSA
+from .easel cimport Alphabet, Sequence, DigitalSequence, MSA, TextMSA, DigitalMSA, VectorF
 from .reexports.p7_tophits cimport p7_tophits_Reuse
 from .reexports.p7_hmmfile cimport (
     read_asc20hmm,
@@ -185,6 +185,8 @@ cdef class Background:
             backgound model.
         uniform (`bool`): Whether or not the null model has been created
             with uniform frequencies.
+        residue_frequencies (`~pyhmmer.easel.VectorF`): The null1 background
+            residue frequencies.
 
     """
 
@@ -192,7 +194,9 @@ cdef class Background:
 
     def __cinit__(self):
         self._bg = NULL
+        self._L  = 350
         self.alphabet = None
+        self.residue_frequencies = None
         self.uniform = False
 
     def __init__(self, Alphabet alphabet, bint uniform=False):
@@ -217,6 +221,11 @@ cdef class Background:
         if self._bg == NULL:
             raise AllocationError("P7_BG")
 
+        self.residue_frequencies = VectorF.__new__(VectorF)
+        self.residue_frequencies._data = &(self._bg.f[0])
+        self.residue_frequencies._owner = self
+        self.residue_frequencies._n = self.residue_frequencies._shape[0] = self.alphabet.K
+
     def __dealloc__(self):
         libhmmer.p7_bg.p7_bg_Destroy(self._bg)
 
@@ -230,19 +239,39 @@ cdef class Background:
         """`int`: The mean of the null model length distribution, in residues.
         """
         assert self._bg != NULL
-        return <int> ceil(self._bg.p1 / (1 - self._bg.p1))
+        return self._L
 
     @L.setter
     def L(self, int L):
+        assert self._bg != NULL
+
         cdef int    status
         cdef P7_BG* bg     = self._bg
-
-        assert self._bg != NULL
 
         with nogil:
             status = libhmmer.p7_bg.p7_bg_SetLength(bg, L)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_bg_SetLength")
+        self._L = L
+
+    @property
+    def transition_probability(self):
+        r"""`float`: The null1 transition probability (:math:`\frac{L}{L+1}`).
+        """
+        assert self._bg != NULL
+        return self._bg.p1
+
+    @property
+    def omega(self):
+        """`float`: The *prior* on null2/null3.
+        """
+        assert self._bg != NULL
+        return self._bg.omega
+
+    @omega.setter
+    def omega(self, float omega):
+        assert self._bg != NULL
+        self._bg.omega = omega
 
     # --- Methods ------------------------------------------------------------
 

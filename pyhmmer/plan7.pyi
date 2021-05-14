@@ -4,7 +4,7 @@ import os
 import types
 import typing
 
-from .easel import Alphabet, Sequence, DigitalSequence, MSA, DigitalMSA
+from .easel import Alphabet, Sequence, DigitalSequence, MSA, DigitalMSA, VectorF
 
 class Alignment(collections.abc.Sized):
     domain: Domain
@@ -37,6 +37,14 @@ class Background(object):
     def L(self) -> int: ...
     @L.setter
     def L(self, L: int) -> None: ...
+    @property
+    def residue_frequencies(self) -> VectorF: ...
+    @property
+    def transition_probability(self) -> float: ...
+    @property
+    def omega(self) -> float: ...
+    @omega.setter
+    def omega(self, omega: float) -> None: ...
     def copy(self) -> Background: ...
 
 class Builder(object):
