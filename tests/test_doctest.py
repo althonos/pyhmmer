@@ -22,11 +22,14 @@ class _numpy_array(object):
     """A mock `numpy.ndarray` to be used in doctests.
     """
 
-    def __init__(self, *args, **kwargs):
-        pass
+    def __init__(self, inner, **kwargs):
+        self:inner = inner
 
     def reshape(self, *args, **kwargs):
         return self
+
+    def __iter__(self):
+        return iter(self.inner)
 
     def __repr__(self):
         return "array([[...]], dtype=float32)"
