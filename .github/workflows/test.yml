@@ -121,10 +121,12 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Install OpenBLAS with homebrew
+      run: brew install openblas
     - name: Update pip
       run: python -m pip install -U pip wheel setuptools
     - name: Install Python requirements
-      run: python -m pip install -r ci/requirements.txt
+      run: OPENBLAS="$(brew --prefix openblas)" python -m pip install -r ci/requirements.txt
     - name: Build C extension
       run: python setup.py build_ext --inplace --debug
     - name: Test with coverage
