@@ -40,13 +40,18 @@ API Reference
        pyhmmer.easel.DigitalMSA
        pyhmmer.easel.DigitalSequence
        pyhmmer.easel.KeyHash
+       pyhmmer.easel.Matrix
+       pyhmmer.easel.MatrixF
        pyhmmer.easel.MSA
+       pyhmmer.easel.MSAFile
        pyhmmer.easel.Sequence
        pyhmmer.easel.SequenceFile
        pyhmmer.easel.TextMSA
        pyhmmer.easel.TextSequence
        pyhmmer.easel.SSIReader
        pyhmmer.easel.SSIWriter
+       pyhmmer.easel.Vector
+       pyhmmer.easel.VectorF
 
 
     Plan7

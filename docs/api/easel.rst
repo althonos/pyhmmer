@@ -30,6 +30,24 @@ KeyHash
    :members:
 
 
+Vector / Matrix
+---------------
+
+.. autoclass:: pyhmmer.easel.Vector
+   :members:
+
+.. autoclass:: pyhmmer.easel.VectorF
+   :special-members: __init__
+   :members:
+
+.. autoclass:: pyhmmer.easel.Matrix
+   :members:
+
+.. autoclass:: pyhmmer.easel.MatrixF
+   :special-members: __init__
+   :members:
+
+
 Multiple Sequence Alignment
 ---------------------------
 
@@ -41,6 +59,14 @@ Multiple Sequence Alignment
    :members:
 
 .. autoclass:: pyhmmer.easel.DigitalMSA(MSA)
+   :special-members: __init__
+   :members:
+
+
+MSA File
+--------
+
+.. autoclass:: pyhmmer.easel.MSAFile
    :special-members: __init__
    :members:
 
