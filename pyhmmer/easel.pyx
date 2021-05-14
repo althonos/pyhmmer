@@ -562,10 +562,9 @@ cdef class Vector:
 cdef class VectorF(Vector):
     """A 1D vector storing single-precision floating point number.
 
-    Objects of this type support the buffer protocol, and can be manipulated
-    with `numpy` as an array:
+    Objects of this type support the buffer protocol, and can be converted
+    into a `numpy` array with the `numpy.asarray` function:
 
-        >>> import numpy
         >>> v = VectorF([1, 2, 3])
         >>> a = numpy.asarray(v)
         >>> numpy.sum(a)
