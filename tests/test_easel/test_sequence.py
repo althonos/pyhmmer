@@ -10,6 +10,10 @@ from pyhmmer import easel
 
 
 class TestSequence(unittest.TestCase):
+
+    def test_init_abstract(self):
+        self.assertRaises(TypeError, easel.Sequence, name=b"ecoRI", sequence="GAATTC")
+
     def test_write_roundtrip(self):
         seq = easel.TextSequence(name=b"ecoRI", sequence="GAATTC")
         with io.BytesIO() as buffer:
