@@ -1743,17 +1743,15 @@ cdef class TextMSA(MSA):
 
         """
         assert self._msa != NULL
+        assert alphabet._abc != NULL
 
-        cdef int status
-        cdef DigitalMSA new
+        cdef int                 status
+        cdef DigitalMSA          new
+        cdef char[eslERRBUFSIZE] errbuf
 
         new = DigitalMSA.__new__(DigitalMSA, alphabet)
         with nogil:
-            new._msa = libeasel.msa.esl_msa_CreateDigital(
-                alphabet._abc,
-                self._msa.nseq,
-                self._msa.alen
-            )
+            new._msa = libeasel.msa.esl_msa_Create(self._msa.nseq, self._msa.alen)
             if new._msa == NULL:
                 raise AllocationError("ESL_MSA")
 
@@ -1761,7 +1759,15 @@ cdef class TextMSA(MSA):
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "esl_msa_Copy")
 
-        assert new._msa.flags & libeasel.msa.eslMSA_DIGITAL
+            status = libeasel.msa.esl_msa_Digitize(alphabet._abc, new._msa, <char*> &errbuf)
+            if status == libeasel.eslOK:
+                assert new._msa.flags & libeasel.msa.eslMSA_DIGITAL
+            elif status == libeasel.eslEINVAL:
+                err_msg = errbuf.decode("utf-8")
+                raise ValueError(f"Cannot digitize MSA with alphabet {alphabet}: {err_msg}")
+            else:
+                raise UnexpectedError(stats, "esl_msa_Digitize")
+
         return new
 
 
