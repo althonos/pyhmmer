@@ -172,7 +172,7 @@ class TestTextMSA(TestMSA, unittest.TestCase):
         self.assertEqual(len(msa_d.sequences), 1)
         self.assertTrue(msa_d)
         self.assertEqual(msa_d.sequences[0].name, b"seq1")
-        self.assertEqual(bytearray(msa_d.sequences[0].sequence), bytearray([0, 1, 2, 3]))
+        self.assertEqual(msa_d.sequences[0].sequence, bytearray([0, 1, 2, 3]))
 
 
 class TestDigitalMSA(TestMSA, unittest.TestCase):

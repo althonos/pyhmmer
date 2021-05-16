@@ -13,7 +13,6 @@ to facilitate the development of biological software in C. It is used by
 cimport cython
 from cpython cimport Py_buffer
 from cpython.buffer cimport PyBUF_READ, PyBUF_WRITE, PyBUF_FORMAT, PyBUF_F_CONTIGUOUS
-from cpython.memoryview cimport PyMemoryView_FromMemory
 from cpython.unicode cimport PyUnicode_FromUnicode
 from libc.stdint cimport int64_t, uint16_t, uint32_t
 from libc.stdio cimport fclose
@@ -1781,12 +1780,12 @@ cdef class _DigitalMSASequences(_MSASequences):
             raise IndexError("list index out of range")
 
         seq = DigitalSequence.__new__(DigitalSequence, self.alphabet)
-        status = libeasel.sq.esl_sq_FetchFromMSA(self.msa._msa, idx, &seq._sq)
-
-        if status == libeasel.eslOK:
-            return seq
-        else:
+        with nogil:
+            status = libeasel.sq.esl_sq_FetchFromMSA(self.msa._msa, idx, &seq._sq)
+        if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_FetchFromMSA")
+
+        return seq
 
     def __setitem__(self, int idx, DigitalSequence seq):
         assert self.msa is not None
@@ -2643,17 +2642,33 @@ cdef class DigitalSequence(Sequence):
         assert self._sq.desc != NULL
         assert self._sq.acc != NULL
 
-    @property
-    def sequence(self):
-        """`memoryview`: The raw sequence digits, as a memory view.
-        """
+    def __getbuffer__(self, Py_buffer* buffer, int flags):
         assert self._sq != NULL
         assert libeasel.sq.esl_sq_IsDigital(self._sq)
-        return PyMemoryView_FromMemory(
-            <char*> &self._sq.dsq[1],
-            self._sq.n,
-            PyBUF_WRITE
-        )
+
+        if flags & PyBUF_FORMAT:
+            buffer.format = "B"
+        else:
+            buffer.format = NULL
+        buffer.buf = <void*> &(self._sq.dsq[1])
+        buffer.internal = NULL
+        buffer.itemsize = sizeof(ESL_DSQ)
+        buffer.len = self._sq.n * sizeof(ESL_DSQ)
+        buffer.ndim = 1
+        buffer.obj = self
+        buffer.readonly = 1
+        buffer.shape = NULL
+        buffer.strides = NULL
+        buffer.suboffsets = NULL
+
+    def __releasebuffer__(self, Py_buffer* buffer):
+        pass
+
+    @property
+    def sequence(self):
+        """`bytearray`: The raw sequence digits, as a byte array.
+        """
+        return bytearray(self)
 
     cpdef DigitalSequence copy(self):
         """copy(self)\n--
