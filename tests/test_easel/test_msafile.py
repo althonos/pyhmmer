@@ -25,7 +25,8 @@ class TestMSAFile(unittest.TestCase):
     def test_empty_file(self):
         with tempfile.NamedTemporaryFile() as f:
             self.assertRaises(ValueError, easel.MSAFile, f.name)  # cannot guess format
-            self.assertRaises(EOFError, easel.MSAFile, f.name, format="stockholm")
+            with easel.MSAFile(f.name, format="stockholm") as msa_file:
+                self.assertIs(msa_file.read(), None)
 
     def test_author(self):
         trna_5 = os.path.join(self.easel_folder, "testsuite", "trna-5.stk")
@@ -54,7 +55,7 @@ class TestMSAFile(unittest.TestCase):
         trna_5 = os.path.join(self.easel_folder, "testsuite", "trna-5.stk")
         with easel.MSAFile(trna_5) as f:
             msa = next(f)
-            self.assertRaises(StopIteration, next, msa)
+            self.assertRaises(StopIteration, next, f)
 
     def test_closed_file(self):
         trna_5 = os.path.join(self.easel_folder, "testsuite", "trna-5.stk")
