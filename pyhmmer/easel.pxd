@@ -83,7 +83,7 @@ cdef class MatrixF(Matrix):
     cpdef float max(self)
     cpdef float min(self)
     cpdef float sum(self)
-    
+
 
 # --- Multiple Sequences Alignment -------------------------------------------
 
@@ -131,7 +131,7 @@ cdef class MSAFile:
 
     cpdef void close(self)
     cpdef Alphabet guess_alphabet(self)
-    cpdef void set_digital(self, Alphabet)
+    cpdef Alphabet set_digital(self, Alphabet)
 
 
 # --- Sequence ---------------------------------------------------------------
@@ -172,7 +172,7 @@ cdef class SequenceFile:
 
     cpdef void close(self)
     cpdef Alphabet guess_alphabet(self)
-    cpdef void set_digital(self, Alphabet)
+    cpdef Alphabet set_digital(self, Alphabet)
 
 
 # --- Sequence/Subsequence Index ---------------------------------------------

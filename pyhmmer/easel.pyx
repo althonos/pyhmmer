@@ -1582,7 +1582,7 @@ cdef class TextMSA(MSA):
                 alignment, if any.
             accession (`bytes`, optional): The accession of the alignment,
                 if any.
-            sequences (iterable of `TextSequence`): The sequences to store
+            sequences (collection of `TextSequence`): The sequences to store
                 in the multiple sequence alignment. All sequences must have
                 the same length. They also need to have distinct names.
             author (`bytes`, optional): The author of the alignment, often
@@ -1606,19 +1606,20 @@ cdef class TextMSA(MSA):
 
         """
         cdef list    seqs  = [] if sequences is None else list(sequences)
-        cdef set     names = { seq.name for seq in seqs }
-        cdef int64_t alen  = len(seqs[0]) if seqs else -1
-        cdef int     nseq  = len(seqs) if seqs else 1
-
-        if len(names) != len(seqs):
-            raise ValueError("duplicate names in alignment sequences")
 
         for seq in seqs:
             if not isinstance(seq, TextSequence):
                 ty = type(seq).__name__
                 raise TypeError(f"expected TextSequence, found {ty}")
-            elif len(seq) != alen:
-                raise ValueError("all sequences must have the same length")
+
+        cdef set     names = {seq.name for seq in seqs}
+        cdef int64_t alen  = len(seqs[0]) if seqs else -1
+        cdef int     nseq  = len(seqs) if seqs else 1
+
+        if len(names) != len(seqs):
+            raise ValueError("duplicate names in alignment sequences")
+        elif not all(len(seq) == alen for seq in seqs):
+            raise ValueError("all sequences must have the same length")
 
         with nogil:
             self._msa = libeasel.msa.esl_msa_Create(nseq, alen)
@@ -1721,16 +1722,10 @@ cdef class TextMSA(MSA):
         cdef int status
         cdef TextMSA new = TextMSA.__new__(TextMSA)
         with nogil:
-            new._msa = libeasel.msa.esl_msa_Create(self._msa.nseq, self._msa.alen)
+            new._msa = libeasel.msa.esl_msa_Clone(self._msa)
         if new._msa == NULL:
             raise AllocationError("ESL_MSA")
-
-        with nogil:
-            status = libeasel.msa.esl_msa_Copy(self._msa, new._msa)
-        if status == libeasel.eslOK:
-            return new
-        else:
-            raise UnexpectedError(status, "esl_msa_Copy")
+        return new
 
     cpdef DigitalMSA digitize(self, Alphabet alphabet):
         """digitize(self, alphabet)\n--
@@ -1751,24 +1746,19 @@ cdef class TextMSA(MSA):
 
         new = DigitalMSA.__new__(DigitalMSA, alphabet)
         with nogil:
-            new._msa = libeasel.msa.esl_msa_Create(self._msa.nseq, self._msa.alen)
+            new._msa = libeasel.msa.esl_msa_Clone(self._msa)
             if new._msa == NULL:
                 raise AllocationError("ESL_MSA")
-
-            status = libeasel.msa.esl_msa_Copy(self._msa, new._msa)
-            if status != libeasel.eslOK:
-                raise UnexpectedError(status, "esl_msa_Copy")
-
             status = libeasel.msa.esl_msa_Digitize(alphabet._abc, new._msa, <char*> &errbuf)
-            if status == libeasel.eslOK:
-                assert new._msa.flags & libeasel.msa.eslMSA_DIGITAL
-            elif status == libeasel.eslEINVAL:
-                err_msg = errbuf.decode("utf-8")
-                raise ValueError(f"Cannot digitize MSA with alphabet {alphabet}: {err_msg}")
-            else:
-                raise UnexpectedError(stats, "esl_msa_Digitize")
 
-        return new
+        if status == libeasel.eslOK:
+            assert new._msa.flags & libeasel.msa.eslMSA_DIGITAL
+            return new
+        elif status == libeasel.eslEINVAL:
+            err_msg = errbuf.decode("utf-8")
+            raise ValueError(f"Cannot digitize MSA with alphabet {alphabet}: {err_msg}")
+        else:
+            raise UnexpectedError(status, "esl_msa_Digitize")
 
 
 cdef class _DigitalMSASequences(_MSASequences):
@@ -1787,7 +1777,7 @@ cdef class _DigitalMSASequences(_MSASequences):
 
         if idx < 0:
             idx += self.msa._msa.nseq
-        if idx >= self.msa._msa.nseq:
+        if idx >= self.msa._msa.nseq or idx < 0:
             raise IndexError("list index out of range")
 
         seq = DigitalSequence.__new__(DigitalSequence, self.alphabet)
@@ -1819,7 +1809,7 @@ cdef class _DigitalMSASequences(_MSASequences):
             raise ValueError("sequence does not have the expected length")
 
         # make sure the sequence has the right alphabet
-        if not self.msa.alphabet._eq(seq.alphabet):
+        if not (<Alphabet> self.msa.alphabet)._eq(seq.alphabet):
             raise AlphabetMismatch(self.msa.alphabet, seq.alphabet)
 
         # make sure inserting the sequence will not create a name duplicate
@@ -1976,19 +1966,10 @@ cdef class DigitalMSA(MSA):
         cdef DigitalMSA    new    = DigitalMSA.__new__(DigitalMSA, self.alphabet)
 
         with nogil:
-            new._msa = libeasel.msa.esl_msa_CreateDigital(
-                abc,
-                self._msa.nseq,
-                self._msa.alen
-            )
-            if new._msa == NULL:
-                raise AllocationError("ESL_MSA")
-            status = libeasel.msa.esl_msa_Copy(self._msa, new._msa)
-
-        if status == libeasel.eslOK:
-            return new
-        else:
-            raise UnexpectedError(status, "esl_msa_Copy")
+            new._msa = libeasel.msa.esl_msa_Clone(self._msa)
+        if new._msa == NULL:
+            raise AllocationError("ESL_MSA")
+        return new
 
     cpdef TextMSA textize(self):
         """textize(self)\n--
@@ -2002,25 +1983,23 @@ cdef class DigitalMSA(MSA):
 
         """
         assert self._msa != NULL
+        assert self.alphabet._abc != NULL
 
         cdef int     status
         cdef TextMSA new
 
         new = TextMSA.__new__(TextMSA)
         with nogil:
-            new._msa = libeasel.msa.esl_msa_Create(
-                self._msa.nseq,
-                self._msa.alen
-            )
+            new._msa = libeasel.msa.esl_msa_Clone(self._msa)
             if new._msa == NULL:
                 raise AllocationError("ESL_MSA")
+            status = libeasel.msa.esl_msa_Textize(new._msa)
 
-            status = libeasel.msa.esl_msa_Copy(self._msa, new._msa)
-            if status != libeasel.eslOK:
-                raise UnexpectedError(status, "esl_msa_Copy")
-
-        assert not (new._msa.flags & libeasel.msa.eslMSA_DIGITAL)
-        return new
+        if status == libeasel.eslOK:
+            assert not (new._msa.flags & libeasel.msa.eslMSA_DIGITAL)
+            return new
+        else:
+            raise UnexpectedError(status, "esl_msa_Textize")
 
 
 # --- MSA File ---------------------------------------------------------------
@@ -2067,7 +2046,7 @@ cdef class MSAFile:
             raise FileNotFoundError(2, "No such file or directory: {!r}".format(file))
         elif status == libeasel.eslEMEM:
             raise AllocationError("ESL_MSAFILE")
-        elif status == libeasel.eslEFORMAT:
+        elif status == libeasel.eslENOFORMAT:
             if format is None:
                 raise ValueError("Could not determine format of file: {!r}".format(file))
             else:
@@ -2184,13 +2163,21 @@ cdef class MSAFile:
         else:
             raise UnexpectedError(status, "esl_msafile_GuessAlphabet")
 
-    cpdef void set_digital(self, Alphabet alphabet):
+    cpdef Alphabet set_digital(self, Alphabet alphabet):
         """set_digital(self, alphabet)\n--
 
         Set the `MSAFile` to read in digital mode with ``alphabet``.
 
         This method can be called even after the first alignment have been
         read; it only affects subsequent sequences in the file.
+
+        Returns:
+            `~pyhmmer.easel.Alphabet`: The alphabet it was given. Useful to
+            wrap `~MSAFile.guess_alphabet` calls and get the resulting
+            alphabet.
+
+        .. versionchanged:: 0.4.0
+            Returns the `Alphabet` given as argument instead of `None`.
 
         """
         if self._msaf == NULL:
@@ -2199,6 +2186,7 @@ cdef class MSAFile:
         cdef int status = libeasel.msafile.esl_msafile_SetDigital(self._msaf, alphabet._abc)
         if status == libeasel.eslOK:
             self.alphabet = alphabet
+            return alphabet
         else:
             raise UnexpectedError(status, "esl_msafile_SetDigital")
 
@@ -2636,7 +2624,7 @@ cdef class DigitalSequence(Sequence):
                 # update the digital sequence buffer
                 self._sq.dsq[0] = self._sq.dsq[n+1] = libeasel.eslDSQ_SENTINEL
                 memcpy(<void*> &self._sq.dsq[1], <const void*> &sequence[0], n)
-            # set the coor bookkeeping like it would happend
+            # set the coor bookkeeping like it would happen
             self._sq.start = 1
             self._sq.C = 0
             self._sq.end = self._sq.W = self._sq.L = self._sq.n = n
@@ -3060,13 +3048,21 @@ cdef class SequenceFile:
         else:
             raise UnexpectedError(status, "esl_sqfile_GuessAlphabet")
 
-    cpdef void set_digital(self, Alphabet alphabet):
+    cpdef Alphabet set_digital(self, Alphabet alphabet):
         """set_digital(self, alphabet)\n--
 
         Set the `SequenceFile` to read in digital mode with ``alphabet``.
 
         This method can be called even after the first sequences have been
         read; it only affects subsequent sequences in the file.
+
+        Returns:
+            `~pyhmmer.easel.Alphabet`: The alphabet it was given. Useful to
+            wrap `~SequenceFile.guess_alphabet` calls and get the resulting
+            alphabet.
+
+        .. versionchanged:: 0.4.0
+            Returns the `Alphabet` given as argument instead of `None`.
 
         """
         if self._sqfp == NULL:
@@ -3075,6 +3071,7 @@ cdef class SequenceFile:
         cdef int status = libeasel.sqio.esl_sqfile_SetDigital(self._sqfp, alphabet._abc)
         if status == libeasel.eslOK:
             self.alphabet = alphabet
+            return self.alphabet
         else:
             raise UnexpectedError(status, "esl_sqfile_SetDigital")
 
