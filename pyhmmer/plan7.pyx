@@ -1364,6 +1364,7 @@ cdef class HMM:
         Set all parameters to zero, including model composition.
 
         """
+        assert self._hmm != NULL
         with nogil:
             libhmmer.p7_hmm.p7_hmm_Zero(self._hmm)
 
@@ -1387,7 +1388,9 @@ cdef class HMM:
         return new
 
     cpdef void renormalize(self):
-        """Renormalize all parameter vectors (emissions and transitions).
+        """renormalize(self)\n--
+
+        Renormalize all parameter vectors (emissions and transitions).
 
         .. versionadded:: 0.4.0
 
@@ -1401,7 +1404,9 @@ cdef class HMM:
             raise UnexpectedError(status, "p7_hmm_Renormalize")
 
     cpdef void scale(self, double scale, bint exponential=False):
-        r"""In a model containing counts, rescale counts by a factor.
+        """scale(self, scale, exponential=False)\n--
+
+        In a model containing counts, rescale counts by a factor.
 
         This method only affects core probability model emissions and
         transitions.
@@ -1409,10 +1414,10 @@ cdef class HMM:
         Arguments:
             scale (`float`): The scaling factor to use (:math:`1.0` for no
                 scaling). Often computed using the ratio of effective
-                sequences (:math:`\frac{n_{eff}}{n_{seq}}`)
+                sequences (:math:`\\frac{n_{eff}}{n_{seq}}`)
             exponential (`bool`): When set to `True`, use ``scale`` as an
                 exponential factor (:math:`C_i = C_i \exp{s}`) instead of
-                a multiplicative factor (:math: `C_i = C_i \times s`),
+                a multiplicative factor (:math: `C_i = C_i \\times s`),
                 resulting in a non-uniform scaling across columns. This
                 can be useful when some heavily fragmented sequences are
                 used to reconstruct a family MSA.
@@ -1433,7 +1438,9 @@ cdef class HMM:
             raise UnexpectedError(status, func)
 
     cpdef void set_composition(self):
-        """Calculate and set the model composition.
+        """set_composition(self)\n--
+
+        Calculate and set the model composition.
 
         .. versionadded:: 0.4.0
 
@@ -2902,15 +2909,8 @@ cdef class TopHits:
 
     # --- Methods ------------------------------------------------------------
 
-    cdef void threshold(self, Pipeline pipeline):
-        """threshold(self, pipeline)\n--
+    cdef int _threshold(self, Pipeline pipeline) except 1:
 
-        Apply score and e-value thresholds using pipeline parameters.
-
-        This function is automatically called in `Pipeline.search_hmm` or
-        `Pipeline.search_seq`, and is therefore not exposed in the Python API.
-
-        """
         cdef int          status
         cdef P7_TOPHITS*  th     = self._th
         cdef P7_PIPELINE* pli    = pipeline._pli
@@ -2926,28 +2926,33 @@ cdef class TopHits:
         self.domZ = pli.domZ
         self.long_targets = pli.long_targets
 
-    cpdef void clear(self):
-        """clear(self)\n--
+    def threshold(self, Pipeline pipeline):
+        """threshold(self, pipeline)\n--
 
-        Free internals to allow reusing for a new pipeline run.
+        Apply score and e-value thresholds using pipeline parameters.
+
+        This function is automatically called in `Pipeline.search_hmm` or
+        `Pipeline.search_seq`, so it should have limited usefulness at the
+        Python level.
 
         """
+        self._threshold(pipeline)
+
+    cdef int _clear(self) except 1:
         assert self._th != NULL
         cdef int status = p7_tophits_Reuse(self._th)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tophits_Reuse")
 
-    cpdef void sort(self, str by="key"):
-        """sort(self, by="key")\n--
+    def clear(self):
+        """clear(self)\n--
 
-        Sort hits in the current instance using the given method.
-
-        Arguments:
-            by (`str`): The comparison method to use to compare hits.
-                Allowed values are: ``key`` (the default) to sort by key, or
-                ``seqidx`` to sort by sequence index and alignment position.
+        Free internals to allow reusing for a new pipeline run.
 
         """
+        self._clear()
+
+    cdef int _sort(self, str by="key") except 1:
         assert self._th != NULL
 
         cdef P7_TOPHITS* th = self._th
@@ -2969,7 +2974,20 @@ cdef class TopHits:
         if status != libeasel.eslOK:
             raise UnexpectedError(status, function)
 
-    cpdef bint is_sorted(self, str by="key"):
+    def sort(self, str by="key"):
+        """sort(self, by="key")\n--
+
+        Sort hits in the current instance using the given method.
+
+        Arguments:
+            by (`str`): The comparison method to use to compare hits.
+                Allowed values are: ``key`` (the default) to sort by key, or
+                ``seqidx`` to sort by sequence index and alignment position.
+
+        """
+        self._sort(by=by)
+
+    def is_sorted(self, str by="key"):
         """is_sorted(self, by="key")\n--
 
         Check whether or not the hits are sorted with the given method.

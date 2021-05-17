@@ -8,7 +8,7 @@ import pkg_resources
 
 import pyhmmer
 from pyhmmer.errors import EaselError
-from pyhmmer.easel import SequenceFile
+from pyhmmer.easel import SequenceFile, TextMSA, DigitalMSA
 from pyhmmer.plan7 import HMMFile, Pipeline
 
 
@@ -21,7 +21,8 @@ class TestTopHits(unittest.TestCase):
         with HMMFile(hmm_path) as hmm_file:
             self.hmm = next(hmm_file)
         with SequenceFile(seqs_path) as seqs_file:
-            self.seqs = [seq.digitize(self.hmm.alphabet) for seq in seqs_file]
+            seqs_file.set_digital(self.hmm.alphabet)
+            self.seqs = list(seqs_file)
 
         self.pipeline = Pipeline(alphabet=self.hmm.alphabet)
         self.hits = self.pipeline.search_hmm(self.hmm, self.seqs)
@@ -57,6 +58,10 @@ class TestTopHits(unittest.TestCase):
         self.assertTrue(self.hits.is_sorted(by="seqidx"))
         self.assertFalse(self.hits.is_sorted(by="key"))
 
+        # check error otherwise
+        self.assertRaises(ValueError, self.hits.sort, by="nonsense")
+        self.assertRaises(ValueError, self.hits.is_sorted, by="nonsense")
+
     def test_sort_while_hit(self):
         # check sorting while a Hit instance exists does not crash, and that
         # the Hit still points to the right data
@@ -73,5 +78,9 @@ class TestTopHits(unittest.TestCase):
 
     def test_to_msa(self):
         msa = self.hits.to_msa(self.hmm.alphabet)
+        self.assertIsInstance(msa, TextMSA)
         unique_names = { seq.name.split(b"/")[0] for seq in msa.sequences }
         self.assertEqual(len(unique_names), self.hits.included)
+
+        msa_d = self.hits.to_msa(self.hmm.alphabet, True, True, True)
+        self.assertIsInstance(msa_d, DigitalMSA)
