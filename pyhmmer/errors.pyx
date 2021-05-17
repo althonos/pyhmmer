@@ -53,7 +53,7 @@ class UnexpectedError(RuntimeError):
         return "{}({!r}, {!r})".format(type(self).__name__, self.code, self.function)
 
     def __str__(self):
-        return "Unexpected error occurred in {!r}: {} (status code {}).".format(
+        return "Unexpected error occurred in {!r}: {} (status code {})".format(
             self.function,
             statuscode.get(self.code, "<unknown>"),
             self.code,
@@ -71,7 +71,7 @@ class AllocationError(MemoryError):
         return "{}({!r})".format(type(self).__name__, self.ctype)
 
     def __str__(self):
-        return "Could not allocate {}.".format(self.ctype)
+        return "Could not allocate {!r}".format(self.ctype)
 
 
 class EaselError(RuntimeError):
@@ -86,9 +86,9 @@ class EaselError(RuntimeError):
         return "{}({!r}, {!r})".format(type(self).__name__, self.code, self.message)
 
     def __str__(self):
-        return "Error raised from C code: {}, {} (status code {}).".format(
-            statuscode.get(self.code, "<unknown>"),
+        return "Error raised from C code: {}, {} (status code {})".format(
             self.message,
+            statuscode.get(self.code, "<unknown>"),
             self.code
         )
 
@@ -106,7 +106,7 @@ class AlphabetMismatch(ValueError):
         >>> builder.build(seq, plan7.Background(seq.alphabet))
         Traceback (most recent call last):
           ...
-        pyhmmer.errors.AlphabetMismatch: expected ..., found ...
+        pyhmmer.errors.AlphabetMismatch: Expected ..., found ...
 
     .. versionadded:: 0.3.0
 
@@ -121,7 +121,7 @@ class AlphabetMismatch(ValueError):
         return f"{type(self).__name__}({self.expected}, {self.actual})"
 
     def __str__(self):
-        return f"expected {self.expected}, found {self.actual}"
+        return f"Expected {self.expected}, found {self.actual}"
 
     def __eq__(self, other):
         if not isinstance(other, AlphabetMismatch):
