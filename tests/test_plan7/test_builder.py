@@ -1,3 +1,4 @@
+import copy
 import io
 import itertools
 import os
@@ -9,7 +10,7 @@ import pkg_resources
 from unittest import mock
 
 import pyhmmer
-from pyhmmer.errors import EaselError
+from pyhmmer.errors import EaselError, AlphabetMismatch
 from pyhmmer.easel import Alphabet, SequenceFile, MSAFile
 from pyhmmer.plan7 import HMMFile, Pipeline, Builder, Background
 
@@ -40,12 +41,38 @@ class TestBuilder(unittest.TestCase):
         with SequenceFile(cls.faa_path) as seqf:
             cls.proteins = list(seqf)
 
+    def test_init_error(self):
+        abc = Alphabet.amino()
+        self.assertRaises(ValueError, Builder, alphabet=abc, architecture="nonsense")
+        self.assertRaises(ValueError, Builder, alphabet=abc, weighting="nonsense")
+        self.assertRaises(ValueError, Builder, alphabet=abc, effective_number="nonsense")
+        self.assertRaises(ValueError, Builder, alphabet=abc, prior_scheme="nonsense")
+
+    def test_init_effective_number(self):
+        abc = Alphabet.amino()
+        builder = Builder(alphabet=abc, effective_number=2.0)
+        self.assertEqual(builder.effective_number, 2.0)
+        self.assertRaises(TypeError, Builder, alphabet=abc, effective_number=[])
+
     def test_copy(self):
         abc = Alphabet.amino()
         builder = Builder(alphabet=abc)
-        copy = builder.copy()
-        self.assertEqual(builder.alphabet, copy.alphabet)
-        self.assertEqual(builder.seed, copy.seed)
+        bc1 = builder.copy()
+        self.assertEqual(builder.alphabet, bc1.alphabet)
+        self.assertEqual(builder.seed, bc1.seed)
+        bc2 = copy.copy(bc1)
+        self.assertEqual(builder.alphabet, bc2.alphabet)
+        self.assertEqual(builder.seed, bc2.seed)
+
+    def test_build_alphabet_mismatch(self):
+        abc = Alphabet.dna()
+        amino = Alphabet.amino()
+
+        builder = Builder(alphabet=abc)
+        bg = Background(alphabet=abc)
+
+        seq = self.proteins[0].digitize(amino)
+        self.assertRaises(AlphabetMismatch, builder.build, seq, bg)
 
     def test_build_command_line(self):
         abc = Alphabet.amino()

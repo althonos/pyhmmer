@@ -299,13 +299,21 @@ cdef class Background:
         Create a copy of the null model with the same parameters.
 
         """
+        assert self._bg != NULL
+
         cdef Background new = Background.__new__(Background)
-        new.alphabet = self.alphabet
-        new.uniform = self.uniform
         with nogil:
             new._bg = libhmmer.p7_bg.p7_bg_Clone(self._bg)
         if new._bg == NULL:
             raise AllocationError("P7_BG")
+
+        new.alphabet = self.alphabet
+        new.uniform = self.uniform
+        new.residue_frequencies = VectorF.__new__(VectorF)
+        new.residue_frequencies._data = &(new._bg.f[0])
+        new.residue_frequencies._owner = new
+        new.residue_frequencies._n = new.residue_frequencies._shape[0] = new.alphabet.K
+
         return new
 
 
@@ -352,7 +360,7 @@ cdef class Builder:
         *,
         str architecture="fast",
         str weighting="pb",
-        str effective_number="entropy",
+        object effective_number="entropy",
         str prior_scheme="alphabet",
         float symfrac=0.5,
         float fragthresh=0.5,
@@ -434,12 +442,15 @@ cdef class Builder:
         if isinstance(effective_number, (int, float)):
             self._bld.effn_strategy = p7_effnchoice_e.p7_EFFN_SET
             self._bld.eset = effective_number
-        else:
+        elif isinstance(effective_number, str):
             _effn = self._EFFECTIVE_STRATEGY.get(effective_number)
             if _effn is not None:
                 self._bld.effn_strategy = _effn
             else:
                 raise ValueError(f"Invalid value for 'effective_number': {effective_number}")
+        else:
+            ty = type(effective_number).__name__
+            raise TypeError(f"Invalid type for 'effective_number': {ty}")
 
         # set the RE target if given one
         if ere is not None:
