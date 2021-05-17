@@ -26,6 +26,11 @@ class TestHMM(unittest.TestCase):
         hmm = HMM(100, abc)
         self.assertIs(hmm.checksum, None)
 
+        hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/LuxC.hmm")
+        with HMMFile(hmm_path) as hmm_file:
+            hmm = next(hmm_file)
+        self.assertEqual(hmm.checksum, 395769323)
+
     def test_composition(self):
         abc = Alphabet.dna()
         hmm = HMM(100, abc)

@@ -2938,20 +2938,6 @@ cdef class TopHits:
         """
         self._threshold(pipeline)
 
-    cdef int _clear(self) except 1:
-        assert self._th != NULL
-        cdef int status = p7_tophits_Reuse(self._th)
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "p7_tophits_Reuse")
-
-    def clear(self):
-        """clear(self)\n--
-
-        Free internals to allow reusing for a new pipeline run.
-
-        """
-        self._clear()
-
     cdef int _sort(self, str by="key") except 1:
         assert self._th != NULL
 
