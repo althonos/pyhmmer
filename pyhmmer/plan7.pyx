@@ -531,8 +531,8 @@ cdef class Builder:
                 to use to create the HMM.
 
         Raises:
-            `ValueError`: When either ``sequence`` or ``background`` have
-                the wrong alphabet for this builder.
+            `~pyhmmer.errors.AlphabetMismatch`: When either ``sequence`` or
+                ``background`` have the wrong alphabet for this builder.
 
         """
         assert self._bld != NULL
@@ -613,8 +613,8 @@ cdef class Builder:
                 to use to create the HMM.
 
         Raises:
-            `ValueError`: When either ``msa`` or ``background`` have
-                the wrong alphabet for this builder.
+            `~pyhmmer.errors.AlphabetMismatch`: When either ``msa`` or
+                ``background`` have the wrong alphabet for this builder.
 
         .. versionadded:: 0.3.0
 
@@ -1031,6 +1031,18 @@ cdef class HMM:
         residue composition emitted by the model, the `~HMM.set_composition`
         method must be called to compute the composition from occupancy.
 
+        Note:
+            Although the allocated buffer in the ``P7_HMM`` object is always
+            the same dimension so that it can store the largest possible
+            alphabet, we only expose the relevant residues. This means that
+            the vector will be of size ``alphabet.K``:
+
+                >>> dna = easel.Alphabet.dna()  # dna.K=4
+                >>> hmm = plan7.HMM(100, dna)
+                >>> hmm.set_composition()
+                >>> len(hmm.composition)
+                4
+
         .. versionadded:: 0.4.0
 
         """
@@ -1043,7 +1055,7 @@ cdef class HMM:
         comp = VectorF.__new__(VectorF)
         comp._data = &(self._hmm.compo[0])
         comp._owner = self
-        comp._n = comp._shape[0] = libhmmer.p7_hmm.p7_MAXABET
+        comp._n = comp._shape[0] = self.alphabet.K
         return comp
 
     @property
@@ -1521,7 +1533,6 @@ cdef class HMMFile:
         return self
 
     def __next__(self):
-
         cdef int status
         cdef HMM py_hmm
         cdef P7_HMM* hmm = NULL
@@ -2151,10 +2162,7 @@ cdef class Pipeline:
 
         # check the pipeline was configure with the same alphabet
         if not self.alphabet._eq(query.alphabet):
-            raise ValueError("Wrong alphabet in input HMM: expected {!r}, found {!r}".format(
-                self.alphabet,
-                query.alphabet
-            ))
+            raise AlphabetMismatch(self.alphabet, query.alphabet)
 
         # make sure the pipeline is set to search mode and ready for a new HMM
         self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
@@ -2241,10 +2249,7 @@ cdef class Pipeline:
 
         # check the pipeline was configure with the same alphabet
         if not self.alphabet._eq(query.alphabet):
-            raise ValueError("Wrong alphabet in query MSA: expected {!r}, found {!r}".format(
-                self.alphabet,
-                query.alphabet
-            ))
+            raise AlphabetMismatch(self.alphabet, query.alphabet)
 
         # make sure the pipeline is set to search mode and ready for a new HMM
         self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS

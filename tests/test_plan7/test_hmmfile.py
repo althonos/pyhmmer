@@ -68,9 +68,10 @@ class _TestHMMFileobj:
 class _TestHMMPath:
 
     def open_hmm(self, path):
-        with open(path, "rb") as f:
-            buffer = io.BytesIO(f.read())
-        return HMMFile(buffer)
+        return HMMFile(path)
+
+    def test_filenotfound(self):
+        self.assertRaises(FileNotFoundError, HMMFile, "path/to/missing/file")
 
 
 class _TestThioesterase(_TestHMMFile):

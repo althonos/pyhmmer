@@ -9,7 +9,7 @@ import pkg_resources
 
 import pyhmmer
 from pyhmmer.errors import EaselError
-from pyhmmer.easel import Alphabet, SequenceFile
+from pyhmmer.easel import Alphabet, SequenceFile, VectorF
 from pyhmmer.plan7 import HMM, HMMFile, Pipeline
 
 
@@ -20,6 +20,19 @@ class TestHMM(unittest.TestCase):
         cls.hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/Thioesterase.hmm")
         with HMMFile(cls.hmm_path) as hmm_file:
             cls.hmm = next(hmm_file)
+
+    def test_checksum(self):
+        abc = Alphabet.dna()
+        hmm = HMM(100, abc)
+        self.assertIs(hmm.checksum, None)
+
+    def test_composition(self):
+        abc = Alphabet.dna()
+        hmm = HMM(100, abc)
+        self.assertIs(hmm.composition, None)
+        hmm.set_composition()
+        self.assertEqual(len(hmm.composition), hmm.alphabet.K)
+        self.assertEqual(hmm.composition.shape, (hmm.alphabet.K,))
 
     def test_copy(self):
         hmm2 = copy.copy(self.hmm)
@@ -35,6 +48,24 @@ class TestHMM(unittest.TestCase):
         self.assertNotEqual(self.hmm, HMM(100, abc))
         self.assertNotEqual(self.hmm, 1)
 
+    def test_insert_emissions(self):
+        emissions = self.hmm.insert_emissions
+        self.assertEqual(emissions.shape, (self.hmm.M+1, self.hmm.alphabet.K))
+
+        row = emissions[0]
+        self.assertAlmostEqual(row.sum(), 1.0, places=5)
+
+    def test_command_line(self):
+        abc = Alphabet.amino()
+        hmm = HMM(100, abc)
+        self.assertIs(hmm.command_line, None)
+        hmm.command_line = "hmmbuild x"
+        self.assertEqual(hmm.command_line, "hmmbuild x")
+        hmm.command_line = ""
+        self.assertEqual(hmm.command_line, "")
+        hmm.command_line = None
+        self.assertIs(hmm.command_line, None)
+
     def test_name(self):
         abc = Alphabet.amino()
         hmm = HMM(100, abc)
@@ -45,7 +76,7 @@ class TestHMM(unittest.TestCase):
         hmm.name = b""
         self.assertEqual(hmm.name, b"")
         hmm.name = None
-        self.assertEqual(hmm.name, None)
+        self.assertIs(hmm.name, None)
 
     def test_accession(self):
         abc = Alphabet.amino()
@@ -57,7 +88,19 @@ class TestHMM(unittest.TestCase):
         hmm.accession = b""
         self.assertEqual(hmm.accession, b"")
         hmm.accession = None
-        self.assertEqual(hmm.accession, None)
+        self.assertIs(hmm.accession, None)
+
+    def test_description(self):
+        abc = Alphabet.amino()
+        hmm = HMM(100, abc)
+
+        self.assertIs(hmm.description, None)
+        hmm.description = b"A very important HMM"
+        self.assertEqual(hmm.description, b"A very important HMM")
+        hmm.description = b""
+        self.assertEqual(hmm.description, b"")
+        hmm.description = None
+        self.assertIs(hmm.description, None)
 
     def test_consensus(self):
         # if not set, HMM is None

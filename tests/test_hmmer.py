@@ -86,6 +86,9 @@ class _TestSearch(metaclass=abc.ABCMeta):
         self.assertEqual(domain.env_from, 115)
         self.assertEqual(domain.env_to, 129)
 
+        last = hit.domains[-1]
+        self.assertEqual(domain.alignment.hmm_name, last.alignment.hmm_name)
+
     def test_pf02826(self):
         with self.hmm_file("PF02826") as hmm_file:
             hmm = next(hmm_file)

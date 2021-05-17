@@ -41,6 +41,12 @@ class TestBuilder(unittest.TestCase):
         with SequenceFile(cls.faa_path) as seqf:
             cls.proteins = list(seqf)
 
+        cls.msa_path = os.path.join(cls.testdata, "3box.sto")
+        with MSAFile(cls.msa_path) as msa_file:
+            msa_file.set_digital(msa_file.guess_alphabet())
+            cls.msa = next(msa_file)
+            cls.msa.name = b"3box"
+
     def test_init_error(self):
         abc = Alphabet.amino()
         self.assertRaises(ValueError, Builder, alphabet=abc, architecture="nonsense")
@@ -125,14 +131,22 @@ class TestBuilder(unittest.TestCase):
         abc = Alphabet.dna()
         builder = Builder(alphabet=abc)
 
-        with MSAFile(os.path.join(self.testdata, "3box.sto")) as msa_file:
-            msa_file.set_digital(abc)
-            msa = next(msa_file)
-            msa.name = b"3box"
+        hmm, profile, opt = builder.build_msa(self.msa, Background(abc))
 
         with HMMFile(os.path.join(self.testdata, "3box.hmm")) as hmm_file:
             hmm_exp = next(hmm_file)
 
-        hmm, profile, opt = builder.build_msa(msa, Background(abc))
         self.assertEqual(hmm.name, b"3box")
         self.assertEqual(hmm.M, hmm_exp.M)
+
+    def test_build_msa_alphabet_mismatch(self):
+        dna = Alphabet.dna()
+        amino = Alphabet.amino()
+
+        builder = Builder(alphabet=dna)
+        bg = Background(alphabet=amino)
+        self.assertRaises(AlphabetMismatch, builder.build_msa, self.msa, bg)
+
+        builder = Builder(alphabet=amino)
+        bg = Background(alphabet=amino)
+        self.assertRaises(AlphabetMismatch, builder.build_msa, self.msa, bg)
