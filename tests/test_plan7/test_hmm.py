@@ -137,3 +137,40 @@ class TestHMM(unittest.TestCase):
             self.hmm.write(buffer)
         self.assertEqual(ctx.exception.code, 27)
         self.assertIsInstance(ctx.exception.__cause__, TypeError)
+
+    def test_renormalize(self):
+        dna = Alphabet.dna()
+        hmm = HMM(10, dna)
+        for i in range(1, hmm.M+1):
+            for j in range(dna.K):
+                hmm.match_emissions[i, j] = 25.0
+
+        hmm.renormalize()
+        for i in range(hmm.M+1):
+            self.assertAlmostEqual(hmm.match_emissions[i].sum(), 1.0, places=5)
+
+    def test_scale(self):
+        dna = Alphabet.dna()
+        hmm = HMM(10, dna)
+        for i in range(1, hmm.M+1):
+            for j in range(dna.K):
+                hmm.match_emissions[i, j] = 25.0
+
+        hmm.scale(2.0)
+        for i in range(1, hmm.M+1):
+            for j in range(dna.K):
+                self.assertAlmostEqual(hmm.match_emissions[i, j], 50.0, places=5)
+
+    def test_zero(self):
+        dna = Alphabet.dna()
+        hmm = HMM(10, dna)
+        hmm.name = b"custom"
+        for i in range(1, hmm.M+1):
+            for j in range(dna.K):
+                hmm.match_emissions[i, j] = 25.0
+
+        hmm.zero()
+        for i in range(hmm.M+1):
+            for j in range(dna.K):
+                self.assertEqual(hmm.match_emissions[i, j], 0.0)
+        self.assertEqual(hmm.name, b"custom")
