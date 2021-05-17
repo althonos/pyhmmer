@@ -2661,6 +2661,15 @@ cdef class Profile:
         assert self._gm != NULL
         return self._gm.L
 
+    @L.setter
+    def L(self, int L):
+        assert self._gm != NULL
+        cdef int status
+        with nogil:
+            status = libhmmer.modelconfig.p7_ReconfigLength(self._gm, L)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_ReconfigLength")
+
     @property
     def accession(self):
         """`bytes` or `None`: The accession of the profile, if any.
@@ -2693,12 +2702,7 @@ cdef class Profile:
 
     # --- Methods ------------------------------------------------------------
 
-    cpdef void clear(self):
-        """clear(self)\n--
-
-        Clear internal buffers to reuse the profile without reallocation.
-
-        """
+    cdef int _clear(self) except 1:
         assert self._gm != NULL
         cdef int status
         with nogil:
@@ -2706,19 +2710,15 @@ cdef class Profile:
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_profile_Reuse")
 
-    cpdef void configure(self, HMM hmm, Background background, int L, bint multihit=True, bint local=True):
-        """configure(self, hmm, background, L, multihit=True, local=True)\n--
+    def clear(self):
+        """clear(self)\n--
 
-        Configure a search profile using the given models.
-
-        Arguments:
-            hmm (`pyhmmer.plan7.HMM`): The model HMM with core probabilities.
-            bg (`pyhmmer.plan7.Background`): The null background model.
-            L (`int`): The expected target sequence length.
-            multihit (`bool`): Whether or not to use multihit modes.
-            local (`bool`): Whether or not to use non-local modes.
+        Clear internal buffers to reuse the profile without reallocation.
 
         """
+        self._clear()
+
+    cdef int _configure(self, HMM hmm, Background background, int L, bint multihit=True, bint local=True) except 1:
         cdef int         mode
         cdef int         status
         cdef P7_HMM*     hm     = hmm._hmm
@@ -2727,6 +2727,8 @@ cdef class Profile:
 
         if not self.alphabet._eq(hmm.alphabet):
             raise AlphabetMismatch(self.alphabet, hmm.alphabet)
+        elif not self.alphabet._eq(background.alphabet):
+            raise AlphabetMismatch(self.alphabet, background.alphabet)
         elif hm.M > self._gm.allocM:
             raise ValueError("Profile is too small to hold HMM")
 
@@ -2739,6 +2741,21 @@ cdef class Profile:
             status = libhmmer.modelconfig.p7_ProfileConfig(hm, bg, gm, L, mode)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_ProfileConfig")
+
+    def configure(self, HMM hmm, Background background, int L, bint multihit=True, bint local=True):
+        """configure(self, hmm, background, L, multihit=True, local=True)\n--
+
+        Configure a search profile using the given models.
+
+        Arguments:
+            hmm (`pyhmmer.plan7.HMM`): The model HMM with core probabilities.
+            bg (`pyhmmer.plan7.Background`): The null background model.
+            L (`int`): The expected target sequence length.
+            multihit (`bool`): Whether or not to use multihit modes.
+            local (`bool`): Whether or not to use non-local modes.
+
+        """
+        self._configure(hmm, background, L, multihit, local)
 
     cpdef Profile copy(self):
         """copy(self)\n--

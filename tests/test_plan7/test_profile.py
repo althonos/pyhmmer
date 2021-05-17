@@ -8,7 +8,7 @@ import tempfile
 import pkg_resources
 
 import pyhmmer
-from pyhmmer.errors import EaselError
+from pyhmmer.errors import EaselError, AlphabetMismatch
 from pyhmmer.easel import Alphabet, SequenceFile
 from pyhmmer.plan7 import HMM, HMMFile, Profile, Background
 
@@ -26,6 +26,15 @@ class TestProfile(unittest.TestCase):
         self.background = Background(self.alphabet)
         self.profile = Profile(self.hmm.M, self.alphabet)
         self.profile.configure(self.hmm, self.background, 200)
+
+    def test_configure(self):
+        profile = Profile(self.hmm.M, Alphabet.dna())
+        bg = Background(profile.alphabet)
+        self.assertNotEqual(profile.alphabet, self.hmm.alphabet)
+        self.assertRaises(AlphabetMismatch, profile.configure, self.hmm, bg, 200)
+        hmm = HMM(100, profile.alphabet)
+        self.assertNotEqual(profile.alphabet, self.background.alphabet)
+        self.assertRaises(AlphabetMismatch, profile.configure, hmm, self.background, 200)
 
     def test_eq(self):
         profile2 = Profile(self.hmm.M, self.alphabet)
@@ -52,6 +61,13 @@ class TestProfile(unittest.TestCase):
 
     def test_M(self):
         self.assertEqual(self.profile.M, self.hmm.M)
+
+    def test_L(self):
+        profile = Profile(self.hmm.M, self.alphabet)
+        profile.configure(self.hmm, self.background, 200)
+        self.assertEqual(profile.L, 200)
+        profile.L = 300
+        self.assertEqual(profile.L, 300)
 
     def test_accession(self):
         self.assertEqual(self.profile.accession, self.hmm.accession)

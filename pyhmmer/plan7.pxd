@@ -166,8 +166,8 @@ cdef class Profile:
     cdef readonly Alphabet alphabet
     cdef P7_PROFILE* _gm
 
-    cpdef void clear(self)
-    cpdef void configure(self, HMM hmm, Background background, int L, bint multihit=*, bint local=*)
+    cdef int _clear(self) except 1
+    cdef int _configure(self, HMM hmm, Background background, int L, bint multihit=*, bint local=*) except 1
     cpdef Profile copy(self)
     cpdef bint is_local(self)
     cpdef bint is_multihit(self)
