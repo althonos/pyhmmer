@@ -138,13 +138,19 @@ jobs:
   docs:
     environment: ReadTheDocs
     runs-on: ubuntu-latest
-    name: Rebuild stable docs
+    name: Rebuild docs
     needs:
     - upload
     steps:
-    - name: Ping ReadTheDocs to rebuild the stable branch
+    - name: Ping ReadTheDocs to rebuild the release docs
       uses: dfm/rtds-action@v1
       with:
         webhook_url: ${{ secrets.RTDS_WEBHOOK_URL }}
         webhook_token: ${{ secrets.RTDS_WEBHOOK_TOKEN }}
         commit_ref: ${{ github.ref }}
+    - name: Ping ReadTheDocs to rebuild the stable docs
+      uses: dfm/rtds-action@v1
+      with:
+        webhook_url: ${{ secrets.RTDS_WEBHOOK_URL }}
+        webhook_token: ${{ secrets.RTDS_WEBHOOK_TOKEN }}
+        commit_ref: refs/head/stable
