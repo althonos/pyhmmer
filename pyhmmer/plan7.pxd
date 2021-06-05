@@ -115,6 +115,8 @@ cdef class OptimizedProfile:
     cpdef bint is_local(self)
     cpdef void write(self, object fh_filter, object fh_profile)
 
+    cpdef object ssv_filter(self, DigitalSequence seq)
+
 
 cdef class _Offsets:
     cdef OptimizedProfile    opt

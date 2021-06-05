@@ -16,7 +16,7 @@ cimport cython
 from cpython.ref cimport PyObject
 from cpython.exc cimport PyErr_Clear
 from libc.stdlib cimport malloc, realloc, free
-from libc.stdint cimport uint32_t
+from libc.stdint cimport uint8_t, uint32_t
 from libc.stdio cimport fprintf, FILE, stdout, fclose
 from libc.string cimport strdup
 from libc.math cimport exp, ceil
@@ -56,7 +56,7 @@ IF HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
     from libhmmer.impl_vmx.io cimport p7_oprofile_Write
 ELIF HMMER_IMPL == "SSE":
-    from libhmmer.impl_sse cimport p7_oprofile, p7_omx, impl_Init
+    from libhmmer.impl_sse cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7O_EXTRA_SB
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
     from libhmmer.impl_sse.io cimport p7_oprofile_Write
 
@@ -68,7 +68,8 @@ from .easel cimport (
     TextMSA,
     DigitalMSA,
     VectorF,
-    MatrixF
+    MatrixF,
+    MatrixU8,
 )
 from .reexports.p7_tophits cimport p7_tophits_Reuse
 from .reexports.p7_hmmfile cimport (
@@ -92,6 +93,7 @@ ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
 
 import collections.abc
 import errno
+import math
 import io
 import os
 import sys
@@ -1725,6 +1727,100 @@ cdef class OptimizedProfile:
     def offsets(self):
         return _Offsets.__new__(_Offsets, self)
 
+    @property
+    def M(self):
+        """`int`: The number of nodes in the model.
+
+        .. versionadded:: v0.4.0
+
+        """
+        assert self._om != NULL
+        return self._om.M
+
+    @property
+    def L(self):
+        """`int`: The currently configured target sequence length.
+
+        .. versionadded:: v0.4.0
+
+        """
+        assert self._om != NULL
+        return self._om.L
+
+    @L.setter
+    def L(self, int L):
+        assert self._om != NULL
+        cdef int status
+        with nogil:
+            status = p7_oprofile.p7_oprofile_ReconfigLength(self._om, L)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
+
+    @property
+    def tbm(self):
+        r"""`int`: The constant cost for a :math:`B \to M_k` transition.
+
+        .. versionadded:: v0.4.0
+
+        """
+        assert self._om != NULL
+        return self._om.tbm_b
+
+    @property
+    def tec(self):
+        r"""`int`: The constant cost for a :math:`E \to C` transition.
+
+        .. versionadded:: v0.4.0
+
+        """
+        assert self._om != NULL
+        return self._om.tec_b
+
+    @property
+    def tjb(self):
+        """`int`: The constant cost for a :math:`NJC` move.
+
+        .. versionadded:: v0.4.0
+
+        """
+        assert self._om != NULL
+        return self._om.tjb_b
+
+    @property
+    def base(self):
+        assert self._om != NULL
+        return self._om.base_b
+
+    @property
+    def bias(self):
+        """`int`: The positive bias to emission scores.
+
+        .. versionadded:: v0.4.0
+
+        """
+        assert self._om != NULL
+        return self._om.bias_b
+
+    @property
+    def sbv(self):
+        """`~pyhmmer.easel.MatrixU8`: The match scores for the SSV filter.
+
+        .. versionadded:: v0.4.0
+
+        """
+        assert self._om != NULL
+
+        cdef int nqb = self._om.allocQ16
+        cdef int nqs = nqb + p7O_EXTRA_SB
+
+        cdef MatrixU8 mat = MatrixU8.__new__(MatrixU8)
+        mat._m = mat._shape[0] = self.alphabet.Kp
+        mat._n = mat._shape[1] = 16 * nqs
+        mat._strides = (sizeof(uint8_t), mat._m * sizeof(uint8_t))
+        mat._owner = self
+        mat._data = <uint8_t**> self._om.sbv
+        return mat
+
     cpdef bint is_local(self):
         """is_local(self)\n--
 
@@ -1775,6 +1871,42 @@ cdef class OptimizedProfile:
             fclose(pfp)
         else:
             raise UnexpectedError(status, "p7_oprofile_Write")
+
+    cpdef object ssv_filter(self, DigitalSequence seq):
+        r"""Compute the SSV filter score for the given sequence.
+
+        Returns:
+            `float` or `None`: The SSV filter score for the sequence.
+
+        Note:
+            * `math.inf` may be returned if an overflow occurs that will also
+              occur in the MSV filter. This is the case whenever
+              :math:`\text{base} - \text{tjb} - \text{tbm} \ge 128`
+            * `None` if the MSV filter score needs to be recomputed (because
+              it may not overflow even though the SSV filter did).
+
+        Caution:
+            This method is not available on the PowerPC platform (calling
+            it will raise a `NotImplementedError`).
+
+        .. versionadded:: v0.4.0
+
+        """
+        IF HMMER_IMPL == "SSE":
+            cdef float score
+            cdef int status
+            with nogil:
+                status = p7_SSVFilter(seq._sq.dsq, seq._sq.L, self._om, &score)
+            if status == libeasel.eslOK:
+                return score
+            elif status == libeasel.eslERANGE:
+                return math.inf
+            elif status == libeasel.eslENORESULT:
+                return None
+            else:
+                raise UnexpectedError(status, "p7_SSVFilter")
+        ELSE:
+            raise NotImplementedError("p7_SSVFilter is not available on VMX platforms")
 
 
 cdef class _Offsets:

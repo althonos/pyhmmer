@@ -4,7 +4,15 @@ import os
 import types
 import typing
 
-from .easel import Alphabet, Sequence, DigitalSequence, MSA, DigitalMSA, VectorF
+from .easel import (
+    Alphabet,
+    Sequence,
+    DigitalSequence,
+    MSA,
+    DigitalMSA,
+    VectorF,
+    VectorU8,
+)
 
 class Alignment(collections.abc.Sized):
     domain: Domain
@@ -206,6 +214,24 @@ class OptimizedProfile(object):
     def copy(self) -> OptimizedProfile: ...
     @property
     def offsets(self) -> _Offsets: ...
+    @property
+    def M(self) -> int: ...
+    @property
+    def L(self) -> int: ...
+    @L.setter
+    def L(self, L: int) -> None: ...
+    @property
+    def tbm(self) -> int: ...
+    @property
+    def tec(self) -> int: ...
+    @property
+    def tjb(self) -> int: ...
+    @property
+    def base(self) -> int: ...
+    @property
+    def bias(self) -> int: ...
+    @property
+    def sbv(self) -> VectorU8: ...
     def write(self, fh_filter: typing.BinaryIO, fh_profile: typing.BinaryIO) -> None: ...
 
 class _Offsets(object):
