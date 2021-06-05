@@ -124,8 +124,6 @@ cdef class _Offsets:
 
 
 cdef class Pipeline:
-    cdef public   bint       null2
-    cdef public   bint       bias_filter
     cdef public   float      report_e
     cdef          object     _Z
     cdef          object     _domZ

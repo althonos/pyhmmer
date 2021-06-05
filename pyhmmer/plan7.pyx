@@ -280,7 +280,7 @@ cdef class Background:
 
     @property
     def omega(self):
-        """`float`: The *prior* on null2/null3.
+        """`float`: The *prior* on *null2*/*null3*.
 
         .. versionadded:: 0.4.0
 
@@ -1982,6 +1982,9 @@ cdef class Pipeline:
         uint32_t seed=42,
         object Z=None,
         object domZ=None,
+        double F1=0.02,
+        double F2=1e-3,
+        double F3=1e-5,
     ):
         """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None)\n--
 
@@ -2010,6 +2013,9 @@ cdef class Pipeline:
             domZ (`int`, optional): The number of significant sequences found,
                 for domain E-value calculation. Leave as `None` to auto-detect
                 by counting the number of sequences reported.
+            F1 (`float`): The MSV filter threshold.
+            F2 (`float`): The Viterbi filter threshold.
+            F3 (`float`): The uncorrected Forward filter threshold.
 
         """
         # extract default parameters from the class attributes
@@ -2044,6 +2050,9 @@ cdef class Pipeline:
         self.Z = Z
         self.domZ = domZ
         self.seed = seed
+        self.F1 = F1
+        self.F2 = F2
+        self.F3 = F3
 
     def __dealloc__(self):
         libhmmer.p7_pipeline.p7_pipeline_Destroy(self._pli)
@@ -2113,6 +2122,82 @@ cdef class Pipeline:
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_randomness_Init")
         self._pli.do_reseeding = self._pli.ddef.do_reseeding = seed != 0
+
+    @property
+    def null2(self):
+        """`bool`: Whether or not to enable the *null2* score correction.
+
+        .. versionadded:: v0.4.1
+
+        """
+        assert self._pli != NULL
+        return self._pli.do_null2
+
+    @null2.setter
+    def null2(self, bint null2):
+        assert self._pli != NULL
+        self._pli.do_null2 = null2
+
+    @property
+    def bias_filter(self):
+        """`bool`: Whether or not to enable the biased comp HMM filter.
+
+        .. versionadded:: v0.4.1
+
+        """
+        assert self._pli != NULL
+        return self._pli.do_biasfilter
+
+    @bias_filter.setter
+    def bias_filter(self, bint bias_filter):
+        assert self._pli != NULL
+        self._pli.do_biasfilter = bias_filter
+
+    @property
+    def F1(self):
+        """`float`: The MSV filter threshold.
+
+        .. versionadded:: v0.4.1
+
+        """
+        assert self._pli != NULL
+        return self._pli.F1
+
+    @F1.setter
+    def F1(self, double F1):
+        assert self._pli != NULL
+        self._pli.F1 = F1
+
+    @property
+    def F2(self):
+        """`float`: The Viterbi filter threshold.
+
+        .. versionadded:: v0.4.1
+
+        """
+        assert self._pli != NULL
+        return self._pli.F2
+
+    @F1.setter
+    def F2(self, double F2):
+        assert self._pli != NULL
+        self._pli.F2 = F2
+
+    @property
+    def F3(self):
+        """`float`: The uncorrected Forward filter threshold.
+
+        .. versionadded:: v0.4.1
+
+        """
+        assert self._pli != NULL
+        return self._pli.F3
+
+    @F3.setter
+    def F3(self, double F3):
+        assert self._pli != NULL
+        self._pli.F3 = F3
+
 
     # --- Methods ------------------------------------------------------------
 
@@ -2223,11 +2308,6 @@ cdef class Pipeline:
 
         # Configure acceleration pipeline thresholds
         self._pli.do_max        = False
-        self._pli.do_biasfilter = self.bias_filter
-        self._pli.do_null2      = self.null2
-        self._pli.F1            = 0.02
-        self._pli.F2            = 1e-3
-        self._pli.F3            = 1e-5
         if self._pli.long_targets:
             self._pli.B1     = 100
             self._pli.B2     = 240
@@ -2261,7 +2341,7 @@ cdef class Pipeline:
         self._pli.pos_output      = 0
         self._pli.strands         = 0
         self._pli.W               = 0
-        self._pli.show_accessions = True #(go && esl_opt_GetBoolean(go, "--acc")   ? TRUE  : FALSE);
+        self._pli.show_accessions = True  #(go && esl_opt_GetBoolean(go, "--acc")   ? TRUE  : FALSE);
         self._pli.show_alignments = False #(go && esl_opt_GetBoolean(go, "--noali") ? FALSE : TRUE);
         self._pli.hfp             = NULL
         self._pli.errbuf[0]       = b'\0'
