@@ -1873,7 +1873,12 @@ cdef class OptimizedProfile:
             raise UnexpectedError(status, "p7_oprofile_Write")
 
     cpdef object ssv_filter(self, DigitalSequence seq):
-        r"""Compute the SSV filter score for the given sequence.
+        r"""ssv_filter(self, seq)\n--
+
+        Compute the SSV filter score for the given sequence.
+
+        Arguments:
+            seq (`~pyhmmer.easel.DigitalSequence`):
 
         Returns:
             `float` or `None`: The SSV filter score for the sequence.
@@ -1885,6 +1890,10 @@ cdef class OptimizedProfile:
             * `None` if the MSV filter score needs to be recomputed (because
               it may not overflow even though the SSV filter did).
 
+        Raises:
+            `~pyhmmer.errors.AlphabetMismatch`: when the alphabet of the
+                sequence does not correspond to the profile alphabet.
+
         Caution:
             This method is not available on the PowerPC platform (calling
             it will raise a `NotImplementedError`).
@@ -1893,8 +1902,14 @@ cdef class OptimizedProfile:
 
         """
         IF HMMER_IMPL == "SSE":
+            assert self._om != NULL
+
+            if self.alphabet != seq.alphabet:
+                raise AlphabetMismatch(self.alphabet, seq.alphabet)
+
             cdef float score
             cdef int status
+
             with nogil:
                 status = p7_SSVFilter(seq._sq.dsq, seq._sq.L, self._om, &score)
             if status == libeasel.eslOK:
@@ -2221,11 +2236,13 @@ cdef class Pipeline:
         self._pli.long_targets = self.LONG_TARGETS
 
         with nogil:
-            # reinitialize the random number generator
-            if self._pli.do_reseeding:
-                status = libeasel.random.esl_randomness_Init(self._pli.r, seed)
-                if status != libeasel.eslOK:
-                    raise UnexpectedError(status, "esl_randomness_Init")
+            # reinitialize the random number generator, even if
+            # `self._pli.do_reseeding` is False, because a true
+            # deallocation/reallocation of a P7_PIPELINE would reinitialize
+            # it unconditionally.
+            status = libeasel.random.esl_randomness_Init(self._pli.r, seed)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_randomness_Init")
             # reinitialize the domaindef
             libhmmer.p7_domaindef.p7_domaindef_Reuse(self._pli.ddef)
 
