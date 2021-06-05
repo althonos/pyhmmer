@@ -3264,33 +3264,29 @@ cdef class DigitalSequence(Sequence):
         assert self._sq.desc != NULL
         assert self._sq.acc != NULL
 
-    def __getbuffer__(self, Py_buffer* buffer, int flags):
-        assert self._sq != NULL
-        assert libeasel.sq.esl_sq_IsDigital(self._sq)
-
-        if flags & PyBUF_FORMAT:
-            buffer.format = "B"
-        else:
-            buffer.format = NULL
-        buffer.buf = <void*> &(self._sq.dsq[1])
-        buffer.internal = NULL
-        buffer.itemsize = sizeof(ESL_DSQ)
-        buffer.len = self._sq.n * sizeof(ESL_DSQ)
-        buffer.ndim = 1
-        buffer.obj = self
-        buffer.readonly = 1
-        buffer.shape = NULL
-        buffer.strides = NULL
-        buffer.suboffsets = NULL
-
-    def __releasebuffer__(self, Py_buffer* buffer):
-        pass
-
     @property
     def sequence(self):
-        """`bytearray`: The raw sequence digits, as a byte array.
+        """`VectorU8`: The raw sequence digits, as a byte vector.
+
+        Note:
+            The internal ``ESL_SQ`` object allocates a buffer of size
+            :math:`n+2` (where :math:`n` is the number of residues in the
+            sequence), with the first and the last element of the buffer
+            being sentinel values. This vector does not expose the sentinel
+            values, only the :math:`n` elements of the buffer in between.
+
+        .. versionchanged:: v0.4.0
+           Property is now a `VectorU8` instead of a memoryview.
+
         """
-        return bytearray(self)
+        assert self._sq != NULL
+
+        cdef VectorU8 seq = VectorU8.__new__(VectorU8)
+        seq._n = seq._shape[0] = self._sq.n
+        seq._data = &self._sq.dsq[1]
+        seq._owner = self
+
+        return seq
 
     cpdef DigitalSequence copy(self):
         """copy(self)\n--
