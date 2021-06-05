@@ -1335,6 +1335,7 @@ cdef class MatrixF(Matrix):
 
     def __dealloc__(self):
         if self._owner is None:
+            free(self._data[0])
             free(self._data)
         self._data = NULL
 
@@ -1621,6 +1622,7 @@ cdef class MatrixU8(Matrix):
 
     def __dealloc__(self):
         if self._owner is None:
+            free(self._data[0])
             free(self._data)
         self._data = NULL
 
