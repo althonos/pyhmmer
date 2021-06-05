@@ -32,45 +32,110 @@ API Reference
     Easel
     -----
 
+    Data Structures
+    ^^^^^^^^^^^^^^^
+
+    .. autosummary::
+       :nosignatures:
+
+       pyhmmer.easel.Bitfield
+       pyhmmer.easel.KeyHash
+
+    Sequences
+    ^^^^^^^^^
+
+    .. autosummary::
+       :nosignatures:
+
+       pyhmmer.easel.Sequence
+       pyhmmer.easel.TextSequence
+       pyhmmer.easel.DigitalSequence
+       pyhmmer.easel.SequenceFile
+
+
+    Alignments
+    ^^^^^^^^^^
+
+    .. autosummary::
+       :nosignatures:
+
+       pyhmmer.easel.MSA
+       pyhmmer.easel.TextMSA
+       pyhmmer.easel.DigitalMSA
+       pyhmmer.easel.MSAFile
+
+
+    Linear Algebra
+    ^^^^^^^^^^^^^^
+
+    .. autosummary::
+       :nosignatures:
+
+       pyhmmer.easel.Vector
+       pyhmmer.easel.VectorF
+       pyhmmer.easel.VectorU8
+       pyhmmer.easel.Matrix
+       pyhmmer.easel.MatrixF
+       pyhmmer.easel.MatrixU8
+
+
+    Miscellaneous
+    ^^^^^^^^^^^^^
+
     .. autosummary::
        :nosignatures:
 
        pyhmmer.easel.Alphabet
-       pyhmmer.easel.Bitfield
-       pyhmmer.easel.DigitalMSA
-       pyhmmer.easel.DigitalSequence
-       pyhmmer.easel.KeyHash
-       pyhmmer.easel.Matrix
-       pyhmmer.easel.MatrixF
-       pyhmmer.easel.MSA
-       pyhmmer.easel.MSAFile
-       pyhmmer.easel.Sequence
-       pyhmmer.easel.SequenceFile
-       pyhmmer.easel.TextMSA
-       pyhmmer.easel.TextSequence
        pyhmmer.easel.SSIReader
        pyhmmer.easel.SSIWriter
-       pyhmmer.easel.Vector
-       pyhmmer.easel.VectorF
+
 
 
     Plan7
     -----
 
+    Hidden Markov Model
+    ^^^^^^^^^^^^^^^^^^^
+
     .. autosummary::
         :nosignatures:
 
-        pyhmmer.plan7.Alignment
-        pyhmmer.plan7.Background
-        pyhmmer.plan7.Domain
-        pyhmmer.plan7.Domains
-        pyhmmer.plan7.Hit
         pyhmmer.plan7.HMM
         pyhmmer.plan7.HMMFile
-        pyhmmer.plan7.OptimizedProfile
-        pyhmmer.plan7.Pipeline
+
+
+    Profile
+    ^^^^^^^
+
+    .. autosummary::
+        :nosignatures:
+
         pyhmmer.plan7.Profile
+        pyhmmer.plan7.OptimizedProfile
+        pyhmmer.plan7.Background
+
+
+    Pipelines
+    ^^^^^^^^^
+
+    .. autosummary::
+        :nosignatures:
+
+        pyhmmer.plan7.Pipeline
+        pyhmmer.plan7.Builder
+
+
+    Results
+    ^^^^^^^
+
+    .. autosummary::
+        :nosignatures:
+
         pyhmmer.plan7.TopHits
+        pyhmmer.plan7.Hit
+        pyhmmer.plan7.Domains
+        pyhmmer.plan7.Domain
+        pyhmmer.plan7.Alignment
 
 
     Errors

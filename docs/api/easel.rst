@@ -7,95 +7,141 @@ Easel
 .. automodule:: pyhmmer.easel
 
 
-Alphabet
---------
-
-.. autoclass:: pyhmmer.easel.Alphabet
-   :members:
-
+Data Structures
+---------------
 
 Bitfield
---------
+^^^^^^^^
 
 .. autoclass:: pyhmmer.easel.Bitfield
    :special-members: __init__
    :members:
 
-
 KeyHash
--------
+^^^^^^^
 
 .. autoclass:: pyhmmer.easel.KeyHash
    :special-members: __init__
    :members:
 
 
-Vector / Matrix
----------------
+Sequences
+---------
 
-.. autoclass:: pyhmmer.easel.Vector
+Sequence
+^^^^^^^^
+
+.. autoclass:: pyhmmer.easel.Sequence
    :members:
 
-.. autoclass:: pyhmmer.easel.VectorF
+TextSequence
+^^^^^^^^^^^^
+
+.. autoclass:: pyhmmer.easel.TextSequence(Sequence)
    :special-members: __init__
    :members:
 
-.. autoclass:: pyhmmer.easel.Matrix
-   :members:
+DigitalSequence
+^^^^^^^^^^^^^^^
 
-.. autoclass:: pyhmmer.easel.MatrixF
+.. autoclass:: pyhmmer.easel.DigitalSequence(Sequence)
    :special-members: __init__
    :members:
 
+SequenceFile
+^^^^^^^^^^^^
 
-Multiple Sequence Alignment
----------------------------
+.. autoclass:: pyhmmer.easel.SequenceFile
+  :special-members: __init__
+  :members:
+
+
+Alignments
+----------
+
+MSA
+^^^
 
 .. autoclass:: pyhmmer.easel.MSA
    :members:
+
+TextMSA
+^^^^^^^
 
 .. autoclass:: pyhmmer.easel.TextMSA(MSA)
    :special-members: __init__
    :members:
 
+DigitalMSA
+^^^^^^^^^^
+
 .. autoclass:: pyhmmer.easel.DigitalMSA(MSA)
    :special-members: __init__
    :members:
 
-
-MSA File
---------
+MSAFile
+^^^^^^^
 
 .. autoclass:: pyhmmer.easel.MSAFile
    :special-members: __init__
    :members:
 
 
-Sequence
---------
+Linear Algebra
+--------------
 
-.. autoclass:: pyhmmer.easel.Sequence
+Vector
+^^^^^^
+
+.. autoclass:: pyhmmer.easel.Vector
    :members:
 
-.. autoclass:: pyhmmer.easel.TextSequence(Sequence)
+VectorF
+^^^^^^^
+
+.. autoclass:: pyhmmer.easel.VectorF
    :special-members: __init__
    :members:
 
-.. autoclass:: pyhmmer.easel.DigitalSequence(Sequence)
+VectorU8
+^^^^^^^^
+
+.. autoclass:: pyhmmer.easel.VectorU8
+   :special-members: __init__
+   :members:
+
+Matrix
+^^^^^^
+
+.. autoclass:: pyhmmer.easel.Matrix
+   :members:
+
+MatrixF
+^^^^^^^
+
+.. autoclass:: pyhmmer.easel.MatrixF
+   :special-members: __init__
+   :members:
+
+MatrixU8
+^^^^^^^^
+
+.. autoclass:: pyhmmer.easel.MatrixU8
    :special-members: __init__
    :members:
 
 
-Sequence File
+Miscellaneous
 -------------
 
-.. autoclass:: pyhmmer.easel.SequenceFile
-   :special-members: __init__
+Alphabet
+^^^^^^^^
+
+.. autoclass:: pyhmmer.easel.Alphabet
    :members:
 
-
 Sequence / Subsequence Index
-----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: pyhmmer.easel.SSIReader
    :special-members: __init__
