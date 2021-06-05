@@ -134,3 +134,16 @@ jobs:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
         skip_existing: false
+
+  docs:
+    environment: ReadTheDocs
+    runs-on: ubuntu-latest
+    needs:
+    - upload
+    steps:
+    - name: Ping ReadTheDocs to rebuild the stable branch
+      uses: dfm/rtds-action@v1
+      with:
+        webhook_url: ${{ secrets.RTDS_WEBHOOK_URL }}
+        webhook_token: ${{ secrets.RTDS_WEBHOOK_TOKEN }}
+        commit_ref: ${{ github.ref }}
