@@ -3,7 +3,7 @@
 
 # --- C imports --------------------------------------------------------------
 
-from libc.stdint cimport int64_t, uint16_t, uint32_t
+from libc.stdint cimport int64_t, uint8_t, uint16_t, uint32_t
 from posix.types cimport off_t
 
 cimport libeasel.sq
@@ -67,6 +67,17 @@ cdef class VectorF(Vector):
     cpdef void reverse(self)
     cpdef float sum(self)
 
+cdef class VectorU8(Vector):
+    cdef uint8_t* _data
+
+    cpdef int argmax(self)
+    cpdef int argmin(self)
+    cpdef VectorU8 copy(self)
+    cpdef uint8_t max(self)
+    cpdef uint8_t min(self)
+    cpdef void reverse(self)
+    cpdef uint8_t sum(self)
+
 cdef class Matrix:
     cdef object _owner
     cdef int _n
@@ -83,6 +94,16 @@ cdef class MatrixF(Matrix):
     cpdef float max(self)
     cpdef float min(self)
     cpdef float sum(self)
+
+cdef class MatrixU8(Matrix):
+    cdef uint8_t** _data
+
+    cpdef tuple argmax(self)
+    cpdef tuple argmin(self)
+    cpdef MatrixU8 copy(self)
+    cpdef uint8_t max(self)
+    cpdef uint8_t min(self)
+    cpdef uint8_t sum(self)
 
 
 # --- Multiple Sequences Alignment -------------------------------------------
