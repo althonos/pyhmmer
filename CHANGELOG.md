@@ -6,7 +6,37 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.0...HEAD
+
+
+## [v0.4.0] - 2021-06-05
+[v0.4.0]: https://github.com/althonos/pyhmmer/compare/v0.3.1...v0.4.0
+
+### Added
+- Linear algebra primitives to expose 1D (`Vector`) and 2D (`Matrix`) contiguous buffers containing numerical values to `pyhmmer.easel`.
+- Documentation for the `Z` and `domZ` parameters of the `pyhmmer.plan7.Pipeline` constructor.
+- `pyhmmer.errors.AlphabetMismatch` exception deriving from `ValueError` to specifically report mismatching Easel alphabets where applicable.
+- `scale` and `normalize` methods to `pyhmmer.plan7.HMM` objects.
+- Property to access `pyhmmer.plan7.Background` residue frequencies as a `VectorF` object.
+- Property to access `pyhmmer.plan7.HMM` mean residue composition as a `VectorF` object.
+- Property to access `pyhmmer.plan7.HMM` probabilities and emissions as `MatrixF` objects.
+- `ssv_filter` methods to `pyhmmer.plan7.OptimizedProfile` to get the SSV filter score of the profile for a given sequence.
+- Several additional properties to access the `pyhmmer.plan7.OptimizedProfile` internals.
+
+### Removed
+- Unused `report_e` parameter of `pyhmmer.plan7.Pipeline` constructor.
+- `pyhmmer.plan7.TopHits.clear` method which could lead to segfault if it was called while a `Hit` is being held.
+
+### Changed
+- Multithreaded loop in `pyhmmer.hmmer` to reduce memory consumption while still yielding hits in order.
+- `pyhmmer.easel.DigitalSequence.sequence` property is now a `VectorU8`.
+
+### Fixed
+- Type annotations in `pyhmmer.hmmer`.
+- Potential double free in `pyhmmer.plan7.HMM.command_line` property setter.
+- Minor floating-point precision issues in `pyhmmer.plan7.Builder` constructor.
+- Segfault in `TextMSA.digitize` caused by `esl_msa_Copy` not digitizing on-the-fly like `esl_sq_Copy`.
+- Exceptions not being raised in some methods of `pyhmmer.plan7.Profile` and `pyhmmer.plan7.TopHits`.
 
 
 ## [v0.3.1] - 2021-05-08

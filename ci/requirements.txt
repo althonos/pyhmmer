@@ -3,9 +3,6 @@ setuptools >=46.4
 wheel >=0.35.0
 cython ~=0.29.16
 
-# test dependencies
--r ../tests/requirements.txt
-
 # run dependencies
 psutil ~=5.0
 
@@ -15,4 +12,3 @@ codecov ~=2.0
 
 # deployment dependencies
 auditwheel
-

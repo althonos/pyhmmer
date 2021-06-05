@@ -25,7 +25,7 @@ from .hmmer import hmmsearch, hmmpress, nhmmer, phmmer
 
 __author__ = "Martin Larralde <martin.larralde@embl.de>"
 __license__ = "MIT"
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 __all__ = [
     errors.__name__,
     easel.__name__,

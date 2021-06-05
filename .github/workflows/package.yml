@@ -138,6 +138,7 @@ jobs:
   docs:
     environment: ReadTheDocs
     runs-on: ubuntu-latest
+    name: Rebuild stable docs
     needs:
     - upload
     steps:
