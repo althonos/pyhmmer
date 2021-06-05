@@ -2193,7 +2193,7 @@ cdef class Pipeline:
         assert self._pli != NULL
         return self._pli.F2
 
-    @F1.setter
+    @F2.setter
     def F2(self, double F2):
         assert self._pli != NULL
         self._pli.F2 = F2
