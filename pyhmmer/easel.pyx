@@ -661,7 +661,7 @@ cdef class VectorF(Vector):
         self._strides = (sizeof(float),)
 
     def __dealloc__(self):
-        if self._owner is None:
+        if self._owner is None and self._data != NULL:
             free(self._data)
         self._data = NULL
 
@@ -931,7 +931,7 @@ cdef class VectorU8(Vector):
         self._strides = (sizeof(uint8_t),)
 
     def __dealloc__(self):
-        if self._owner is None:
+        if self._owner is None and self._data != NULL:
             free(self._data)
         self._data = NULL
 
@@ -1334,7 +1334,7 @@ cdef class MatrixF(Matrix):
         self._strides = (sizeof(float), self._n * sizeof(float))
 
     def __dealloc__(self):
-        if self._owner is None:
+        if self._owner is None and self._data != NULL:
             free(self._data[0])
             free(self._data)
         self._data = NULL
@@ -1621,7 +1621,7 @@ cdef class MatrixU8(Matrix):
         self._strides = (sizeof(uint8_t), self._n * sizeof(uint8_t))
 
     def __dealloc__(self):
-        if self._owner is None:
+        if self._owner is None and self._data != NULL:
             free(self._data[0])
             free(self._data)
         self._data = NULL
