@@ -6,7 +6,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.1...HEAD
+
+
+## [v0.4.1] - 2021-06-06
+[v0.4.1]: https://github.com/althonos/pyhmmer/compare/v0.4.0...v0.4.1
+
+### Fixed
+- Main buffer not being freed in `MatrixF.__dealloc__` and `MatrixU8.__dealloc__` when created without owner.
+
+### Added
+- Additional configuration values for `pyhmmer.plan7.Pipeline` as both constructor arguments and mutable properties.
+- `consensus`, `consensus_structure` and `offsets` properties to `pyhmmer.plan7.Profile` objects.
+
+### Changed
+- Make `OptimizedProfile.ssv_filter` check the alphabet of the given sequence.
 
 
 ## [v0.4.0] - 2021-06-05
