@@ -14,7 +14,10 @@ import types
 import warnings
 from unittest import mock
 
-import numpy
+try:
+    import numpy
+except ImportError:
+    numpy = None
 
 import pyhmmer.easel
 import pyhmmer.plan7
@@ -49,6 +52,11 @@ def load_tests(loader, tests, ignore):
     # doctests are not compatible with `green`, so we may want to bail out
     # early if `green` is running the tests
     if sys.argv[0].endswith("green"):
+        return tests
+
+    # doctests require `numpy` to run, which may not be available because
+    # it is a pain to get to work out-of-the-box on OSX
+    if numpy is None:
         return tests
 
     # add a sample HMM and some sequences to use with the globals
