@@ -17,7 +17,7 @@ class TestProfile(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/Thioesterase.hmm")
+        cls.hmm_path = pkg_resources.resource_filename("tests", "data/hmms/db/Thioesterase.hmm")
         with HMMFile(cls.hmm_path) as hmm_file:
             cls.hmm = next(hmm_file)
         cls.alphabet = cls.hmm.alphabet
@@ -92,3 +92,8 @@ class TestProfile(unittest.TestCase):
         self.assertEqual(self.profile.consensus, self.hmm.consensus)
         profile = Profile(self.hmm.M, self.alphabet)
         self.assertIs(profile.consensus, None)
+
+    def test_offsets(self):
+        self.assertIs(self.profile.offsets.model, None)
+        self.assertIs(self.profile.offsets.profile, None)
+        self.assertIs(self.profile.offsets.filter, None)

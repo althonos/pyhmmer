@@ -1925,20 +1925,31 @@ cdef class OptimizedProfile:
 
 
 cdef class _Offsets:
-    """A mutable view over the disk offsets of an optimized profile.
+    """A mutable view over the disk offsets of a profile.
     """
 
-    def __cinit__(self, OptimizedProfile opt):
-        self.opt = opt
-        self._offs = &opt._om.offs
+    def __cinit__(self, object owner):
+        cdef P7_PROFILE*  gm
+        cdef P7_OPROFILE* om
+
+        self._owner = owner
+        if isinstance(owner, Profile):
+            gm = (<Profile> owner)._gm
+            self._offs = &gm.offs
+        elif isinstance(owner, OptimizedProfile):
+            om = (<OptimizedProfile> owner)._om
+            self._offs = &om.offs
+        else:
+            ty = type(owner).__name__
+            raise TypeError("expected Profile or OptimizedProfile, found {ty}")
 
     def __copy__(self):
-        return _Offsets.__new__(_Offsets, self.om)
+        return _Offsets.__new__(_Offsets, self._owner)
 
     def __str__(self):
         ty = type(self).__name__
         return "<offsets of {!r} model={!r} filter={!r} profile={!r}>".format(
-            self.opt,
+            self._owner,
             self.model,
             self.filter,
             self.profile,
@@ -2959,6 +2970,10 @@ cdef class Profile:
         if self._gm.cs[0] == b'\0':
             return None
         return (<bytes> (&self._gm.cs[1])).decode("ascii")
+
+    @property
+    def offsets(self):
+        return _Offsets.__new__(_Offsets, self)
 
     # --- Methods ------------------------------------------------------------
 

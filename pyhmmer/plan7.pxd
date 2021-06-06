@@ -119,7 +119,7 @@ cdef class OptimizedProfile:
 
 
 cdef class _Offsets:
-    cdef OptimizedProfile    opt
+    cdef object              _owner
     cdef off_t[p7_NOFFSETS]* _offs
 
 
