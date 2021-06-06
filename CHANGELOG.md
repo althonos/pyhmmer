@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Make `OptimizedProfile.ssv_filter` check the alphabet of the given sequence.
 
 
-## [v0.4.0] - 2021-06-05
+## [v0.4.0] - 2021-06-05 - YANKED
 [v0.4.0]: https://github.com/althonos/pyhmmer/compare/v0.3.1...v0.4.0
 
 ### Added
