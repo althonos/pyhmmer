@@ -2936,6 +2936,30 @@ cdef class Profile:
         assert self._gm != NULL
         return None if self._gm.desc == NULL else <bytes> self._gm.desc
 
+    @property
+    def consensus(self):
+        """`str` or `None`: The consensus residue line of the profile, if set.
+
+        .. versionadded:: 0.4.1
+
+        """
+        assert self._gm != NULL
+        if self._gm.consensus[0] == b'\0':
+            return None
+        return (<bytes> (&self._gm.consensus[1])).decode("ascii")
+
+    @property
+    def consensus_structure(self):
+        """`str` or `None`: The consensus structure of the profile, if any.
+
+        .. versionadded:: 0.4.1
+
+        """
+        assert self._gm != NULL
+        if self._gm.cs[0] == b'\0':
+            return None
+        return (<bytes> (&self._gm.cs[1])).decode("ascii")
+
     # --- Methods ------------------------------------------------------------
 
     cdef int _clear(self) except 1:

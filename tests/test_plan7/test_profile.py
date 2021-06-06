@@ -20,12 +20,10 @@ class TestProfile(unittest.TestCase):
         cls.hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/Thioesterase.hmm")
         with HMMFile(cls.hmm_path) as hmm_file:
             cls.hmm = next(hmm_file)
-
-    def setUp(self):
-        self.alphabet = self.hmm.alphabet
-        self.background = Background(self.alphabet)
-        self.profile = Profile(self.hmm.M, self.alphabet)
-        self.profile.configure(self.hmm, self.background, 200)
+        cls.alphabet = cls.hmm.alphabet
+        cls.background = Background(cls.alphabet)
+        cls.profile = Profile(cls.hmm.M, cls.alphabet)
+        cls.profile.configure(cls.hmm, cls.background, 200)
 
     def test_configure(self):
         profile = Profile(self.hmm.M, Alphabet.dna())
@@ -47,17 +45,18 @@ class TestProfile(unittest.TestCase):
         self.assertEqual(self.profile, profile2)
 
     def test_profile_modes(self):
+        profile = self.profile.copy()
         for multihit in (False, True):
             for local in (False, True):
-                self.profile.configure(
+                profile.configure(
                     self.hmm,
                     self.background,
                     200,
                     multihit=multihit,
                     local=local
                 )
-                self.assertEqual(self.profile.is_multihit(), multihit)
-                self.assertEqual(self.profile.is_local(), local)
+                self.assertEqual(profile.is_multihit(), multihit)
+                self.assertEqual(profile.is_local(), local)
 
     def test_M(self):
         self.assertEqual(self.profile.M, self.hmm.M)
@@ -79,6 +78,17 @@ class TestProfile(unittest.TestCase):
         self.assertEqual(self.profile.name, self.hmm.name)
 
     def test_clear(self):
-        self.assertNotEqual(self.profile.M, 0)
-        self.profile.clear()
-        self.assertEqual(self.profile.M, 0)
+        profile = self.profile.copy()
+        self.assertNotEqual(profile.M, 0)
+        profile.clear()
+        self.assertEqual(profile.M, 0)
+
+    def test_consensus(self):
+        self.assertEqual(self.profile.consensus, self.hmm.consensus)
+        profile = Profile(self.hmm.M, self.alphabet)
+        self.assertIs(profile.consensus, None)
+
+    def test_consensus_structure(self):
+        self.assertEqual(self.profile.consensus, self.hmm.consensus)
+        profile = Profile(self.hmm.M, self.alphabet)
+        self.assertIs(profile.consensus, None)
