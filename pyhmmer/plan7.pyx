@@ -553,9 +553,7 @@ cdef class Builder:
 
         # reseed RNG used by the builder if needed
         if self._bld.do_reseeding:
-            status = libeasel.random.esl_randomness_Init(self._bld.r, self.seed)
-            if status != libeasel.eslOK:
-                raise UnexpectedError(status, "esl_randomness_Init")
+            self.randomness._seed(self.seed)
 
         # check alphabet and assign it to newly created objects
         hmm.alphabet = profile.alphabet = opti.alphabet = self.alphabet
@@ -637,9 +635,7 @@ cdef class Builder:
 
         # reseed RNG used by the builder if needed
         if self._bld.do_reseeding:
-            status = libeasel.random.esl_randomness_Init(self._bld.r, self.seed)
-            if status != libeasel.eslOK:
-                raise UnexpectedError(status, "esl_randomness_Init")
+            self.randomness._seed(self.seed)
 
         # check alphabet and assign it to newly created objects
         hmm.alphabet = profile.alphabet = opti.alphabet = self.alphabet
@@ -2101,7 +2097,6 @@ cdef class Pipeline:
 
     def __dealloc__(self):
         libhmmer.p7_pipeline.p7_pipeline_Destroy(self._pli)
-        self.randomness._rng = NULL
 
     # --- Properties ---------------------------------------------------------
 
@@ -2265,18 +2260,17 @@ cdef class Pipeline:
         if self._pli.domZ_setby == p7_zsetby_e.p7_ZSETBY_NTARGETS:
             self.domZ = None
 
+        # reinitialize the random number generator, even if
+        # `self._pli.do_reseeding` is False, because a true
+        # deallocation/reallocation of a P7_PIPELINE would reinitialize
+        # it unconditionally.
+        self.randomness._seed(self._seed)
+        # reinitialize the domaindef
+        libhmmer.p7_domaindef.p7_domaindef_Reuse(self._pli.ddef)
+
         # # not needed
         # self._pli.do_alignment_score_calc = 0
         # self._pli.long_targets = self.LONG_TARGETS
-
-        with nogil:
-            # reinitialize the random number generator, even if
-            # `self._pli.do_reseeding` is False, because a true
-            # deallocation/reallocation of a P7_PIPELINE would reinitialize
-            # it unconditionally.
-            self.randomness._seed(self._seed)
-            # reinitialize the domaindef
-            libhmmer.p7_domaindef.p7_domaindef_Reuse(self._pli.ddef)
 
         # # Configure reporting thresholds
         # self._pli.by_E            = True

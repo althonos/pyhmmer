@@ -2823,20 +2823,6 @@ cdef class Randomness:
     Methods with an implementation in Easel are named after the equivalent
     methods of `random.Random`.
 
-    Note:
-
-        However, not all of the distributions of `random.Random` are
-        available: to use `pyhmmer.easel.Randomness` as a drop-in replacement,
-        create a subclass deriving from both::
-
-            import random
-            from pyhmmer.easel import Randomness
-
-            class EaselRandom(Randomness, random.Random):
-                pass
-
-
-
     .. versionadded:: 0.4.1
 
     """
@@ -2851,7 +2837,6 @@ cdef class Randomness:
         if self._rng != NULL and self._owner is None:
             libeasel.random.esl_randomness_Destroy(self._rng)
         self._rng = NULL
-        self._owner = None
 
     def __init__(self, object seed=None, bint fast=False):
         """__init__(self, seed=None, fast=False)\n--
