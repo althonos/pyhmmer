@@ -138,3 +138,4 @@ jobs:
         name: test-python-${{ matrix.python-version }}
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
+        codecov_curl_args: "--globoff"
