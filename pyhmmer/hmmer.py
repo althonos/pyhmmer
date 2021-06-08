@@ -676,7 +676,8 @@ if __name__ == "__main__":
                         print(
                             hit.name.decode(),
                             "-",
-                            hit.domains[0].alignment.hmm_name.decode(),
+                            hit.best_domain.alignment.hmm_accession.decode(),
+                            hit.best_domain.alignment.hmm_name.decode(),
                             hit.evalue,
                             hit.score,
                             hit.bias,
@@ -701,7 +702,8 @@ if __name__ == "__main__":
                         print(
                             hit.name.decode(),
                             "-",
-                            hit.domains[0].alignment.hmm_name.decode(),
+                            hit.best_domain.alignment.hmm_accession.decode(),
+                            hit.best_domain.alignment.hmm_name.decode(),
                             hit.evalue,
                             hit.score,
                             hit.bias,

@@ -871,6 +871,15 @@ cdef class Hit:
         return Domains(self)
 
     @property
+    def best_domain(self):
+        """`~pyhmmer.plan7.Domain`: The best scoring domain in this hit.
+
+        .. versionadded:: 0.4.2
+
+        """
+        return Domain(self, self._hit.best_domain)
+
+    @property
     def evalue(self):
         """`float`: The e-value of the hit.
         """
