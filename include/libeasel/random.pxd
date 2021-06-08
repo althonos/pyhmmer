@@ -9,11 +9,11 @@ cdef extern from "esl_random.h" nogil:
         eslRND_MERSENNE = 1
 
     ctypedef struct ESL_RANDOMNESS:
-      esl_randomness_type      type
-      int      mti
-      uint32_t[624] mt
-      uint32_t x
-      uint32_t seed
+        esl_randomness_type      type
+        int      mti
+        uint32_t[624] mt
+        uint32_t x
+        uint32_t seed
 
     # The ESL_RANDOMNESS object.
     ESL_RANDOMNESS *esl_randomness_Create    (uint32_t seed);

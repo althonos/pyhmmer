@@ -27,6 +27,7 @@ cimport libeasel.keyhash
 cimport libeasel.matrixops
 cimport libeasel.msa
 cimport libeasel.msafile
+cimport libeasel.random
 cimport libeasel.sq
 cimport libeasel.sqio
 cimport libeasel.sqio.ascii
@@ -34,6 +35,7 @@ cimport libeasel.ssi
 cimport libeasel.vec
 from libeasel cimport ESL_DSQ, esl_pos_t
 from libeasel.sq cimport ESL_SQ
+from libeasel.random cimport ESL_RANDOMNESS
 
 DEF eslERRBUFSIZE = 128
 
@@ -2812,6 +2814,187 @@ cdef class MSAFile:
             return alphabet
         else:
             raise UnexpectedError(status, "esl_msafile_SetDigital")
+
+# --- Randomness -------------------------------------------------------------
+
+cdef class Randomness:
+    """A portable, thread-safe random number generator.
+
+    Methods with an implementation in Easel are named after the equivalent
+    methods of `random.Random`.
+
+    Note:
+
+        However, not all of the distributions of `random.Random` are
+        available: to use `pyhmmer.easel.Randomness` as a drop-in replacement,
+        create a subclass deriving from both::
+
+            import random
+            from pyhmmer.easel import Randomness
+
+            class EaselRandom(Randomness, random.Random):
+                pass
+
+
+
+    .. versionadded:: 0.4.1
+
+    """
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __cinit__(self):
+        self._rng = NULL
+        self._owner = None
+
+    def __dealloc__(self):
+        if self._rng != NULL and self._owner is None:
+            libeasel.random.esl_randomness_Destroy(self._rng)
+        self._rng = NULL
+        self._owner = None
+
+    def __init__(self, object seed=None, bint fast=False):
+        """__init__(self, seed=None, fast=False)\n--
+
+        Create a new random number generator with the given seed.
+
+        Arguments:
+            seed (`int`): The seed to initialize the generator with. If ``0``
+                or `None` is given, an arbitrary seed will be chosen using
+                the system clock.
+            fast (`bool`): If `True`, use a linear congruential generator
+                (LCG), which is low quality and should only be used for
+                integration with legacy code. With `False`, use the
+                Mersenne Twister MT19937 algorithm instead.
+
+        """
+        cdef uint32_t _seed = 0 if seed is None else seed
+        # Support calling __init__ multiple times
+        if self._rng == NULL:
+            if fast:
+                self._rng = libeasel.random.esl_randomness_CreateFast(_seed)
+            else:
+                self._rng = libeasel.random.esl_randomness_Create(_seed)
+            if self._rng == NULL:
+                raise AllocationError("ESL_RANDOMNESS")
+        else:
+            self._seed(_seed)
+
+    def __copy__(self):
+        return self.copy()
+
+    def __getstate__(self):
+        return self.getstate()
+
+    def __setstate__(self, state):
+        if self._rng == NULL:
+            self._rng = <ESL_RANDOMNESS*> malloc(sizeof(ESL_RANDOMNESS))
+            if self._rng == NULL:
+                raise AllocationError("ESL_RANDOMNESS")
+        self.setstate(state)
+
+    # --- Methods ------------------------------------------------------------
+
+    def getstate(self):
+        """getstate(self)\n--
+
+        Get a tuple containing the current state.
+
+        """
+        assert self._rng != NULL
+        if self.is_fast():
+            return ( True, self._rng.seed, self._rng.x )
+        else:
+            return ( False, self._rng.seed, self._rng.mti, [self._rng.mt[x] for x in range(624)] )
+
+    def setstate(self, tuple state):
+        """setstate(self, state)\n--
+
+        Restores the state of the random number generator.
+
+        """
+        assert self._rng != NULL
+        if self._rng == NULL:
+            self._rng = <ESL_RANDOMNESS*> malloc(sizeof(ESL_RANDOMNESS))
+            if self._rng == NULL:
+                raise AllocationError("ESL_RANDOMNESS")
+
+        self._rng.seed = state[1]
+        if state[0]:
+            self._rng.type = libeasel.random.esl_randomness_type.eslRND_FAST
+            self._rng.x = state[2]
+        else:
+            self._rng.type = libeasel.random.esl_randomness_type.eslRND_MERSENNE
+            self._rng.mti = state[2]
+            for x in range(624):
+                self._rng.mt[x] = state[3][x]
+
+    cdef int _seed(self, uint32_t n) except 1:
+        status = libeasel.random.esl_randomness_Init(self._rng, n)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_randomness_Init")
+
+    cpdef void seed(self, object n=None):
+        """seed([n])\n--
+
+        Reinitialize the random number generator with the given seed.
+
+        Arguments:
+            n (`int`, optional): The seed to use. If ``0`` or `None`, an
+                arbitrary seed will be chosen using the current time.
+
+        """
+        assert self._rng != NULL
+        cdef uint32_t seed = n if n is not None else 0
+        self._seed(seed)
+
+    cpdef Randomness copy(self):
+        """copy(self)\n--
+
+        Return a copy of the random number generator in the same exact state.
+
+        """
+        assert self._rng != NULL
+
+        cdef Randomness new = Randomness.__new__(Randomness)
+        new._rng = <ESL_RANDOMNESS*> malloc(sizeof(ESL_RANDOMNESS))
+        if new._rng == NULL:
+            raise AllocationError("ESL_RANDOMNESS")
+
+        memcpy(<void*> new._rng, <void*> self._rng, sizeof(ESL_RANDOMNESS))
+        return new
+
+    cpdef double random(self):
+        """random(self)\n--
+
+        Generate a uniform random deviate on :math:`\\left[ 0, 1 \\right)`.
+
+        """
+        assert self._rng != NULL
+        return libeasel.random.esl_random(self._rng)
+
+    cpdef double normalvariate(self, double mu, double sigma):
+        """normalvariate(self, mu, sigma)\n--
+
+        Generate a Gaussian-distributed sample.
+
+        Arguments:
+            mu (`float`): The mean of the Gaussian being sampled.
+            sigma (`float`): The standard deviation of the Gaussian being
+                sampled.
+
+        """
+        assert self._rng != NULL
+        return libeasel.random.esl_rnd_Gaussian(self._rng, mu, sigma)
+
+    cpdef bint is_fast(self):
+        """is_fast(self)\n--
+
+        Returns whether or not the linear congruential generator is in use.
+
+        """
+        assert self._rng != NULL
+        return self._rng.type == libeasel.random.esl_randomness_type.eslRND_FAST
 
 
 # --- Sequence ---------------------------------------------------------------

@@ -12,10 +12,10 @@ from libeasel.bitfield cimport ESL_BITFIELD
 from libeasel.keyhash cimport ESL_KEYHASH
 from libeasel.msa cimport ESL_MSA
 from libeasel.msafile cimport ESL_MSAFILE
+from libeasel.random cimport ESL_RANDOMNESS
 from libeasel.sq cimport ESL_SQ
 from libeasel.sqio cimport ESL_SQFILE
 from libeasel.ssi cimport ESL_SSI, ESL_NEWSSI
-
 
 
 # --- Alphabet ---------------------------------------------------------------
@@ -153,6 +153,21 @@ cdef class MSAFile:
     cpdef void close(self)
     cpdef Alphabet guess_alphabet(self)
     cpdef Alphabet set_digital(self, Alphabet)
+
+
+# --- Randomness -------------------------------------------------------------
+
+cdef class Randomness:
+    cdef ESL_RANDOMNESS* _rng
+    cdef object          _owner
+
+    cdef int _seed(self, uint32_t n) except 1
+
+    cpdef void seed(self, object n=*)
+    cpdef Randomness copy(self)
+    cpdef double random(self)
+    cpdef double normalvariate(self, double mu, double sigma)
+    cpdef bint is_fast(self)
 
 
 # --- Sequence ---------------------------------------------------------------
