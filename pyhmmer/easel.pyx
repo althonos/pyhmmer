@@ -2823,7 +2823,7 @@ cdef class Randomness:
     Methods with an implementation in Easel are named after the equivalent
     methods of `random.Random`.
 
-    .. versionadded:: 0.4.1
+    .. versionadded:: 0.4.2
 
     """
 

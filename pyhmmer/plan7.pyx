@@ -325,8 +325,13 @@ cdef class Builder:
     Attributes:
         alphabet (`~pyhmmer.easel.Alphabet`): The alphabet the builder is
             configured to use to convert sequences to HMMs.
+        randomness (`~pyhmmer.easel.Randomness`): The random number generator
+            being used by the builder.
 
     .. versionadded:: 0.2.0
+
+    .. versionchanged:: 0.4.2
+       Added the ``randomness`` attribute.
 
     """
 
@@ -506,7 +511,7 @@ cdef class Builder:
         Setting this attribute to a different value will cause the internal
         random number generator to be reseeded immediately.
 
-        .. versionchanged:: 0.4.1
+        .. versionchanged:: 0.4.2
            Avoid shadowing initial null seeds given on builder initialization.
 
         """
@@ -2002,6 +2007,9 @@ cdef class Pipeline:
         randomness (`~pyhmmer.easel.Randomness`): The random number generator
             being used by the pipeline.
 
+    .. versionchanged:: 0.4.2
+       Added the ``randomness`` attribute.
+
     """
 
     M_HINT = 100         # default model size
@@ -2164,7 +2172,7 @@ cdef class Pipeline:
 
         .. versionadded:: 0.2.0
 
-        .. versionchanged:: 0.4.1
+        .. versionchanged:: 0.4.2
            Avoid shadowing initial null seeds given on pipeline initialization.
 
         """
@@ -2180,7 +2188,7 @@ cdef class Pipeline:
     def null2(self):
         """`bool`: Whether or not to enable the *null2* score correction.
 
-        .. versionadded:: v0.4.1
+        .. versionadded:: 0.4.1
 
         """
         assert self._pli != NULL
@@ -2195,7 +2203,7 @@ cdef class Pipeline:
     def bias_filter(self):
         """`bool`: Whether or not to enable the biased comp HMM filter.
 
-        .. versionadded:: v0.4.1
+        .. versionadded:: 0.4.1
 
         """
         assert self._pli != NULL
@@ -2210,7 +2218,7 @@ cdef class Pipeline:
     def F1(self):
         """`float`: The MSV filter threshold.
 
-        .. versionadded:: v0.4.1
+        .. versionadded:: 0.4.1
 
         """
         assert self._pli != NULL
@@ -2225,7 +2233,7 @@ cdef class Pipeline:
     def F2(self):
         """`float`: The Viterbi filter threshold.
 
-        .. versionadded:: v0.4.1
+        .. versionadded:: 0.4.1
 
         """
         assert self._pli != NULL
@@ -2240,7 +2248,7 @@ cdef class Pipeline:
     def F3(self):
         """`float`: The uncorrected Forward filter threshold.
 
-        .. versionadded:: v0.4.1
+        .. versionadded:: 0.4.1
 
         """
         assert self._pli != NULL
