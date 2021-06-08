@@ -10,6 +10,7 @@ from .easel import (
     DigitalSequence,
     MSA,
     DigitalMSA,
+    Randomness,
     VectorF,
     VectorU8,
 )
@@ -256,6 +257,7 @@ class Pipeline(object):
     alphabet: Alphabet
     background: Background
     profile: typing.Optional[Profile]
+    randomness: Randomness
     def __init__(
         self,
         alphabet: Alphabet,

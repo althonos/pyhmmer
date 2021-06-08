@@ -22,7 +22,7 @@ IF HMMER_IMPL == "VMX":
 ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
-from .easel cimport Alphabet, DigitalSequence, DigitalMSA, MSA, VectorF
+from .easel cimport Alphabet, DigitalSequence, DigitalMSA, MSA, Randomness, VectorF
 
 
 cdef extern from "hmmer.h" nogil:
@@ -124,13 +124,14 @@ cdef class _Offsets:
 
 
 cdef class Pipeline:
-    cdef public   float      report_e
-    cdef          object     _Z
-    cdef          object     _domZ
+    cdef          object     _Z       # either `Z` as an int, or `None`
+    cdef          object     _domZ    # either `domZ` as an int, or `None`
+    cdef          uint32_t   _seed    # the seed passed at pipeline initialization
 
     cdef readonly Alphabet   alphabet
     cdef readonly Background background
     cdef readonly Profile    profile
+    cdef readonly Randomness randomness
 
     cdef OptimizedProfile _optimized
     cdef P7_PIPELINE* _pli

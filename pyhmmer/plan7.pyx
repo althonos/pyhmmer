@@ -1985,6 +1985,15 @@ cdef class _Offsets:
 
 cdef class Pipeline:
     """An HMMER3 accelerated sequence/profile comparison pipeline.
+
+    Attributes:
+        alphabet (`~pyhmmer.easel.Alphabet`): The alphabet for which the
+            pipeline is configured.
+        background (`~pyhmmer.plan7.Background`): The null background model
+            to use to compute scores.
+        randomness (`~pyhmmer.easel.Randomness`): The random number generator
+            being used by the pipeline.
+
     """
 
     M_HINT = 100         # default model size
@@ -1995,8 +2004,10 @@ cdef class Pipeline:
 
     def __cinit__(self):
         self._pli = NULL
+        self.alphabet = None
         self.profile = None
         self.background = None
+        self.randomness = None
 
     def __init__(
         self,
@@ -2070,6 +2081,11 @@ cdef class Pipeline:
         if self._pli == NULL:
             raise AllocationError("P7_PIPELINE")
 
+        # create a Randomness object exposing the internal pipeline RNG
+        self.randomness = Randomness.__new__(Randomness)
+        self.randomness._owner = self
+        self.randomness._rng = self._pli.r
+
         # configure the pipeline with the additional keyword arguments
         self.null2 = null2
         self.bias_filter = bias_filter
@@ -2082,6 +2098,7 @@ cdef class Pipeline:
 
     def __dealloc__(self):
         libhmmer.p7_pipeline.p7_pipeline_Destroy(self._pli)
+        self.randomness._rng = NULL
 
     # --- Properties ---------------------------------------------------------
 
@@ -2133,21 +2150,24 @@ cdef class Pipeline:
 
     @property
     def seed(self):
-        """`int`: The seed used by the internal random number generator.
+        """`int`: The seed given at pipeline initialization.
+
+        Setting this attribute to a different value will cause the random
+        number generator to be reseeded immediately.
 
         .. versionadded:: 0.2.0
 
+        .. versionchanged:: 0.4.1
+           Avoid shadowing initial null seeds given on pipeline initialization.
+
         """
-        return libeasel.random.esl_randomness_GetSeed(self._pli.r)
+        return self._seed
 
     @seed.setter
     def seed(self, uint32_t seed):
-        cdef int status
-        with nogil:
-            status = libeasel.random.esl_randomness_Init(self._pli.r, seed)
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "esl_randomness_Init")
+        self._seed = seed
         self._pli.do_reseeding = self._pli.ddef.do_reseeding = seed != 0
+        self.randomness._seed(seed)
 
     @property
     def null2(self):
@@ -2234,37 +2254,35 @@ cdef class Pipeline:
 
         """
         cdef int      status
-        cdef uint32_t seed   = self.seed
+        cdef uint32_t seed
 
         # reset the Z and domZ values from the CLI if needed
         if self._pli.Z_setby == p7_zsetby_e.p7_ZSETBY_NTARGETS:
-          self.Z = None
+            self.Z = None
         if self._pli.domZ_setby == p7_zsetby_e.p7_ZSETBY_NTARGETS:
             self.domZ = None
 
-        #
-        self._pli.do_alignment_score_calc = 0
-        self._pli.long_targets = self.LONG_TARGETS
+        # # not needed
+        # self._pli.do_alignment_score_calc = 0
+        # self._pli.long_targets = self.LONG_TARGETS
 
         with nogil:
             # reinitialize the random number generator, even if
             # `self._pli.do_reseeding` is False, because a true
             # deallocation/reallocation of a P7_PIPELINE would reinitialize
             # it unconditionally.
-            status = libeasel.random.esl_randomness_Init(self._pli.r, seed)
-            if status != libeasel.eslOK:
-                raise UnexpectedError(status, "esl_randomness_Init")
+            self.randomness._seed(self._seed)
             # reinitialize the domaindef
             libhmmer.p7_domaindef.p7_domaindef_Reuse(self._pli.ddef)
 
-        # Configure reporting thresholds
-        self._pli.by_E            = True
-        self._pli.E               = 10.0
-        self._pli.T               = 0.0
-        self._pli.dom_by_E        = True
-        self._pli.domE            = 10.0
-        self._pli.domT            = 0.0
-        self._pli.use_bit_cutoffs = False
+        # # Configure reporting thresholds
+        # self._pli.by_E            = True
+        # self._pli.E               = 10.0
+        # self._pli.T               = 0.0
+        # self._pli.dom_by_E        = True
+        # self._pli.domE            = 10.0
+        # self._pli.domT            = 0.0
+        # self._pli.use_bit_cutoffs = False
         # if (go && esl_opt_IsOn(go, "-T"))
         #   {
         #     pli->T    = esl_opt_GetReal(go, "-T");
@@ -2276,13 +2294,13 @@ cdef class Pipeline:
         #     pli->dom_by_E = FALSE;
         #   }
 
-        # Configure inclusion thresholds
-        self._pli.inc_by_E           = True
-        self._pli.incE               = 0.01
-        self._pli.incT               = 0.0
-        self._pli.incdom_by_E        = True
-        self._pli.incdomE            = 0.01
-        self._pli.incdomT            = 0.0
+        # # Configure inclusion thresholds
+        # self._pli.inc_by_E           = True
+        # self._pli.incE               = 0.01
+        # self._pli.incT               = 0.0
+        # self._pli.incdom_by_E        = True
+        # self._pli.incdomE            = 0.01
+        # self._pli.incdomT            = 0.0
         # if (go && esl_opt_IsOn(go, "--incT"))
         #   {
         #     pli->incT     = esl_opt_GetReal(go, "--incT");
@@ -2294,7 +2312,7 @@ cdef class Pipeline:
         #     pli->incdom_by_E = FALSE;
         #   }
 
-        # Configure for one of the model-specific thresholding options
+        # # Configure for one of the model-specific thresholding options
         # if (go && esl_opt_GetBoolean(go, "--cut_ga"))
         #   {
         #     pli->T        = pli->domT        = 0.0;
@@ -2334,14 +2352,14 @@ cdef class Pipeline:
         #     pli->domZ       = esl_opt_GetReal(go, "--domZ");
         #   }
 
-        # Configure acceleration pipeline thresholds
-        self._pli.do_max        = False
-        if self._pli.long_targets:
-            self._pli.B1     = 100
-            self._pli.B2     = 240
-            self._pli.B3     = 1000
-        else:
-            self._pli.B1 = self._pli.B2 = self._pli.B3 = -1
+        # # Configure acceleration pipeline thresholds
+        # self._pli.do_max      = False
+        # if self._pli.long_targets:
+        #     self._pli.B1     = 100
+        #     self._pli.B2     = 240
+        #     self._pli.B3     = 1000
+        # else:
+        #     self._pli.B1 = self._pli.B2 = self._pli.B3 = -1
 
         # if (go && esl_opt_GetBoolean(go, "--max"))
         #   {
@@ -2352,7 +2370,7 @@ cdef class Pipeline:
         #     pli->F1 = (pli->long_targets ? 0.3 : 1.0); // need to set some threshold for F1 even on long targets. Should this be tighter?
         #   }
 
-        # Accounting as we collect results
+        # Reset accounting values
         self._pli.nmodels         = 0
         self._pli.nseqs           = 0
         self._pli.nres            = 0
@@ -2369,8 +2387,8 @@ cdef class Pipeline:
         self._pli.pos_output      = 0
         self._pli.strands         = 0
         self._pli.W               = 0
-        self._pli.show_accessions = True  #(go && esl_opt_GetBoolean(go, "--acc")   ? TRUE  : FALSE);
-        self._pli.show_alignments = False #(go && esl_opt_GetBoolean(go, "--noali") ? FALSE : TRUE);
+        #self._pli.show_accessions = True  #(go && esl_opt_GetBoolean(go, "--acc")   ? TRUE  : FALSE);
+        #self._pli.show_alignments = False #(go && esl_opt_GetBoolean(go, "--noali") ? FALSE : TRUE);
         self._pli.hfp             = NULL
         self._pli.errbuf[0]       = b'\0'
 
