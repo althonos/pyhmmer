@@ -86,6 +86,7 @@ API Reference
        :nosignatures:
 
        pyhmmer.easel.Alphabet
+       pyhmmer.easel.Randomness
        pyhmmer.easel.SSIReader
        pyhmmer.easel.SSIWriter
 

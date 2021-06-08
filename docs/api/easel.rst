@@ -140,6 +140,13 @@ Alphabet
 .. autoclass:: pyhmmer.easel.Alphabet
    :members:
 
+Randomness
+^^^^^^^^^^
+
+.. autoclass:: pyhmmer.easel.Randomness
+   :special-members: __init__
+   :members:
+
 Sequence / Subsequence Index
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
