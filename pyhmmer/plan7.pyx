@@ -376,7 +376,7 @@ cdef class Builder:
         int EfL=100,
         int EfN=200,
         double Eft=0.04,
-        int seed=42,
+        uint32_t seed=42,
         object ere=None,
         object popen=None,
         object pextend=None,
@@ -396,6 +396,9 @@ cdef class Builder:
             pextend (`float`): The *gap extend* probability to use with the
                 score system. Default depends on the alphabet: *0.4* for
                 proteins, *0.75* for nucleotides.
+            seed (`int`): The seed to use to initialize the internal random
+                number generator. If ``0`` is given, an arbitrary seed will
+                be chosen based on the current time.
 
         """
         # extract alphabet and create raw P7_BUILDER object
@@ -405,6 +408,14 @@ cdef class Builder:
             self._bld = libhmmer.p7_builder.p7_builder_Create(NULL, alphabet._abc)
         if self._bld == NULL:
             raise AllocationError("P7_BG")
+
+        # create a Randomness object exposing the internal RNG
+        self.randomness = Randomness.__new__(Randomness)
+        self.randomness._owner = self
+        self.randomness._rng = self._bld.r
+
+        # store the seed given at initialization and reseed the RNG
+        self.seed = seed
 
         # set numeric parameters
         self._bld.symfrac = symfrac
@@ -419,9 +430,6 @@ cdef class Builder:
         self._bld.EfL = EfL
         self._bld.EfN = EfN
         self._bld.Eft = Eft
-
-        # reset the random number generator
-        self.seed = seed
 
         # set the architecture strategy
         self.architecture = architecture
@@ -493,27 +501,22 @@ cdef class Builder:
 
     @property
     def seed(self):
-        """`int`: The seed used by the internal random number generator.
+        """`int`: The seed given at builder initialization.
 
-        Setting the seed will effectively reinitialize the internal RNG. In
-        the special case the seed is *0*, a one-time arbitrary seed will be
-        chosen and the RNG will no be reseeded for reproducibility.
+        Setting this attribute to a different value will cause the internal
+        random number generator to be reseeded immediately.
+
+        .. versionchanged:: 0.4.1
+           Avoid shadowing initial null seeds given on builder initialization.
+
         """
-        assert self._bld != NULL
-        return libeasel.random.esl_randomness_GetSeed(self._bld.r)
+        return self._seed
 
     @seed.setter
     def seed(self, uint32_t seed):
-        assert self._bld != NULL
-
-        cdef int status
-
-        with nogil:
-            status = libeasel.random.esl_randomness_Init(self._bld.r, seed)
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "esl_randomness_Init")
-
+        self._seed = seed
         self._bld.do_reseeding = seed != 0
+        self.randomness._seed(seed)
 
     # --- Methods ------------------------------------------------------------
 

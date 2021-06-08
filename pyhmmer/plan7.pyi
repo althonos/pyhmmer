@@ -57,6 +57,8 @@ class Background(object):
     def copy(self) -> Background: ...
 
 class Builder(object):
+    alphabet: Alphabet
+    randomness: Randomness
     def __init__(
         self,
         alphabet: Alphabet,

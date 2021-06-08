@@ -54,6 +54,9 @@ cdef class Builder:
     cdef readonly float  popen
     cdef readonly float  pextend
     cdef readonly Alphabet alphabet
+    cdef readonly Randomness randomness
+
+    cdef uint32_t    _seed    # the seed passed at builder initialization
     cdef P7_BUILDER* _bld
 
     cpdef tuple build(self, DigitalSequence sequence, Background background)
