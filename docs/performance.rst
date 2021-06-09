@@ -20,6 +20,9 @@ Both pyHMMER and HMMER support searching / scanning several targets with
 several queries in parallel using multithreading. However, benchmarks suggest
 that pyHMMER takes a greater advantage of the number of available CPUs.
 
+Querying modes
+^^^^^^^^^^^^^^
+
 To get a better idea of how this is possible, let's first have a look at how
 HMMER parallelises computations on a consumer setup (*i.e.* excluding MPI).
 The ``hmmsearch`` binary can process multiple HMM queries against multiple
@@ -52,6 +55,7 @@ the targets with that HMM. **This allows the pipeline search loop to be truly
 run in parallel for several HMMs, and doesn't require threads to wait for each
 other before moving on to the next query**.
 
+
 .. admonition:: Note
 
     Obviously, the pyHMMER parallelisation strategy will only work for multiple
@@ -62,6 +66,22 @@ other before moving on to the next query**.
     The Python API still remains flexible enough for the original HMMER strategy
     to be implemented; if this was of interest, you should consider opening
     a feature request on the `issue tracker <https://github.com/althonos/pyhmmer/issues>`_.
+
+
+Example
+^^^^^^^
+
+To check how well pyHMMER and HMMER3 handle parallelism on a real dataset,
+we annotated proteins from representative genomes of the
+`proGenomes <https://progenomes.embl.de/>`_ database with the
+`Pfam <http://pfam.xfam.org/>`_ collection of HMMs. ``hmmsearch`` runs
+are shown in green, ``pyhmmer`` runs in blue.
+
+.. image:: _images/progenomes-v0.4.0.svg
+
+*The proteins of each genomes were extracted into one FASTA file per genome,
+and we measured the runtime of either the* ``hmmsearch`` *binary or the*
+``python -m pyhmmer.hmmer hmmsearch`` *module on each file*.
 
 
 Memory allocation

@@ -15,6 +15,10 @@ the times for pressed HMMs, and dashed-lines the times for HMMs in text format.*
 Unreleased
 ----------
 
+
+v0.4.0 - 2021-06-05
+-------------------
+
 .. image:: _images/bench-v0.4.0.svg
 
 The overhead of pyHMMER has been reduced, and has a much smaller effect when
