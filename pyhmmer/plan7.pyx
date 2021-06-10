@@ -785,6 +785,13 @@ cdef class Domain:
         else:
             return exp(self._dom.lnP) * self.hit.hits.Z
 
+    @property
+    def lnP(self):
+        """`float`: The log(p-value) of the domain bitscore.
+        """
+        assert self._dom != NULL
+        return self._dom.lnP
+
 
 cdef class Domains:
     """A read-only view over the domains of a single `~pyhmmer.plan7.Hit`.
