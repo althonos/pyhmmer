@@ -30,6 +30,10 @@ cdef extern from "emmintrin.h":
 
 cdef extern from "impl_sse/impl_sse.h" nogil:
 
+    cdef int p7O_NQB(int)
+    cdef int p7O_NQW(int)
+    cdef int p7O_NQF(int)
+
     DEF p7O_NXSTATES = 4
     cdef enum p7o_xstates_e:
         p7O_E  = 0

@@ -53,11 +53,11 @@ from libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL
 
 IF HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init
-    from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
+    from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE, p7_oprofile_Dump, p7O_NQB
     from libhmmer.impl_vmx.io cimport p7_oprofile_Write
 ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7O_EXTRA_SB
-    from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
+    from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE, p7_oprofile_Dump, p7O_NQB
     from libhmmer.impl_sse.io cimport p7_oprofile_Write
 
 from .easel cimport (
@@ -1823,7 +1823,7 @@ cdef class OptimizedProfile:
         """
         assert self._om != NULL
 
-        cdef int nqb = self._om.allocQ16
+        cdef int nqb = p7O_NQB(self._om.M)
         cdef int nqs = nqb + p7O_EXTRA_SB
 
         cdef MatrixU8 mat = MatrixU8.__new__(MatrixU8)
@@ -1832,6 +1832,20 @@ cdef class OptimizedProfile:
         mat._strides = (sizeof(uint8_t), mat._m * sizeof(uint8_t))
         mat._owner = self
         mat._data = <uint8_t**> self._om.sbv
+        return mat
+
+    @property
+    def rbv(self):
+        """`~pyhmmer.easel.MatrixU8`: The match scores for the MSV filter.
+        """
+        assert self._om != NULL
+
+        cdef MatrixU8 mat = MatrixU8.__new__(MatrixU8)
+        mat._m = mat._shape[0] = self.alphabet.Kp
+        mat._n = mat._shape[1] = 16 * p7O_NQB(self._om.M)
+        mat._strides = (sizeof(uint8_t), mat._m * sizeof(uint8_t))
+        mat._owner = self
+        mat._data = <uint8_t**> self._om.rbv
         return mat
 
     cpdef bint is_local(self):
