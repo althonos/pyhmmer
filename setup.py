@@ -143,12 +143,9 @@ class build_ext(_build_ext):
         for name in ext.libraries:
             lib = self._clib_cmd.get_library(name)
             ext.include_dirs.extend(lib.include_dirs)
-
-        # on OSX, force to build the library sources to fix linking issues
-        if sys.platform == "darwin":
-            for libname in ext.libraries:
-                lib = next(lib for lib in self._clib_cmd.libraries if lib.name == libname)
-                ext.sources.extend(lib.sources)
+            ext.extra_objects.append(self.compiler.library_filename(
+                lib.name, output_dir=self._clib_cmd.build_clib
+            ))
 
         # build the rest of the extension as normal
         _build_ext.build_extension(self, ext)
