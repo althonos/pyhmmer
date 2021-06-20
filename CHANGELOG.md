@@ -6,8 +6,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.2...HEAD
 
+## [v0.4.2] - 2021-06-20
+[v0.4.2]: https://github.com/althonos/pyhmmer/compare/v0.4.1...v0.4.2
+
+### Added
+- `pyhmmer.easel.Randomness` class exposing a deterministic random number generator.
+- `pyhmmer.plan7.Builder.randomness` and `pyhmmer.plan7.Pipeline.randomness` attributes exposing the internal random number generator used by each object.
+- `pyhmmer.plan7.Hit.best_domain` property mapping to the highest scoring domain of a hit.
+- `pyhmmer.plan7.OptimizedProfile.rbv` property exposing match scores.
+- `pyhmmer.plan7.Domain.pvalue` and `pyhmmer.plan7.Hit.pvalue` reporting the p-value for a domain or hit bitscore.
+
+### Fixed
+- Dimensions of the `pyhmmer.plan7.OptimizedProfile.sbv` matrix not being properly set.
 
 ## [v0.4.1] - 2021-06-06
 [v0.4.1]: https://github.com/althonos/pyhmmer/compare/v0.4.0...v0.4.1
