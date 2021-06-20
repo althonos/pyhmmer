@@ -786,11 +786,11 @@ cdef class Domain:
             return exp(self._dom.lnP) * self.hit.hits.Z
 
     @property
-    def lnP(self):
-        """`float`: The log(p-value) of the domain bitscore.
+    def pvalue(self):
+        """`float`: The p-value of the domain bitscore.
         """
         assert self._dom != NULL
-        return self._dom.lnP
+        return exp(self._dom.lnP)
 
 
 cdef class Domains:
@@ -900,6 +900,17 @@ cdef class Hit:
             return exp(self._hit.lnP)
         else:
             return exp(self._hit.lnP) * self.hits.Z
+
+    @property
+    def pvalue(self):
+        """`float`: The p-value of the bitscore.
+
+        .. versionadded:: 0.4.2
+
+        """
+        assert self._hit != NULL
+        return exp(self._hit.lnP)
+
 
     # --- Methods ------------------------------------------------------------
 
