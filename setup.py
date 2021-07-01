@@ -12,7 +12,6 @@ import subprocess
 from unittest import mock
 
 import setuptools
-from distutils import log
 from distutils.command.clean import clean as _clean
 from distutils.errors import CompileError
 from setuptools.command.build_ext import build_ext as _build_ext
@@ -38,6 +37,8 @@ def _split_multiline(value):
     sep = max('\n,;', key=value.count)
     return list(filter(None, map(lambda x: x.strip(), value.split(sep))))
 
+def _eprint(*args, **kwargs):
+    print(*args, **kwargs, file=sys.stderr)
 
 # --- `setup.py` commands ----------------------------------------------------
 
@@ -83,7 +84,7 @@ class build_ext(_build_ext):
         if hmmer_impl is None:
             raise RuntimeError('Could not select implementation for CPU architecture: "{}"'.format(machine))
         else:
-            log.info('Building HMMER with {} for CPU architecture: "{}"'.format(hmmer_impl, machine))
+            _eprint('Building HMMER with', hmmer_impl, 'for CPU architecture:', repr(machine))
 
         # use debug directives with Cython if building in debug mode
         cython_args = {"include_path": ["include"], "compiler_directives": {}}
@@ -178,6 +179,8 @@ class configure(_build_clib):
             raise CompileError(err.stderr)
 
     def _has_header(self, headername):
+        _eprint('checking whether <{}> can be included'.format(headername), end="... ")
+
         slug = re.sub("[./-]", "_", headername)
         testfile = os.path.join(self.build_temp, "have_{}.c".format(slug))
         objects = []
@@ -188,10 +191,10 @@ class configure(_build_clib):
             with mock.patch.object(self.compiler, "spawn", new=self._silent_spawn):
                 objects = self.compiler.compile([testfile], debug=self.debug)
         except CompileError as err:
-            log.warn('could not find header "{}"'.format(headername))
+            _eprint("no")
             return False
         else:
-            log.debug('found header "{}"'.format(headername))
+            _eprint("yes")
             return True
         finally:
             os.remove(testfile)
@@ -199,6 +202,8 @@ class configure(_build_clib):
                 os.remove(obj)
 
     def _has_function(self, funcname):
+        _eprint('checking whether function', repr(funcname), 'is available', end="... ")
+
         testfile = os.path.join(self.build_temp, "have_{}.c".format(funcname))
         binfile = os.path.join(self.build_temp, "have_{}.bin".format(funcname))
         objects = []
@@ -210,10 +215,10 @@ class configure(_build_clib):
                 objects = self.compiler.compile([testfile], debug=self.debug)
                 self.compiler.link_executable(objects, binfile)
         except CompileError:
-            log.warn('could not link to function "{}"'.format(funcname))
+            _eprint("no")
             return False
         else:
-            log.debug('found function "{}"'.format(funcname))
+            _eprint("yes")
             return True
         finally:
             os.remove(testfile)
@@ -222,11 +227,80 @@ class configure(_build_clib):
             if os.path.isfile(binfile):
                 os.remove(binfile)
 
-    def _check_sse(self):
-        pass
+    def _check_sse2(self):
+        _eprint('checking whether compiler can build SSE2 code', end="... ")
+
+        testfile = os.path.join(self.build_temp, "have_sse2.c")
+        binfile = os.path.join(self.build_temp, "have_sse2.bin")
+        objects = []
+
+        with open(testfile, "w") as f:
+            f.write("""
+                #include <emmintrin.h>
+                int main() {
+                    __m128i a = _mm_set1_epi16(1);
+                    short   x = _mm_extract_epi16(a, 1);
+                    return (x == 1) ? 0 : 1;
+                }
+            """)
+        try:
+            with mock.patch.object(self.compiler, "spawn", new=self._silent_spawn):
+                objects = self.compiler.compile([testfile], debug=self.debug, extra_preargs=["-msse2"])
+                self.compiler.link_executable(objects, binfile)
+                subprocess.run([binfile], check=True)
+        except CompileError:
+            _eprint("no")
+            return False
+        except subprocess.CalledProcessError:
+            _eprint("yes, but cannot run code")
+            return True  # assume we are cross-compiling, and still build
+        else:
+            _eprint("yes, with -msse2")
+            return True
+        finally:
+            os.remove(testfile)
+            for obj in filter(os.path.isfile, objects):
+                os.remove(obj)
+            if os.path.isfile(binfile):
+                os.remove(binfile)
 
     def _check_vmx(self):
-        pass
+        _eprint('checking whether compiler can build VMX code', end="... ")
+
+        testfile = os.path.join(self.build_temp, "have_sse.c")
+        binfile = os.path.join(self.build_temp, "have_sse.bin")
+        objects = []
+
+        with open(testfile, "w") as f:
+            f.write("""
+                #include <altivec.h>
+                int main() {
+                    vector float a = vec_splats(1.0);
+                    float f;
+                    vec_ste(a, 0, &f);
+                    return (f == 1) ? 0 : 1;
+                }
+            """)
+        try:
+            with mock.patch.object(self.compiler, "spawn", new=self._silent_spawn):
+                objects = self.compiler.compile([testfile], debug=self.debug)
+                self.compiler.link_executable(objects, binfile)
+                subprocess.run([binfile], check=True)
+        except CompileError:
+            _eprint('no')
+            return False
+        except subprocess.CalledProcessError:
+            _eprint('yes, but cannot run code')
+            return True  # assume we are cross-compiling, and still build
+        else:
+            _eprint('yes')
+            return True
+        finally:
+            os.remove(testfile)
+            for obj in filter(os.path.isfile, objects):
+                os.remove(obj)
+            if os.path.isfile(binfile):
+                os.remove(binfile)
 
     # --- Required interface for `setuptools.Command` ---
 
@@ -290,10 +364,22 @@ class configure(_build_clib):
         if sys.byteorder == "big":
             defines["WORDS_BIGENDIAN"] = 1
 
+        # check platform flags
+        global hmmer_impl
+        platform_supported = False
+        if hmmer_impl is not None:
+            if hmmer_impl == "SSE":
+                supported_feature = self._check_sse2()
+            elif hmmer_impl == "VMX":
+                supported_feature = self._check_vmx()
+            else:
+                supported_feature = False
+            if not supported_feature:
+                raise RuntimeError("failed to compile platform-specific code, aborting.")
+
         # fill the defines if headers are found
         headers = headers or []
         for header in headers:
-            log.info('checking whether or not "{}" can be included'.format(header))
             if self._has_header(header):
                 slug = re.sub("[./-]", "_", header).upper()
                 defines["HAVE_{}".format(slug)] = 1
@@ -301,7 +387,6 @@ class configure(_build_clib):
         # fill the defines if functions are found
         functions = functions or []
         for func in functions:
-            log.info('checking whether or not function "{}" is available'.format(func))
             if self._has_function(func):
                 defines["HAVE_{}".format(func.upper())] = 1
 
@@ -407,21 +492,27 @@ class build_clib(_build_clib):
 
 class clean(_clean):
 
+    def remove_file(self, filename):
+        if os.path.exists(filename):
+            _eprint("removing", repr(filename))
+            os.remove(filename)
+        else:
+            _eprint(repr(filename), "does not exist -- can't clean it")
+
     def run(self):
-
-        source_dir_abs = os.path.join(os.path.dirname(__file__), "pyhmmer")
-        source_dir = os.path.relpath(source_dir_abs)
-
-        patterns = ["*.html"]
-        if self.all:
-            patterns.extend(["*.so", "*.c"])
-
-        for pattern in patterns:
-            for file in glob.glob(os.path.join(source_dir, pattern)):
-                log.info("removing {!r}".format(file))
-                os.remove(file)
-
         _clean.run(self)
+
+        _build_cmd = self.get_finalized_command("build_ext")
+        _build_cmd.inplace = True
+
+        for ext in self.distribution.ext_modules:
+            filename = _build_cmd.get_ext_filename(ext.name)
+            if self.all:
+                self.remove_file(filename)
+            basename = _build_cmd.get_ext_fullname(ext.name).replace(".", os.path.sep)
+            for ext in ["c", "html"]:
+                filename = os.path.extsep.join([basename, ext])
+                self.remove_file(filename)
 
 
 # --- C static libraries -----------------------------------------------------
@@ -464,7 +555,7 @@ elif machine.startswith(("x86", "amd", "i386", "i686")):
     platform_define_macros = [("eslENABLE_SSE", 1)]
     platform_compile_args = ["-msse3"]
 else:
-    log.warn('pyHMMER is not supported on CPU architecture: "{}"'.format(machine))
+    _eprint('pyHMMER is not supported on CPU architecture:', repr(machine))
     platform_define_macros = []
     platform_compile_args = []
     hmmer_impl = None
