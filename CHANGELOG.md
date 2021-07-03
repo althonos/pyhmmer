@@ -6,7 +6,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.3...HEAD
+
+
+## [v0.4.3] - 2021-07-03
+[v0.4.3]: https://github.com/althonos/pyhmmer/compare/v0.4.2...v0.4.3
+
+### Fixed
+- File object wrappers not reporting exceptions raised when seeking on OSX/BSD platforms.
+
 
 ## [v0.4.2] - 2021-06-20
 [v0.4.2]: https://github.com/althonos/pyhmmer/compare/v0.4.1...v0.4.2
@@ -20,6 +28,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - Dimensions of the `pyhmmer.plan7.OptimizedProfile.sbv` matrix not being properly set.
+
 
 ## [v0.4.1] - 2021-06-06
 [v0.4.1]: https://github.com/althonos/pyhmmer/compare/v0.4.0...v0.4.1
