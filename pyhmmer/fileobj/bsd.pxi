@@ -24,11 +24,11 @@ ctypedef int    (*closefn_t)(void *cookie)
 
 cdef extern from "stdio.h":
     FILE* funopen(
-        const void*  cookie,
-        readfn_t*    readfn,
-        writefn_t*   writefn,
-        seekfn_t*    seekfn,
-        closefn_t*   closefn
+        const void* cookie,
+        readfn_t    readfn,
+        writefn_t   writefn,
+        seekfn_t    seekfn,
+        closefn_t   closefn
     )
 
 
@@ -93,21 +93,21 @@ cdef int fclose_obj(void *cookie) except EOF:
 # --- fopen_obj --------------------------------------------------------------
 
 cdef FILE* fopen_obj(object obj, str mode = "r") except NULL:
-    cdef closefn_t* closefn = <closefn_t*> fclose_obj
-    cdef readfn_t*  readfn  = NULL
-    cdef writefn_t* writefn = NULL
-    cdef seekfn_t*  seekfn  = NULL
+    cdef closefn_t closefn = <closefn_t> fclose_obj
+    cdef readfn_t  readfn  = NULL
+    cdef writefn_t writefn = NULL
+    cdef seekfn_t  seekfn  = NULL
 
     try:
         if obj.readable():
             if hasattr((<object> obj), "readinto"):
-                readfn = <readfn_t*> fread_obj_readinto
+                readfn = <readfn_t> fread_obj_readinto
             else:
-                readfn = <readfn_t*> fread_obj_read
+                readfn = <readfn_t> fread_obj_read
         if obj.writable():
-            writefn = <writefn_t*> fwrite_obj
+            writefn = <writefn_t> fwrite_obj
         if obj.seekable():
-            seekfn = <seekfn_t*> fseek_obj
+            seekfn = <seekfn_t> fseek_obj
     except AttributeError as err:
         ty = type(obj).__name__
         raise TypeError("expected `io.IOBase` instance, found {}".format(ty)) from err
