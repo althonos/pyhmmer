@@ -18,7 +18,7 @@ from cpython.exc cimport PyErr_Clear
 from libc.stdlib cimport malloc, realloc, free
 from libc.stdint cimport uint8_t, uint32_t
 from libc.stdio cimport fprintf, FILE, stdout, fclose
-from libc.string cimport strdup
+from libc.string cimport strdup, strlen
 from libc.math cimport exp, ceil
 
 cimport libeasel
@@ -45,6 +45,7 @@ from libeasel.sq cimport ESL_SQ
 from libhmmer cimport p7_LOCAL, p7_offsets_e
 from libhmmer.logsum cimport p7_FLogsumInit
 from libhmmer.p7_builder cimport P7_BUILDER, p7_archchoice_e, p7_wgtchoice_e, p7_effnchoice_e
+from libhmmer.p7_hmm cimport p7H_NTRANSITIONS
 from libhmmer.p7_hmmfile cimport p7_hmmfile_formats_e
 from libhmmer.p7_tophits cimport p7_hitflags_e
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
@@ -989,6 +990,49 @@ cdef class HMM:
 
     def __copy__(self):
         return self.copy()
+
+    def __sizeof__(self):
+        assert self._hmm != NULL
+        assert self.alphabet is not None
+        assert self.alphabet._abc != NULL
+
+        cdef size_t s = 0
+        # level 1
+        s += (self._hmm.M + 1) * sizeof(float*)  # hmm->t
+        s += (self._hmm.M + 1) * sizeof(float*)  # hmm->mat
+        s += (self._hmm.M + 1) * sizeof(float*)  # hmm->inst
+        # level 2
+        s += p7H_NTRANSITIONS * (self._hmm.M + 1) * sizeof(float)
+        s += self.alphabet._abc.K * (self._hmm.M + 1) * sizeof(float)
+        s += self.alphabet._abc.K * (self._hmm.M + 1) * sizeof(float)
+        # optional fields
+        if self._hmm.flags & libhmmer.p7_hmm.p7H_RF:
+            s += (self._hmm.M + 2) * sizeof(char)
+        if self._hmm.flags & libhmmer.p7_hmm.p7H_MMASK:
+            s += (self._hmm.M + 2) * sizeof(char)
+        if self._hmm.flags & libhmmer.p7_hmm.p7H_CONS:
+            s += (self._hmm.M + 2) * sizeof(char)
+        if self._hmm.flags & libhmmer.p7_hmm.p7H_CS:
+            s += (self._hmm.M + 2) * sizeof(char)
+        if self._hmm.flags & libhmmer.p7_hmm.p7H_CA:
+            s += (self._hmm.M + 2) * sizeof(char)
+        if self._hmm.flags & libhmmer.p7_hmm.p7H_MAP:
+            s += (self._hmm.M + 1) * sizeof(int)
+        # annotations
+        if self._hmm.name != NULL:
+            s += strlen(self._hmm.name) * sizeof(char)
+        if self._hmm.acc != NULL:
+            s += strlen(self._hmm.acc) * sizeof(char)
+        if self._hmm.desc != NULL:
+            s += strlen(self._hmm.desc) * sizeof(char)
+        if self._hmm.comlog != NULL:
+            s += strlen(self._hmm.comlog) * sizeof(char)
+        if self._hmm.ctime != NULL:
+            s += strlen(self._hmm.ctime) * sizeof(char)
+        # struct size
+        s += sizeof(P7_HMM)
+        s += sizeof(self)
+        return s
 
     # --- Properties ---------------------------------------------------------
 
@@ -3257,12 +3301,12 @@ cdef class TopHits:
     # --- Methods ------------------------------------------------------------
 
     cdef int _threshold(self, Pipeline pipeline) except 1:
+        assert self._th != NULL
+        assert pipeline._pli != NULL
 
         cdef int          status
         cdef P7_TOPHITS*  th     = self._th
         cdef P7_PIPELINE* pli    = pipeline._pli
-
-        assert self._th != NULL
 
         with nogil:
             status = libhmmer.p7_tophits.p7_tophits_Threshold(th, pli)
@@ -3365,6 +3409,7 @@ cdef class TopHits:
 
         """
         assert self._th != NULL
+        assert alphabet._abc != NULL
 
         cdef int status
         cdef int flags  = libhmmer.p7_DEFAULT

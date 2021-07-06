@@ -3645,8 +3645,11 @@ cdef class SequenceFile:
                 ``hmmpgmd``, ``fmindex``.
             ignore_gaps (`bool`): When set to `True`, allow ignoring gap
                 characters ('-') when they are present in ungapped formats
-                such as ``fasta``. Defaults to `False`, the default Easel
+                such as ``fasta``. With `False`, stick to the default Easel
                 behaviour.
+
+        .. versionchanged:: 0.4.4
+           Added the ``ignore_gaps`` parameter.
 
         """
         # get format from string passed as input
