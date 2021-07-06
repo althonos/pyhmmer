@@ -9,7 +9,7 @@ import pkg_resources
 
 import pyhmmer
 from pyhmmer.plan7 import Background, Builder, Pipeline, HMMFile, TopHits
-from pyhmmer.easel import Alphabet, SequenceFile, TextSequence, MSAFile, DigitalMSA
+from pyhmmer.easel import Alphabet, SequenceFile, DigitalSequence, TextSequence, MSAFile, DigitalMSA
 from pyhmmer.errors import AlphabetMismatch
 
 
@@ -29,15 +29,21 @@ class TestSearchPipeline(unittest.TestCase):
     def test_search_seq_alphabet_mismatch(self):
         pipeline = Pipeline(alphabet=Alphabet.dna())
 
-        # mismatch between pipeline alphabet and query alphabet
-        dsq = TextSequence(sequence="IRGIY").digitize(self.alphabet)
-        self.assertRaises(AlphabetMismatch, pipeline.search_seq, dsq, self.references)
-
         # mismatch between pipeline alphabet and database alphabet
-        dsq = TextSequence(sequence="ATGC").digitize(pipeline.alphabet)
-        self.assertRaises(AlphabetMismatch, pipeline.search_seq, dsq, self.references)
+        dsq1 = TextSequence(sequence="ATGC").digitize(pipeline.alphabet)
+        self.assertRaises(AlphabetMismatch, pipeline.search_seq, dsq1, self.references)
 
-    def test_search_seq_alphabet_mismatch(self):
+        # mismatch between pipeline alphabet and query alphabet
+        dsq2 = TextSequence(sequence="IRGIY").digitize(self.alphabet)
+        self.assertRaises(AlphabetMismatch, pipeline.search_seq, dsq2, self.references)
+
+        # check that all ref sequences are checked, not just the first one
+        references = self.references.copy()
+        references.append(TextSequence(sequence="ATGC").digitize(Alphabet.dna()))
+        pipeline = Pipeline(alphabet=self.alphabet)
+        self.assertRaises(AlphabetMismatch, pipeline.search_seq, dsq2, references)
+
+    def test_search_msa_alphabet_mismatch(self):
         pipeline = Pipeline(alphabet=Alphabet.dna())
 
         # mismatch between pipeline alphabet and query alphabet

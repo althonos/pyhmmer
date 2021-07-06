@@ -2699,6 +2699,9 @@ cdef class Pipeline:
             # verify the alphabet
             if not self_alphabet._eq(seq_alphabet):
                 raise AlphabetMismatch(self_alphabet, seq_alphabet)
+            # verify the length
+            if sq.n > 100000:
+                raise ValueError("sequence length over comparison pipeline limit (100,000)")
 
             # configure the pipeline for the current HMM
             status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
@@ -2740,6 +2743,12 @@ cdef class Pipeline:
                     else:
                         sq = seq._sq
                         seq_alphabet = seq.alphabet
+                        # verify the alphabet
+                        if not self_alphabet._eq(seq_alphabet):
+                            raise AlphabetMismatch(self_alphabet, seq_alphabet)
+                        # verify the length
+                        if sq.n > 100000:
+                            raise ValueError("sequence length over comparison pipeline limit (100,000)")
 
         # Return 0 to indicate success
         return 0
@@ -2843,6 +2852,9 @@ cdef class Pipeline:
             # verify the alphabet
             if not self_alphabet._eq(hmm_alphabet):
                 raise AlphabetMismatch(self_alphabet, hmm_alphabet)
+            # verify the length
+            if sq.n > 100000:
+                raise ValueError("sequence length over comparison pipeline limit (100,000)")
 
             # configure the pipeline for the current sequence
             status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq)
@@ -2899,6 +2911,9 @@ cdef class Pipeline:
                     else:
                         hm = hmm._hmm
                         hmm_alphabet = hmm.alphabet
+                        # verify the alphabet
+                        if not self_alphabet._eq(hmm_alphabet):
+                            raise AlphabetMismatch(self_alphabet, hmm_alphabet)
 
         # Return 0 to indicate success
         return 0
