@@ -130,6 +130,7 @@ cdef class Alphabet:
         libeasel.alphabet.esl_alphabet_Destroy(self._abc)
 
     def __repr__(self):
+        assert self._abc != NULL
         if self._abc.type == libeasel.alphabet.eslRNA:
             return "Alphabet.rna()"
         elif self._abc.type == libeasel.alphabet.eslDNA:
@@ -151,10 +152,15 @@ cdef class Alphabet:
         return NotImplemented
 
     def __getstate__(self):
+        assert self._abc != NULL
         return {"type": self._abc.type}
 
     def __setstate__(self, state):
         self._init_default(state["type"])
+
+    def __sizeof__(self):
+        assert self._abc != NULL
+        return libeasel.alphabet.esl_alphabet_Sizeof(self._abc) + sizeof(ESL_ALPHABET*)
 
 
     # --- Properties ---------------------------------------------------------
@@ -170,6 +176,7 @@ cdef class Alphabet:
             20
 
         """
+        assert self._abc != NULL
         return self._abc.K
 
     @property
@@ -183,6 +190,7 @@ cdef class Alphabet:
             29
 
         """
+        assert self._abc != NULL
         return self._abc.Kp
 
     @property
@@ -196,8 +204,10 @@ cdef class Alphabet:
             'ACGU-RYMKSWHBVDN*~'
 
         """
+        assert self._abc != NULL
         cdef bytes symbols = self._abc.sym[:self._abc.Kp]
         return symbols.decode("ascii")
+
 
     # --- Utils --------------------------------------------------------------
 
