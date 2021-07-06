@@ -651,6 +651,14 @@ cdef class Builder:
             raise AlphabetMismatch(self.alphabet, msa.alphabet)
 
         with nogil:
+            status = libhmmer.p7_builder.p7_builder_SetScoreSystem(
+                self._bld,
+                NULL, # --mxfile
+                NULL, # env
+                self.popen, # popen
+                self.pextend,  # pextend
+                background._bg
+            )
             if status == libeasel.eslENOTFOUND:
                 raise FileNotFoundError("could not open substitution score matrix file")
             elif status == libeasel.eslEINVAL:
