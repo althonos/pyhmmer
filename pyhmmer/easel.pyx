@@ -14,7 +14,7 @@ cimport cython
 from cpython cimport Py_buffer
 from cpython.buffer cimport PyBUF_READ, PyBUF_WRITE, PyBUF_FORMAT, PyBUF_F_CONTIGUOUS
 from cpython.unicode cimport PyUnicode_FromUnicode
-from libc.stdint cimport int64_t, uint8_t, uint16_t, uint32_t
+from libc.stdint cimport int64_t, uint8_t, uint16_t, uint32_t, uint64_t
 from libc.stdio cimport fclose
 from libc.stdlib cimport calloc, malloc, free
 from libc.string cimport memcpy, memmove, strdup, strlen, strncpy
@@ -160,8 +160,7 @@ cdef class Alphabet:
 
     def __sizeof__(self):
         assert self._abc != NULL
-        return libeasel.alphabet.esl_alphabet_Sizeof(self._abc) + sizeof(ESL_ALPHABET*)
-
+        return libeasel.alphabet.esl_alphabet_Sizeof(self._abc) + sizeof(self)
 
     # --- Properties ---------------------------------------------------------
 
@@ -207,7 +206,6 @@ cdef class Alphabet:
         assert self._abc != NULL
         cdef bytes symbols = self._abc.sym[:self._abc.Kp]
         return symbols.decode("ascii")
-
 
     # --- Utils --------------------------------------------------------------
 
@@ -276,12 +274,21 @@ cdef class Bitfield:
         else:
             libeasel.bitfield.esl_bitfield_Clear(self._b, index_)
 
+    def __sizeof__(self):
+        assert self._b != NULL
+        cdef size_t nu = (self._b.nb // 64) + (self._b.nb % 64 != 0)
+        return sizeof(uint64_t) * nu + sizeof(ESL_BITFIELD) + sizeof(self)
+
+    # --- Utils --------------------------------------------------------------
+
     cdef size_t _wrap_index(self, int index) except -1:
         if index < 0:
             index += self._b.nb
         if index >= self._b.nb or index < 0:
             raise IndexError("bitfield index out of range")
         return <size_t> index
+
+    # --- Methods ------------------------------------------------------------
 
     cpdef size_t count(self, bint value=1):
         """count(self, value=True)\n--
@@ -368,6 +375,8 @@ cdef class KeyHash:
 
     """
 
+    # --- Magic methods ------------------------------------------------------
+
     def __cinit__(self):
         self._kh = NULL
 
@@ -437,6 +446,18 @@ cdef class KeyHash:
             offset = self._kh.key_offset[i]
             key = &self._kh.smem[offset]
             yield <bytes> key
+
+    def __sizeof__(self):
+        assert self._kh != NULL
+        return (
+            sizeof(int) * self._kh.hashsize   # kh->hashtable
+          + sizeof(int) * self._kh.kalloc * 2 # kh->key_offset, kh->nxt
+          + sizeof(int) * self._kh.salloc     # kh->smem
+          + sizeof(ESL_KEYHASH)
+          + sizeof(self)
+        )
+
+    # --- Methods ------------------------------------------------------------
 
     cpdef int add(self, bytes key) except -1:
         """add(self, item)\n--
@@ -832,6 +853,9 @@ cdef class VectorF(Vector):
     def __repr__(self):
         return f"VectorF({list(self)!r})"
 
+    def __sizeof__(self):
+        return self._n * sizeof(float) + sizeof(self)
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -1100,6 +1124,9 @@ cdef class VectorU8(Vector):
 
     def __repr__(self):
         return f"VectorU8({list(self)!r})"
+
+    def __sizeof__(self):
+        return self._n * sizeof(uint8_t) + sizeof(self)
 
     # --- Methods ------------------------------------------------------------
 
@@ -1508,6 +1535,13 @@ cdef class MatrixF(Matrix):
     def __repr__(self):
         return f"MatrixF({[list(row) for row in self]!r})"
 
+    def __sizeof__(self):
+        return (
+            self._n * sizeof(float*)
+          + self._m * self._n * sizeof(float)
+          + sizeof(self)
+        )
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -1806,6 +1840,13 @@ cdef class MatrixU8(Matrix):
 
     def __repr__(self):
         return f"MatrixU8({[list(row) for row in self]!r})"
+
+    def __sizeof__(self):
+        return (
+            self._n * sizeof(uint8_t*)
+          + self._m * self._n * sizeof(uint8_t)
+          + sizeof(self)
+        )
 
     # --- Methods ------------------------------------------------------------
 
@@ -2660,7 +2701,6 @@ cdef class MSAFile:
         "phylips": libeasel.msafile.eslMSAFILE_PHYLIPS,
     }
 
-
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
@@ -2703,7 +2743,6 @@ cdef class MSAFile:
         if seq is None:
             raise StopIteration()
         return seq
-
 
     # --- Read methods -------------------------------------------------------
 
@@ -2748,7 +2787,6 @@ cdef class MSAFile:
             raise ValueError("Could not parse file: {}".format(msg.decode()))
         else:
             raise UnexpectedError(status, "esl_msafile_Read")
-
 
     # --- Utils --------------------------------------------------------------
 
@@ -2825,6 +2863,7 @@ cdef class MSAFile:
         else:
             raise UnexpectedError(status, "esl_msafile_SetDigital")
 
+
 # --- Randomness -------------------------------------------------------------
 
 cdef class Randomness:
@@ -2887,6 +2926,10 @@ cdef class Randomness:
             if self._rng == NULL:
                 raise AllocationError("ESL_RANDOMNESS")
         self.setstate(state)
+
+    def __sizeof__(self):
+        assert self._rng != NULL
+        return sizeof(ESL_RANDOMNESS) + sizeof(self)
 
     # --- Methods ------------------------------------------------------------
 
