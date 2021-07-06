@@ -137,3 +137,15 @@ class TestSequenceFile(unittest.TestCase):
         # check reading an GenBank file while giving another format fails
         with easel.SequenceFile(gbk, "fasta") as f:
             self.assertRaises(ValueError, f.read)
+
+    def test_ignore_gaps(self):
+        luxc = os.path.realpath(
+            os.path.join(__file__, os.pardir, os.pardir, "data", "msa", "LuxC.faa")
+        )
+
+        with easel.SequenceFile(luxc, "fasta") as seq_file:
+            self.assertRaises(ValueError, seq_file.read)
+
+        with easel.SequenceFile(luxc, "fasta", ignore_gaps=True) as seq_file:
+            sequences = list(seq_file)
+            self.assertEqual(len(sequences), 13)
