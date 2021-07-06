@@ -856,21 +856,6 @@ cdef class VectorF(Vector):
     def __sizeof__(self):
         return self._n * sizeof(float) + sizeof(self)
 
-    # --- Properties ---------------------------------------------------------
-
-    @property
-    def __array_interface__(self):
-        return {
-            "version": 3,
-            "data": (<size_t> self._data, False),
-            "shape": self.shape,
-            "typestr": (
-                ("<" if sys.byteorder == "little" else ">")
-                + "f"
-                + str(sizeof(float))
-            )
-        }
-
     # --- Methods ------------------------------------------------------------
 
     cpdef int argmax(self):
@@ -948,17 +933,6 @@ cdef class VectorU8(Vector):
         if vec._data == NULL:
             raise AllocationError("uint8_t*")
         return vec
-
-    # --- Properties ---------------------------------------------------------
-
-    @property
-    def __array_interface__(self):
-        return {
-            "version": 3,
-            "data": (<size_t> self._data[0], False),
-            "shape": self.shape,
-            "typestr": "|u1",
-        }
 
     # --- Magic methods ------------------------------------------------------
 
@@ -1542,21 +1516,6 @@ cdef class MatrixF(Matrix):
           + sizeof(self)
         )
 
-    # --- Properties ---------------------------------------------------------
-
-    @property
-    def __array_interface__(self):
-        return {
-            "version": 3,
-            "data": (<size_t> self._data[0], False),
-            "shape": self.shape,
-            "typestr": (
-                ("<" if sys.byteorder == "little" else ">")
-                + "f"
-                + str(sizeof(float))
-            )
-        }
-
     # --- Methods ------------------------------------------------------------
 
     cpdef tuple argmax(self):
@@ -1648,17 +1607,6 @@ cdef class MatrixU8(Matrix):
             mat._data[i] = mat._data[0] + i*n
 
         return mat
-
-    # --- Properties ---------------------------------------------------------
-
-    @property
-    def __array_interface__(self):
-        return {
-            "version": 3,
-            "data": (<size_t> self._data[0], False),
-            "shape": self.shape,
-            "typestr": "|u1"
-        }
 
     # --- Magic methods ------------------------------------------------------
 
