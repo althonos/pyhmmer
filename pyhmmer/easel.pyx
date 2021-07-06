@@ -3630,8 +3630,8 @@ cdef class SequenceFile:
         self.alphabet = None
         self._sqfp = NULL
 
-    def __init__(self, str file, str format=None):
-        """__init__(self, file, format=None)\n--
+    def __init__(self, str file, str format=None, bint ignore_gaps=False):
+        """__init__(self, file, format=None, ignore_gaps=False)\n--
 
         Create a new sequence file parser wrapping the given ``file``.
 
@@ -3642,8 +3642,13 @@ cdef class SequenceFile:
                 autodetect. Supported values are: ``fasta``, ``embl``,
                 ``genbank``, ``ddbj``, ``uniprot``, ``ncbi``, ``daemon``,
                 ``hmmpgmd``, ``fmindex``.
+            ignore_gaps (`bool`): When set to `True`, allow ignoring gap
+                characters ('-') when they are present in ungapped formats
+                such as ``fasta``. Defaults to `False`, the default Easel
+                behaviour.
 
         """
+        # get format from string passed as input
         cdef int fmt = libeasel.sqio.eslSQFILE_UNKNOWN
         if format is not None:
             format_ = format.lower()
@@ -3651,6 +3656,7 @@ cdef class SequenceFile:
                 raise ValueError("Invalid sequence format: {!r}".format(format))
             fmt = self._formats[format_]
 
+        # open the given filename
         cdef bytes fspath = os.fsencode(file)
         cdef int status = libeasel.sqio.esl_sqfile_Open(fspath, fmt, NULL, &self._sqfp)
         if status == libeasel.eslENOTFOUND:
@@ -3664,6 +3670,12 @@ cdef class SequenceFile:
                 raise EOFError("Sequence file is empty")
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sqfile_Open")
+
+        # HACK(@althonos): allow ignoring the gap character if explicitly
+        #                  requested, which is normally not allowed by
+        #                  Easel for ungapped formats (althonos/pyhmmer#7).
+        if ignore_gaps:
+            libeasel.sqio.esl_sqio_Ignore(self._sqfp, b"-")
 
     def __enter__(self):
         return self
