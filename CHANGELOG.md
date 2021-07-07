@@ -6,7 +6,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.3...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.4...HEAD
+
+
+## [v0.4.4] - 2021-07-07
+[v0.4.3]: https://github.com/althonos/pyhmmer/compare/v0.4.3...v0.4.4
+
+### Added
+- `ignore_gaps` parameter to `pyhmmer.plan7.SequenceFile`, allowing to skip the gap characters when reading a sequence from an ungapped format.
+- `__sizeof__` implementation for some
+- Dedicated check for sequence length before running the platform-specific code in `pyhmmer.plan7.Pipeline`.
+
+### Fixed
+- Score system not being set in `pyhmmer.plan7.Builder.build_msa`.
+- Alphabet not being checked after the first sequence in `Pipeline` search and scan methods.
 
 
 ## [v0.4.3] - 2021-07-03
