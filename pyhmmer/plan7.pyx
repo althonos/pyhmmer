@@ -2566,13 +2566,14 @@ cdef class Pipeline:
         seqs[len(sequences)] = NULL
 
         # run the search loop on all database sequences while recycling memory
-        Pipeline._search_loop(
-            self._pli,
-            opt._om,
-            self.background._bg,
-            seqs,
-            hits._th,
-        )
+        with nogil:
+            Pipeline._search_loop(
+                self._pli,
+                opt._om,
+                self.background._bg,
+                seqs,
+                hits._th,
+            )
 
         # free the temporary array
         free(seqs)
@@ -2661,13 +2662,14 @@ cdef class Pipeline:
         seqs[len(sequences)] = NULL
 
         # run the search loop on all database sequences while recycling memory
-        Pipeline._search_loop(
-            self._pli,
-            opt._om,
-            self.background._bg,
-            seqs,
-            hits._th,
-        )
+        with nogil:
+            Pipeline._search_loop(
+                self._pli,
+                opt._om,
+                self.background._bg,
+                seqs,
+                hits._th,
+            )
         # free the temporary array
         free(seqs)
         # threshold hits
@@ -2755,13 +2757,14 @@ cdef class Pipeline:
         seqs[len(sequences)] = NULL
 
         # run the search loop on all database sequences while recycling memory
-        Pipeline._search_loop(
-            self._pli,
-            opt._om,
-            self.background._bg,
-            seqs,
-            hits._th,
-        )
+        with nogil:
+            Pipeline._search_loop(
+                self._pli,
+                opt._om,
+                self.background._bg,
+                seqs,
+                hits._th,
+            )
 
         # free the temporary array
         free(seqs)
