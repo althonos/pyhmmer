@@ -143,16 +143,14 @@ cdef class Pipeline:
     cpdef TopHits search_hmm(self, HMM query, object seqs)
     cpdef TopHits search_msa(self, DigitalMSA query, object seqs, Builder builder = ?)
     cpdef TopHits search_seq(self, DigitalSequence query, object seqs, Builder builder = ?)
+    @staticmethod
     cdef  int    _search_loop(
-        self,
         P7_PIPELINE* pli,
         P7_OPROFILE* om,
         P7_BG*       bg,
-        ESL_SQ*      sq,
+        ESL_SQ**     seqs,
         P7_TOPHITS*  th,
-        object       seqs_iter,
-        Alphabet     seq_alphabet,
-    ) except 1
+    ) nogil except 1
     cpdef TopHits scan_seq(self, DigitalSequence query, object hmms)
     cdef int _scan_loop(
         self,

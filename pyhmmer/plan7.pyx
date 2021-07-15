@@ -2514,31 +2514,25 @@ cdef class Pipeline:
         .. versionadded:: 0.2.0
 
         """
+        assert self._pli != NULL
+
         cdef int                  status
         cdef int                  allocM
         cdef DigitalSequence      seq
         cdef Profile              profile = self.profile
         cdef OptimizedProfile     opt
         cdef TopHits              hits    = TopHits()
+        cdef ESL_SQ**             seqs
 
-        assert self._pli != NULL
-
-        # check the pipeline was configure with the same alphabet
+        # check the pipeline was configured with the same alphabet
         if not self.alphabet._eq(query.alphabet):
             raise AlphabetMismatch(self.alphabet, query.alphabet)
+        # check we can rewind the sequences
+        if not isinstance(sequences, collections.abc.Sequence):
+            raise TypeError("`sequences` cannot be an iterator, expected an iterable")
 
         # make sure the pipeline is set to search mode and ready for a new HMM
         self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
-
-        # get an iterator over the input sequences, with an early return if
-        # no sequences were given, and extract the raw pointer to the sequence
-        # from the Python object
-        seqs_iter = iter(sequences)
-        seq = next(seqs_iter, None)
-        if seq is None:
-            return hits
-        if not self.alphabet._eq(seq.alphabet):
-            raise AlphabetMismatch(self.alphabet, seq.alphabet)
 
         # build the profile from the HMM, using the first sequence length
         # as a hint for the model configuration, or reuse the profile we
@@ -2547,26 +2541,44 @@ cdef class Pipeline:
             profile = self.profile = Profile(query.M, self.alphabet)
         else:
             profile.clear()
-        profile.configure(query, self.background, len(seq))
+        profile.configure(query, self.background, len(sequences[0]))
 
         # build the optimized model from the profile
         opt = profile.optimized()
 
+        # prepare an array to pass the sequences to the C function
+        seqs = <ESL_SQ**> malloc(sizeof(ESL_SQ*) * (len(sequences) + 1))
+        if seqs == NULL:
+            raise AllocationError("ESL_SQ**")
+
+        # collect sequences: we prepare an array of pointer to sequences
+        # so that the C backend can iter through them without having to
+        # acquire the GIL between each iteration.
+        for i, seq in enumerate(sequences):
+            # check alphabet
+            if not self.alphabet._eq(seq.alphabet):
+                raise AlphabetMismatch(self.alphabet, seq.alphabet)
+            # check length
+            if len(seq) > 100000:
+                raise ValueError("sequence length over comparison pipeline limit (100,000)")
+            # record the pointer to the raw C struct
+            seqs[i] = seq._sq
+        seqs[len(sequences)] = NULL
+
         # run the search loop on all database sequences while recycling memory
-        self._search_loop(
+        Pipeline._search_loop(
             self._pli,
             opt._om,
             self.background._bg,
-            seq._sq,
+            seqs,
             hits._th,
-            seqs_iter,
-            seq.alphabet,
         )
 
+        # free the temporary array
+        free(seqs)
         # threshold hits
         hits.sort(by="key")
         hits.threshold(self)
-
         # return the hits
         return hits
 
@@ -2601,18 +2613,23 @@ cdef class Pipeline:
         .. versionadded:: 0.3.0
 
         """
+        assert self._pli != NULL
+
+        cdef int                  status
         cdef int                  allocM
         cdef DigitalSequence      seq
         cdef Profile              profile
         cdef HMM                  hmm
         cdef OptimizedProfile     opt
         cdef TopHits              hits    = TopHits()
+        cdef ESL_SQ**             seqs
 
-        assert self._pli != NULL
-
-        # check the pipeline was configure with the same alphabet
+        # check the pipeline was configured with the same alphabet
         if not self.alphabet._eq(query.alphabet):
             raise AlphabetMismatch(self.alphabet, query.alphabet)
+        # check we can rewind the sequences
+        if not isinstance(sequences, collections.abc.Sequence):
+            raise TypeError("`sequences` cannot be an iterator, expected an iterable")
 
         # make sure the pipeline is set to search mode and ready for a new HMM
         self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
@@ -2620,33 +2637,42 @@ cdef class Pipeline:
         # use a default HMM builder if none was given
         builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
 
-        # get an iterator over the input sequences, with an early return if
-        # no sequences were given
-        seqs_iter = iter(sequences)
-        seq = next(seqs_iter, None)
-        if seq is None:
-            return hits
-        if not self.alphabet._eq(seq.alphabet):
-            raise AlphabetMismatch(self.alphabet, seq.alphabet)
-
         # build the HMM and the profile from the query MSA
         hmm, profile, opt = builder.build_msa(query, self.background)
 
+        # prepare an array to pass the sequences to the C function
+        seqs = <ESL_SQ**> malloc(sizeof(ESL_SQ*) * (len(sequences) + 1))
+        if seqs == NULL:
+            raise AllocationError("ESL_SQ**")
+
+        # collect sequences: we prepare an array of pointer to sequences
+        # so that the C backend can iter through them without having to
+        # acquire the GIL between each iteration.
+
+        for i, seq in enumerate(sequences):
+            # check alphabet
+            if not self.alphabet._eq(seq.alphabet):
+                raise AlphabetMismatch(self.alphabet, seq.alphabet)
+            # check length
+            if len(seq) > 100000:
+                raise ValueError("sequence length over comparison pipeline limit (100,000)")
+            # record the pointer to the raw C struct
+            seqs[i] = seq._sq
+        seqs[len(sequences)] = NULL
+
         # run the search loop on all database sequences while recycling memory
-        self._search_loop(
+        Pipeline._search_loop(
             self._pli,
             opt._om,
             self.background._bg,
-            seq._sq,
+            seqs,
             hits._th,
-            seqs_iter,
-            seq.alphabet
         )
-
+        # free the temporary array
+        free(seqs)
         # threshold hits
         hits.sort(by="key")
         hits.threshold(self)
-
         # return the hits
         return hits
 
@@ -2681,18 +2707,22 @@ cdef class Pipeline:
         .. versionadded:: 0.2.0
 
         """
+        assert self._pli != NULL
+
         cdef int                  allocM
         cdef DigitalSequence      seq
         cdef Profile              profile
         cdef HMM                  hmm
         cdef OptimizedProfile     opt
         cdef TopHits              hits    = TopHits()
-
-        assert self._pli != NULL
+        cdef ESL_SQ**             seqs
 
         # check the pipeline was configure with the same alphabet
         if not self.alphabet._eq(query.alphabet):
             raise AlphabetMismatch(self.alphabet, query.alphabet)
+        # check we can rewind the sequences
+        if not isinstance(sequences, collections.abc.Sequence):
+            raise TypeError("`sequences` cannot be an iterator, expected an iterable")
 
         # make sure the pipeline is set to search mode and ready for a new HMM
         self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
@@ -2700,107 +2730,92 @@ cdef class Pipeline:
         # use a default HMM builder if none was given
         builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
 
-        # get an iterator over the input sequences, with an early return if
-        # no sequences were given, and extract the raw pointer to the sequence
-        # from the Python object
-        seqs_iter = iter(sequences)
-        seq = next(seqs_iter, None)
-        if seq is None:
-            return hits
-        if not self.alphabet._eq(seq.alphabet):
-            raise AlphabetMismatch(self.alphabet, seq.alphabet)
-
         # build the HMM and the profile from the query sequence, using the first
         # as a hint for the model configuration, or reuse the profile we
         # cached if it is large enough to hold the new HMM
         hmm, profile, opt = builder.build(query, self.background)
 
+        # prepare an array to pass the sequences to the C function
+        seqs = <ESL_SQ**> malloc(sizeof(ESL_SQ*) * (len(sequences) + 1))
+        if seqs == NULL:
+            raise AllocationError("ESL_SQ**")
+
+        # collect sequences: we prepare an array of pointer to sequences
+        # so that the C backend can iter through them without having to
+        # acquire the GIL between each iteration.
+        for i, seq in enumerate(sequences):
+            # check alphabet
+            if not self.alphabet._eq(seq.alphabet):
+                raise AlphabetMismatch(self.alphabet, seq.alphabet)
+            # check length
+            if len(seq) > 100000:
+                raise ValueError("sequence length over comparison pipeline limit (100,000)")
+            # record the pointer to the raw C struct
+            seqs[i] = seq._sq
+        seqs[len(sequences)] = NULL
+
         # run the search loop on all database sequences while recycling memory
-        self._search_loop(
+        Pipeline._search_loop(
             self._pli,
             opt._om,
             self.background._bg,
-            seq._sq,
+            seqs,
             hits._th,
-            seqs_iter,
-            seq.alphabet
         )
 
+        # free the temporary array
+        free(seqs)
         # threshold hits
         hits.sort(by="key")
         hits.threshold(self)
-
         # return the hits
         return hits
 
+    @staticmethod
     cdef int _search_loop(
-        self,
         P7_PIPELINE* pli,
         P7_OPROFILE* om,
         P7_BG*       bg,
-        ESL_SQ*      sq,
+        ESL_SQ**     sq,
         P7_TOPHITS*  th,
-        object       seqs_iter,
-        Alphabet     seq_alphabet
-    ) except 1:
-        cdef int             status
-        cdef DigitalSequence seq
-        cdef Alphabet        self_alphabet = self.alphabet
+    ) nogil except 1:
+        cdef int status
 
-        with nogil:
-            # verify the alphabet
-            if not self_alphabet._eq(seq_alphabet):
-                raise AlphabetMismatch(self_alphabet, seq_alphabet)
-            # verify the length
-            if sq.n > 100000:
-                raise ValueError("sequence length over comparison pipeline limit (100,000)")
+        # configure the pipeline for the current HMM
+        status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
+        if status == libeasel.eslEINVAL:
+            raise ValueError("model does not have bit score thresholds expected by the pipeline")
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_pli_NewModel")
 
-            # configure the pipeline for the current HMM
-            status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
+        # run the inner loop on all sequences
+        while sq[0] != NULL:
+
+            # configure the profile, background and pipeline for the new sequence
+            status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq[0])
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_pli_NewSeq")
+            status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq[0].n)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_bg_SetLength")
+            status = p7_oprofile.p7_oprofile_ReconfigLength(om, sq[0].n)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
+
+            # run the pipeline on the sequence
+            status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, sq[0], NULL, th)
             if status == libeasel.eslEINVAL:
                 raise ValueError("model does not have bit score thresholds expected by the pipeline")
+            elif status == libeasel.eslERANGE:
+                raise OverflowError("numerical overflow in the optimized vector implementation")
             elif status != libeasel.eslOK:
-                raise UnexpectedError(status, "p7_pli_NewModel")
+                raise UnexpectedError(status, "p7_Pipeline")
 
-            # run the inner loop on all sequences
-            while sq != NULL:
-                # configure the profile, background and pipeline for the new sequence
-                status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq)
-                if status != libeasel.eslOK:
-                    raise UnexpectedError(status, "p7_pli_NewSeq")
-                status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq.n)
-                if status != libeasel.eslOK:
-                    raise UnexpectedError(status, "p7_bg_SetLength")
-                status = p7_oprofile.p7_oprofile_ReconfigLength(om, sq.n)
-                if status != libeasel.eslOK:
-                    raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
+            # clear pipeline for reuse for next target
+            libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
 
-                # run the pipeline on the sequence
-                status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, sq, NULL, th)
-                if status == libeasel.eslEINVAL:
-                    raise ValueError("model does not have bit score thresholds expected by the pipeline")
-                elif status == libeasel.eslERANGE:
-                    raise OverflowError("numerical overflow in the optimized vector implementation")
-                elif status != libeasel.eslOK:
-                    raise UnexpectedError(status, "p7_Pipeline")
-
-                # clear pipeline for reuse for next target
-                libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
-
-                # acquire the GIL just long enough to get the next sequence
-                with gil:
-                    seq = next(seqs_iter, None)
-                    if seq is None:
-                        sq = NULL
-                    else:
-                        sq = seq._sq
-                        seq_alphabet = seq.alphabet
-                        # verify the alphabet
-                        if not self_alphabet._eq(seq_alphabet):
-                            raise AlphabetMismatch(self_alphabet, seq_alphabet)
-                        # verify the length
-                        if sq.n > 100000:
-                            raise ValueError("sequence length over comparison pipeline limit (100,000)")
+            # advance to next sequence
+            sq = &(sq[1])
 
         # Return 0 to indicate success
         return 0

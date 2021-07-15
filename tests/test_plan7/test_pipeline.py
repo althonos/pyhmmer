@@ -51,7 +51,7 @@ class TestSearchPipeline(unittest.TestCase):
 
         # mismatch between pipeline alphabet and database alphabet
         dsq = TextSequence(sequence="ATGC").digitize(pipeline.alphabet)
-        msa = DigitalMSA(pipeline.alphabet, sequences=[dsq])
+        msa = DigitalMSA(pipeline.alphabet, sequences=[dsq], name=b"test")
         self.assertRaises(AlphabetMismatch, pipeline.search_msa, msa, self.references)
 
     def test_search_hmm(self):
