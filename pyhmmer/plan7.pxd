@@ -170,6 +170,7 @@ cdef class Profile:
 
     cdef int _clear(self) except 1
     cdef int _configure(self, HMM hmm, Background background, int L, bint multihit=*, bint local=*) except 1
+
     cpdef Profile copy(self)
     cpdef bint is_local(self)
     cpdef bint is_multihit(self)
@@ -184,5 +185,7 @@ cdef class TopHits:
     cdef P7_TOPHITS* _th
 
     cdef int _threshold(self, Pipeline pipeline) except 1
-    cdef int _sort(self, str by=*) except 1
+    cdef int _sort_by_key(self) except 1
+    cdef int _sort_by_seqidx(self) except 1
+    
     cpdef MSA to_msa(self, Alphabet alphabet, bint trim=*, bint digitize=?, bint all_consensus_cols=?)

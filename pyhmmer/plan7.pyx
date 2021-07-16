@@ -2540,8 +2540,8 @@ cdef class Pipeline:
         if profile is None or profile._gm.allocM < query.M:
             profile = self.profile = Profile(query.M, self.alphabet)
         else:
-            profile.clear()
-        profile.configure(query, self.background, len(sequences[0]))
+            profile._clear()
+        profile._configure(query, self.background, len(sequences[0]))
 
         # build the optimized model from the profile
         opt = profile.optimized()
@@ -2578,8 +2578,8 @@ cdef class Pipeline:
         # free the temporary array
         free(seqs)
         # threshold hits
-        hits.sort(by="key")
-        hits.threshold(self)
+        hits._sort_by_key()
+        hits._threshold(self)
         # return the hits
         return hits
 
@@ -2673,8 +2673,8 @@ cdef class Pipeline:
         # free the temporary array
         free(seqs)
         # threshold hits
-        hits.sort(by="key")
-        hits.threshold(self)
+        hits._sort_by_key()
+        hits._threshold(self)
         # return the hits
         return hits
 
@@ -2769,8 +2769,8 @@ cdef class Pipeline:
         # free the temporary array
         free(seqs)
         # threshold hits
-        hits.sort(by="key")
-        hits.threshold(self)
+        hits._sort_by_key()
+        hits._threshold(self)
         # return the hits
         return hits
 
@@ -2894,8 +2894,8 @@ cdef class Pipeline:
         )
 
         # threshold hits
-        hits.sort(by="key")
-        hits.threshold(self)
+        hits._sort_by_key()
+        hits._threshold(self)
 
         # return the hits
         return hits
@@ -3355,27 +3355,29 @@ cdef class TopHits:
         """
         self._threshold(pipeline)
 
-    cdef int _sort(self, str by="key") except 1:
+    cdef int _sort_by_key(self) except 1:
         assert self._th != NULL
 
-        cdef P7_TOPHITS* th = self._th
+        cdef int         status
+        cdef P7_TOPHITS* th     = self._th
 
-        if by == "key":
-            function = "p7_tophits_SortBySortkey"
-            with nogil:
-                status = libhmmer.p7_tophits.p7_tophits_SortBySortkey(th)
-        elif by == "seqidx":
-            function = "p7_tophits_SortBySeqidxAndAlipos"
-            with nogil:
-                status = libhmmer.p7_tophits.p7_tophits_SortBySeqidxAndAlipos(th)
-        # elif by == "modelname"
-        #     status = libhmmer.p7_tophits.p7_tophits_SortByModelnameAndAlipos(self._th)
-        #     function = "p7_tophits_SortByModelnameAndAlipos"
-        else:
-            raise ValueError("Invalid value for `by` argument: {!r}".format(by))
-
+        with nogil:
+            status = libhmmer.p7_tophits.p7_tophits_SortBySortkey(th)
         if status != libeasel.eslOK:
-            raise UnexpectedError(status, function)
+            raise UnexpectedError(status, "p7_tophits_SortBySortkey")
+        return 0
+
+    cdef int _sort_by_seqidx(self) except 1:
+        assert self._th != NULL
+
+        cdef int         status
+        cdef P7_TOPHITS* th     = self._th
+
+        with nogil:
+            status = libhmmer.p7_tophits.p7_tophits_SortBySeqidxAndAlipos(th)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_tophits_SortBySeqidxAndAlipos")
+        return 0
 
     def sort(self, str by="key"):
         """sort(self, by="key")\n--
@@ -3388,7 +3390,12 @@ cdef class TopHits:
                 ``seqidx`` to sort by sequence index and alignment position.
 
         """
-        self._sort(by=by)
+        if by == "key":
+            self._sort_by_key()
+        elif by == "seqidx":
+            self._sort_by_seqidx()
+        else:
+            raise ValueError("Invalid value for `by` argument: {!r}".format(by))
 
     def is_sorted(self, str by="key"):
         """is_sorted(self, by="key")\n--
