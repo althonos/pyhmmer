@@ -130,6 +130,8 @@ cdef class Pipeline:
     cdef          object     _Z       # either `Z` as an int, or `None`
     cdef          object     _domZ    # either `domZ` as an int, or `None`
     cdef          uint32_t   _seed    # the seed passed at pipeline initialization
+    cdef          void**     _refs    # the array to pass the references to the C code
+    cdef          ssize_t    _nref    # the total size of `self._refs`
 
     cdef readonly Alphabet   alphabet
     cdef readonly Background background
@@ -187,5 +189,5 @@ cdef class TopHits:
     cdef int _threshold(self, Pipeline pipeline) except 1
     cdef int _sort_by_key(self) except 1
     cdef int _sort_by_seqidx(self) except 1
-    
+
     cpdef MSA to_msa(self, Alphabet alphabet, bint trim=*, bint digitize=?, bint all_consensus_cols=?)

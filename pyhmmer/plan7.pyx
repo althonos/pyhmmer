@@ -2103,6 +2103,8 @@ cdef class Pipeline:
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
+        self._refs = NULL
+        self._nref = 0
         self._pli = NULL
         self.alphabet = None
         self.profile = None
@@ -2198,6 +2200,7 @@ cdef class Pipeline:
 
     def __dealloc__(self):
         libhmmer.p7_pipeline.p7_pipeline_Destroy(self._pli)
+        free(self._refs)
 
     # --- Properties ---------------------------------------------------------
 
@@ -2519,10 +2522,9 @@ cdef class Pipeline:
         cdef int                  status
         cdef int                  allocM
         cdef DigitalSequence      seq
-        cdef Profile              profile = self.profile
         cdef OptimizedProfile     opt
+        cdef Profile              profile = self.profile
         cdef TopHits              hits    = TopHits()
-        cdef ESL_SQ**             seqs
 
         # check the pipeline was configured with the same alphabet
         if not self.alphabet._eq(query.alphabet):
@@ -2547,9 +2549,11 @@ cdef class Pipeline:
         opt = profile.optimized()
 
         # prepare an array to pass the sequences to the C function
-        seqs = <ESL_SQ**> malloc(sizeof(ESL_SQ*) * (len(sequences) + 1))
-        if seqs == NULL:
-            raise AllocationError("ESL_SQ**")
+        if self._nref <= len(sequences):
+            self._nref = len(sequences) + 1
+            self._refs = <void**> realloc(self._refs, sizeof(void*) * (len(sequences)+1))
+            if self._refs == NULL:
+                raise AllocationError("void**")
 
         # collect sequences: we prepare an array of pointer to sequences
         # so that the C backend can iter through them without having to
@@ -2562,8 +2566,8 @@ cdef class Pipeline:
             if len(seq) > 100000:
                 raise ValueError("sequence length over comparison pipeline limit (100,000)")
             # record the pointer to the raw C struct
-            seqs[i] = seq._sq
-        seqs[len(sequences)] = NULL
+            self._refs[i] = <void*> seq._sq
+        self._refs[len(sequences)] = NULL
 
         # run the search loop on all database sequences while recycling memory
         with nogil:
@@ -2571,12 +2575,10 @@ cdef class Pipeline:
                 self._pli,
                 opt._om,
                 self.background._bg,
-                seqs,
+                <ESL_SQ**> self._refs,
                 hits._th,
             )
 
-        # free the temporary array
-        free(seqs)
         # threshold hits
         hits._sort_by_key()
         hits._threshold(self)
@@ -2623,7 +2625,6 @@ cdef class Pipeline:
         cdef HMM                  hmm
         cdef OptimizedProfile     opt
         cdef TopHits              hits    = TopHits()
-        cdef ESL_SQ**             seqs
 
         # check the pipeline was configured with the same alphabet
         if not self.alphabet._eq(query.alphabet):
@@ -2642,9 +2643,11 @@ cdef class Pipeline:
         hmm, profile, opt = builder.build_msa(query, self.background)
 
         # prepare an array to pass the sequences to the C function
-        seqs = <ESL_SQ**> malloc(sizeof(ESL_SQ*) * (len(sequences) + 1))
-        if seqs == NULL:
-            raise AllocationError("ESL_SQ**")
+        if self._nref < len(sequences) + 1:
+            self._nref = len(sequences) + 1
+            self._refs = <void**> realloc(self._refs, sizeof(void*) * (len(sequences)+1))
+            if self._refs == NULL:
+                raise AllocationError("void**")
 
         # collect sequences: we prepare an array of pointer to sequences
         # so that the C backend can iter through them without having to
@@ -2658,8 +2661,8 @@ cdef class Pipeline:
             if len(seq) > 100000:
                 raise ValueError("sequence length over comparison pipeline limit (100,000)")
             # record the pointer to the raw C struct
-            seqs[i] = seq._sq
-        seqs[len(sequences)] = NULL
+            self._refs[i] = <void*> seq._sq
+        self._refs[len(sequences)] = NULL
 
         # run the search loop on all database sequences while recycling memory
         with nogil:
@@ -2667,11 +2670,9 @@ cdef class Pipeline:
                 self._pli,
                 opt._om,
                 self.background._bg,
-                seqs,
+                <ESL_SQ**> self._refs,
                 hits._th,
             )
-        # free the temporary array
-        free(seqs)
         # threshold hits
         hits._sort_by_key()
         hits._threshold(self)
@@ -2738,9 +2739,11 @@ cdef class Pipeline:
         hmm, profile, opt = builder.build(query, self.background)
 
         # prepare an array to pass the sequences to the C function
-        seqs = <ESL_SQ**> malloc(sizeof(ESL_SQ*) * (len(sequences) + 1))
-        if seqs == NULL:
-            raise AllocationError("ESL_SQ**")
+        if self._nref <= len(sequences):
+            self._nref = len(sequences) + 1
+            self._refs = <void**> realloc(self._refs, sizeof(void*) * (len(sequences)+1))
+            if self._refs == NULL:
+                raise AllocationError("void**")
 
         # collect sequences: we prepare an array of pointer to sequences
         # so that the C backend can iter through them without having to
@@ -2753,8 +2756,8 @@ cdef class Pipeline:
             if len(seq) > 100000:
                 raise ValueError("sequence length over comparison pipeline limit (100,000)")
             # record the pointer to the raw C struct
-            seqs[i] = seq._sq
-        seqs[len(sequences)] = NULL
+            self._refs[i] = <void*> seq._sq
+        self._refs[len(sequences)] = NULL
 
         # run the search loop on all database sequences while recycling memory
         with nogil:
@@ -2762,12 +2765,10 @@ cdef class Pipeline:
                 self._pli,
                 opt._om,
                 self.background._bg,
-                seqs,
+                <ESL_SQ**> self._refs,
                 hits._th,
             )
 
-        # free the temporary array
-        free(seqs)
         # threshold hits
         hits._sort_by_key()
         hits._threshold(self)
