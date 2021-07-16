@@ -101,6 +101,7 @@ import sys
 import warnings
 
 from .errors import AllocationError, UnexpectedError, AlphabetMismatch
+from .utils import peekable
 
 
 # --- Cython classes ---------------------------------------------------------
@@ -2501,10 +2502,8 @@ cdef class Pipeline:
         Arguments:
             query (`~pyhmmer.plan7.HMM`): The HMM object to use to query the
                 sequence database.
-            sequences (iterable of `~pyhmmer.easel.DigitalSequence`): The
-                sequences to query with the HMM. For instance, pass a
-                `~pyhmmer.easel.SequenceFile` in digital mode to read from
-                disk iteratively.
+            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
+                sequences to query with the HMM.
 
         Returns:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
@@ -2519,6 +2518,7 @@ cdef class Pipeline:
         """
         assert self._pli != NULL
 
+        cdef size_t               n_sequences
         cdef int                  status
         cdef int                  allocM
         cdef DigitalSequence      seq
@@ -2532,6 +2532,9 @@ cdef class Pipeline:
         # check we can rewind the sequences
         if not isinstance(sequences, collections.abc.Sequence):
             raise TypeError("`sequences` cannot be an iterator, expected an iterable")
+        # allow peeking the sequences
+        n_sequences = len(sequences)
+        sequences = peekable(sequences)
 
         # make sure the pipeline is set to search mode and ready for a new HMM
         self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
@@ -2543,15 +2546,15 @@ cdef class Pipeline:
             profile = self.profile = Profile(query.M, self.alphabet)
         else:
             profile._clear()
-        profile._configure(query, self.background, len(sequences[0]))
+        profile._configure(query, self.background, len(sequences.peek()))
 
         # build the optimized model from the profile
         opt = profile.optimized()
 
         # prepare an array to pass the sequences to the C function
-        if self._nref <= len(sequences):
-            self._nref = len(sequences) + 1
-            self._refs = <void**> realloc(self._refs, sizeof(void*) * (len(sequences)+1))
+        if self._nref <= n_sequences:
+            self._nref = n_sequences + 1
+            self._refs = <void**> realloc(self._refs, sizeof(void*) * (self._nref))
             if self._refs == NULL:
                 raise AllocationError("void**")
 
@@ -2567,7 +2570,7 @@ cdef class Pipeline:
                 raise ValueError("sequence length over comparison pipeline limit (100,000)")
             # record the pointer to the raw C struct
             self._refs[i] = <void*> seq._sq
-        self._refs[len(sequences)] = NULL
+        self._refs[n_sequences] = NULL
 
         # run the search loop on all database sequences while recycling memory
         with nogil:
@@ -2598,9 +2601,8 @@ cdef class Pipeline:
         Arguments:
             query (`~pyhmmer.easel.DigitalMSA`): The multiple sequence
                 alignment to use to query the sequence database.
-            sequences (iterable of `~pyhmmer.easel.DigitalSequence`): The
-                sequences to query. Pass a `~pyhmmer.easel.SequencesFile`
-                instance in digital mode to read from disk iteratively.
+            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
+                sequences to query.
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query to a `~pyhmmer.plan7.HMM`. If
                 `None` is given, it will use a default one.
@@ -2692,9 +2694,8 @@ cdef class Pipeline:
         Arguments:
             query (`~pyhmmer.easel.DigitalSequence`): The sequence object to
                 use to query the sequence database.
-            sequences (iterable of `~pyhmmer.easel.DigitalSequence`): The
-                sequences to query. Pass a `~pyhmmer.easel.SequenceFile`
-                instance in digital mode to read from disk iteratively.
+            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
+                sequences to query.
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query to a `~pyhmmer.plan7.HMM`. If
                 `None` is given, it will use a default one.
