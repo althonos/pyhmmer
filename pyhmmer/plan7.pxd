@@ -118,6 +118,9 @@ cdef class OptimizedProfile:
     cpdef bint is_local(self)
     cpdef void write(self, object fh_filter, object fh_profile)
 
+    @staticmethod
+    cdef int _convert(P7_OPROFILE* om, P7_PROFILE* gm) nogil except 1
+
     cpdef object ssv_filter(self, DigitalSequence seq)
 
 

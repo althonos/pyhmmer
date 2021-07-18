@@ -1970,6 +1970,44 @@ cdef class OptimizedProfile:
         else:
             raise UnexpectedError(status, "p7_oprofile_Write")
 
+    def convert(self, Profile profile):
+        """convert(self, profile)\n--
+
+        Store the given profile into ``self`` as a platform-specific profile.
+
+        Use this method to obtained an optimized profile from a `Profile`
+        while recycling the internal vector buffers.
+
+        See Also:
+            The `Profile.optimized` method, which allows getting an
+            `OptimizedProfile` directly from a profile without having to
+            allocate first.
+
+        """
+        assert self._om != NULL
+        assert profile._gm != NULL
+
+        cdef P7_OPROFILE* om = self._om
+        cdef P7_PROFILE*  gm = profile._gm
+
+        with nogil:
+            OptimizedProfile._convert(om, gm)
+
+    @staticmethod
+    cdef int _convert(P7_OPROFILE* om, P7_PROFILE* gm) nogil except 1:
+        cdef int status
+        if om.M < gm.M:
+            raise ValueError("Optimized profile is too small to hold profile")
+        status = p7_oprofile.p7_oprofile_Convert(gm, om)
+        if status == libeasel.eslOK:
+            return 0
+        elif status == libeasel.eslEINVAL:
+            raise ValueError("Standard and optimized profiles are not compatible.")
+        elif status == libeasel.eslEMEM:
+            raise AllocationError("P7_OPROFILE")
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_oprofile_Convert")
+
     cpdef object ssv_filter(self, DigitalSequence seq):
         r"""ssv_filter(self, seq)\n--
 
@@ -3234,25 +3272,20 @@ cdef class Profile:
             using the configuration of this profile.
 
         """
+        assert self._gm != NULL
+
         cdef int              status
         cdef OptimizedProfile opt
         cdef P7_PROFILE*      gm     = self._gm
-
-        assert self._gm != NULL
+        cdef P7_OPROFILE*     om
 
         opt = OptimizedProfile.__new__(OptimizedProfile)
         OptimizedProfile.__init__(opt, self._gm.M, self.alphabet)
-
+        om = opt._om
         with nogil:
-            status = p7_oprofile.p7_oprofile_Convert(gm, opt._om)
-        if status == libeasel.eslOK:
-            return opt
-        elif status == libeasel.eslEINVAL:
-            raise ValueError("Standard and optimized profiles are not compatible.")
-        elif status == libeasel.eslEMEM:
-            raise AllocationError("P7_OPROFILE")
-        elif status != libeasel.eslOK:
-            raise UnexpectedError(status, "p7_oprofile_Convert")
+            OptimizedProfile._convert(om, gm)
+
+        return opt
 
 
 cdef class TopHits:
