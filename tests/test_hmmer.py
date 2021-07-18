@@ -1,4 +1,5 @@
 import abc
+import math
 import io
 import itertools
 import os
@@ -77,8 +78,8 @@ class _TestSearch(metaclass=abc.ABCMeta):
         domain = hit.domains[0]
         self.assertAlmostEqual(domain.score, 8.1, delta=0.1)
         self.assertAlmostEqual(domain.bias, 1.5, delta=0.1)
-        self.assertAlmostEqual(domain.i_evalue, 0.14, delta=0.01)  # printed with %9.2g
-        self.assertAlmostEqual(domain.c_evalue, 6.5e-05, delta=0.1e-5)  # printed with %9.2g
+        self.assertAlmostEqual(domain.i_evalue, 0.14, places=2)  # printed with %9.2g
+        self.assertAlmostEqual(domain.c_evalue, 6.5e-05, places=2)  # printed with %9.2g
         self.assertEqual(domain.alignment.target_from, 115)
         self.assertEqual(domain.alignment.target_to, 129)
         self.assertEqual(domain.alignment.hmm_from, 79)
@@ -96,8 +97,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
             seqs_file.set_digital(hmm.alphabet)
             seqs = list(seqs_file)
 
-        pipeline = Pipeline(alphabet=hmm.alphabet)
-        hits = pipeline.search_hmm(hmm, seqs)
+        hits = self.get_hits(hmm, seqs)
         self.assertEqual(len(hits), 22)
 
         hits.sort()
@@ -112,6 +112,40 @@ class _TestSearch(metaclass=abc.ABCMeta):
                 self.assertAlmostEqual(hit.score, float(fields[5]), delta=0.1)
                 self.assertAlmostEqual(hit.bias, float(fields[6]), delta=0.1)
                 self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
+
+    def test_t2pks(self):
+        with self.seqs_file("938293.PRJEB85.HG003687") as seqs_file:
+            seqs_file.set_digital(Alphabet.amino())
+            seqs = list(seqs_file)
+
+        with self.hmm_file("t2pks") as hmm_file:
+            all_hits = [ self.get_hits(hmm, seqs) for hmm in hmm_file ]
+
+        hits = (hit for hits in all_hits for hit in hits)
+        with self.table("t2pks.tbl") as table:
+            lines = filter(lambda line: not line.startswith("#"), table)
+            for line, hit in itertools.zip_longest(lines, hits):
+                fields = list(filter(None, line.strip().split(" ")))
+                self.assertIsNot(line, None)
+                self.assertIsNot(hit, None)
+                self.assertEqual(hit.name.decode(), fields[0])
+                self.assertAlmostEqual(hit.score, float(fields[5]), delta=0.1)
+                self.assertAlmostEqual(hit.bias, float(fields[6]), delta=0.1)
+                self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
+
+        domains = [domain for hits in all_hits for hit in hits for domain in hit.domains]
+        with self.table("t2pks.domtbl") as table:
+            lines = filter(lambda line: not line.startswith("#"), table)
+            for line, domain in itertools.zip_longest(lines, domains):
+                fields = list(filter(None, line.strip().split(" ")))
+                self.assertIsNot(line, None)
+                self.assertIsNot(domain, None)
+                self.assertEqual(domain.hit.hits.Z, len(seqs))
+                self.assertEqual(domain.hit.name.decode(), fields[0])
+                self.assertAlmostEqual(domain.score, float(fields[13]), places=1)
+                self.assertAlmostEqual(domain.bias, float(fields[14]), places=1)
+                # self.assertEqual(f"{domain.c_evalue:9.2g}", f"{float(fields[11]):9.2g}")
+                self.assertEqual(f"{domain.i_evalue:9.2g}", f"{float(fields[12]):9.2g}")
 
 
 class TestHmmsearch(_TestSearch, unittest.TestCase):
