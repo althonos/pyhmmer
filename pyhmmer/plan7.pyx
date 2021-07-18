@@ -1996,7 +1996,7 @@ cdef class OptimizedProfile:
     @staticmethod
     cdef int _convert(P7_OPROFILE* om, P7_PROFILE* gm) nogil except 1:
         cdef int status
-        if om.M < gm.M:
+        if om.allocM < gm.M:
             raise ValueError("Optimized profile is too small to hold profile")
         status = p7_oprofile.p7_oprofile_Convert(gm, om)
         if status == libeasel.eslOK:
@@ -2226,6 +2226,9 @@ cdef class Pipeline:
         self.randomness = Randomness.__new__(Randomness)
         self.randomness._owner = self
         self.randomness._rng = self._pli.r
+
+        # create an empty profile and optimized profile
+        self.profile = self.opt = None
 
         # configure the pipeline with the additional keyword arguments
         self.null2 = null2
@@ -2560,7 +2563,7 @@ cdef class Pipeline:
         cdef int                  status
         cdef int                  allocM
         cdef DigitalSequence      seq
-        cdef OptimizedProfile     opt
+        cdef OptimizedProfile     opt     = self.opt
         cdef Profile              profile = self.profile
         cdef TopHits              hits    = TopHits()
 
@@ -2587,7 +2590,10 @@ cdef class Pipeline:
         profile._configure(query, self.background, len(sequences.peek()))
 
         # build the optimized model from the profile
-        opt = profile.optimized()
+        if opt is None or opt._om.allocM < query.M:
+            opt = self.opt = profile.optimized()
+        else:
+            opt.convert(profile)
 
         # prepare an array to pass the sequences to the C function
         if self._nref <= n_sequences:
@@ -3277,13 +3283,11 @@ cdef class Profile:
         cdef int              status
         cdef OptimizedProfile opt
         cdef P7_PROFILE*      gm     = self._gm
-        cdef P7_OPROFILE*     om
 
         opt = OptimizedProfile.__new__(OptimizedProfile)
         OptimizedProfile.__init__(opt, self._gm.M, self.alphabet)
-        om = opt._om
         with nogil:
-            OptimizedProfile._convert(om, gm)
+            OptimizedProfile._convert(opt._om, gm)
 
         return opt
 

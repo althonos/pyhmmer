@@ -136,10 +136,11 @@ cdef class Pipeline:
     cdef          void**     _refs    # the array to pass the references to the C code
     cdef          ssize_t    _nref    # the total size of `self._refs`
 
-    cdef readonly Alphabet   alphabet
-    cdef readonly Background background
-    cdef readonly Profile    profile
-    cdef readonly Randomness randomness
+    cdef readonly Alphabet         alphabet
+    cdef readonly Background       background
+    cdef readonly Profile          profile
+    cdef readonly OptimizedProfile opt
+    cdef readonly Randomness       randomness
 
     cdef OptimizedProfile _optimized
     cdef P7_PIPELINE* _pli
