@@ -118,8 +118,8 @@ cdef class OptimizedProfile:
     cpdef bint is_local(self)
     cpdef void write(self, object fh_filter, object fh_profile)
 
-    @staticmethod
-    cdef int _convert(P7_OPROFILE* om, P7_PROFILE* gm) nogil except 1
+    # @staticmethod
+    cdef int _convert(self, P7_PROFILE* gm) nogil except 1
 
     cpdef object ssv_filter(self, DigitalSequence seq)
 
@@ -174,8 +174,8 @@ cdef class Profile:
     cdef readonly Alphabet alphabet
     cdef P7_PROFILE* _gm
 
-    cdef int _clear(self) except 1
-    cdef int _configure(self, HMM hmm, Background background, int L, bint multihit=*, bint local=*) except 1
+    cdef int _clear(self) nogil except 1
+    cdef int _configure(self, HMM hmm, Background background, int L, bint multihit=*, bint local=*) nogil except 1
 
     cpdef Profile copy(self)
     cpdef bint is_local(self)

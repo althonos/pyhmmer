@@ -1987,18 +1987,14 @@ cdef class OptimizedProfile:
         assert self._om != NULL
         assert profile._gm != NULL
 
-        cdef P7_OPROFILE* om = self._om
-        cdef P7_PROFILE*  gm = profile._gm
-
         with nogil:
-            OptimizedProfile._convert(om, gm)
+            self._convert(profile._gm)
 
-    @staticmethod
-    cdef int _convert(P7_OPROFILE* om, P7_PROFILE* gm) nogil except 1:
+    cdef int _convert(self, P7_PROFILE* gm) nogil except 1:
         cdef int status
-        if om.allocM < gm.M:
+        if self._om.allocM < gm.M:
             raise ValueError("Optimized profile is too small to hold profile")
-        status = p7_oprofile.p7_oprofile_Convert(gm, om)
+        status = p7_oprofile.p7_oprofile_Convert(gm, self._om)
         if status == libeasel.eslOK:
             return 0
         elif status == libeasel.eslEINVAL:
@@ -2228,7 +2224,8 @@ cdef class Pipeline:
         self.randomness._rng = self._pli.r
 
         # create an empty profile and optimized profile
-        self.profile = self.opt = None
+        self.profile = Profile(m_hint, self.alphabet)
+        self.opt = OptimizedProfile(m_hint, self.alphabet)
 
         # configure the pipeline with the additional keyword arguments
         self.null2 = null2
@@ -2559,13 +2556,11 @@ cdef class Pipeline:
         """
         assert self._pli != NULL
 
-        cdef size_t               n_sequences
+        cdef size_t               nseqs
         cdef int                  status
         cdef int                  allocM
         cdef DigitalSequence      seq
-        cdef OptimizedProfile     opt     = self.opt
-        cdef Profile              profile = self.profile
-        cdef TopHits              hits    = TopHits()
+        cdef TopHits              hits = TopHits()
 
         # check the pipeline was configured with the same alphabet
         if not self.alphabet._eq(query.alphabet):
@@ -2574,37 +2569,18 @@ cdef class Pipeline:
         if not isinstance(sequences, collections.abc.Sequence):
             raise TypeError("`sequences` cannot be an iterator, expected an iterable")
         # allow peeking the sequences
-        n_sequences = len(sequences)
+        nseqs = len(sequences)
         sequences = peekable(sequences)
-
-        # make sure the pipeline is set to search mode and ready for a new HMM
-        self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
-
-        # build the profile from the HMM, using the first sequence length
-        # as a hint for the model configuration, or reuse the profile we
-        # cached if it is large enough to hold the new HMM
-        if profile is None or profile._gm.allocM < query.M:
-            profile = self.profile = Profile(query.M, self.alphabet)
-        else:
-            profile._clear()
-        profile._configure(query, self.background, len(sequences.peek()))
-
-        # build the optimized model from the profile
-        if opt is None or opt._om.allocM < query.M:
-            opt = self.opt = profile.optimized()
-        else:
-            opt.convert(profile)
-
-        # prepare an array to pass the sequences to the C function
-        if self._nref <= n_sequences:
-            self._nref = n_sequences + 1
-            self._refs = <void**> realloc(self._refs, sizeof(void*) * (self._nref))
-            if self._refs == NULL:
-                raise AllocationError("void**")
+        seq = sequences.peek()
 
         # collect sequences: we prepare an array of pointer to sequences
         # so that the C backend can iter through them without having to
         # acquire the GIL between each iteration.
+        if self._nref <= nseqs:
+            self._nref = nseqs + 1
+            self._refs = <void**> realloc(self._refs, sizeof(void*) * (self._nref))
+            if self._refs == NULL:
+                raise AllocationError("void**")
         for i, seq in enumerate(sequences):
             # check alphabet
             if not self.alphabet._eq(seq.alphabet):
@@ -2614,13 +2590,33 @@ cdef class Pipeline:
                 raise ValueError("sequence length over comparison pipeline limit (100,000)")
             # record the pointer to the raw C struct
             self._refs[i] = <void*> seq._sq
-        self._refs[n_sequences] = NULL
+        self._refs[nseqs] = NULL
 
-        # run the search loop on all database sequences while recycling memory
         with nogil:
+            # make sure the pipeline is set to search mode and ready for a new HMM
+            self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
+            # reallocate the profile if it is too small, otherwise just clear it
+            if self.profile._gm.allocM < query._hmm.M:
+                libhmmer.p7_profile.p7_profile_Destroy(self.profile._gm)
+                self.profile._gm = libhmmer.p7_profile.p7_profile_Create(query._hmm.M, self.alphabet._abc)
+                if self.profile._gm == NULL:
+                    raise AllocationError("P7_PROFILE")
+            else:
+                self.profile._clear()
+            # configure the profile from the query HMM
+            self.profile._configure(query, self.background, seq._sq.L)
+            # reallocate the optimized profile if it is too small
+            if self.opt._om.allocM < query._hmm.M:
+                p7_oprofile.p7_oprofile_Destroy(self.opt._om)
+                self.opt._om = p7_oprofile.p7_oprofile_Create(query._hmm.M, self.alphabet._abc)
+                if self.opt._om == NULL:
+                    raise AllocationError("P7_OPROFILE")
+            # convert the profile to an optimized one
+            self.opt._convert(self.profile._gm)
+            # run the search loop on all database sequences while recycling memory
             Pipeline._search_loop(
                 self._pli,
-                opt._om,
+                self.opt._om,
                 self.background._bg,
                 <ESL_SQ**> self._refs,
                 hits._th,
@@ -3172,13 +3168,12 @@ cdef class Profile:
 
     # --- Methods ------------------------------------------------------------
 
-    cdef int _clear(self) except 1:
-        assert self._gm != NULL
+    cdef int _clear(self) nogil except 1:
         cdef int status
-        with nogil:
-            status = libhmmer.p7_profile.p7_profile_Reuse(self._gm)
+        status = libhmmer.p7_profile.p7_profile_Reuse(self._gm)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_profile_Reuse")
+        return 0
 
     def clear(self):
         """clear(self)\n--
@@ -3186,31 +3181,34 @@ cdef class Profile:
         Clear internal buffers to reuse the profile without reallocation.
 
         """
+        assert self._gm != NULL
         self._clear()
 
-    cdef int _configure(self, HMM hmm, Background background, int L, bint multihit=True, bint local=True) except 1:
+    cdef int _configure(self, HMM hmm, Background background, int L, bint multihit=True, bint local=True) nogil except 1:
         cdef int         mode
         cdef int         status
         cdef P7_HMM*     hm     = hmm._hmm
         cdef P7_BG*      bg     = background._bg
         cdef P7_PROFILE* gm     = self._gm
 
+        # check alphabets are correct
         if not self.alphabet._eq(hmm.alphabet):
             raise AlphabetMismatch(self.alphabet, hmm.alphabet)
         elif not self.alphabet._eq(background.alphabet):
             raise AlphabetMismatch(self.alphabet, background.alphabet)
         elif hm.M > self._gm.allocM:
             raise ValueError("Profile is too small to hold HMM")
-
+        # get the proper flag
         if multihit:
             mode = p7_LOCAL if local else p7_GLOCAL
         else:
             mode = p7_UNILOCAL if local else p7_UNIGLOCAL
-
-        with nogil:
-            status = libhmmer.modelconfig.p7_ProfileConfig(hm, bg, gm, L, mode)
+        # configure the model
+        status = libhmmer.modelconfig.p7_ProfileConfig(hm, bg, gm, L, mode)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_ProfileConfig")
+
+        return 0
 
     def configure(self, HMM hmm, Background background, int L, bint multihit=True, bint local=True):
         """configure(self, hmm, background, L, multihit=True, local=True)\n--
@@ -3225,7 +3223,9 @@ cdef class Profile:
             local (`bool`): Whether or not to use non-local modes.
 
         """
-        self._configure(hmm, background, L, multihit, local)
+        assert self._gm != NULL
+        with nogil:
+            self._configure(hmm, background, L, multihit, local)
 
     cpdef Profile copy(self):
         """copy(self)\n--
@@ -3282,12 +3282,11 @@ cdef class Profile:
 
         cdef int              status
         cdef OptimizedProfile opt
-        cdef P7_PROFILE*      gm     = self._gm
 
         opt = OptimizedProfile.__new__(OptimizedProfile)
         OptimizedProfile.__init__(opt, self._gm.M, self.alphabet)
         with nogil:
-            OptimizedProfile._convert(opt._om, gm)
+            opt._convert(self._gm)
 
         return opt
 
