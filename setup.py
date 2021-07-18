@@ -94,6 +94,7 @@ class build_ext(_build_ext):
         if self.force:
             cython_args["force"] = True
         if self.debug:
+            cython_args["gdb_debug"] = True
             cython_args["annotate"] = True
             cython_args["compiler_directives"]["warn.undeclared"] = True
             cython_args["compiler_directives"]["warn.unreachable"] = True
