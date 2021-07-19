@@ -25,7 +25,7 @@ from .hmmer import hmmsearch, hmmpress, nhmmer, phmmer
 
 __author__ = "Martin Larralde <martin.larralde@embl.de>"
 __license__ = "MIT"
-__version__ = "0.4.4"
+__version__ = "0.4.5"
 __all__ = [
     errors.__name__,
     easel.__name__,
@@ -44,12 +44,7 @@ if __doc__ is not None:
     An online rendered version of the documentation for this version of the
     library on `Read The Docs <https://pyhmmer.readthedocs.io/en/v{}/>`_.
 
-    """.format(
-        # in the even the library is a CI build installed from GitLab, we
-        # just redirect to the stable version instead, i.e. not including
-        # the local component of the version (everything after the ``+``)
-        __version__.split("+")[0]
-    )
+    """.format(__version__)
 
 # Register collections using the `collections.abc` module (this is probably
 # not required with later versions of Python)

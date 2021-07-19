@@ -6,11 +6,24 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.4...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.5...HEAD
+
+
+## [v0.4.5] - 2021-07-19
+[v0.4.4]: https://github.com/althonos/pyhmmer/compare/v0.4.4...v0.4.5
+
+### Added
+- `OptimizedProfile.convert` method to configure an optimized profile from a `Profile` without reallocating a new `P7_OPROFILE` struct.
+
+### Changed
+- Rewrite the `plan7.Pipeline` search loop to avoid reacquiring the GIL between reference sequences.
+- Require the reference sequences to be stored in a collection (instead of an iterable) when passing them to the `search_hmm`, `search_msa` and `search_seq` methods of `plan7.Pipeline`.
+- Avoid reallocating a new `OptimizedProfile` every time a new HMM is passed to `Pipeline.search_hmm`.
+- Relax the GIL while sorting and thresholding `TopHits` in `Pipeline` search methods.
 
 
 ## [v0.4.4] - 2021-07-07
-[v0.4.3]: https://github.com/althonos/pyhmmer/compare/v0.4.3...v0.4.4
+[v0.4.4]: https://github.com/althonos/pyhmmer/compare/v0.4.3...v0.4.4
 
 ### Added
 - `ignore_gaps` parameter to `pyhmmer.plan7.SequenceFile`, allowing to skip the gap characters when reading a sequence from an ungapped format.
