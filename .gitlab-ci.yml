@@ -18,7 +18,7 @@ variables:
     - build
   before_script:
     - $python -m pip install -U pip
-    - $python -m pip install -U -r ci/requirements.txt
+    - $python -m pip install -U -r .github/workflows/requirements.txt
   script:
     - $python setup.py build_clib --debug
     - $python setup.py build_ext  --debug --inplace
@@ -52,7 +52,7 @@ variables:
   only:
     - tags
   before_script:
-    - $python -m pip install -U -r ci/requirements.txt
+    - $python -m pip install -U -r .github/workflows/requirements.txt
   script:
     - $python setup.py build_clib
     - $python setup.py build_ext  --inplace
@@ -112,7 +112,7 @@ test:pypy3.7:
 #     paths:
 #       - dist/*.tar.gz
 #   before_script:
-#     - $python -m pip install -U -r ci/requirements.txt
+#     - $python -m pip install -U -r .github/workflows/requirements.txt
 #   script:
 #     - $python setup.py sdist
 #     - $python -m pip install pyhmmer dist/*.tar.gz
