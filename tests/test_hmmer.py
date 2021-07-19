@@ -144,6 +144,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
                 self.assertEqual(domain.hit.name.decode(), fields[0])
                 self.assertAlmostEqual(domain.score, float(fields[13]), places=1)
                 self.assertAlmostEqual(domain.bias, float(fields[14]), places=1)
+                # FIXME: it looks like domZ is not extracted properly
                 # self.assertEqual(f"{domain.c_evalue:9.2g}", f"{float(fields[11]):9.2g}")
                 self.assertEqual(f"{domain.i_evalue:9.2g}", f"{float(fields[12]):9.2g}")
 

@@ -2621,10 +2621,10 @@ cdef class Pipeline:
                 <ESL_SQ**> self._refs,
                 hits._th,
             )
+            # sort hits
+            hits._sort_by_key()
+            hits._threshold(self)
 
-        # threshold hits
-        hits._sort_by_key()
-        hits._threshold(self)
         # return the hits
         return hits
 
@@ -2706,8 +2706,8 @@ cdef class Pipeline:
             self._refs[i] = <void*> seq._sq
         self._refs[len(sequences)] = NULL
 
-        # run the search loop on all database sequences while recycling memory
         with nogil:
+            # run the search loop on all database sequences while recycling memory
             Pipeline._search_loop(
                 self._pli,
                 opt._om,
@@ -2715,9 +2715,9 @@ cdef class Pipeline:
                 <ESL_SQ**> self._refs,
                 hits._th,
             )
-        # threshold hits
-        hits._sort_by_key()
-        hits._threshold(self)
+            # threshold hits
+            hits._sort_by_key()
+            hits._threshold(self)
         # return the hits
         return hits
 
@@ -2800,8 +2800,8 @@ cdef class Pipeline:
             self._refs[i] = <void*> seq._sq
         self._refs[len(sequences)] = NULL
 
-        # run the search loop on all database sequences while recycling memory
         with nogil:
+            # run the search loop on all database sequences while recycling memory
             Pipeline._search_loop(
                 self._pli,
                 opt._om,
@@ -2809,10 +2809,9 @@ cdef class Pipeline:
                 <ESL_SQ**> self._refs,
                 hits._th,
             )
-
-        # threshold hits
-        hits._sort_by_key()
-        hits._threshold(self)
+            # threshold hits
+            hits._sort_by_key()
+            hits._threshold(self)
         # return the hits
         return hits
 
@@ -3364,22 +3363,14 @@ cdef class TopHits:
 
     # --- Methods ------------------------------------------------------------
 
-    cdef int _threshold(self, Pipeline pipeline) except 1:
-        assert self._th != NULL
-        assert pipeline._pli != NULL
-
-        cdef int          status
-        cdef P7_TOPHITS*  th     = self._th
-        cdef P7_PIPELINE* pli    = pipeline._pli
-
-        with nogil:
-            status = libhmmer.p7_tophits.p7_tophits_Threshold(th, pli)
+    cdef int _threshold(self, Pipeline pipeline) nogil except 1:
+        cdef int status = libhmmer.p7_tophits.p7_tophits_Threshold(self._th, pipeline._pli)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tophits_Threshold")
-
-        self.Z = pli.Z
-        self.domZ = pli.domZ
-        self.long_targets = pli.long_targets
+        self.Z = pipeline._pli.Z
+        self.domZ = pipeline._pli.domZ
+        self.long_targets = pipeline._pli.long_targets
+        return 0
 
     def threshold(self, Pipeline pipeline):
         """threshold(self, pipeline)\n--
@@ -3391,28 +3382,19 @@ cdef class TopHits:
         Python level.
 
         """
-        self._threshold(pipeline)
-
-    cdef int _sort_by_key(self) except 1:
         assert self._th != NULL
-
-        cdef int         status
-        cdef P7_TOPHITS* th     = self._th
-
+        assert pipeline._pli != NULL
         with nogil:
-            status = libhmmer.p7_tophits.p7_tophits_SortBySortkey(th)
+            self._threshold(pipeline)
+
+    cdef int _sort_by_key(self) nogil except 1:
+        cdef int status = libhmmer.p7_tophits.p7_tophits_SortBySortkey(self._th)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tophits_SortBySortkey")
         return 0
 
-    cdef int _sort_by_seqidx(self) except 1:
-        assert self._th != NULL
-
-        cdef int         status
-        cdef P7_TOPHITS* th     = self._th
-
-        with nogil:
-            status = libhmmer.p7_tophits.p7_tophits_SortBySeqidxAndAlipos(th)
+    cdef int _sort_by_seqidx(self) nogil except 1:
+        cdef int status = libhmmer.p7_tophits.p7_tophits_SortBySeqidxAndAlipos(self._th)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tophits_SortBySeqidxAndAlipos")
         return 0
@@ -3428,10 +3410,13 @@ cdef class TopHits:
                 ``seqidx`` to sort by sequence index and alignment position.
 
         """
+        assert self._th != NULL
         if by == "key":
-            self._sort_by_key()
+            with nogil:
+                self._sort_by_key()
         elif by == "seqidx":
-            self._sort_by_seqidx()
+            with nogil:
+                self._sort_by_seqidx()
         else:
             raise ValueError("Invalid value for `by` argument: {!r}".format(by))
 
@@ -3445,13 +3430,12 @@ cdef class TopHits:
 
         """
         assert self._th != NULL
-
         if by == "key":
             return self._th.is_sorted_by_sortkey
         elif by == "seqidx":
             return self._th.is_sorted_by_seqidx
-
-        raise ValueError("Invalid value for `by` argument: {!r}".format(by))
+        else:
+            raise ValueError("Invalid value for `by` argument: {!r}".format(by))
 
     cpdef MSA to_msa(self, Alphabet alphabet, bint trim=False, bint digitize=False, bint all_consensus_cols=False):
         """to_msa(self, alphabet, trim=False, digitize=False, all_consensus_cols=False)\n--

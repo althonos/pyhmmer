@@ -190,8 +190,8 @@ cdef class TopHits:
 
     cdef P7_TOPHITS* _th
 
-    cdef int _threshold(self, Pipeline pipeline) except 1
-    cdef int _sort_by_key(self) except 1
-    cdef int _sort_by_seqidx(self) except 1
+    cdef int _threshold(self, Pipeline pipeline) nogil except 1
+    cdef int _sort_by_key(self) nogil except 1
+    cdef int _sort_by_seqidx(self) nogil except 1
 
     cpdef MSA to_msa(self, Alphabet alphabet, bint trim=*, bint digitize=?, bint all_consensus_cols=?)
