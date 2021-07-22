@@ -12,8 +12,23 @@ and the version 33.1 of the `Pfam <https://pfam.xfam.org/>`_ HMM library contain
 the times for pressed HMMs, and dashed-lines the times for HMMs in text format.*
 
 
-Unreleased
-----------
+v0.4.5 - 2021-07-19
+-------------------
+
+.. image:: _images/bench-v0.4.5.svg
+
+By adding an extra requirement on the reference sequences passed to a `~pyhmmer.plan7.Pipeline`,
+the Cython code can now evaluate a single HMM against the entirety of the reference
+sequences without having to reacquire the GIL between each reference sequence. This now
+means all the sequences must be stored in memory and cannot be obtained from an
+iterator anymore. However, since this was already required by `pyhmmer.hmmer.hmmsearch`,
+the changes in the downstream code should be minimal.
+
+Another consequence of this change is that threads can operate independently for
+much longer periods of time. This will greatly improve multi-threaded performance
+on workstations with many CPUs. However, the speedup becomes negligible once the
+number of threads grows above the number of physical cores because of the SIMD
+code making heavy use of CPU registers.
 
 
 v0.4.0 - 2021-06-05
@@ -34,7 +49,6 @@ total number of physical CPUs (6 cores).
 The main thread also now yields result instead of waiting for all HMMs to be
 done, thus potentially reducing the size of the result queue, which may in turn
 speed up insertions by worker threads.
-
 
 
 v0.3.0 - 2021-03-11
