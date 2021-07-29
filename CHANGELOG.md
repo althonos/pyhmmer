@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [v0.4.5] - 2021-07-19
-[v0.4.4]: https://github.com/althonos/pyhmmer/compare/v0.4.4...v0.4.5
+[v0.4.5]: https://github.com/althonos/pyhmmer/compare/v0.4.4...v0.4.5
 
 ### Added
 - `OptimizedProfile.convert` method to configure an optimized profile from a `Profile` without reallocating a new `P7_OPROFILE` struct.
