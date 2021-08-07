@@ -17,7 +17,7 @@ from cpython.unicode cimport PyUnicode_FromUnicode
 from libc.stdint cimport int64_t, uint8_t, uint16_t, uint32_t, uint64_t
 from libc.stdio cimport fclose
 from libc.stdlib cimport calloc, malloc, free
-from libc.string cimport memcpy, memmove, strdup, strlen, strncpy
+from libc.string cimport memcmp, memcpy, memmove, strdup, strlen, strncpy
 from posix.types cimport off_t
 
 cimport libeasel
@@ -47,6 +47,7 @@ ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
 # --- Python imports ---------------------------------------------------------
 
 import abc
+import array
 import os
 import collections
 import sys
@@ -252,6 +253,10 @@ cdef class Bitfield:
         Create a new bitfield with the given ``length``.
 
         """
+        # NB: checking whether `self._b` is not NULL before allocating allows
+        #     calling __init__ more than once without causing a memory leak.
+        if self._b != NULL:
+            libeasel.bitfield.esl_bitfield_Destroy(self._b)
         with nogil:
             self._b = libeasel.bitfield.esl_bitfield_Create(length)
         if not self._b:
@@ -273,6 +278,50 @@ cdef class Bitfield:
             libeasel.bitfield.esl_bitfield_Set(self._b, index_)
         else:
             libeasel.bitfield.esl_bitfield_Clear(self._b, index_)
+
+    def __eq__(self, object other):
+        assert self._b != NULL
+
+        cdef size_t        nu      = (self._b.nb // 64) + (self._b.nb % 64 != 0)
+        cdef ESL_BITFIELD* other_b
+        cdef int           cmp
+
+        if isinstance(other, Bitfield):
+            other_b = (<Bitfield> other)._b
+            assert other_b != NULL
+            if self._b.nb != other_b.nb:
+                return False
+            with nogil:
+                cmp = memcmp(
+                    <const void*> self._b.b,
+                    <const void*> other_b.b,
+                    nu
+                )
+            return cmp == 0
+
+        return NotImplemented
+
+    def __getstate__(self):
+        assert self._b != NULL
+
+        cdef size_t i
+        cdef size_t nu = (self._b.nb // 64) + (self._b.nb % 64 != 0)
+
+        a = array.array("Q")
+        for i in range(nu):
+            a.append(self._b.b[i])
+        return {"nb": self._b.nb, "b": a}
+
+    def __setstate__(self, state):
+        self.__init__(state["nb"])
+
+        cdef size_t i
+        cdef size_t nu = (self._b.nb // 64) + (self._b.nb % 64 != 0)
+        cdef object a  = state["b"]
+
+        assert len(a) <= nu
+        for i in range(nu):
+            self._b.b[i] = a[i]
 
     def __sizeof__(self):
         assert self._b != NULL
