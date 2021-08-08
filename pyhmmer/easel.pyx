@@ -316,12 +316,10 @@ cdef class Bitfield:
     def __setstate__(self, state):
         self.__init__(state["nb"])
 
-        cdef size_t        i
         cdef size_t        nu   = (self._b.nb // 64) + (self._b.nb % 64 != 0)
-        cdef object        b    = state["b"]
-        cdef uint64_t[::1] view = b
+        cdef uint64_t[::1] view = state["b"]
 
-        assert len(b) <= nu
+        assert view.shape[0] <= nu
         with nogil:
             memcpy(<void*> self._b.b, <const void*> &view[0], nu * sizeof(uint64_t))
 
@@ -512,7 +510,7 @@ cdef class KeyHash:
     def __getstate__(self):
         assert self._kh != NULL
 
-        cdef size_t    i
+        cdef ssize_t   i
         cdef object    hashtable  = array.array("i")
         cdef object    key_offset = array.array("i")
         cdef object    nxt        = array.array("i")
@@ -680,6 +678,9 @@ cdef class Vector:
 
     def __init__(self, object iterable = None):
         raise TypeError("Can't instantiate abstract class 'Vector'")
+
+    def __reduce__(self):
+        return type(self), (list(self),)
 
     # --- Properties ---------------------------------------------------------
 
@@ -1351,6 +1352,9 @@ cdef class Matrix:
 
     def __len__(self):
         return self._m
+
+    def __reduce__(self):
+        return type(self), (list(self),)
 
     # --- Properties ---------------------------------------------------------
 
