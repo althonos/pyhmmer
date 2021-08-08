@@ -1,4 +1,5 @@
 import copy
+import pickle
 import unittest
 
 from pyhmmer import easel
@@ -48,3 +49,13 @@ class TestKeyHash(unittest.TestCase):
         self.assertEqual(list(kh), list(k2))
         kh.clear()
         self.assertNotEqual(list(kh), list(k2))
+
+    def test_pickle(self):
+        kh = easel.KeyHash()
+        kh.add(b"first")
+        kh.add(b"second")
+
+        kh2 = pickle.loads(pickle.dumps(kh))
+        self.assertEqual(len(kh2), 2)
+        self.assertEqual(list(iter(kh2)), [b"first", b"second"])
+        self.assertEqual(kh.__getstate__(), kh2.__getstate__())

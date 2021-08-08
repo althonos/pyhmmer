@@ -304,24 +304,26 @@ cdef class Bitfield:
     def __getstate__(self):
         assert self._b != NULL
 
-        cdef size_t i
-        cdef size_t nu = (self._b.nb // 64) + (self._b.nb % 64 != 0)
+        cdef size_t        i
+        cdef size_t        nu   = (self._b.nb // 64) + (self._b.nb % 64 != 0)
+        cdef object        b    = array.array("Q")
 
-        a = array.array("Q")
         for i in range(nu):
-            a.append(self._b.b[i])
-        return {"nb": self._b.nb, "b": a}
+            b.append(self._b.b[i])
+
+        return {"nb": self._b.nb, "b": b}
 
     def __setstate__(self, state):
         self.__init__(state["nb"])
 
-        cdef size_t i
-        cdef size_t nu = (self._b.nb // 64) + (self._b.nb % 64 != 0)
-        cdef object a  = state["b"]
+        cdef size_t        i
+        cdef size_t        nu   = (self._b.nb // 64) + (self._b.nb % 64 != 0)
+        cdef object        b    = state["b"]
+        cdef uint64_t[::1] view = b
 
-        assert len(a) <= nu
-        for i in range(nu):
-            self._b.b[i] = a[i]
+        assert len(b) <= nu
+        with nogil:
+            memcpy(<void*> self._b.b, <const void*> &view[0], nu * sizeof(uint64_t))
 
     def __sizeof__(self):
         assert self._b != NULL
@@ -418,6 +420,14 @@ cdef class KeyHash:
               ...
             KeyError: b'missing'
 
+        Iterate over the keys of the key hash, in the order of insertion::
+
+            >>> kh.add(b"key2")
+            >>> for k in kh:
+            ...     print(k)
+            b'key'
+            b'key2'
+
     See Also:
         The Wikipedia article for Bob Jenkins' hash functions:
         https://en.wikipedia.org/wiki/Jenkins_hash_function
@@ -439,7 +449,10 @@ cdef class KeyHash:
 
         """
         with nogil:
-            self._kh = libeasel.keyhash.esl_keyhash_Create()
+            if self._kh == NULL:
+                self._kh = libeasel.keyhash.esl_keyhash_Create()
+            else:
+                libeasel.keyhash.esl_keyhash_Reuse(self._kh)
         if not self._kh:
             raise AllocationError("ESL_KEYHASH")
 
@@ -495,6 +508,65 @@ cdef class KeyHash:
             offset = self._kh.key_offset[i]
             key = &self._kh.smem[offset]
             yield <bytes> key
+
+    def __getstate__(self):
+        assert self._kh != NULL
+
+        cdef size_t    i
+        cdef object    hashtable  = array.array("i")
+        cdef object    key_offset = array.array("i")
+        cdef object    nxt        = array.array("i")
+        cdef object    smem       = bytearray(self._kh.salloc)
+        cdef char[::1] view       = smem
+
+        memcpy(<void*> &view[0], <const void*> self._kh.smem, self._kh.salloc * sizeof(char))
+        for i in range(self._kh.hashsize):
+            hashtable.append(self._kh.hashtable[i])
+        for i in range(self._kh.nkeys):
+            key_offset.append(self._kh.key_offset[i])
+            nxt.append(self._kh.nxt[i])
+
+        return {
+            "hashtable": hashtable,
+            "hashsize": self._kh.hashsize,
+            "key_offset": key_offset,
+            "nxt": nxt,
+            "nkeys": self._kh.nkeys,
+            "kalloc": self._kh.kalloc,
+            "smem": smem,
+            "salloc": self._kh.salloc,
+            "sn": self._kh.sn,
+        }
+
+    def __setstate__(self, state):
+        cdef size_t    i
+        cdef char[::1] sview = state["smem"]
+        cdef int[::1]  hview = state["hashtable"]
+        cdef int[::1]  kview = state["key_offset"]
+        cdef int[::1]  nview = state["nxt"]
+
+        # FIXME: avoid reallocation if possible?
+        if self._kh != NULL:
+            libeasel.keyhash.esl_keyhash_Destroy(self._kh)
+        # allocate the keyhash using the right allocation sizes
+        self._kh = libeasel.keyhash.esl_keyhash_CreateCustom(
+            state["hashsize"],
+            state["kalloc"],
+            state["salloc"]
+        )
+        if not self._kh:
+            raise AllocationError("ESL_KEYHASH")
+        # copy keys
+        assert sview.shape[0] <= state["salloc"]
+        self._kh.sn = state["sn"]
+        memcpy(<void*> self._kh.smem, <const void*> &sview[0], state["salloc"] * sizeof(char))
+        # copy hashes and indices
+        assert kview.shape[0] <= state["nkeys"]
+        assert nview.shape[0] <= state["nkeys"]
+        self._kh.nkeys = state["nkeys"]
+        memcpy(<void*> self._kh.hashtable,  <const void*> &hview[0], self._kh.hashsize * sizeof(int))
+        memcpy(<void*> self._kh.key_offset, <const void*> &kview[0], self._kh.nkeys    * sizeof(int))
+        memcpy(<void*> self._kh.nxt,        <const void*> &nview[0], self._kh.nkeys    * sizeof(int))
 
     def __sizeof__(self):
         assert self._kh != NULL

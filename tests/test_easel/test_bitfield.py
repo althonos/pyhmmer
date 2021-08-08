@@ -37,3 +37,12 @@ class TestBitfield(unittest.TestCase):
 
         b3 = easel.Bitfield(8)
         self.assertNotEqual(b2, b3)
+
+    def test_getstate(self):
+        b1 = easel.Bitfield(8)
+        b1[2] = b1[4] = True
+
+        b2 = easel.Bitfield(8)
+        b2[2] = b2[4] = True
+
+        self.assertEqual(b1.__getstate__(), b2.__getstate__())
