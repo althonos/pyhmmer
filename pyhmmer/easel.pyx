@@ -23,7 +23,7 @@ cimport cython
 from cpython cimport Py_buffer
 from cpython.buffer cimport PyBUF_READ, PyBUF_WRITE, PyBUF_FORMAT, PyBUF_F_CONTIGUOUS
 from cpython.unicode cimport PyUnicode_FromUnicode
-from libc.stdint cimport int64_t, uint8_t, uint16_t, uint32_t, uint64_t
+from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t
 from libc.stdio cimport fclose
 from libc.stdlib cimport calloc, malloc, free
 from libc.string cimport memcmp, memcpy, memmove, strdup, strlen, strncpy
@@ -3240,6 +3240,7 @@ cdef class Sequence:
     def source(self):
         """`bytes`: The source of the sequence, if any.
         """
+        assert self._sq != NULL
         return <bytes> self._sq.source
 
     @source.setter
@@ -3255,6 +3256,26 @@ cdef class Sequence:
             raise AllocationError("char*")
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_SetSource")
+
+    @property
+    def taxonomy_id(self):
+        """`int` or `None`: The NCBI taxonomy ID for the source organism, if any.
+
+        .. versionadded:: 0.4.6
+
+        """
+        assert self._sq != NULL
+        return None if self._sq.tax_id == -1 else self._sq.tax_id
+
+    @taxonomy_id.setter
+    def taxonomy_id(self, object tax_id):
+        assert self._sq != NULL
+        if tax_id is None:
+            self._sq.tax_id = -1
+        elif (<int32_t> tax_id) > 0:
+            self._sq.tax_id = tax_id
+        else:
+            raise ValueError(f"NCBI taxonomy must be a positive integer or None, got {tax_id}")
 
     # --- Abstract methods ---------------------------------------------------
 
@@ -3341,6 +3362,7 @@ cdef class TextSequence(Sequence):
         bytes accession=None,
         str   sequence=None,
         bytes source=None,
+        object taxonomy_id=None,
     ):
         """__init__(self, name=None, description=None, accession=None, sequence=None, source=None)\n--
 
@@ -3366,6 +3388,8 @@ cdef class TextSequence(Sequence):
             self.description = description
         if source is not None:
             self.source = source
+        if taxonomy_id is not None:
+            self.taxonomy_id = taxonomy_id
 
         assert libeasel.sq.esl_sq_IsText(self._sq)
         assert self._sq.name != NULL
@@ -3520,6 +3544,7 @@ cdef class DigitalSequence(Sequence):
         bytes    accession=None,
         char[:]  sequence=None,
         bytes    source=None,
+        object   taxonomy_id=None,
     ):
         """__init__(self, alphabet, name=None, description=None, accession=None, sequence=None, source=None)\n--
 
@@ -3565,6 +3590,8 @@ cdef class DigitalSequence(Sequence):
             self.description = description
         if source is not None:
             self.source = source
+        if taxonomy_id is not None:
+            self.taxonomy_id = taxonomy_id
 
         assert libeasel.sq.esl_sq_IsDigital(self._sq)
         assert self._sq.name != NULL
