@@ -8,6 +8,15 @@ to facilitate the development of biological software in C. It is used by
 
 """
 
+# --- C declarations ---------------------------------------------------------
+
+DEF eslERRBUFSIZE = 128
+
+IF UNAME_SYSNAME == "Linux":
+    include "fileobj/linux.pxi"
+ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
+    include "fileobj/bsd.pxi"
+
 # --- C imports --------------------------------------------------------------
 
 cimport cython
@@ -36,13 +45,7 @@ cimport libeasel.vec
 from libeasel cimport ESL_DSQ, esl_pos_t
 from libeasel.sq cimport ESL_SQ
 from libeasel.random cimport ESL_RANDOMNESS
-
-DEF eslERRBUFSIZE = 128
-
-IF UNAME_SYSNAME == "Linux":
-    include "fileobj/linux.pxi"
-ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
-    include "fileobj/bsd.pxi"
+from unicode cimport PyUnicode_FromKindAndData, PyUnicode_1BYTE_KIND
 
 # --- Python imports ---------------------------------------------------------
 
@@ -421,6 +424,7 @@ cdef class KeyHash:
         Iterate over the keys of the key hash, in the order of insertion::
 
             >>> kh.add(b"key2")
+            1
             >>> for k in kh:
             ...     print(k)
             b'key'
@@ -3167,7 +3171,6 @@ cdef class Sequence:
     def __copy__(self):
         return self.copy()
 
-
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -3253,7 +3256,6 @@ cdef class Sequence:
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_SetSource")
 
-
     # --- Abstract methods ---------------------------------------------------
 
     def copy(self):
@@ -3263,7 +3265,6 @@ cdef class Sequence:
 
         """
         raise NotImplementedError("Sequence.copy")
-
 
     # --- Methods ------------------------------------------------------------
 
@@ -3331,6 +3332,8 @@ cdef class TextSequence(Sequence):
 
     """
 
+    # --- Magic methods ------------------------------------------------------
+
     def __init__(
         self,
         bytes name=None,
@@ -3369,13 +3372,21 @@ cdef class TextSequence(Sequence):
         assert self._sq.desc != NULL
         assert self._sq.acc != NULL
 
+    # --- Properties ---------------------------------------------------------
+
     @property
     def sequence(self):
         """`str`: The raw sequence letters, as a Python string.
         """
         assert self._sq != NULL
         assert libeasel.sq.esl_sq_IsText(self._sq)
-        return self._sq.seq.decode("ascii")
+        return PyUnicode_FromKindAndData(
+            PyUnicode_1BYTE_KIND,
+            self._sq.seq,
+            self._sq.n,
+        )
+
+    # --- Methods ------------------------------------------------------------
 
     cpdef DigitalSequence digitize(self, Alphabet alphabet):
         """digitize(self, alphabet)\n--
