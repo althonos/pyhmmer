@@ -21,11 +21,12 @@ ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
 
 cimport cython
 from cpython cimport Py_buffer
+from cpython.bytes cimport PyBytes_FromString, PyBytes_FromStringAndSize
 from cpython.buffer cimport PyBUF_READ, PyBUF_WRITE, PyBUF_FORMAT, PyBUF_F_CONTIGUOUS
 from cpython.unicode cimport PyUnicode_FromUnicode
 from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t
 from libc.stdio cimport fclose
-from libc.stdlib cimport calloc, malloc, free
+from libc.stdlib cimport calloc, malloc, realloc, free
 from libc.string cimport memcmp, memcpy, memmove, strdup, strlen, strncpy
 from posix.types cimport off_t
 
@@ -3276,6 +3277,78 @@ cdef class Sequence:
             self._sq.tax_id = tax_id
         else:
             raise ValueError(f"NCBI taxonomy must be a positive integer or None, got {tax_id}")
+
+    @property
+    def residue_markups(self):
+        """`dict`: Extra residue markups, mapping information to each position.
+
+        Keys and values are not decoded, since they are not necessarily
+        valid UTF-8 bytestrings.
+
+        Caution:
+            The values the dictionary must be the same size as the sequence
+            itself. Trying to set a residue markup of the wrong size will
+            raise a `ValueError`::
+
+                >>> seq = TextSequence(sequence="TTAATTGGT")
+                >>> seq.residue_markups = {b"quality": b"efcfffffcfee"}
+                Traceback (most recent call last):
+                  ...
+                ValueError: Residue markup annotation has an invalid length (expected 9)
+
+        .. versionadded:: 0.4.6
+
+        """
+        assert self._sq != NULL
+
+        cdef int    i
+        cdef bytes  tag
+        cdef bytes  val
+        cdef dict   xr  = {}
+        cdef size_t off = 0 if libeasel.sq.esl_sq_IsText(self._sq) else 1
+
+        for i in range(self._sq.nxr):
+            tag = PyBytes_FromString(self._sq.xr_tag[i])
+            val = PyBytes_FromStringAndSize(&self._sq.xr[i][off], self._sq.n)
+            xr[tag] = val
+
+        return xr
+
+    @residue_markups.setter
+    def residue_markups(self, dict xr):
+        assert self._sq != NULL
+
+        cdef bytes   tag
+        cdef bytes   val
+        cdef int     i
+        cdef ssize_t xrlen = len(xr)
+        cdef size_t  off   = 0 if libeasel.sq.esl_sq_IsText(self._sq) else 1
+        cdef size_t  xrdim = self._sq.n + 2 * libeasel.sq.esl_sq_IsDigital(self._sq)
+
+        # check the values have the right length before doing anything
+        for tag, val in xr.items():
+            if len(val) != self._sq.n:
+                raise ValueError(f"Residue markup annotation has an invalid length (expected {self._sq.n})")
+        # clear old values
+        for i in range(self._sq.nxr):
+            free(self._sq.xr_tag[i])
+            self._sq.xr_tag[i] = NULL
+            free(self._sq.xr[i])
+            self._sq.xr[i] = NULL
+        # reallocate arrays if needed
+        if xrlen != self._sq.nxr:
+            self._sq.nxr = xrlen
+            self._sq.xr = <char**> realloc(<void*> self._sq.xr, xrlen * sizeof(char*))
+            self._sq.xr_tag = <char**> realloc(<void*> self._sq.xr_tag, xrlen * sizeof(char*))
+            if self._sq.xr == NULL or self._sq.xr_tag == NULL:
+                raise AllocationError("char**")
+        # assign the new values
+        for i, (tag, val) in enumerate(xr.items()):
+            self._sq.xr_tag[i] = strdup(<const char*> tag)
+            self._sq.xr[i] = <char*> calloc(xrdim, sizeof(char))
+            if self._sq.xr_tag[i] == NULL or self._sq.xr[i] == NULL:
+                raise AllocationError("char*")
+            memcpy(&self._sq.xr[i][off], <const void*> (<const char*> val), len(val))
 
     # --- Abstract methods ---------------------------------------------------
 

@@ -1,3 +1,4 @@
+import abc
 import copy
 import gc
 import io
@@ -7,6 +8,32 @@ import tempfile
 import warnings
 
 from pyhmmer import easel
+
+
+class _TestSequenceBase(abc.ABC):
+
+    @classmethod
+    @abc.abstractmethod
+    def Sequence(cls, **kwargs):
+        pass
+
+    def test_init_empty(self):
+        seq = self.Sequence()
+        self.assertEqual(seq.name, b"")
+        self.assertEqual(len(seq), 0)
+        self.assertEqual(len(seq.sequence), 0)
+
+    def test_setter_name(self):
+        seq = self.Sequence()
+        self.assertEqual(seq.name, b"")
+        seq.name = b"OTHER"
+        self.assertEqual(seq.name, b"OTHER")
+
+    def test_setter_description(self):
+        seq = self.Sequence()
+        self.assertIs(seq.description, b"")
+        seq.description = b"a test sequence"
+        self.assertEqual(seq.description, b"a test sequence")
 
 
 class TestSequence(unittest.TestCase):
@@ -22,16 +49,15 @@ class TestSequence(unittest.TestCase):
         self.assertEqual(seq, seq2)
 
 
-class TestDigitalSequence(unittest.TestCase):
+class TestDigitalSequence(_TestSequenceBase, unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.abc = easel.Alphabet.dna()
 
-    def test_init_empty(self):
-        seq = easel.DigitalSequence(self.abc)
-        self.assertEqual(seq.name, b"")
-        self.assertEqual(seq.sequence, bytearray())
-        self.assertEqual(len(seq), 0)
+    @classmethod
+    def Sequence(cls, **kwargs):
+        return easel.DigitalSequence(cls.abc, **kwargs)
 
     def test_init_kwargs(self):
         arr = bytearray([0, 1, 2, 3])
@@ -39,18 +65,6 @@ class TestDigitalSequence(unittest.TestCase):
         self.assertEqual(seq.name, b"TEST")
         self.assertEqual(bytearray(seq.sequence), arr)
         self.assertEqual(len(seq), 4)
-
-    def test_setter_name(self):
-        seq = easel.DigitalSequence(self.abc)
-        self.assertEqual(seq.name, b"")
-        seq.name = b"OTHER"
-        self.assertEqual(seq.name, b"OTHER")
-
-    def test_setter_description(self):
-        seq = easel.DigitalSequence(self.abc)
-        self.assertIs(seq.description, b"")
-        seq.description = b"a test sequence"
-        self.assertEqual(seq.description, b"a test sequence")
 
     def test_copy(self):
         arr = bytearray([0, 1, 2, 3])
@@ -125,30 +139,17 @@ class TestDigitalSequence(unittest.TestCase):
         self.assertRaises(ValueError, seq.reverse_complement, inplace=True)
 
 
-class TestTextSequence(unittest.TestCase):
-    def test_init_empty(self):
-        seq = easel.TextSequence()
-        self.assertEqual(seq.name, b"")
-        self.assertEqual(seq.sequence, "")
-        self.assertEqual(len(seq), 0)
+class TestTextSequence(_TestSequenceBase, unittest.TestCase):
+
+    @classmethod
+    def Sequence(cls, **kwargs):
+        return easel.TextSequence(**kwargs)
 
     def test_init_kwargs(self):
         seq = easel.TextSequence(name=b"TEST", sequence="ATGC")
         self.assertEqual(seq.name, b"TEST")
         self.assertEqual(seq.sequence, "ATGC")
         self.assertEqual(len(seq), 4)
-
-    def test_setter_name(self):
-        seq = easel.TextSequence()
-        self.assertEqual(seq.name, b"")
-        seq.name = b"OTHER"
-        self.assertEqual(seq.name, b"OTHER")
-
-    def test_setter_description(self):
-        seq = easel.TextSequence()
-        self.assertIs(seq.description, b"")
-        seq.description = b"a test sequence"
-        self.assertEqual(seq.description, b"a test sequence")
 
     def test_copy(self):
         seq = easel.TextSequence(name=b"TEST", sequence="ATGC")
@@ -221,3 +222,11 @@ class TestTextSequence(unittest.TestCase):
             warnings.simplefilter('ignore')
             rc = seq.reverse_complement()
             self.assertEqual(rc.sequence, "NNKNK")
+
+    def test_setter_residue_markup(self):
+        seq = easel.TextSequence(sequence="MEMLP")
+        self.assertEqual(seq.residue_markups, {})
+        seq.residue_markups = {b"kind": b"DADDC"}
+        self.assertEqual(seq.residue_markups[b"kind"], b"DADDC")
+        with self.assertRaises(ValueError):
+            seq.residue_markups = {b"kind": b"D"}
