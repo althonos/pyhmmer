@@ -3286,8 +3286,8 @@ cdef class Sequence:
         valid UTF-8 bytestrings.
 
         Caution:
-            The values the dictionary must be the same size as the sequence
-            itself. Trying to set a residue markup of the wrong size will
+            The values of the dictionary must be the same size as the sequence
+            itself. Trying to set a residue markup of the wrong length will
             raise a `ValueError`::
 
                 >>> seq = TextSequence(sequence="TTAATTGGT")
@@ -3607,6 +3607,8 @@ cdef class DigitalSequence(Sequence):
 
     """
 
+    # --- Magic methods ------------------------------------------------------
+
     def __cinit__(self, Alphabet alphabet, *args, **kwargs):
         self.alphabet = alphabet
 
@@ -3671,6 +3673,8 @@ cdef class DigitalSequence(Sequence):
         assert self._sq.desc != NULL
         assert self._sq.acc != NULL
 
+    # --- Properties ---------------------------------------------------------
+
     @property
     def sequence(self):
         """`VectorU8`: The raw sequence digits, as a byte vector.
@@ -3694,6 +3698,8 @@ cdef class DigitalSequence(Sequence):
         seq._owner = self
 
         return seq
+
+    # --- Methods ------------------------------------------------------------
 
     cpdef DigitalSequence copy(self):
         """copy(self)\n--

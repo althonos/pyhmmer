@@ -880,6 +880,16 @@ cdef class Hit:
         return self._hit.pre_score
 
     @property
+    def sum_score(self):
+        """`float`: Bit score reconstructed from the sum of domain envelopes.
+
+        .. versionadded:: 0.4.6
+
+        """
+        assert self._hit != NULL
+        return self._hit.sum_score
+
+    @property
     def bias(self):
         """`float`: The *null2* contribution to the uncorrected score.
         """
@@ -890,6 +900,7 @@ cdef class Hit:
     def domains(self):
         """`~pyhmmer.plan7.Domains`: The list of domains aligned to this hit.
         """
+        assert self._hit != NULL
         return Domains(self)
 
     @property
@@ -899,6 +910,7 @@ cdef class Hit:
         .. versionadded:: 0.4.2
 
         """
+        assert self._hit != NULL
         return Domain(self, self._hit.best_domain)
 
     @property
