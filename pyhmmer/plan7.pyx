@@ -3161,7 +3161,7 @@ cdef class Profile:
         assert self._gm != NULL
         if self._gm.consensus[0] == b'\0':
             return None
-        return (<bytes> (&self._gm.consensus[1])).decode("ascii")
+        return (&self._gm.consensus[1]).decode("ascii")
 
     @property
     def consensus_structure(self):
@@ -3173,7 +3173,7 @@ cdef class Profile:
         assert self._gm != NULL
         if self._gm.cs[0] == b'\0':
             return None
-        return (<bytes> (&self._gm.cs[1])).decode("ascii")
+        return (&self._gm.cs[1]).decode("ascii")
 
     @property
     def offsets(self):

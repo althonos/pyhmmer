@@ -470,6 +470,7 @@ cdef class KeyHash:
         if not isinstance(value, bytes):
             return False
 
+        cdef       int    status
         cdef const char*  key    = value
         cdef       size_t length = len(value)
 
@@ -485,9 +486,10 @@ cdef class KeyHash:
     def __getitem__(self, bytes item):
         assert self._kh != NULL
 
+        cdef       int    status
+        cdef       int    index
         cdef const char*  key    = item
         cdef       size_t length = len(item)
-        cdef       int    index
 
         with nogil:
             status = libeasel.keyhash.esl_keyhash_Lookup(self._kh, key, length, &index)
@@ -827,6 +829,7 @@ cdef class VectorF(Vector):
 
         cdef size_t i
         cdef int    n = len(iterable)
+        cdef float  item
 
         if n <= 0:
             raise ValueError("Cannot create a vector with negative or null size")
@@ -850,6 +853,9 @@ cdef class VectorF(Vector):
 
         cdef VectorF new
         cdef int     idx
+        cdef ssize_t start
+        cdef ssize_t stop
+        cdef ssize_t step
 
         if isinstance(index, slice):
             start, stop, step = index.indices(self._n)
@@ -871,7 +877,7 @@ cdef class VectorF(Vector):
     def __setitem__(self, object index, float value):
         assert self._data != NULL
 
-        cdef int x
+        cdef ssize_t x
 
         if isinstance(index, slice):
             for x in range(*index.indices(self._n)):
@@ -1072,8 +1078,9 @@ cdef class VectorU8(Vector):
 
     def __init__(self, object iterable):
 
-        cdef size_t i
-        cdef int    n = len(iterable)
+        cdef int     n    = len(iterable)
+        cdef size_t  i
+        cdef uint8_t item
 
         if n <= 0:
             raise ValueError("Cannot create a vector with negative or null size")
@@ -1097,6 +1104,9 @@ cdef class VectorU8(Vector):
 
         cdef VectorU8 new
         cdef int      idx
+        cdef ssize_t  start
+        cdef ssize_t  stop
+        cdef ssize_t  step
 
         if isinstance(index, slice):
             start, stop, step = index.indices(self._n)
@@ -1207,16 +1217,18 @@ cdef class VectorU8(Vector):
     def __matmul__(VectorU8 self, object other):
         assert self._data != NULL
 
-        cdef long int  res = 0
-        cdef int       i
+        cdef long int res = 0
+        cdef int      i
+        cdef uint8_t* data
+        cdef VectorU8 other_vec
 
         if isinstance(other, VectorU8):
-            other_data = (<VectorU8> other)._data
-            assert other_data != NULL
+            other_vec = other
+            assert other_vec._data != NULL
             if len(self) != len(other):
                 raise ValueError("cannot multiply vectors of different size")
             for i in range(self._n):
-                res += self._data[i] * other_data[i]
+                res += self._data[i] * other_vec._data[i]
             return res
 
         return NotImplemented
@@ -1481,6 +1493,10 @@ cdef class MatrixF(Matrix):
         self._data = NULL
 
     def __init__(self, object iterable):
+        cdef size_t i
+        cdef size_t j
+        cdef object row
+        cdef float  val
 
         self._m = self._shape[0] = len(iterable)
         if self._m <= 0:
@@ -1497,8 +1513,6 @@ cdef class MatrixF(Matrix):
             if self._data == NULL:
                 raise AllocationError("float**")
 
-        cdef size_t i
-        cdef size_t j
         for i, row in enumerate(iterable):
             if len(row) != self._n:
                 raise ValueError("Inconsistent number of rows in input")
@@ -1635,6 +1649,7 @@ cdef class MatrixF(Matrix):
         pass
 
     def __repr__(self):
+        cdef VectorF row
         return f"MatrixF({[list(row) for row in self]!r})"
 
     def __sizeof__(self):
@@ -2815,10 +2830,10 @@ cdef class MSAFile:
         return self
 
     def __next__(self):
-        seq = self.read()
-        if seq is None:
+        cdef MSA msa = self.read()
+        if msa is None:
             raise StopIteration()
-        return seq
+        return msa
 
     # --- Read methods -------------------------------------------------------
 
@@ -2890,9 +2905,10 @@ cdef class MSAFile:
             `ValueError`: if this methods is called after the file was closed.
 
         """
-        cdef int ty
-        cdef int status
+        cdef int      ty
+        cdef int      status
         cdef Alphabet alphabet
+        cdef str      msg
 
         if self._msaf == NULL:
             raise ValueError("I/O operation on closed file.")
@@ -2997,10 +3013,6 @@ cdef class Randomness:
         return self.getstate()
 
     def __setstate__(self, state):
-        if self._rng == NULL:
-            self._rng = <ESL_RANDOMNESS*> malloc(sizeof(ESL_RANDOMNESS))
-            if self._rng == NULL:
-                raise AllocationError("ESL_RANDOMNESS")
         self.setstate(state)
 
     def __sizeof__(self):
@@ -3932,7 +3944,7 @@ cdef class SequenceFile:
         return self
 
     def __next__(self):
-        seq = self.read()
+        cdef Sequence seq = self.read()
         if seq is None:
             raise StopIteration()
         return seq
@@ -4086,7 +4098,7 @@ cdef class SequenceFile:
         """
         cdef int      ty
         cdef int      status
-        cdef Alphabet alphabets
+        cdef Alphabet alphabet
         cdef char*    errbuf
         cdef str      msg
 
