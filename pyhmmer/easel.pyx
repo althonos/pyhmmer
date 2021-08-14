@@ -23,7 +23,7 @@ cimport cython
 from cpython cimport Py_buffer
 from cpython.bytes cimport PyBytes_FromString, PyBytes_FromStringAndSize
 from cpython.buffer cimport PyBUF_READ, PyBUF_WRITE, PyBUF_FORMAT, PyBUF_F_CONTIGUOUS
-from cpython.unicode cimport PyUnicode_FromUnicode
+from cpython.unicode cimport PyUnicode_DecodeASCII
 from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t
 from libc.stdio cimport fclose
 from libc.stdlib cimport calloc, malloc, realloc, free
@@ -46,7 +46,6 @@ cimport libeasel.vec
 from libeasel cimport ESL_DSQ, esl_pos_t
 from libeasel.sq cimport ESL_SQ
 from libeasel.random cimport ESL_RANDOMNESS
-from unicode cimport PyUnicode_FromKindAndData, PyUnicode_1BYTE_KIND
 
 # --- Python imports ---------------------------------------------------------
 
@@ -209,8 +208,7 @@ cdef class Alphabet:
 
         """
         assert self._abc != NULL
-        cdef bytes symbols = self._abc.sym[:self._abc.Kp]
-        return symbols.decode("ascii")
+        return PyUnicode_DecodeASCII(self._abc.sym, self._abc.Kp, NULL)
 
     # --- Utils --------------------------------------------------------------
 
@@ -2509,7 +2507,7 @@ cdef class TextMSA(MSA):
             assert new._msa.flags & libeasel.msa.eslMSA_DIGITAL
             return new
         elif status == libeasel.eslEINVAL:
-            err_msg = errbuf.decode("utf-8")
+            err_msg = errbuf.decode("utf-8", "replace")
             raise ValueError(f"Cannot digitize MSA with alphabet {alphabet}: {err_msg}")
         else:
             raise UnexpectedError(status, "esl_msa_Digitize")
@@ -2861,8 +2859,8 @@ cdef class MSAFile:
         elif status == libeasel.eslEOF:
             return None
         elif status == libeasel.eslEFORMAT:
-            msg = <bytes> self._msaf.errmsg
-            raise ValueError("Could not parse file: {}".format(msg.decode()))
+            msg = self._msaf.errmsg.decode("utf-8", "replace")
+            raise ValueError("Could not parse file: {}".format(msg))
         else:
             raise UnexpectedError(status, "esl_msafile_Read")
 
@@ -2909,8 +2907,8 @@ cdef class MSAFile:
         elif status == libeasel.eslENODATA:
             raise EOFError("Sequence file appears to be empty.")
         elif status == libeasel.eslEFORMAT:
-            msg = <bytes> self._msaf.errmsg
-            raise ValueError("Could not parse file: {}".format(msg.decode()))
+            msg = self._msaf.errmsg.decode("utf-8", "replace")
+            raise ValueError("Could not parse file: {}".format(msg))
         else:
             raise UnexpectedError(status, "esl_msafile_GuessAlphabet")
 
@@ -3477,11 +3475,7 @@ cdef class TextSequence(Sequence):
         """
         assert self._sq != NULL
         assert libeasel.sq.esl_sq_IsText(self._sq)
-        return PyUnicode_FromKindAndData(
-            PyUnicode_1BYTE_KIND,
-            self._sq.seq,
-            self._sq.n,
-        )
+        return PyUnicode_DecodeASCII(self._sq.seq, self._sq.n, NULL)
 
     # --- Methods ------------------------------------------------------------
 
@@ -4022,6 +4016,8 @@ cdef class SequenceFile:
         cdef int (*funcread)(ESL_SQFILE *sqfp, ESL_SQ *sq) nogil
         cdef str   funcname
         cdef int   status
+        cdef char* errbuf
+        cdef str   msg
 
         if not skip_info and not skip_sequence:
             funcname = "esl_sqio_Read"
@@ -4045,8 +4041,9 @@ cdef class SequenceFile:
         elif status == libeasel.eslEOF:
             return None
         elif status == libeasel.eslEFORMAT:
-            msg = <bytes> libeasel.sqio.esl_sqfile_GetErrorBuf(self._sqfp)
-            raise ValueError("Could not parse file: {}".format(msg.decode()))
+            errbuf = libeasel.sqio.esl_sqfile_GetErrorBuf(self._sqfp)
+            msg = errbuf.decode("utf-8", "replace")
+            raise ValueError("Could not parse file: {}".format(msg))
         else:
             raise UnexpectedError(status, funcname)
 
@@ -4087,9 +4084,11 @@ cdef class SequenceFile:
             `ValueError`: if this methods is called after the file was closed.
 
         """
-        cdef int ty
-        cdef int status
-        cdef Alphabet alphabet
+        cdef int      ty
+        cdef int      status
+        cdef Alphabet alphabets
+        cdef char*    errbuf
+        cdef str      msg
 
         if self._sqfp == NULL:
             raise ValueError("I/O operation on closed file.")
@@ -4104,8 +4103,9 @@ cdef class SequenceFile:
         elif status == libeasel.eslENODATA:
             raise EOFError("Sequence file appears to be empty.")
         elif status == libeasel.eslEFORMAT:
-            msg = <bytes> libeasel.sqio.esl_sqfile_GetErrorBuf(self._sqfp)
-            raise ValueError("Could not parse file: {}".format(msg.decode()))
+            errbuf = libeasel.sqio.esl_sqfile_GetErrorBuf(self._sqfp)
+            msg = errbuf.decode("utf-8", "replace")
+            raise ValueError("Could not parse file: {}".format(msg))
         else:
             raise UnexpectedError(status, "esl_sqfile_GuessAlphabet")
 

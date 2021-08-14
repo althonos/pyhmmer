@@ -553,6 +553,7 @@ cdef class Builder:
         cdef HMM              hmm     = HMM.__new__(HMM)
         cdef Profile          profile = Profile.__new__(Profile)
         cdef OptimizedProfile opti    = OptimizedProfile.__new__(OptimizedProfile)
+        cdef str              msg
 
         # use given probabilities
         self._bld.popen = self.popen
@@ -602,8 +603,8 @@ cdef class Builder:
           hmm.command_line = " ".join(sys.argv)
           return (hmm, profile, opti)
         elif status == libeasel.eslEINVAL:
-            msg = <bytes> self._bld.errbuf
-            raise ValueError("Could not build HMM: {}".format(msg.decode()))
+            msg = self._bld.errbuf.decode("utf-8", "replace")
+            raise ValueError("Could not build HMM: {}".format(msg))
         else:
             raise UnexpectedError(status, "p7_SingleBuilder")
 
@@ -635,6 +636,7 @@ cdef class Builder:
         cdef HMM              hmm     = HMM.__new__(HMM)
         cdef Profile          profile = Profile.__new__(Profile)
         cdef OptimizedProfile opti    = OptimizedProfile.__new__(OptimizedProfile)
+        cdef str              msg
 
         # use given probabilities
         self._bld.popen = self.popen
@@ -681,8 +683,8 @@ cdef class Builder:
             hmm.command_line = " ".join(sys.argv)
             return (hmm, profile, opti)
         elif status == libeasel.eslEINVAL:
-            msg = <bytes> self._bld.errbuf
-            raise ValueError("Could not build HMM: {}".format(msg.decode()))
+            msg = self._bld.errbuf.decode("utf-8", "replace")
+            raise ValueError("Could not build HMM: {}".format(msg))
         else:
             raise UnexpectedError(status, "p7_Builder")
 
@@ -1167,7 +1169,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CONS):
             return None
         assert self._hmm.consensus != NULL
-        return (<bytes> (&self._hmm.consensus[1])).decode("ascii")
+        return (&self._hmm.consensus[1]).decode("ascii")
 
     @property
     def consensus_structure(self):
@@ -1180,7 +1182,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CS):
             return None
         assert self._hmm.cs != NULL
-        return (<bytes> (&self._hmm.cs[1])).decode("ascii")
+        return (&self._hmm.cs[1]).decode("ascii")
 
     @property
     def consensus_accessibility(self):
@@ -1193,7 +1195,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CA):
             return None
         assert self._hmm.ca != NULL
-        return (<bytes> (&self._hmm.ca[1])).decode("ascii")
+        return (&self._hmm.ca[1]).decode("ascii")
 
     @property
     def reference(self):
@@ -1210,7 +1212,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_RF):
             return None
         assert self._hmm.rf != NULL
-        return (<bytes> (&self._hmm.rf[1])).decode("ascii")
+        return (&self._hmm.rf[1]).decode("ascii")
 
     @property
     def model_mask(self):
@@ -1223,7 +1225,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_MM):
             return None
         assert self._hmm.mm != NULL
-        return (<bytes> (&self._hmm.mm[1])).decode("ascii")
+        return (&self._hmm.mm[1]).decode("ascii")
 
     @property
     def description(self):
@@ -1374,7 +1376,7 @@ cdef class HMM:
         assert self._hmm != NULL
         if self._hmm.comlog == NULL:
             return None
-        return (<bytes> self._hmm.comlog).decode("ascii")
+        return self._hmm.comlog.decode("ascii")
 
     @command_line.setter
     def command_line(self, object cli):
@@ -1658,9 +1660,9 @@ cdef class HMMFile:
         elif status == libeasel.eslEMEM:
             raise AllocationError("P7_HMM")
         elif status == libeasel.eslESYS:
-            raise OSError(self._hfp.errbuf.decode('ascii'))
+            raise OSError(self._hfp.errbuf.decode("utf-8", "replace"))
         elif status == libeasel.eslEFORMAT:
-            raise ValueError("Invalid format in file: {}".format(self._hfp.errbuf.decode('ascii')))
+            raise ValueError("Invalid format in file: {}".format(self._hfp.errbuf.decode("utf-8", "replace")))
         elif status == libeasel.eslEINCOMPAT:
             alphabet = libeasel.alphabet.esl_abc_DecodeType(self._alphabet.type)
             raise ValueError("HMM is not in the expected {} alphabet".format(alphabet))
@@ -1764,7 +1766,7 @@ cdef class HMMFile:
         # detect the format
         if token.startswith(b"HMMER3/"):
             hfp.parser = read_asc30hmm
-            format = token[5:].decode("ascii", errors="replace")
+            format = token[5:].decode("utf-8", "replace")
             if format in self._FORMATS:
                 hfp.format = self._FORMATS[format]
             else:
@@ -1775,7 +1777,7 @@ cdef class HMMFile:
 
         # check the format tag was recognized
         if hfp.parser == NULL:
-            text = token.decode(encoding='ascii', errors='replace')
+            text = token.decode("utf-8", "replace")
             libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
             raise ValueError("Unrecognized format tag in HMM file: {!r}".format(text))
 
