@@ -23,7 +23,7 @@ from libeasel.ssi cimport ESL_SSI, ESL_NEWSSI
 cdef class Alphabet:
     cdef ESL_ALPHABET* _abc
 
-    cdef void _init_default(self, int ty)
+    cdef int _init_default(self, int ty) nogil except 1
     cdef inline bint _eq(self, Alphabet other) nogil
 
 

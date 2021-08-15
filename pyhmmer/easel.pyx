@@ -80,11 +80,13 @@ cdef class Alphabet:
 
     # --- Default constructors -----------------------------------------------
 
-    cdef void _init_default(self, int ty):
-        with nogil:
-            self._abc = libeasel.alphabet.esl_alphabet_Create(ty)
+    cdef int _init_default(self, int ty) nogil except 1:
+        if self._abc != NULL:
+            libeasel.alphabet.esl_alphabet_Destroy(self._abc)
+        self._abc = libeasel.alphabet.esl_alphabet_Create(ty)
         if not self._abc:
             raise AllocationError("ESL_ALPHABET")
+        return 0
 
     @classmethod
     def amino(cls):
