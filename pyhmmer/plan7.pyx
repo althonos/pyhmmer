@@ -42,7 +42,7 @@ from libeasel cimport eslERRBUFSIZE, eslCONST_LOG2R
 from libeasel.alphabet cimport ESL_ALPHABET, esl_alphabet_Create, esl_abc_ValidateType
 from libeasel.getopts cimport ESL_GETOPTS, ESL_OPTIONS
 from libeasel.sq cimport ESL_SQ
-from libhmmer cimport p7_LOCAL, p7_offsets_e
+from libhmmer cimport p7_LOCAL, p7_EVPARAM_UNSET, p7_NEVPARAM, p7_offsets_e, p7_evparams_e
 from libhmmer.logsum cimport p7_FLogsumInit
 from libhmmer.p7_builder cimport P7_BUILDER, p7_archchoice_e, p7_wgtchoice_e, p7_effnchoice_e
 from libhmmer.p7_hmm cimport p7H_NTRANSITIONS
@@ -248,7 +248,7 @@ cdef class Background:
     def __copy__(self):
         return self.copy()
 
-    # --- Magic methods ------------------------------------------------------
+    # --- Properties ---------------------------------------------------------
 
     @property
     def L(self):
@@ -813,6 +813,8 @@ cdef class Domains:
 
     """
 
+    # --- Magic methods ------------------------------------------------------
+
     def __cinit__(self, Hit hit):
         self.hit = hit
 
@@ -825,6 +827,166 @@ cdef class Domains:
         if index >= self.hit._hit.ndom or index < 0:
             raise IndexError("list index out of range")
         return Domain(self.hit, <size_t> index)
+
+
+cdef class _EvalueParameters:
+    """A mutable view over the e-value parameters of a `HMM` or a `Profile`.
+
+    The e-value for each filter is estimated based off a maximum likelihood
+    distribution fitted for each profile HMM, either a Gumbel distribution
+    for the MSV and Viterbi filters, or an exponential distribution for the
+    Forward filter.
+
+    """
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __cinit__(self):
+        self._owner = None
+        self._evparams = NULL
+
+    def __init__(self, object owner):
+        cdef str ty
+        if isinstance(owner, Profile):
+            self._evparams = &(<Profile> owner)._gm.evparam
+            self._owner = owner
+        elif isinstance(owner, HMM):
+            self._evparams = &(<HMM> owner)._hmm.evparam
+            self._owner = owner
+        else:
+            ty = type(owner).__name__
+            raise TypeError("expected Profile or HMM, found {ty}")
+
+    def __copy__(self):
+        cdef _EvalueParameters ev
+        ev = _EvalueParameters.__new__(_EvalueParameters)
+        ev._owner = self._owner
+        ev._evparams = self._evparams
+        return ev
+
+    def __str__(self):
+        ty = type(self).__name__
+        return "<e-value parameters of {!r}>".format(
+            self._owner,
+        )
+
+    def __eq__(self, object other):
+        if isinstance(other, _EvalueParameters):
+            return self.as_vector() == other.as_vector()
+        return NotImplemented
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def m_mu(self):
+        r"""`float` or `None`: The :math:`\mu` parameter for the MSV filter distribution.
+        """
+        assert self._evparams != NULL
+        cdef float m = self._evparam[0][<int> p7_evparams_e.p7_MMU]
+        return None if m == p7_EVPARAM_UNSET else m
+
+    @m_mu.setter
+    def m_mu(self, object m):
+        assert self._evparams != NULL
+        if m is None:
+            self._evparams[0][<int> p7_evparams_e.p7_MMU] = p7_EVPARAM_UNSET
+        else:
+            self._evparams[0][<int> p7_evparams_e.p7_MMU] = m
+
+    @property
+    def m_lambda(self):
+        r"""`float` or `None`: The :math:`\lambda` parameter for the MSV filter distribution.
+        """
+        assert self._evparams != NULL
+        cdef float l = self._evparams[0][<int> p7_evparams_e.p7_MLAMBDA]
+        return None if l == p7_EVPARAM_UNSET else l
+
+    @m_lambda.setter
+    def m_lambda(self, object l):
+        assert self._evparams != NULL
+        if l is None:
+            self._evparams[0][<int> p7_evparams_e.p7_MLAMBDA] = p7_EVPARAM_UNSET
+        else:
+            self._evparams[0][<int> p7_evparams_e.p7_MLAMBDA] = l
+
+    @property
+    def v_mu(self):
+        r"""`float` or `None`: The :math:`\mu` parameter for the Viterbi filter distribution.
+        """
+        assert self._evparams != NULL
+        cdef float m = self._evparams[0][<int> p7_evparams_e.p7_VMU]
+        return None if m == p7_EVPARAM_UNSET else m
+
+    @v_mu.setter
+    def v_mu(self, object m):
+        assert self._evparams != NULL
+        if m is None:
+            self._evparams[0][<int> p7_evparams_e.p7_VMU] = p7_EVPARAM_UNSET
+        else:
+            self._evparams[0][<int> p7_evparams_e.p7_VMU] = m
+
+    @property
+    def v_lambda(self):
+        r"""`float` or `None`: The :math:`\lambda` parameter for the Viterbi filter distribution.
+        """
+        assert self._evparams != NULL
+        cdef float l = self._evparams[0][<int> p7_evparams_e.p7_VLAMBDA]
+        return None if l == p7_EVPARAM_UNSET else l
+
+    @v_lambda.setter
+    def v_lambda(self, object l):
+        assert self._evparams != NULL
+        if l is None:
+            self._evparams[0][<int> p7_evparams_e.p7_VLAMBDA] = p7_EVPARAM_UNSET
+        else:
+            self._evparams[0][<int> p7_evparams_e.p7_VLAMBDA] = l
+
+    @property
+    def f_tau(self):
+        r"""`float` or `None`: The :math:`\tau` parameter for the Forward filter distribution.
+        """
+        assert self._evparams != NULL
+        cdef float t = self._evparams[0][<int> p7_evparams_e.p7_FTAU]
+        return None if t == p7_EVPARAM_UNSET else t
+
+    @f_tau.setter
+    def f_tau(self, object t):
+        assert self._evparams != NULL
+        if t is None:
+            self._evparams[0][<int> p7_evparams_e.p7_FTAU] = p7_EVPARAM_UNSET
+        else:
+            self._evparams[0][<int> p7_evparams_e.p7_FTAU] = t
+
+    @property
+    def f_lambda(self):
+        r"""`float` or `None`: The :math:`\lambda` parameter for the Forward filter distribution.
+        """
+        assert self._evparams != NULL
+        cdef float l = self._evparams[0][<int> p7_evparams_e.p7_FLAMBDA]
+        return None if l == p7_EVPARAM_UNSET else l
+
+    @f_lambda.setter
+    def f_lambda(self, object l):
+        assert self._evparams != NULL
+        if l is None:
+            self._evparams[0][<int> p7_evparams_e.p7_FLAMBDA] = p7_EVPARAM_UNSET
+        else:
+            self._evparams[0][<int> p7_evparams_e.p7_FLAMBDA] = l
+
+    # --- Methods ------------------------------------------------------------
+
+    cpdef VectorF as_vector(self):
+        """Return a view over the e-value parameters as a `~VectorF`.
+        """
+        assert self._evparams != NULL
+
+        cdef VectorF new
+
+        new = VectorF.__new__(VectorF)
+        new._owner = self
+        new._n = new._shape[0] = p7_NEVPARAM
+        new._data = <float*> self._evparams
+        return new
 
 
 cdef class Hit:
@@ -935,7 +1097,6 @@ cdef class Hit:
         assert self._hit != NULL
         return exp(self._hit.lnP)
 
-
     # --- Methods ------------------------------------------------------------
 
     cpdef bint is_included(self):
@@ -960,7 +1121,8 @@ cdef class HMM:
 
     Attributes:
         alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
-
+        evalue_parameters (`~pyhmmer.plan7._EvalueParameters`): The e-value
+            parameters for this profile.
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -1669,7 +1831,6 @@ cdef class HMMFile:
         else:
             raise UnexpectedError(status, "p7_hmmfile_Read")
 
-
     # --- Methods ------------------------------------------------------------
 
     cpdef void close(self):
@@ -1686,7 +1847,6 @@ cdef class HMMFile:
         if self._hfp:
             libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
             self._hfp = NULL
-
 
     # --- Utils --------------------------------------------------------------
 
@@ -1787,7 +1947,16 @@ cdef class HMMFile:
 
 cdef class OptimizedProfile:
     """An optimized profile that uses platform-specific instructions.
+
+    Attributes:
+        alphabet (`~pyhmmer.easel.Alphabet`): The alphabet for which this
+            optimized profile is configured.
+        offsets (`~pyhmmer.plan7._Offsets`): The disk offsets for this
+            optimized profile, if it was loaded from a pressed HMM file.
+
     """
+
+    # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
         self._om = NULL
@@ -1814,6 +1983,7 @@ cdef class OptimizedProfile:
             self._om = p7_oprofile.p7_oprofile_Create(M, alphabet._abc)
         if self._om == NULL:
             raise AllocationError("P7_OPROFILE")
+        self.offsets = _Offsets(self)
 
     def __dealloc__(self):
         p7_oprofile.p7_oprofile_Destroy(self._om)
@@ -1821,9 +1991,7 @@ cdef class OptimizedProfile:
     def __copy__(self):
         return self.copy()
 
-    @property
-    def offsets(self):
-        return _Offsets.__new__(_Offsets, self)
+    # --- Properties ---------------------------------------------------------
 
     @property
     def M(self):
@@ -1932,6 +2100,8 @@ cdef class OptimizedProfile:
         mat._owner = self
         mat._data = <uint8_t**> self._om.rbv
         return mat
+
+    # --- Methods ------------------------------------------------------------
 
     cpdef bint is_local(self):
         """is_local(self)\n--
@@ -2074,23 +2244,29 @@ cdef class _Offsets:
     """A mutable view over the disk offsets of a profile.
     """
 
-    def __cinit__(self, object owner):
-        cdef P7_PROFILE*  gm
-        cdef P7_OPROFILE* om
+    def __cinit__(self):
+        self._owner = None
+        self._offs  = NULL
 
-        self._owner = owner
+    def __init__(self, object owner):
+        cdef str ty
+
         if isinstance(owner, Profile):
-            gm = (<Profile> owner)._gm
-            self._offs = &gm.offs
+            self._offs = &(<Profile> owner)._gm.offs
+            self._owner = owner
         elif isinstance(owner, OptimizedProfile):
-            om = (<OptimizedProfile> owner)._om
-            self._offs = &om.offs
+            self._offs = &(<OptimizedProfile> owner)._om.offs
+            self._owner = owner
         else:
             ty = type(owner).__name__
             raise TypeError("expected Profile or OptimizedProfile, found {ty}")
 
     def __copy__(self):
-        return _Offsets.__new__(_Offsets, self._owner)
+        assert self._offs != NULL
+        cdef _Offsets copy = _Offsets.__new__(_Offsets)
+        copy._offs = self._offs
+        copy._owner = self._owner
+        return copy
 
     def __str__(self):
         ty = type(self).__name__
@@ -2399,7 +2575,6 @@ cdef class Pipeline:
         assert self._pli != NULL
         self._pli.F3 = F3
 
-
     # --- Methods ------------------------------------------------------------
 
     cpdef void clear(self):
@@ -2570,7 +2745,7 @@ cdef class Pipeline:
         """
         assert self._pli != NULL
 
-        cdef size_t               nseqs
+        cdef ssize_t              nseqs
         cdef int                  status
         cdef int                  allocM
         cdef DigitalSequence      seq
@@ -3046,6 +3221,15 @@ cdef class Pipeline:
 
 cdef class Profile:
     """A Plan7 search profile.
+
+    Attributes:
+        alphabet (`~pyhmmer.easel.Alphabet`): The alphabet for which this
+            profile was configured.
+        offsets (`~pyhmmer.plan7._Offsets`): The disk offsets for this
+            profile, if it was loaded from a pressed HMM file.
+        evalue_parameters (`~pyhmmer.plan7._EvalueParameters`): The e-value
+            parameters for this profile.
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -3053,6 +3237,8 @@ cdef class Profile:
     def __cinit__(self):
         self._gm = NULL
         self.alphabet = None
+        self.offsets = None
+        self.evalue_parameters = None
 
     def __init__(self, int M, Alphabet alphabet):
         """__init__(self, M, alphabet)\n--
@@ -3070,6 +3256,9 @@ cdef class Profile:
             self._gm = libhmmer.p7_profile.p7_profile_Create(M, alphabet._abc)
         if not self._gm:
             raise AllocationError("P7_PROFILE")
+
+        self.offsets = _Offsets(self)
+        self.evalue_parameters = _EvalueParameters(self)
 
     def __dealloc__(self):
         libhmmer.p7_profile.p7_profile_Destroy(self._gm)
@@ -3174,10 +3363,6 @@ cdef class Profile:
         if self._gm.cs[0] == b'\0':
             return None
         return (&self._gm.cs[1]).decode("ascii")
-
-    @property
-    def offsets(self):
-        return _Offsets.__new__(_Offsets, self)
 
     # --- Methods ------------------------------------------------------------
 

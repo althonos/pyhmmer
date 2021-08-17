@@ -14,6 +14,7 @@ cdef extern from "hmmer.h" nogil:
     cdef bint p7_IsLocal(int)
     cdef bint p7_IsMulti(int)
 
+
     cdef size_t p7_NEVPARAM = 6
     cdef enum p7_evparams_e:
         p7_MMU     = 0
@@ -23,6 +24,9 @@ cdef extern from "hmmer.h" nogil:
         p7_FTAU    = 4
         p7_FLAMBDA = 5
 
+    cdef float p7_EVPARAM_UNSET = -99999.0
+
+
     cdef size_t p7_NCUTOFFS = 6
     cdef enum p7_cutoffs_e:
         p7_GA1 = 0
@@ -31,6 +35,9 @@ cdef extern from "hmmer.h" nogil:
         p7_TC2 = 3
         p7_NC1 = 4
         p7_NC2 = 5
+
+    cdef float p7_CUTOFF_UNSET = -99999.0
+
 
     cdef size_t p7_NOFFSETS = 3
     cdef enum p7_offsets_e:

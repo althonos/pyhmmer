@@ -27,6 +27,8 @@ from .easel cimport Alphabet, DigitalSequence, DigitalMSA, MSA, Randomness, Vect
 
 cdef extern from "hmmer.h" nogil:
     DEF p7_NOFFSETS = 3
+    DEF p7_NEVPARAM = 6
+
 
 # --- Cython classes ---------------------------------------------------------
 
@@ -74,6 +76,13 @@ cdef class Domains:
     cdef readonly Hit hit
 
 
+cdef class _EvalueParameters:
+    cdef object              _owner
+    cdef float[p7_NEVPARAM]* _evparams
+
+    cpdef VectorF as_vector(self)
+
+
 cdef class Hit:
     # a reference to the TopHits that owns the wrapped P7_HIT, kept so that
     # the internal data is never deallocated before the Python class.
@@ -88,10 +97,11 @@ cdef class Hit:
 
 
 cdef class HMM:
+    cdef P7_HMM* _hmm
     # a reference to the Alphabet Python object to avoid deallocation of the
     # inner ESL_ALPHABET; the Python object provides reference counting for free
-    cdef readonly Alphabet alphabet
-    cdef P7_HMM* _hmm
+    cdef readonly Alphabet          alphabet
+    cdef readonly _EvalueParameters evalue_parameters
 
     cpdef HMM copy(self)
     cpdef void write(self, object fh, bint binary=*) except *
@@ -111,8 +121,9 @@ cdef class HMMFile:
 
 
 cdef class OptimizedProfile:
-    cdef readonly Alphabet alphabet
     cdef P7_OPROFILE* _om
+    cdef readonly Alphabet alphabet
+    cdef readonly _Offsets offsets
 
     cpdef OptimizedProfile copy(self)
     cpdef bint is_local(self)
@@ -171,8 +182,10 @@ cdef class Pipeline:
 
 
 cdef class Profile:
-    cdef readonly Alphabet alphabet
     cdef P7_PROFILE* _gm
+    cdef readonly Alphabet          alphabet
+    cdef readonly _Offsets          offsets
+    cdef readonly _EvalueParameters evalue_parameters
 
     cdef int _clear(self) nogil except 1
     cdef int _configure(self, HMM hmm, Background background, int L, bint multihit=*, bint local=*) nogil except 1
