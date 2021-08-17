@@ -4027,11 +4027,11 @@ cdef class SequenceFile:
         """
         assert seq._sq != NULL
 
-        cdef int (*funcread)(ESL_SQFILE *sqfp, ESL_SQ *sq) nogil
-        cdef str   funcname
-        cdef int   status
-        cdef char* errbuf
-        cdef str   msg
+        cdef int         (*funcread)(ESL_SQFILE *sqfp, ESL_SQ *sq) nogil
+        cdef str         funcname
+        cdef int         status
+        cdef const char* errbuf
+        cdef str         msg
 
         if not skip_info and not skip_sequence:
             funcname = "esl_sqio_Read"
@@ -4098,11 +4098,11 @@ cdef class SequenceFile:
             `ValueError`: if this methods is called after the file was closed.
 
         """
-        cdef int      ty
-        cdef int      status
-        cdef Alphabet alphabet
-        cdef char*    errbuf
-        cdef str      msg
+        cdef int         ty
+        cdef int         status
+        cdef Alphabet    alphabet
+        cdef const char* errbuf
+        cdef str         msg
 
         if self._sqfp == NULL:
             raise ValueError("I/O operation on closed file.")
