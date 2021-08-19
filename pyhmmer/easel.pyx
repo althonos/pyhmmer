@@ -57,6 +57,7 @@ import sys
 import warnings
 
 from .errors import AllocationError, UnexpectedError, AlphabetMismatch
+from .utils import peekable
 
 
 # --- Alphabet ---------------------------------------------------------------
@@ -832,19 +833,22 @@ cdef class VectorF(Vector):
         self._data = NULL
 
     def __init__(self, object iterable):
-
+        cdef int    n    = len(iterable)
         cdef size_t i
-        cdef int    n = len(iterable)
         cdef float  item
 
+        # make sure __init__ is only called once
+        if self._data != NULL:
+            raise RuntimeError("Vector.__init__ must not be called more than once")
+        # make sure the vector has a positive size
         if n <= 0:
             raise ValueError("Cannot create a vector with negative or null size")
-
+        # use malloc to allocate a buffer for the vector
         self._n = self._shape[0] = n
-        if self._data == NULL: # avoid realloc if __init__ called more than once
-            self._data = <float*> malloc(n * sizeof(float))
-            if self._data == NULL:
-                raise AllocationError("float*")
+        self._data = <float*> malloc(n * sizeof(uint8_t))
+        if self._data == NULL:
+            raise AllocationError("float*")
+        # assign the items given to the constructor
         for i, item in enumerate(iterable):
             self._data[i] = item
 
@@ -1083,19 +1087,22 @@ cdef class VectorU8(Vector):
         self._data = NULL
 
     def __init__(self, object iterable):
-
         cdef int     n    = len(iterable)
         cdef size_t  i
         cdef uint8_t item
 
+        # make sure __init__ is only called once
+        if self._data != NULL:
+            raise RuntimeError("Vector.__init__ must not be called more than once")
+        # make sure the vector has a positive size
         if n <= 0:
             raise ValueError("Cannot create a vector with negative or null size")
-
+        # use malloc to allocate a buffer for the vector
         self._n = self._shape[0] = n
-        if self._data == NULL: # avoid realloc if __init__ called more than once
-            self._data = <uint8_t*> malloc(n * sizeof(uint8_t))
-            if self._data == NULL:
-                raise AllocationError("uint8_t*")
+        self._data = <uint8_t*> malloc(n * sizeof(uint8_t))
+        if self._data == NULL:
+            raise AllocationError("uint8_t*")
+        # assign the items given to the constructor
         for i, item in enumerate(iterable):
             self._data[i] = item
 
@@ -1134,7 +1141,7 @@ cdef class VectorU8(Vector):
     def __setitem__(self, object index, uint8_t value):
         assert self._data != NULL
 
-        cdef int x
+        cdef ssize_t x
 
         if isinstance(index, slice):
             for x in range(*index.indices(self._n)):
@@ -1503,23 +1510,30 @@ cdef class MatrixF(Matrix):
         cdef size_t j
         cdef object row
         cdef float  val
+        cdef object peeking = peekable(iterable)
 
+        # make sure __init__ is only called once
+        if self._data != NULL:
+            raise RuntimeError("Matrix.__init__ must not be called more than once")
+
+        # get the number of columns from the iterable
         self._m = self._shape[0] = len(iterable)
         if self._m <= 0:
             raise ValueError("Cannot create a matrix with null number of columns")
-
-        self._n = self._shape[1] = len(iterable[0])
+        # get the number of rows from the first element of the iterable
+        self._n = self._shape[1] = len(peeking.peek())
         if self._n <= 0:
             raise ValueError("Cannot create a matrix with null number of rows")
 
+        # mark the strides
         self._strides = (self._m * sizeof(float), sizeof(float))
-
+        # allocate the buffer
+        self._data = libeasel.matrixops.esl_mat_FCreate(self._m, self._n)
         if self._data == NULL:
-            self._data = libeasel.matrixops.esl_mat_FCreate(self._m, self._n)
-            if self._data == NULL:
-                raise AllocationError("float**")
+            raise AllocationError("float**")
 
-        for i, row in enumerate(iterable):
+        # assign the items
+        for i, row in enumerate(peeking):
             if len(row) != self._n:
                 raise ValueError("Inconsistent number of rows in input")
             for j, val in enumerate(row):
@@ -1770,33 +1784,34 @@ cdef class MatrixU8(Matrix):
         self._data = NULL
 
     def __init__(self, object iterable):
+        cdef size_t  i
+        cdef size_t  j
+        cdef object  row
+        cdef uint8_t val
+        cdef object  peeking = peekable(iterable)
 
-        cdef int i
-        cdef int j
+        # make sure __init__ is only called once
+        if self._data != NULL:
+            raise RuntimeError("Matrix.__init__ must not be called more than once")
 
+        # get the number of columns from the iterable
         self._m = self._shape[0] = len(iterable)
         if self._m <= 0:
             raise ValueError("Cannot create a matrix with null number of columns")
-
-        self._n = self._shape[1] = len(iterable[0])
+        # get the number of rows from the first element of the iterable
+        self._n = self._shape[1] = len(peeking.peek())
         if self._n <= 0:
             raise ValueError("Cannot create a matrix with null number of rows")
 
-        if self._data == NULL:
-            # allocate the array of pointers
-            self._data    = <uint8_t**> calloc(self._m, sizeof(uint8_t*))
-            if self._data == NULL:
-                raise AllocationError("uint8_t**")
-            # allocate the data array
-            self._data[0] = <uint8_t*> calloc(self._m*self._n, sizeof(uint8_t))
-            if self._data[0] == NULL:
-                raise AllocationError("uint8_t*")
-            # update the pointer offsets in the array of pointers
-            for i in range(1, self._m):
-                self._data[i] = self._data[0] + i * self._n
-
+        # mark the strides
         self._strides = (self._m * sizeof(uint8_t), sizeof(uint8_t))
-        for i, row in enumerate(iterable):
+        # allocate the buffer
+        self._data = libeasel.matrixops.esl_mat_FCreate(self._m, self._n)
+        if self._data == NULL:
+            raise AllocationError("uint8_t**")
+
+        # assign the items
+        for i, row in enumerate(peeking):
             if len(row) != self._n:
                 raise ValueError("Inconsistent number of rows in input")
             for j, val in enumerate(row):
