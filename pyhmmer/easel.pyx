@@ -157,12 +157,16 @@ cdef class Alphabet:
             return self._eq(<Alphabet> other)
         return NotImplemented
 
-    def __getstate__(self):
+    def __reduce__(self):
         assert self._abc != NULL
-        return {"type": self._abc.type}
-
-    def __setstate__(self, state):
-        self._init_default(state["type"])
+        if self._abc.type == libeasel.alphabet.eslRNA:
+            return Alphabet.rna, ()
+        elif self._abc.type == libeasel.alphabet.eslDNA:
+            return Alphabet.dna, ()
+        elif self._abc.type == libeasel.alphabet.eslAMINO:
+            return Alphabet.amino, ()
+        else:
+            raise NotImplementedError("Alphabet.__reduce__")
 
     def __sizeof__(self):
         assert self._abc != NULL
