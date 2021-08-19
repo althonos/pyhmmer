@@ -227,8 +227,11 @@ cdef class Background:
               uniform frequencies. Defaults to `False`.
 
         """
+        # store the alphabet so it's not deallocated
         self.alphabet = alphabet
+        # store whether or not the null model has uniform frequencies
         self.uniform = uniform
+        # create the background profile
         with nogil:
             if uniform:
                 self._bg = libhmmer.p7_bg.p7_bg_CreateUniform(alphabet._abc)
@@ -236,7 +239,7 @@ cdef class Background:
                 self._bg = libhmmer.p7_bg.p7_bg_Create(alphabet._abc)
         if self._bg == NULL:
             raise AllocationError("P7_BG")
-
+        # expose the residue frequencies as the `residue_frequencies` attribute
         self.residue_frequencies = VectorF.__new__(VectorF)
         self.residue_frequencies._data = &(self._bg.f[0])
         self.residue_frequencies._owner = self
@@ -837,6 +840,8 @@ cdef class _EvalueParameters:
     for the MSV and Viterbi filters, or an exponential distribution for the
     Forward filter.
 
+    .. versionadded:: 0.4.6
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -1123,6 +1128,10 @@ cdef class HMM:
         alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
         evalue_parameters (`~pyhmmer.plan7._EvalueParameters`): The e-value
             parameters for this profile.
+
+    .. versionchanged:: 0.4.6
+       Added the `~HMM.evalue_parameters` attribute.
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -1141,7 +1150,9 @@ cdef class HMM:
             alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
 
         """
+        # store the alphabet so it's not deallocated
         self.alphabet = alphabet
+        # create a new HMM suitable for at least M nodes
         with nogil:
             self._hmm = libhmmer.p7_hmm.p7_hmm_Create(M, alphabet._abc)
         if not self._hmm:
@@ -1153,6 +1164,10 @@ cdef class HMM:
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_hmm_SetConsensus")
         self._hmm.flags &= ~libhmmer.p7_hmm.p7H_CONS
+        # expose the e-value parameters as the `evalue_parameters` attribute
+        self.evalue_parameters = _EvalueParameters.__new__(_EvalueParameters)
+        self.evalue_parameters._evparams = &self._hmm.evparam
+        self.evalue_parameters._owner = self
 
     def __dealloc__(self):
         libhmmer.p7_hmm.p7_hmm_Destroy(self._hmm)
@@ -1978,12 +1993,17 @@ cdef class OptimizedProfile:
             alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
 
         """
+        # store the alphabet to make sure it's not deallocated
         self.alphabet = alphabet
+        # create a new optimized profile large enough to store M nodes
         with nogil:
             self._om = p7_oprofile.p7_oprofile_Create(M, alphabet._abc)
         if self._om == NULL:
             raise AllocationError("P7_OPROFILE")
-        self.offsets = _Offsets(self)
+        # expose the disk offsets as the `offsets` attribute
+        self.offsets = _Offsets.__new__(_Offsets)
+        self.offsets._offs = &self._om.offs
+        self.offsets._owner = self
 
     def __dealloc__(self):
         p7_oprofile.p7_oprofile_Destroy(self._om)
@@ -2203,8 +2223,9 @@ cdef class OptimizedProfile:
             * `math.inf` may be returned if an overflow occurs that will also
               occur in the MSV filter. This is the case whenever
               :math:`\text{base} - \text{tjb} - \text{tbm} \ge 128`
-            * `None` if the MSV filter score needs to be recomputed (because
-              it may not overflow even though the SSV filter did).
+            * `None` may be returned if the MSV filter score needs to be
+              recomputed (because it may not overflow even though the SSV
+              filter did).
 
         Raises:
             `~pyhmmer.errors.AlphabetMismatch`: when the alphabet of the
@@ -2276,6 +2297,8 @@ cdef class _Offsets:
             self.filter,
             self.profile,
         )
+
+    # --- Properties ---------------------------------------------------------
 
     @property
     def model(self):
@@ -3230,6 +3253,9 @@ cdef class Profile:
         evalue_parameters (`~pyhmmer.plan7._EvalueParameters`): The e-value
             parameters for this profile.
 
+    .. versionchanged:: 0.4.6
+       Added the `~HMM.evalue_parameters` attribute.
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -3251,14 +3277,21 @@ cdef class Profile:
                 this profile.
 
         """
+        # store the alphabet to make sure it's not deallocated
         self.alphabet = alphabet
+        # create a new profile large enough to store M nodes
         with nogil:
             self._gm = libhmmer.p7_profile.p7_profile_Create(M, alphabet._abc)
         if not self._gm:
             raise AllocationError("P7_PROFILE")
-
-        self.offsets = _Offsets(self)
-        self.evalue_parameters = _EvalueParameters(self)
+        # expose the disk offsets as the `offsets` attribute
+        self.offsets = _Offsets.__new__(_Offsets)
+        self.offsets._offs = &self._gm.offs
+        self.offsets._owner = self
+        # expose the e-value parameters as the `evalue_parameters` attribute
+        self.evalue_parameters = _EvalueParameters.__new__(_EvalueParameters)
+        self.evalue_parameters._evparams = &self._gm.evparam
+        self.evalue_parameters._owner = self
 
     def __dealloc__(self):
         libhmmer.p7_profile.p7_profile_Destroy(self._gm)
@@ -3481,8 +3514,7 @@ cdef class Profile:
         cdef int              status
         cdef OptimizedProfile opt
 
-        opt = OptimizedProfile.__new__(OptimizedProfile)
-        OptimizedProfile.__init__(opt, self._gm.M, self.alphabet)
+        opt = OptimizedProfile(opt, self._gm.M, self.alphabet)
         with nogil:
             opt._convert(self._gm)
 
@@ -3512,20 +3544,21 @@ cdef class TopHits:
 
     # --- Magic methods ------------------------------------------------------
 
+    def __cinit__(self):
+        self._th = NULL
+
     def __init__(self):
         """__init__(self)\n--
 
         Create an empty `TopHits` instance.
 
         """
-        assert self._th == NULL, "called TopHits.__init__ more than once"
+        if self._th != NULL:
+            libhmmer.p7_tophits.p7_tophits_Destroy(self._th)
         with nogil:
             self._th = libhmmer.p7_tophits.p7_tophits_Create()
         if self._th == NULL:
             raise AllocationError("P7_TOPHITS")
-
-    def __cinit__(self):
-        self._th = NULL
 
     def __dealloc__(self):
         libhmmer.p7_tophits.p7_tophits_Destroy(self._th)
