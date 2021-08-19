@@ -90,12 +90,23 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
 
     def run(self) -> None:
         while not self.kill_switch.is_set():
-            args = self.query_queue.get()
+            # attempt to get the next argument, with a timeout
+            # so that the thread can periodically check if it has
+            # been killed, even when the query queue is empty
+            try:
+                args = self.query_queue.get(timeout=1)
+            except queue.Empty:
+                continue
+            # check if arguments from the queue are a poison-pill (`None`),
+            # in which case the thread will stop running
             if args is None:
                 self.query_queue.task_done()
                 return
             else:
                 index, query = args
+            # process the arguments, making sure to capture any exception
+            # raised while processing the query, and then mark the hits
+            # as "found" using a `threading.Event` for each.
             try:
                 self.process(index, query)
                 self.query_queue.task_done()
@@ -266,14 +277,15 @@ class _Search(typing.Generic[_Q], abc.ABC):
             # yielding back results, if available
             hits_yielded = 0
             while hits_yielded < query_count.value:
-                # get the next query
-                try:
-                    index, query = next(queries)
+                # get the next query, or break the loop if there is no query
+                # left to process in the input iterator.
+                index, query = next(queries, (-1, None))
+                if query is None:
+                    break
+                else:
                     query_count.value += 1
                     hits_found.append(threading.Event())
                     query_queue.put((index, query))
-                except StopIteration:
-                    break
                 # yield the top hits for the next query, if available
                 if hits_found[hits_yielded].is_set():
                     yield hits_queue.get_nowait()[1]
@@ -295,6 +307,8 @@ class _Search(typing.Generic[_Q], abc.ABC):
             for thread in threads:
                 if thread.error is not None:
                     raise thread.error from None
+            # if this is exception is otherwise a bug, make sure to reraise it
+            raise
         except BaseException:
             # make sure threads are killed to avoid being stuck,
             # e.g. after a KeyboardInterrupt
