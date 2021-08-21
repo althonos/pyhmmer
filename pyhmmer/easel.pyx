@@ -845,7 +845,7 @@ cdef class VectorF(Vector):
             raise ValueError("Cannot create a vector with negative or null size")
         # use malloc to allocate a buffer for the vector
         self._n = self._shape[0] = n
-        self._data = <float*> malloc(n * sizeof(uint8_t))
+        self._data = <float*> malloc(n * sizeof(float))
         if self._data == NULL:
             raise AllocationError("float*")
         # assign the items given to the constructor
@@ -1542,6 +1542,26 @@ cdef class MatrixF(Matrix):
     def __copy__(self):
         return self.copy()
 
+    def __eq__(self, object other):
+        assert self._data != NULL
+        cdef MatrixF other_
+        cdef int     i
+        cdef int     j
+        # check matrix type
+        if not isinstance(other, MatrixF):
+            return False
+        # check dimensions
+        other_ = other
+        assert other_._data != NULL
+        if self._m != other_._m or self._n != other_._n:
+            return False
+        # check values
+        for i in range(self._m):
+            for j in range(self._n):
+                if self._data[i][j] != other_._data[i][j]:
+                    return False
+        return True
+
     def __add__(MatrixF self, object other):
         assert self._data != NULL
         cdef MatrixF new = self.copy()
@@ -1596,11 +1616,37 @@ cdef class MatrixF(Matrix):
     def __getitem__(self, object index):
         assert self._data != NULL
 
-        cdef int x
-        cdef int y
+        cdef int     x
+        cdef int     y
+        cdef str     ty
+        cdef VectorF row
+        cdef MatrixF new
 
-        if isinstance(index, slice):
-            return NotImplemented
+        if isinstance(index, int):
+            x = index
+            if x < 0:
+                x += self._m
+            if x < 0 or x >= self._m:
+                raise IndexError("vector index out of range")
+
+            row = VectorF.__new__(VectorF)
+            row._owner = self
+            row._n = row._shape[0] = self._n
+            row._data = self._data[x]
+            return row
+
+        elif isinstance(index, slice):
+            start, stop, step = index.indices(self._m)
+            if stop < 0 or stop >= self._m or start < 0 or start >= self._m:
+                raise IndexError("matrix row index out of range")
+
+            new = MatrixF.__new__(MatrixF)
+            new._owner = self
+            new._m = new._shape[0] = stop - start
+            new._n = new._shape[1] = self._n
+            new._strides = self._strides
+            new._data = &(self._data[start])
+            return new
 
         elif isinstance(index, tuple):
             x, y = index
@@ -1614,17 +1660,9 @@ cdef class MatrixF(Matrix):
                 raise IndexError("matrix column index out of range")
             return self._data[x][y]
 
-        x = index
-        if x < 0:
-            x += self._m
-        if x < 0 or x >= self._m:
-            raise IndexError("vector index out of range")
-
-        cdef VectorF row = VectorF.__new__(VectorF)
-        row._owner = self
-        row._n = row._shape[0] = self._n
-        row._data = self._data[x]
-        return row
+        else:
+            ty = type(index).__name__
+            raise TypeError(f"expected integer, tuple or slice, found {ty}")
 
     def __setitem__(self, object index, float value):
         assert self._data != NULL
@@ -1747,9 +1785,13 @@ cdef class MatrixU8(Matrix):
 
     @classmethod
     def zeros(cls, int m, int n):
-        if n <= 0:
+        cdef MatrixU8 mat
+        cdef int i
+
+        if n <= 0 or m <= 0:
             raise ValueError("Cannot create a matrix with negative or null dimension")
-        cdef MatrixU8 mat = MatrixU8.__new__(MatrixU8)
+
+        mat = MatrixU8.__new__(MatrixU8)
         mat._m = mat._shape[0] = m
         mat._n = mat._shape[1] = n
         mat._strides = (sizeof(uint8_t), mat._m * sizeof(uint8_t))
@@ -1765,7 +1807,7 @@ cdef class MatrixU8(Matrix):
             raise AllocationError("uint8_t*")
 
         # update the pointer offsets in the array of pointers
-        cdef int i
+
         for i in range(1, m):
             mat._data[i] = mat._data[0] + i*n
 
@@ -1784,8 +1826,8 @@ cdef class MatrixU8(Matrix):
         self._data = NULL
 
     def __init__(self, object iterable):
-        cdef size_t  i
-        cdef size_t  j
+        cdef int     i
+        cdef int     j
         cdef object  row
         cdef uint8_t val
         cdef object  peeking = peekable(iterable)
@@ -1806,9 +1848,16 @@ cdef class MatrixU8(Matrix):
         # mark the strides
         self._strides = (self._m * sizeof(uint8_t), sizeof(uint8_t))
         # allocate the buffer
-        self._data = libeasel.matrixops.esl_mat_FCreate(self._m, self._n)
+        self._data    = <uint8_t**> calloc(self._m, sizeof(uint8_t*))
         if self._data == NULL:
             raise AllocationError("uint8_t**")
+        # allocate the data array
+        self._data[0] = <uint8_t*> calloc(self._m*self._n, sizeof(uint8_t))
+        if self._data[0] == NULL:
+            raise AllocationError("uint8_t*")
+        # update the pointer offsets in the array of pointers
+        for i in range(1, self._m):
+            self._data[i] = self._data[0] + i * self._n
 
         # assign the items
         for i, row in enumerate(peeking):
@@ -1819,6 +1868,26 @@ cdef class MatrixU8(Matrix):
 
     def __copy__(self):
         return self.copy()
+
+    def __eq__(self, object other):
+        assert self._data != NULL
+        cdef MatrixU8 other_
+        cdef int      i
+        cdef int      j
+        # check matrix type
+        if not isinstance(other, MatrixU8):
+            return False
+        # check dimensions
+        other_ = other
+        assert other_._data != NULL
+        if self._m != other_._m or self._n != other_._n:
+            return False
+        # check values
+        for i in range(self._m):
+            for j in range(self._n):
+                if self._data[i][j] != other_._data[i][j]:
+                    return False
+        return True
 
     def __add__(MatrixU8 self, object other):
         assert self._data != NULL
@@ -1878,11 +1947,37 @@ cdef class MatrixU8(Matrix):
     def __getitem__(self, object index):
         assert self._data != NULL
 
-        cdef int x
-        cdef int y
+        cdef int      x
+        cdef int      y
+        cdef str      ty
+        cdef VectorU8 row
+        cdef MatrixU8 new
 
-        if isinstance(index, slice):
-            return NotImplemented
+        if isinstance(index, int):
+            x = index
+            if x < 0:
+                x += self._m
+            if x < 0 or x >= self._m:
+                raise IndexError("vector index out of range")
+
+            row = VectorU8.__new__(VectorU8)
+            row._owner = self
+            row._n = row._shape[0] = self._n
+            row._data = self._data[x]
+            return row
+
+        elif isinstance(index, slice):
+            start, stop, step = index.indices(self._m)
+            if stop < 0 or stop >= self._m or start < 0 or start >= self._m:
+                raise IndexError("matrix row index out of range")
+
+            new = MatrixU8.__new__(MatrixU8)
+            new._owner = self
+            new._m = new._shape[0] = stop - start
+            new._n = new._shape[1] = self._n
+            new._strides = self._strides
+            new._data = &(self._data[start])
+            return new
 
         elif isinstance(index, tuple):
             x, y = index
@@ -1896,17 +1991,9 @@ cdef class MatrixU8(Matrix):
                 raise IndexError("matrix column index out of range")
             return self._data[x][y]
 
-        x = index
-        if x < 0:
-            x += self._m
-        if x < 0 or x >= self._m:
-            raise IndexError("vector index out of range")
-
-        cdef VectorU8 row = VectorU8.__new__(VectorU8)
-        row._owner = self
-        row._n = row._shape[0] = self._n
-        row._data = self._data[x]
-        return row
+        else:
+            ty = type(index).__name__
+            raise TypeError(f"expected integer, tuple or slice, found {ty}")
 
     def __setitem__(self, object index, uint8_t value):
         assert self._data != NULL

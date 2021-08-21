@@ -30,6 +30,15 @@ class _TestMatrixBase(object):
         self.assertRaises(TypeError, self.Matrix, 1)
         self.assertRaises(TypeError, self.Matrix.zeros, [])
 
+    def test_eq(self):
+        m1 = self.Matrix([ [1,2], [3,4] ])
+        m2 = self.Matrix([ [1,2], [3,4] ])
+        self.assertEqual(m1, m2)
+        m3 = self.Matrix([ [2,2], [3,4] ])
+        self.assertNotEqual(m1, m3)
+        m4 = self.Matrix([ [1,2], [3,4], [5,6] ])
+        self.assertNotEqual(m1, m4)
+
     def test_len(self):
         mat = self.Matrix([[1, 2], [3, 4]])
         self.assertEqual(len(mat), 2)
@@ -134,6 +143,18 @@ class _TestMatrixBase(object):
     def test_sum(self):
         mat = self.Matrix([ [1, 2], [3, 4] ])
         self.assertEqual(mat.sum(), 1 + 2 + 3 + 4)
+
+    def test_getitem_slice(self):
+        mat = self.Matrix([ [1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16] ])
+
+        m2 = mat[:2]
+        self.assertEqual(m2, self.Matrix([[1, 2, 3, 4], [5, 6, 7, 8]]))
+
+        m3 = mat[1:3]
+        self.assertEqual(m3, self.Matrix([[5, 6, 7, 8], [9, 10, 11, 12]]))
+
+        m4 = mat[-3:-1]
+        self.assertEqual(m4, self.Matrix([[5, 6, 7, 8], [9, 10, 11, 12]]))
 
 
 class TestMatrix(unittest.TestCase):
