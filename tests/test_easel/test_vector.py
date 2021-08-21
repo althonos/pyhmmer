@@ -16,6 +16,15 @@ class _TestVectorBase(object):
         for i in range(len(v1)):
             self.assertEqual(v1[i], v2[i])
 
+    def test_empty_vector(self):
+        v1 = self.Vector([])
+        v2 = self.Vector.zeros(0)
+        self.assertEqual(len(v1), 0)
+        self.assertEqual(len(v2), 0)
+        self.assertEqual(v1, v2)
+        self.assertFalse(v2)
+        self.assertFalse(v1)
+
     def test_init(self):
         vec = self.Vector([1, 2, 3])
         self.assertEqual(vec[0], 1)
@@ -23,9 +32,9 @@ class _TestVectorBase(object):
         self.assertEqual(vec[2], 3)
 
     def test_init_error(self):
-        self.assertRaises(ValueError, self.Vector, [])
-        self.assertRaises(ValueError, self.Vector.zeros, 0)
         self.assertRaises(TypeError, self.Vector, 1)
+        self.assertRaises(TypeError, self.Vector.zeros, [1, 2, 3])
+        self.assertRaises(TypeError, self.Vector.zeros, "1")
 
     def test_shape(self):
         vec = self.Vector([1, 2, 3])

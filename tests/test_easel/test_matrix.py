@@ -15,6 +15,13 @@ class _TestMatrixBase(object):
             for j in range(v1.shape[1]):
                 self.assertEqual(v1[i,j], v2[i,j])
 
+    def test_empty_matrix(self):
+        m1 = self.Matrix([])
+        m2 = self.Matrix.zeros(0, 0)
+        self.assertEqual(m1, m2)
+        self.assertFalse(m2)
+        self.assertFalse(m1)
+
     def test_init(self):
         mat = self.Matrix([ [1, 2], [3, 4] ])
         self.assertEqual(mat[0, 0], 1)
@@ -23,12 +30,27 @@ class _TestMatrixBase(object):
         self.assertEqual(mat[1, 1], 4)
 
     def test_init_error(self):
-        self.assertRaises(ValueError, self.Matrix, [])
-        self.assertRaises(ValueError, self.Matrix, [ [], [] ])
         self.assertRaises(ValueError, self.Matrix, [ [1.0, 2.0], [1.0] ])
-        self.assertRaises(ValueError, self.Matrix.zeros, 0, 0)
         self.assertRaises(TypeError, self.Matrix, 1)
         self.assertRaises(TypeError, self.Matrix.zeros, [])
+
+    def test_zeros(self):
+        m = self.Matrix.zeros(2, 2)
+        self.assertEqual(m.shape, (2, 2))
+        self.assertEqual(m, self.Matrix([ [0, 0], [0, 0] ]))
+
+        m2 = self.Matrix.zeros(4, 3)
+        self.assertEqual(m2.shape, (4, 3))
+
+        m3 = self.Matrix.zeros(0, 0)
+        self.assertEqual(m3.shape, (0, 0))
+
+        m4 = self.Matrix.zeros(0, 2)
+        self.assertEqual(m4.shape, (0, 2))
+
+        self.assertRaises(ValueError, self.Matrix.zeros, -2, 2)
+        self.assertRaises(ValueError, self.Matrix.zeros, 2, -2)
+        self.assertRaises(ValueError, self.Matrix.zeros, 0, -2)
 
     def test_eq(self):
         m1 = self.Matrix([ [1,2], [3,4] ])

@@ -694,6 +694,9 @@ cdef class Vector:
     def __reduce__(self):
         return type(self), (list(self),)
 
+    def __bool__(self):
+        return self._n != 0
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -811,8 +814,8 @@ cdef class VectorF(Vector):
 
     @classmethod
     def zeros(cls, n):
-        if n <= 0:
-            raise ValueError("Cannot create a vector with negative or null size")
+        if n < 0:
+            raise ValueError("Cannot create a vector with negative size")
         cdef VectorF vec = VectorF.__new__(VectorF)
         vec._n = vec._shape[0] = n
         vec._data = <float*> calloc(n, sizeof(float))
@@ -841,8 +844,8 @@ cdef class VectorF(Vector):
         if self._data != NULL:
             raise RuntimeError("Vector.__init__ must not be called more than once")
         # make sure the vector has a positive size
-        if n <= 0:
-            raise ValueError("Cannot create a vector with negative or null size")
+        if n < 0:
+            raise ValueError("Cannot create a vector with negative size")
         # use malloc to allocate a buffer for the vector
         self._n = self._shape[0] = n
         self._data = <float*> malloc(n * sizeof(float))
@@ -854,6 +857,25 @@ cdef class VectorF(Vector):
 
     def __copy__(self):
         return self.copy()
+
+    def __eq__(self, object other):
+        assert self._data != NULL
+        cdef VectorF other_
+        cdef int     i
+        cdef int     j
+        # check matrix type
+        if not isinstance(other, VectorF):
+            return False
+        # check dimensions
+        other_ = other
+        assert other_._data != NULL
+        if self._n != other_._n:
+            return False
+        # check values
+        for i in range(self._n):
+            if self._data[i] != other_._data[i]:
+                return False
+        return True
 
     def __len__(self):
         return self._n
@@ -1065,8 +1087,8 @@ cdef class VectorU8(Vector):
 
     @classmethod
     def zeros(cls, n):
-        if n <= 0:
-            raise ValueError("Cannot create a vector with negative or null size")
+        if n < 0:
+            raise ValueError("Cannot create a vector with negative size")
         cdef VectorU8 vec = VectorU8.__new__(VectorU8)
         vec._n = vec._shape[0] = n
         vec._data = <uint8_t*> calloc(n, sizeof(uint8_t))
@@ -1095,8 +1117,8 @@ cdef class VectorU8(Vector):
         if self._data != NULL:
             raise RuntimeError("Vector.__init__ must not be called more than once")
         # make sure the vector has a positive size
-        if n <= 0:
-            raise ValueError("Cannot create a vector with negative or null size")
+        if n < 0:
+            raise ValueError("Cannot create a vector with negative size")
         # use malloc to allocate a buffer for the vector
         self._n = self._shape[0] = n
         self._data = <uint8_t*> malloc(n * sizeof(uint8_t))
@@ -1105,6 +1127,25 @@ cdef class VectorU8(Vector):
         # assign the items given to the constructor
         for i, item in enumerate(iterable):
             self._data[i] = item
+
+    def __eq__(self, object other):
+        assert self._data != NULL
+        cdef VectorU8 other_
+        cdef int      i
+        cdef int      j
+        # check matrix type
+        if not isinstance(other, VectorU8):
+            return False
+        # check dimensions
+        other_ = other
+        assert other_._data != NULL
+        if self._n != other_._n:
+            return False
+        # check values
+        for i in range(self._n):
+            if self._data[i] != other_._data[i]:
+                return False
+        return True
 
     def __copy__(self):
         return self.copy()
@@ -1384,6 +1425,9 @@ cdef class Matrix:
     def __reduce__(self):
         return type(self), (list(self),)
 
+    def __bool__(self):
+        return self._m != 0 and self._n != 0
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -1469,9 +1513,13 @@ cdef class MatrixF(Matrix):
 
     @classmethod
     def zeros(cls, int m, int n):
-        if n <= 0:
-            raise ValueError("Cannot create a matrix with negative or null dimension")
-        cdef MatrixF mat = MatrixF.__new__(MatrixF)
+        cdef MatrixF mat
+        cdef int     i
+
+        if m < 0 or n < 0:
+            raise ValueError("Cannot create a matrix with negative dimension")
+
+        mat = MatrixF.__new__(MatrixF)
         mat._m = mat._shape[0] = m
         mat._n = mat._shape[1] = n
         mat._strides = (sizeof(float), mat._m * sizeof(float))
@@ -1482,12 +1530,12 @@ cdef class MatrixF(Matrix):
             raise AllocationError("float**")
 
         # allocate the data array
-        mat._data[0] = <float*> calloc(m*n, sizeof(float))
-        if mat._data[0] == NULL:
-            raise AllocationError("float*")
+        if mat._m > 0:
+            mat._data[0] = <float*> calloc(m*n, sizeof(float))
+            if mat._data[0] == NULL:
+                raise AllocationError("float*")
 
         # update the pointer offsets in the array of pointers
-        cdef int i
         for i in range(1, m):
             mat._data[i] = mat._data[0] + i*n
 
@@ -1501,7 +1549,8 @@ cdef class MatrixF(Matrix):
 
     def __dealloc__(self):
         if self._owner is None and self._data != NULL:
-            free(self._data[0])
+            if self._m > 0:
+                free(self._data[0])
             free(self._data)
         self._data = NULL
 
@@ -1518,17 +1567,20 @@ cdef class MatrixF(Matrix):
 
         # get the number of columns from the iterable
         self._m = self._shape[0] = len(iterable)
-        if self._m <= 0:
-            raise ValueError("Cannot create a matrix with null number of columns")
+        if self._m < 0:
+            raise ValueError("Cannot create a matrix with a negative number of columns")
         # get the number of rows from the first element of the iterable
-        self._n = self._shape[1] = len(peeking.peek())
-        if self._n <= 0:
-            raise ValueError("Cannot create a matrix with null number of rows")
+        self._n = self._shape[1] = 0 if self._m == 0 else len(peeking.peek())
+        if self._n < 0:
+            raise ValueError("Cannot create a matrix with a negative number of rows")
 
         # mark the strides
         self._strides = (self._m * sizeof(float), sizeof(float))
         # allocate the buffer
-        self._data = libeasel.matrixops.esl_mat_FCreate(self._m, self._n)
+        if self._m > 0 and self._n > 0:
+            self._data = libeasel.matrixops.esl_mat_FCreate(self._m, self._n)
+        else:
+            self._data = <float**> malloc(0)
         if self._data == NULL:
             raise AllocationError("float**")
 
@@ -1788,8 +1840,8 @@ cdef class MatrixU8(Matrix):
         cdef MatrixU8 mat
         cdef int i
 
-        if n <= 0 or m <= 0:
-            raise ValueError("Cannot create a matrix with negative or null dimension")
+        if n < 0 or m < 0:
+            raise ValueError("Cannot create a matrix with negative dimension")
 
         mat = MatrixU8.__new__(MatrixU8)
         mat._m = mat._shape[0] = m
@@ -1802,9 +1854,10 @@ cdef class MatrixU8(Matrix):
             raise AllocationError("uint8_t**")
 
         # allocate the data array
-        mat._data[0] = <uint8_t*> calloc(m*n, sizeof(uint8_t))
-        if mat._data[0] == NULL:
-            raise AllocationError("uint8_t*")
+        if mat._m > 0:
+            mat._data[0] = <uint8_t*> calloc(m*n, sizeof(uint8_t))
+            if mat._data[0] == NULL:
+                raise AllocationError("uint8_t*")
 
         # update the pointer offsets in the array of pointers
 
@@ -1821,7 +1874,8 @@ cdef class MatrixU8(Matrix):
 
     def __dealloc__(self):
         if self._owner is None and self._data != NULL:
-            free(self._data[0])
+            if self._m > 0:
+                free(self._data[0])
             free(self._data)
         self._data = NULL
 
@@ -1838,12 +1892,12 @@ cdef class MatrixU8(Matrix):
 
         # get the number of columns from the iterable
         self._m = self._shape[0] = len(iterable)
-        if self._m <= 0:
-            raise ValueError("Cannot create a matrix with null number of columns")
+        if self._m < 0:
+            raise ValueError("Cannot create a matrix with a negative number of columns")
         # get the number of rows from the first element of the iterable
-        self._n = self._shape[1] = len(peeking.peek())
-        if self._n <= 0:
-            raise ValueError("Cannot create a matrix with null number of rows")
+        self._n = self._shape[1] = 0 if self._m == 0 else len(peeking.peek())
+        if self._n < 0:
+            raise ValueError("Cannot create a matrix with a negative number of rows")
 
         # mark the strides
         self._strides = (self._m * sizeof(uint8_t), sizeof(uint8_t))
