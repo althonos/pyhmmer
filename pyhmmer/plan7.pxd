@@ -28,6 +28,7 @@ from .easel cimport Alphabet, DigitalSequence, DigitalMSA, MSA, Randomness, Vect
 cdef extern from "hmmer.h" nogil:
     DEF p7_NOFFSETS = 3
     DEF p7_NEVPARAM = 6
+    DEF p7_NCUTOFFS = 6
 
 
 # --- Cython classes ---------------------------------------------------------
@@ -66,6 +67,18 @@ cdef class Builder:
     cpdef Builder copy(self)
 
 
+cdef class _Cutoffs:
+    cdef object              _owner
+    cdef int*                _flags
+    cdef bint                _is_profile
+    cdef float[p7_NCUTOFFS]* _cutoffs
+
+    cpdef VectorF as_vector(self)
+    cpdef bint gathering_available(self)
+    cpdef bint trusted_available(self)
+    cpdef bint noise_available(self)
+
+
 cdef class Domain:
     cdef readonly Alignment alignment
     cdef readonly Hit hit
@@ -102,6 +115,7 @@ cdef class HMM:
     # inner ESL_ALPHABET; the Python object provides reference counting for free
     cdef readonly Alphabet          alphabet
     cdef readonly _EvalueParameters evalue_parameters
+    cdef readonly _Cutoffs          cutoffs
 
     cpdef HMM copy(self)
     cpdef void write(self, object fh, bint binary=*) except *
@@ -185,6 +199,7 @@ cdef class Profile:
     cdef P7_PROFILE* _gm
     cdef readonly Alphabet          alphabet
     cdef readonly _Offsets          offsets
+    cdef readonly _Cutoffs          cutoffs
     cdef readonly _EvalueParameters evalue_parameters
 
     cdef int _clear(self) nogil except 1

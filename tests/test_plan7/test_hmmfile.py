@@ -31,6 +31,8 @@ class _TestHMMFile:
             self.assertIsNot(hmm, None, "missing HMM: {}".format(expected))
             self.assertIsNot(expected, None, "unexpected extra HMM: {}".format(hmm))
             self.assertEqual(hmm.name, expected)
+            self.assertIsNot(hmm.cutoffs, None)
+            self.assertIsNot(hmm.evalue_parameters, None)
 
     def test_empty(self):
         with tempfile.NamedTemporaryFile() as empty:

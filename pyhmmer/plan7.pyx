@@ -42,10 +42,10 @@ from libeasel cimport eslERRBUFSIZE, eslCONST_LOG2R
 from libeasel.alphabet cimport ESL_ALPHABET, esl_alphabet_Create, esl_abc_ValidateType
 from libeasel.getopts cimport ESL_GETOPTS, ESL_OPTIONS
 from libeasel.sq cimport ESL_SQ
-from libhmmer cimport p7_LOCAL, p7_EVPARAM_UNSET, p7_NEVPARAM, p7_offsets_e, p7_evparams_e
+from libhmmer cimport p7_LOCAL, p7_EVPARAM_UNSET, p7_CUTOFF_UNSET, p7_NEVPARAM, p7_NCUTOFFS, p7_offsets_e, p7_cutoffs_e, p7_evparams_e
 from libhmmer.logsum cimport p7_FLogsumInit
 from libhmmer.p7_builder cimport P7_BUILDER, p7_archchoice_e, p7_wgtchoice_e, p7_effnchoice_e
-from libhmmer.p7_hmm cimport p7H_NTRANSITIONS
+from libhmmer.p7_hmm cimport p7H_NTRANSITIONS, p7H_TC, p7H_GA, p7H_NC
 from libhmmer.p7_hmmfile cimport p7_hmmfile_formats_e
 from libhmmer.p7_tophits cimport p7_hitflags_e
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
@@ -92,6 +92,7 @@ ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
 
 # --- Python imports ---------------------------------------------------------
 
+import array
 import collections.abc
 import errno
 import math
@@ -336,7 +337,7 @@ cdef class Builder:
     .. versionadded:: 0.2.0
 
     .. versionchanged:: 0.4.2
-       Added the ``randomness`` attribute.
+       Added the `~Builder.randomness` attribute.
 
     """
 
@@ -603,13 +604,23 @@ cdef class Builder:
                 &opti._om, # optimized profile
             )
         if status == libeasel.eslOK:
-          hmm.command_line = " ".join(sys.argv)
-          return (hmm, profile, opti)
+            hmm.command_line = " ".join(sys.argv)
         elif status == libeasel.eslEINVAL:
             msg = self._bld.errbuf.decode("utf-8", "replace")
             raise ValueError("Could not build HMM: {}".format(msg))
         else:
             raise UnexpectedError(status, "p7_SingleBuilder")
+
+        # setup attributes
+        hmm.evalue_parameters = _EvalueParameters(hmm)
+        hmm.cutoffs = _Cutoffs(hmm)
+        profile.offsets = _Offsets(profile)
+        profile.evalue_parameters = _EvalueParameters(profile)
+        profile.cutoffs = _Cutoffs(profile)
+        opti.offsets = _Offsets(opti)
+
+        # return newly built HMM, profile and optimized profile
+        return hmm, profile, opti
 
     cpdef tuple build_msa(
         self,
@@ -684,12 +695,22 @@ cdef class Builder:
             )
         if status == libeasel.eslOK:
             hmm.command_line = " ".join(sys.argv)
-            return (hmm, profile, opti)
         elif status == libeasel.eslEINVAL:
             msg = self._bld.errbuf.decode("utf-8", "replace")
             raise ValueError("Could not build HMM: {}".format(msg))
         else:
             raise UnexpectedError(status, "p7_Builder")
+
+        # setup attributes
+        hmm.evalue_parameters = _EvalueParameters(hmm)
+        hmm.cutoffs = _Cutoffs(hmm)
+        profile.offsets = _Offsets(profile)
+        profile.evalue_parameters = _EvalueParameters(profile)
+        profile.cutoffs = _Cutoffs(profile)
+        opti.offsets = _Offsets(opti)
+
+        # return newly built HMM, profile and optimized profile
+        return hmm, profile, opti
 
     cpdef Builder copy(self):
         """copy(self)\n--
@@ -721,6 +742,159 @@ cdef class Builder:
             popen=self.popen,
             pextend=self.pextend
         )
+
+
+cdef class _Cutoffs:
+    """A read-only view over the Pfam score cutoffs of a `HMM` or a `Profile`.
+
+    .. versionadded:: 0.4.6
+
+    """
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __cinit__(self):
+        self._owner = None
+        self._flags = NULL
+        self._cutoffs = NULL
+        self._is_profile = True
+
+    def __init__(self, object owner):
+        cdef str ty
+        if isinstance(owner, Profile):
+            self._cutoffs = &(<Profile> owner)._gm.cutoff
+            self._flags = NULL
+            self._owner = owner
+            self._is_profile = True
+        elif isinstance(owner, HMM):
+            self._cutoffs = &(<HMM> owner)._hmm.cutoff
+            self._flags = &(<HMM> owner)._hmm.flags
+            self._owner = owner
+            self._is_profile = False
+        else:
+            ty = type(owner).__name__
+            raise TypeError("expected Profile or HMM, found {ty}")
+
+    def __copy__(self):
+        cdef _Cutoffs c
+        c = _Cutoffs.__new__(_Cutoffs)
+        c._owner = self._owner
+        c._cutoffs = self._cutoffs
+        c._flags = self._flags
+        c._owner = self._owner
+        return c
+
+    def __str__(self):
+        ty = type(self).__name__
+        return "<Pfam score cutoffs of {!r}>".format(
+            self._owner,
+        )
+
+    def __eq__(self, object other):
+        if isinstance(other, _Cutoffs):
+            return self.as_vector() == other.as_vector()
+        return NotImplemented
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def gathering1(self):
+        r"""`float` or `None`: The first gathering threshold, if any.
+        """
+        if self.gathering_available():
+            return self._cutoffs[0][<int> p7_cutoffs_e.p7_GA1]
+        return None
+
+    @property
+    def gathering2(self):
+        r"""`float` or `None`: The second gathering threshold, if any.
+        """
+        if self.gathering_available():
+            return self._cutoffs[0][<int> p7_cutoffs_e.p7_GA2]
+        return None
+
+    @property
+    def trusted1(self):
+        r"""`float` or `None`: The first trusted score cutoff, if any.
+        """
+        if self.trusted_available():
+            return self._cutoffs[0][<int> p7_cutoffs_e.p7_TC1]
+        return None
+
+    @property
+    def trusted2(self):
+        r"""`float` or `None`: The second trusted score cutoff, if any.
+        """
+        if self.trusted_available():
+            return self._cutoffs[0][<int> p7_cutoffs_e.p7_TC2]
+        return None
+
+    @property
+    def noise1(self):
+        r"""`float` or `None`: The first noise cutoff, if any.
+        """
+        if self.noise_available():
+            return self._cutoffs[0][<int> p7_cutoffs_e.p7_NC1]
+        return None
+
+    @property
+    def noise2(self):
+        r"""`float` or `None`: The second noise cutoff, if any.
+        """
+        if self.noise_available():
+            return self._cutoffs[0][<int> p7_cutoffs_e.p7_NC2]
+        return None
+
+    # --- Methods ------------------------------------------------------------
+
+    cpdef bint gathering_available(self):
+        """Check whether the gathering thresholds are available.
+        """
+        assert self._cutoffs != NULL
+        if self._is_profile:
+            return (
+                    self._cutoffs[0][<int> p7_cutoffs_e.p7_GA1] != p7_CUTOFF_UNSET
+                and self._cutoffs[0][<int> p7_cutoffs_e.p7_GA2] != p7_CUTOFF_UNSET
+            )
+        else:
+            return (self._flags[0] & p7H_GA) != 0
+
+    cpdef bint trusted_available(self):
+        """Check whether the trusted cutoffs are available.
+        """
+        assert self._cutoffs != NULL
+        if self._is_profile:
+            return (
+                    self._cutoffs[0][<int> p7_cutoffs_e.p7_TC1] != p7_CUTOFF_UNSET
+                and self._cutoffs[0][<int> p7_cutoffs_e.p7_TC2] != p7_CUTOFF_UNSET
+            )
+        else:
+            return (self._flags[0] & p7H_TC) != 0
+
+    cpdef bint noise_available(self):
+        """Check whether the noise cutoffs are available.
+        """
+        assert self._cutoffs != NULL
+        if self._is_profile:
+            return (
+                    self._cutoffs[0][<int> p7_cutoffs_e.p7_NC1] != p7_CUTOFF_UNSET
+                and self._cutoffs[0][<int> p7_cutoffs_e.p7_NC2] != p7_CUTOFF_UNSET
+            )
+        else:
+            return (self._flags[0] & p7H_NC) != 0
+
+    cpdef VectorF as_vector(self):
+        """Return a view over the score cutoffs as a `~VectorF`.
+        """
+        assert self._cutoffs != NULL
+
+        cdef VectorF new
+
+        new = VectorF.__new__(VectorF)
+        new._owner = self
+        new._n = new._shape[0] = p7_NCUTOFFS
+        new._data = <float*> self._cutoffs
+        return new
 
 
 cdef class Domain:
@@ -1127,10 +1301,12 @@ cdef class HMM:
     Attributes:
         alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
         evalue_parameters (`~pyhmmer.plan7._EvalueParameters`): The e-value
-            parameters for this profile.
+            parameters for this HMM.
+        cutoffs (`~pyhmmer.plan7._Cutoffs`): The Pfam score cutoffs for this
+            HMM, if any.
 
     .. versionchanged:: 0.4.6
-       Added the `~HMM.evalue_parameters` attribute.
+       Added the `~HMM.evalue_parameters` and `~HMM.cutoffs` attributes.
 
     """
 
@@ -1138,6 +1314,8 @@ cdef class HMM:
 
     def __cinit__(self):
         self.alphabet = None
+        self.cutoffs = None
+        self.evalue_parameters = None
         self._hmm = NULL
 
     def __init__(self, int M, Alphabet alphabet):
@@ -1168,6 +1346,11 @@ cdef class HMM:
         self.evalue_parameters = _EvalueParameters.__new__(_EvalueParameters)
         self.evalue_parameters._evparams = &self._hmm.evparam
         self.evalue_parameters._owner = self
+        # expose the score cutoffs as the `cutoffs` attribute
+        self.cutoffs = _Cutoffs.__new__(_Cutoffs)
+        self.cutoffs._cutoffs = &self._hmm.cutoff
+        self.cutoffs._flags = &self._hmm.flags
+        self.cutoffs._is_profile = False
 
     def __dealloc__(self):
         libhmmer.p7_hmm.p7_hmm_Destroy(self._hmm)
@@ -1657,6 +1840,8 @@ cdef class HMM:
 
         cdef HMM new = HMM.__new__(HMM)
         new.alphabet = self.alphabet
+        new.evalue_parameters = _EvalueParameters(new)
+        new.cutoffs = _Cutoffs(new)
 
         with nogil:
             new._hmm = libhmmer.p7_hmm.p7_hmm_Clone(self._hmm)
@@ -1831,6 +2016,8 @@ cdef class HMMFile:
             py_hmm = HMM.__new__(HMM)
             py_hmm.alphabet = self._alphabet # keep a reference to the alphabet
             py_hmm._hmm = hmm
+            py_hmm.evalue_parameters = _EvalueParameters(py_hmm)
+            py_hmm.cutoffs = _Cutoffs(py_hmm)
             return py_hmm
         elif status == libeasel.eslEOF:
             raise StopIteration()
@@ -2141,6 +2328,7 @@ cdef class OptimizedProfile:
         assert self._om != NULL
         cdef OptimizedProfile new = OptimizedProfile.__new__(OptimizedProfile)
         new.alphabet = self.alphabet
+        new.offsets = _Offsets(new)
         with nogil:
             new._om = p7_oprofile.p7_oprofile_Clone(self._om)
         if new._om == NULL:
@@ -3252,9 +3440,11 @@ cdef class Profile:
             profile, if it was loaded from a pressed HMM file.
         evalue_parameters (`~pyhmmer.plan7._EvalueParameters`): The e-value
             parameters for this profile.
+        cutoffs (`~pyhmmer.plan7._Cutoffs`): The Pfam score cutoffs for this
+            profile, if any.
 
     .. versionchanged:: 0.4.6
-       Added the `~HMM.evalue_parameters` attribute.
+       Added the `~Profile.evalue_parameters` and `~Profile.cutoffs` attributes.
 
     """
 
@@ -3265,6 +3455,7 @@ cdef class Profile:
         self.alphabet = None
         self.offsets = None
         self.evalue_parameters = None
+        self.cutoffs = None
 
     def __init__(self, int M, Alphabet alphabet):
         """__init__(self, M, alphabet)\n--
@@ -3292,6 +3483,11 @@ cdef class Profile:
         self.evalue_parameters = _EvalueParameters.__new__(_EvalueParameters)
         self.evalue_parameters._evparams = &self._gm.evparam
         self.evalue_parameters._owner = self
+        # expose the score cutoffs as the `cutoffs` attribute
+        self.cutoffs = _Cutoffs.__new__(_Cutoffs)
+        self.cutoffs._cutoffs = &self._gm.cutoff
+        self.cutoffs._flags = NULL
+        self.cutoffs._is_profile = True
 
     def __dealloc__(self):
         libhmmer.p7_profile.p7_profile_Destroy(self._gm)
@@ -3469,11 +3665,17 @@ cdef class Profile:
         cdef int status
         cdef Profile new = Profile.__new__(Profile)
         new.alphabet = self.alphabet
+        new.offsets = _Offsets(new)
+        new.evalue_parameters = _EvalueParameters(new)
+        new.cutoffs = _Cutoffs(new)
+
+        # allocate a new profile
         with nogil:
             new._gm = libhmmer.p7_profile.p7_profile_Create(self._gm.allocM, self.alphabet._abc)
         if not new._gm:
             raise AllocationError("P7_PROFILE")
 
+        # copy the current profile to the new profile
         with nogil:
             status = libhmmer.p7_profile.p7_profile_Copy(self._gm, new._gm)
         if status == libeasel.eslOK:
@@ -3514,7 +3716,7 @@ cdef class Profile:
         cdef int              status
         cdef OptimizedProfile opt
 
-        opt = OptimizedProfile(opt, self._gm.M, self.alphabet)
+        opt = OptimizedProfile(self._gm.M, self.alphabet)
         with nogil:
             opt._convert(self._gm)
 
