@@ -1130,22 +1130,21 @@ cdef class VectorU8(Vector):
 
     def __eq__(self, object other):
         assert self._data != NULL
-        cdef VectorU8 other_
-        cdef int      i
-        cdef int      j
-        # check matrix type
-        if not isinstance(other, VectorU8):
+
+        cdef unsigned char[::1] buffer
+        cdef int                cmp
+
+        try:
+            buffer = other
+        except ValueError:
+            return NotImplemented
+        if buffer.ndim != 1:
+            return NotImplemented
+        if buffer.shape[0] != self._n:
             return False
-        # check dimensions
-        other_ = other
-        assert other_._data != NULL
-        if self._n != other_._n:
-            return False
-        # check values
-        for i in range(self._n):
-            if self._data[i] != other_._data[i]:
-                return False
-        return True
+        with nogil:
+            cmp = memcmp(&buffer[0], &self._data[0], self._n)
+        return cmp == 0
 
     def __copy__(self):
         return self.copy()

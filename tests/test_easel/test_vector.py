@@ -1,3 +1,4 @@
+import array
 import unittest
 import pickle
 import struct
@@ -209,3 +210,17 @@ class TestVectorU8(_TestVectorBase, unittest.TestCase):
         vec = self.Vector([1, 2, 3])
         mem = memoryview(vec)
         self.assertEqual(mem.tolist(), [1, 2, 3])
+
+    def test_eq_bytebuffer(self):
+        vec = self.Vector([1, 2, 3])
+        b1 = bytearray([1, 2, 3])
+        self.assertEqual(vec, b1)
+
+        b2 = array.array('B', [1, 2, 3])
+        self.assertEqual(vec, b2)
+
+        b3 = array.array('B', [1, 2, 3, 4])
+        self.assertNotEqual(vec, b3)
+
+        b4 = array.array('L', [1, 2, 3])
+        self.assertNotEqual(vec, b4)
