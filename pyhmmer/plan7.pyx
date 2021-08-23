@@ -15,7 +15,7 @@ See Also:
 cimport cython
 from cpython.ref cimport PyObject
 from cpython.exc cimport PyErr_Clear
-from libc.stdlib cimport malloc, realloc, free
+from libc.stdlib cimport calloc, malloc, realloc, free
 from libc.stdint cimport uint8_t, uint32_t
 from libc.stdio cimport fprintf, FILE, stdout, fclose
 from libc.string cimport strdup, strlen
@@ -45,7 +45,7 @@ from libeasel.sq cimport ESL_SQ
 from libhmmer cimport p7_LOCAL, p7_EVPARAM_UNSET, p7_CUTOFF_UNSET, p7_NEVPARAM, p7_NCUTOFFS, p7_offsets_e, p7_cutoffs_e, p7_evparams_e
 from libhmmer.logsum cimport p7_FLogsumInit
 from libhmmer.p7_builder cimport P7_BUILDER, p7_archchoice_e, p7_wgtchoice_e, p7_effnchoice_e
-from libhmmer.p7_hmm cimport p7H_NTRANSITIONS, p7H_TC, p7H_GA, p7H_NC
+from libhmmer.p7_hmm cimport p7H_NTRANSITIONS, p7H_TC, p7H_GA, p7H_NC, p7H_MAP
 from libhmmer.p7_hmmfile cimport p7_hmmfile_formats_e
 from libhmmer.p7_tophits cimport p7_hitflags_e
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
@@ -1358,12 +1358,15 @@ cdef class HMM:
     def __eq__(self, object other):
         assert self._hmm != NULL
 
+        cdef HMM other_
+        cdef int status
+
         if not isinstance(other, HMM):
-            return False
+            return NotImplemented
 
-        cdef HMM o = <HMM> other
-        cdef int status = libhmmer.p7_hmm.p7_hmm_Compare(self._hmm, o._hmm, 0.0)
-
+        other_ = <HMM> other
+        with nogil:
+            status = libhmmer.p7_hmm.p7_hmm_Compare(self._hmm, other_._hmm, 0.0)
         if status == libeasel.eslOK:
             return True
         elif status == libeasel.eslFAIL:
@@ -1416,6 +1419,166 @@ cdef class HMM:
         s += sizeof(P7_HMM)
         s += sizeof(self)
         return s
+
+    def __reduce__(self):
+        return HMM, (self.M, self.alphabet), self.__getstate__()
+
+    cpdef dict __getstate__(self):
+        assert self._hmm != NULL
+
+        cdef int    i
+        cdef bytes  ctime = None
+        cdef bytes  rf    = None
+        cdef bytes  mm    = None
+        cdef bytes  cons  = None
+        cdef bytes  ca    = None
+        cdef bytes  cs    = None
+        cdef object map_  = array.array('i')
+
+        # copy alignment map
+        for i in range(self._hmm.M + 2):
+            map_.append(self._hmm.map[i])
+
+        # copy annotations
+        if self._hmm.ctime != NULL:
+            ctime = <bytes> self._hmm.ctime
+        if self._hmm.rf != NULL:
+            rf = <bytes> self._hmm.rf
+        if self._hmm.cs != NULL:
+            cs = <bytes> self._hmm.cs
+        if self._hmm.ca != NULL:
+            ca = <bytes> self._hmm.ca
+        if self._hmm.consensus != NULL:
+            cons = <bytes> self._hmm.consensus
+
+        return {
+            "M": self._hmm.M,
+            "t": self.transition_probabilities,
+            "mat": self.match_emissions,
+            "ins": self.insert_emissions,
+
+            "name": self.name,
+            "acc": self.accession,
+            "desc": self.description,
+            "rf": rf,
+            "mm": mm,
+            "consensus": cons,
+            "cs": cs,
+            "ca": ca,
+
+            "comlog": self.command_line,
+            "nseq": self._hmm.nseq,
+            "eff_nseq": self._hmm.eff_nseq,
+            "max_length": self._hmm.max_length,
+            "ctime": ctime,
+            "map": map_,
+            "checksum": self._hmm.checksum,
+            "evparam": self.evalue_parameters.as_vector(),
+            "cutoff": self.cutoffs.as_vector(),
+            "compo": self.composition,
+            "offset": self._hmm.offset,
+            "alphabet": self.alphabet,
+            "flags": self._hmm.flags
+        }
+
+    cpdef object __setstate__(self, dict state):
+        assert self._hmm != NULL
+
+        cdef int      i
+        cdef int      M         = self._hmm.M
+        cdef int      K         = self._hmm.abc.K
+        cdef MatrixF  t         = state["t"]
+        cdef MatrixF  mat       = state["mat"]
+        cdef MatrixF  ins       = state["ins"]
+        cdef VectorF  evparam   = state["evparam"]
+        cdef VectorF  cutoff    = state["cutoff"]
+        cdef VectorF  compo     = state["compo"]
+        cdef int[::1] map_      = state["map"]
+
+        if self._hmm.M != state["M"]:
+            raise ValueError(f"HMM has a different node count ({self._hmm.M}, state has {state['M']})")
+        if self.alphabet != state["alphabet"]:
+            raise ValueError(f"HMM has a different alphabet ({self.alphabet}, state has {state['alphabet']})")
+        self._hmm.flags = state["flags"]
+
+        # clean previous HMM
+        self.zero()
+        self._hmm.mat[0][0] = 1.0
+        self._hmm.t[0][5] = 1.0
+
+        # attributes settable via a property
+        self.name = state["name"]
+        self.accession = state["acc"]
+        self.description = state["desc"]
+        self.command_line = state["comlog"]
+
+        # strings that must be set manually
+        if self._hmm.rf != NULL:
+            free(self._hmm.rf)
+            self._hmm.rf = NULL
+        if state["rf"] is not None:
+            self._hmm.rf = <char*> malloc((self._hmm.M + 2) * sizeof(char))
+            memcpy(self._hmm.rf, <const char*> state["rf"], (self._hmm.M + 2) * sizeof(char))
+        if self._hmm.mm != NULL:
+            free(self._hmm.mm)
+            self._hmm.mm = NULL
+        if state["mm"] is not None:
+            self._hmm.mm = <char*> malloc((self._hmm.M + 2) * sizeof(char))
+            memcpy(self._hmm.mm, <const char*> state["mm"], (self._hmm.M + 2) * sizeof(char))
+        if self._hmm.consensus != NULL:
+            free(self._hmm.consensus)
+            self._hmm.consensus = NULL
+        if state["consensus"] is not None:
+            self._hmm.consensus = <char*> malloc((self._hmm.M + 2) * sizeof(char))
+            memcpy(self._hmm.consensus, <const char*> state["consensus"], (self._hmm.M + 2) * sizeof(char))
+        if self._hmm.cs != NULL:
+            free(self._hmm.cs)
+            self._hmm.cs = NULL
+        if state["cs"] is not None:
+            self._hmm.cs = <char*> malloc((self._hmm.M + 2) * sizeof(char))
+            memcpy(self._hmm.cs, <const char*> state["cs"], (self._hmm.M + 2) * sizeof(char))
+        if self._hmm.ca != NULL:
+            free(self._hmm.ca)
+            self._hmm.ca = NULL
+        if state["ca"] is not None:
+            self._hmm.ca = <char*> malloc((self._hmm.M + 2) * sizeof(char))
+            memcpy(self._hmm.ca, <const char*> state["ca"], (self._hmm.M + 2) * sizeof(char))
+        if self._hmm.ctime != NULL:
+            free(self._hmm.ctime)
+            self._hmm.ctime = NULL
+        if state["ctime"] is not None:
+            self._hmm.ctime = strdup(<const char*> state["ctime"])
+
+        # numerical values that can be set directly on the C struct
+        self._hmm.nseq = state["nseq"]
+        self._hmm.eff_nseq = state["eff_nseq"]
+        self._hmm.max_length = state["max_length"]
+        self._hmm.checksum = state["checksum"]
+        self._hmm.offset = state["offset"]
+
+        # vector data that must be copied
+        memcpy(self._hmm.ins[0],  ins._data[0], (M+1) * K                * sizeof(float))
+        memcpy(self._hmm.mat[0],  mat._data[0], (M+1) * K                * sizeof(float))
+        memcpy(self._hmm.t[0],    t._data[0],   (M+1) * p7H_NTRANSITIONS * sizeof(float))
+        memcpy(self._hmm.evparam, evparam._data,        p7_NEVPARAM      * sizeof(float))
+        memcpy(self._hmm.cutoff,  cutoff._data,         p7_NCUTOFFS      * sizeof(float))
+        memcpy(self._hmm.compo,   compo._data,          K                * sizeof(float))
+
+        # copy alignment map only if it is available
+        if self._hmm.flags & p7H_MAP == 0:
+            if self._hmm.map != NULL:
+                free(self._hmm.map)
+                self._hmm.map = NULL
+        else:
+            if self._hmm.map != NULL:
+                self._hmm.map = <int*> realloc(self._hmm.map, (self._hmm.M + 1) * sizeof(int))
+            else:
+                self._hmm.map = <int*> calloc(self._hmm.M + 1, sizeof(int))
+            if self._hmm.map == NULL:
+                raise AllocationError("int*")
+            memcpy(self._hmm.map, &map_[0], (self._hmm.M + 1) * sizeof(int))
+
+        return None
 
     # --- Properties ---------------------------------------------------------
 
@@ -1785,6 +1948,13 @@ cdef class HMM:
         """
         assert self._hmm != NULL
         return None if self._hmm.eff_nseq == -1 else self._hmm.eff_nseq
+
+    @property
+    def creation_time(self):
+        """`bytes` or `None`: The creation time of the HMM, if any.
+        """
+        assert self._hmm != NULL
+        return None if self._hmm.ctime == NULL else <bytes> self._hmm.ctime
 
     # --- Methods ------------------------------------------------------------
 

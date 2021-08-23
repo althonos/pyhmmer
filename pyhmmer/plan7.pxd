@@ -117,6 +117,9 @@ cdef class HMM:
     cdef readonly _EvalueParameters evalue_parameters
     cdef readonly _Cutoffs          cutoffs
 
+    cpdef dict   __getstate__(self)
+    cpdef object __setstate__(self, dict state)
+
     cpdef HMM copy(self)
     cpdef void write(self, object fh, bint binary=*) except *
     cpdef void zero(self)

@@ -2,6 +2,7 @@ import copy
 import io
 import itertools
 import os
+import pickle
 import shutil
 import unittest
 import tempfile
@@ -179,3 +180,33 @@ class TestHMM(unittest.TestCase):
             for j in range(dna.K):
                 self.assertEqual(hmm.match_emissions[i, j], 0.0)
         self.assertEqual(hmm.name, b"custom")
+
+    def test_pickle(self):
+        h1 = self.hmm
+        h2 = pickle.loads(pickle.dumps(h1))
+
+        self.assertEqual(h1.alphabet, h2.alphabet)
+        self.assertEqual(h1.M, h2.M)
+        self.assertEqual(h1.transition_probabilities, h2.transition_probabilities)
+        self.assertEqual(h1.insert_emissions, h2.insert_emissions)
+        self.assertEqual(h1.match_emissions, h2.match_emissions)
+        self.assertEqual(h1.name, h2.name)
+        self.assertEqual(h1.accession, h2.accession)
+        self.assertEqual(h1.description, h2.description)
+        self.assertEqual(h1.checksum, h2.checksum)
+        self.assertEqual(h1.composition, h2.composition)
+        self.assertEqual(h1.consensus, h2.consensus)
+        self.assertEqual(h1.consensus_structure, h2.consensus_structure)
+        self.assertEqual(h1.consensus_accessibility, h2.consensus_accessibility)
+        self.assertEqual(h1.reference, h2.reference)
+        self.assertEqual(h1.model_mask, h2.model_mask)
+        self.assertEqual(h1.command_line, h2.command_line)
+        self.assertEqual(h1.nseq, h2.nseq)
+        self.assertEqual(h1.nseq_effective, h2.nseq_effective)
+
+        self.assertEqual(h1.creation_time, h2.creation_time)
+        self.assertEqual(h1.cutoffs, h2.cutoffs)
+        self.assertEqual(h1.evalue_parameters, h2.evalue_parameters)
+        self.assertEqual(h1.composition, h2.composition)
+
+        self.assertEqual(h1, h2)
