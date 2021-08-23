@@ -24,12 +24,6 @@ try:
 except ImportError as err:
     cythonize = err
 
-# --- Constants --------------------------------------------------------------
-
-PLATFORM_MACHINE = platform.machine()
-SYS_IMPLEMENTATION = sys.implementation.name
-
-
 # --- Utils ------------------------------------------------------------------
 
 def _split_multiline(value):
@@ -87,8 +81,17 @@ class build_ext(_build_ext):
             _eprint('Building HMMER with', hmmer_impl, 'for CPU architecture:', repr(machine))
 
         # use debug directives with Cython if building in debug mode
-        cython_args = {"include_path": ["include"], "compiler_directives": {}}
-        cython_args["compile_time_env"] = {"SYS_IMPLEMENTATION": SYS_IMPLEMENTATION}
+        cython_args = {
+            "include_path": ["include"],
+            "compiler_directives": {},
+            "compile_time_env": {
+                "FASTANI_PRIVATE_ACCESS": 1,
+                "SYS_IMPLEMENTATION_NAME": sys.implementation.name,
+                "SYS_VERSION_INFO_MAJOR": sys.version_info.major,
+                "SYS_VERSION_INFO_MINOR": sys.version_info.minor,
+                "SYS_VERSION_INFO_MICRO": sys.version_info.micro,
+            }
+        }
         if hmmer_impl is not None:
             cython_args["compile_time_env"]["HMMER_IMPL"] = hmmer_impl
         if self.force:
