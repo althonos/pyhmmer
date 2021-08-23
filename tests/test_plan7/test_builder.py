@@ -1,4 +1,5 @@
 import copy
+import datetime
 import io
 import itertools
 import os
@@ -90,6 +91,14 @@ class TestBuilder(unittest.TestCase):
             hmm, profile, opt = builder.build(seq, Background(abc))
         self.assertEqual(hmm.command_line, " ".join(argv))
 
+    def test_build_creation_time(self):
+        abc = Alphabet.amino()
+        builder = Builder(alphabet=abc)
+        seq = self.proteins[1].digitize(abc)
+
+        hmm, profile, opt = builder.build(seq, Background(abc))
+        self.assertIsInstance(hmm.creation_time, datetime.datetime)
+
     def test_build_protein(self):
         abc = Alphabet.amino()
         builder = Builder(alphabet=abc)
@@ -126,6 +135,17 @@ class TestBuilder(unittest.TestCase):
         with mock.patch.object(sys, "argv", argv):
             hmm, profile, opt = builder.build_msa(msa, Background(abc))
         self.assertEqual(hmm.command_line, " ".join(argv))
+
+    def test_build_msa_creation_time(self):
+        abc = Alphabet.dna()
+        builder = Builder(alphabet=abc)
+
+        hmm, profile, opt = builder.build_msa(self.msa, Background(abc))
+
+        with HMMFile(os.path.join(self.testdata, "3box.hmm")) as hmm_file:
+            hmm_exp = next(hmm_file)
+
+        self.assertIsInstance(hmm.creation_time, datetime.datetime)
 
     def test_build_msa_dna(self):
         abc = Alphabet.dna()

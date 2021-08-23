@@ -16,11 +16,14 @@ cimport cython
 from cpython.bytes cimport PyBytes_FromStringAndSize
 from cpython.ref cimport PyObject
 from cpython.exc cimport PyErr_Clear
+from cpython.unicode cimport PyUnicode_DecodeASCII
+from libc.math cimport exp, ceil
 from libc.stdlib cimport calloc, malloc, realloc, free
 from libc.stdint cimport uint8_t, uint32_t
 from libc.stdio cimport fprintf, FILE, stdout, fclose
 from libc.string cimport strdup, strndup, strlen, strncpy
-from libc.math cimport exp, ceil
+from libc.time cimport ctime, strftime, time, time_t, tm, localtime_r
+from unicode cimport PyUnicode_DATA, PyUnicode_KIND, PyUnicode_READ, PyUnicode_READY, PyUnicode_GET_LENGTH
 
 cimport libeasel
 cimport libeasel.sq
@@ -95,6 +98,7 @@ ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
 
 import array
 import collections.abc
+import datetime
 import errno
 import math
 import io
@@ -551,6 +555,9 @@ cdef class Builder:
             `~pyhmmer.errors.AlphabetMismatch`: When either ``sequence`` or
                 ``background`` have the wrong alphabet for this builder.
 
+        .. versionchanged:: 0.4.6
+           Sets the `HMM.creation_time` attribute with the current time.
+
         """
         assert self._bld != NULL
 
@@ -575,7 +582,7 @@ cdef class Builder:
         if not self.alphabet._eq(sequence.alphabet):
             raise AlphabetMismatch(self.alphabet, sequence.alphabet)
 
-        # load score matrix
+        # load score matrix and build HMM
         # TODO: allow changing from the default scoring matrix
         # TODO: allow caching the parameter values to avoid resetting
         #       everytime `build` is called.
@@ -619,7 +626,6 @@ cdef class Builder:
         profile.evalue_parameters = _EvalueParameters(profile)
         profile.cutoffs = _Cutoffs(profile)
         opti.offsets = _Offsets(opti)
-
         # return newly built HMM, profile and optimized profile
         return hmm, profile, opti
 
@@ -643,6 +649,9 @@ cdef class Builder:
                 ``background`` have the wrong alphabet for this builder.
 
         .. versionadded:: 0.3.0
+
+        .. versionchanged:: 0.4.6
+           Sets the `HMM.creation_time` attribute with the current time.
 
         """
         assert self._bld != NULL
@@ -668,6 +677,7 @@ cdef class Builder:
         if not self.alphabet._eq(msa.alphabet):
             raise AlphabetMismatch(self.alphabet, msa.alphabet)
 
+        # load score matrix and build HMM
         with nogil:
             status = libhmmer.p7_builder.p7_builder_SetScoreSystem(
                 self._bld,
@@ -709,7 +719,6 @@ cdef class Builder:
         profile.evalue_parameters = _EvalueParameters(profile)
         profile.cutoffs = _Cutoffs(profile)
         opti.offsets = _Offsets(opti)
-
         # return newly built HMM, profile and optimized profile
         return hmm, profile, opti
 
@@ -1935,30 +1944,69 @@ cdef class HMM:
 
     @property
     def creation_time(self):
-        """`bytes` or `None`: The creation time of the HMM, if any.
+        """`datetime.datetime` or `None`: The creation time of the HMM, if any.
+
+        Example:
+            Get the creation time for any HMM::
+
+                >>> thioesterase.creation_time
+                datetime.datetime(2008, 11, 25, 17, 28, 32)
+
+            Set the creation time manually to a different date and time::
+
+                >>> ctime = datetime.datetime(2021, 8, 23, 23, 59, 19)
+                >>> thioesterase.creation_time = ctime
+                >>> thioesterase.creation_time
+                datetime.datetime(2021, 8, 23, 23, 59, 19)
+
+        Danger:
+            Internally, ``libhmmer`` always uses ``asctime`` to generate a
+            timestamp for the HMMs, so this property assumes that every
+            creation time field can be parsed into a `datetime.datetime`
+            object using the  ``"%a %b %d %H:%M:%S %Y"`` format.
+
+        .. versionadded:: 0.4.6
+
         """
         assert self._hmm != NULL
-        return None if self._hmm.ctime == NULL else <bytes> self._hmm.ctime
+
+        cdef size_t l
+        cdef str    ctime
+
+        if self._hmm.ctime == NULL:
+            return None
+
+        l = strlen(self._hmm.ctime)
+        ctime = PyUnicode_DecodeASCII(self._hmm.ctime, l, NULL)
+        return datetime.datetime.strptime(ctime,'%a %b %d %H:%M:%S %Y')
 
     @creation_time.setter
-    def creation_time(self, bytes ctime):
+    def creation_time(self, object ctime):
         assert self._hmm != NULL
+
+        cdef str    ty
+        cdef bytes  formatted
+        cdef size_t n
 
         if ctime is None:
             free(self._hmm.ctime)
             self._hmm.ctime = NULL
             return
+        elif not isinstance(ctime, datetime.datetime):
+            ty = type(ctime).__name__
+            raise TypeError(f"Expected datetime.datetime or None, found {ty}")
 
-        cdef size_t n    = strlen(ctime)
+        formatted = ctime.strftime('%a %b %e %H:%M:%S %Y').encode('ascii')
+        n = len(formatted)
 
         if self._hmm.ctime == NULL:
-            self._hmm.ctime = strndup(<const char*> ctime, n + 1)
+            self._hmm.ctime = <char*> malloc(sizeof(char) * (n + 1))
         else:
             self._hmm.ctime = <char*> realloc(<void*> self._hmm.ctime, sizeof(char) * (n + 1))
-            if self._hmm.ctime != NULL:
-                strncpy(self._hmm.ctime, <const char*> ctime, n + 1)
         if self._hmm.ctime == NULL:
             raise AllocationError("char*")
+        if self._hmm.ctime != NULL:
+            strncpy(self._hmm.ctime, <const char*> formatted, n + 1)
 
     # --- Methods ------------------------------------------------------------
 
