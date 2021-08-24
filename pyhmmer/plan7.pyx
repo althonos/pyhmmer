@@ -1433,7 +1433,7 @@ cdef class HMM:
     def __reduce__(self):
         return HMM, (self.M, self.alphabet), self.__getstate__()
 
-    cpdef dict __getstate__(self):
+    def __getstate__(self):
         assert self._hmm != NULL
 
         cdef dict   state
@@ -1463,25 +1463,30 @@ cdef class HMM:
 
         # copy alignment map if available
         if self._hmm.flags & libhmmer.p7_hmm.p7H_MAP:
-            map_ = array.array('i')
-            for i in range(self._hmm.M + 2):
+            assert self._hmm.map != NULL
+            state["map"] = map_ = array.array('i')
+            for i in range(self._hmm.M + 1):
                 map_.append(self._hmm.map[i])
-            state["map"] = map_
         # add optional annotations
         if self._hmm.flags & libhmmer.p7_hmm.p7H_RF:
+            assert self._hmm.rf != NULL
             state["rf"] = PyBytes_FromStringAndSize(self._hmm.rf, self._hmm.M + 1)
         if self._hmm.flags & libhmmer.p7_hmm.p7H_MM:
+            assert self._hmm.mm != NULL
             state["mm"] = PyBytes_FromStringAndSize(self._hmm.mm, self._hmm.M + 1)
         if self._hmm.flags & libhmmer.p7_hmm.p7H_CS:
+            assert self._hmm.cs != NULL
             state["cs"] = PyBytes_FromStringAndSize(self._hmm.cs, self._hmm.M + 1)
         if self._hmm.flags & libhmmer.p7_hmm.p7H_CA:
+            assert self._hmm.ca != NULL
             state["ca"] = PyBytes_FromStringAndSize(self._hmm.ca, self._hmm.M + 1)
         if self._hmm.flags & libhmmer.p7_hmm.p7H_CONS:
+            assert self._hmm.consensus != NULL
             state["consensus"] = PyBytes_FromStringAndSize(self._hmm.consensus, self._hmm.M + 1)
 
         return state
 
-    cpdef object __setstate__(self, dict state):
+    def __setstate__(self, dict state):
         assert self._hmm != NULL
 
         cdef int      i
@@ -1569,7 +1574,8 @@ cdef class HMM:
                 self._hmm.map = <int*> calloc(self._hmm.M + 1, sizeof(int))
             if self._hmm.map == NULL:
                 raise AllocationError("int*")
-            memcpy(self._hmm.map, &map_[0], (self._hmm.M + 1) * sizeof(int))
+            assert map_.ndim == 1 and map_.shape[0] == self._hmm.M + 1
+            memcpy(&self._hmm.map[0], &map_[0], (self._hmm.M + 1) * sizeof(int))
 
         return None
 
