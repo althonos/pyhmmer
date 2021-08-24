@@ -65,7 +65,7 @@ cdef int fread_obj_readinto(void *cookie, char *buf, int size) except -1:
     cdef object obj   = <object> cookie
     cdef object mem
 
-    IF SYS_IMPLEMENTATION == "pypy":
+    IF SYS_IMPLEMENTATION_NAME == "pypy":
         # NB: PyPy has a bug in the `readinto` implementation that requires the
         #     memoryview to be read/write and not just write, which is why we
         #     create the memoryview in read/write mode and not just in write mode.
