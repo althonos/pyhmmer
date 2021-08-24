@@ -818,10 +818,10 @@ cdef class VectorF(Vector):
             raise ValueError("Cannot create a vector with negative size")
         cdef VectorF vec = VectorF.__new__(VectorF)
         vec._n = vec._shape[0] = n
-        vec._data = <float*> calloc(n, sizeof(float))
-
-        if vec._data == NULL:
-            raise AllocationError("float*")
+        if n > 0:
+            vec._data = <float*> calloc(n, sizeof(float))
+            if vec._data == NULL:
+                raise AllocationError("float*")
         return vec
 
     # --- Magic methods ------------------------------------------------------
@@ -846,42 +846,55 @@ cdef class VectorF(Vector):
         # make sure the vector has a positive size
         if n < 0:
             raise ValueError("Cannot create a vector with negative size")
-        # use malloc to allocate a buffer for the vector
+        # record the vector dimensions
         self._n = self._shape[0] = n
-        self._data = <float*> malloc(n * sizeof(float))
-        if self._data == NULL:
-            raise AllocationError("float*")
-        # assign the items given to the constructor
-        for i, item in enumerate(iterable):
-            self._data[i] = item
+        # NB: this is to maintain compatibility with systems where `malloc`
+        #     is not able to allocate zero-sized memory. In such case, it
+        #     would return NULL, which we would interpretate as an
+        #     allocation error
+        if n > 0:
+            # use malloc to allocate a buffer for the vector
+            self._data = <float*> malloc(n * sizeof(float))
+            if self._data == NULL:
+                raise AllocationError("float*")
+            # assign the items given to the constructor
+            for i, item in enumerate(iterable):
+                self._data[i] = item
 
     def __copy__(self):
         return self.copy()
 
     def __eq__(self, object other):
-        assert self._data != NULL
-        cdef VectorF other_
-        cdef int     i
-        cdef int     j
-        # check matrix type
-        if not isinstance(other, VectorF):
+        assert self._data != NULL or self._n == 0
+
+        cdef const float[::1] buffer
+        cdef int              i
+        cdef bint             cmp    = True
+
+        # check matrix type and dimensions
+        try:
+            buffer = other
+        except ValueError:
+            return NotImplemented
+        if buffer.ndim != 1:
+            return NotImplemented
+        if buffer.shape[0] != self._n:
             return False
-        # check dimensions
-        other_ = other
-        assert other_._data != NULL
-        if self._n != other_._n:
-            return False
+
         # check values
-        for i in range(self._n):
-            if self._data[i] != other_._data[i]:
-                return False
-        return True
+        with nogil:
+            for i in range(self._n):
+                if self._data[i] != buffer[i]:
+                    cmp = False
+                    break
+
+        return cmp
 
     def __len__(self):
         return self._n
 
     def __getitem__(self, object index):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
 
         cdef VectorF new
         cdef int     idx
@@ -896,7 +909,7 @@ cdef class VectorF(Vector):
             new = VectorF.__new__(VectorF)
             new._owner = self
             new._n = new._shape[0] = stop - start
-            new._data = &(self._data[start])
+            new._data = NULL if new._n == 0 else &(self._data[start])
             return new
         else:
             idx = index
@@ -907,7 +920,7 @@ cdef class VectorF(Vector):
             return self._data[idx]
 
     def __setitem__(self, object index, float value):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
 
         cdef ssize_t x
 
@@ -923,7 +936,7 @@ cdef class VectorF(Vector):
             self._data[x] = value
 
     def __getbuffer__(self, Py_buffer* buffer, int flags):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
 
         if flags & PyBUF_FORMAT:
             buffer.format = "f"
@@ -944,19 +957,19 @@ cdef class VectorF(Vector):
         pass
 
     def __add__(VectorF self, object other):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
         cdef VectorF new = self.copy()
         return new.__iadd__(other)
 
     def __iadd__(self, object other):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
 
         cdef VectorF other_vec
         cdef float   other_f
 
         if isinstance(other, VectorF):
             other_vec = other
-            assert other_vec._data != NULL
+            assert other_vec._data != NULL or other_vec._n == 0
             if self._n != other_vec._n:
                 raise ValueError("cannot add vectors of different size")
             with nogil:
@@ -968,12 +981,12 @@ cdef class VectorF(Vector):
         return self
 
     def __mul__(VectorF self, object other):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
         cdef VectorF new = self.copy()
         return new.__imul__(other)
 
     def __imul__(self, object other):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
 
         cdef VectorF other_vec
         cdef float   other_f
@@ -983,7 +996,7 @@ cdef class VectorF(Vector):
             other_vec = other
             if self._n != other_vec._n:
                 raise ValueError("cannot pairwise multiply vectors of different size")
-            assert other_vec._data != NULL
+            assert other_vec._data != NULL or other_vec._n == 0
             # NB(@althonos): There is no function in `vectorops.h` to do this
             # for now...
             for i in range(self._n):
@@ -995,7 +1008,7 @@ cdef class VectorF(Vector):
         return self
 
     def __matmul__(VectorF self, object other):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
 
         cdef float* other_data
         cdef float* self_data  = self._data
@@ -1004,7 +1017,7 @@ cdef class VectorF(Vector):
 
         if isinstance(other, VectorF):
             other_data = (<VectorF> other)._data
-            assert other_data != NULL
+            assert other_data != NULL or len(other) == 0
             if len(self) != len(other):
                 raise ValueError("cannot multiply vectors of different size")
             with nogil:
@@ -1021,39 +1034,50 @@ cdef class VectorF(Vector):
 
     # --- Methods ------------------------------------------------------------
 
-    cpdef int argmax(self):
-        assert self._data != NULL
+    cpdef int argmax(self) except -1:
+        assert self._data != NULL or self._n == 0
+        if self._n == 0:
+            raise ValueError("argmax() called on an empty vector")
         with nogil:
             return libeasel.vec.esl_vec_FArgMax(self._data, self._n)
 
-    cpdef int argmin(self):
-        assert self._data != NULL
+    cpdef int argmin(self) except -1:
+        assert self._data != NULL or self._n == 0
+        if self._n == 0:
+            raise ValueError("argmin() called on an empty vector")
         with nogil:
             return libeasel.vec.esl_vec_FArgMin(self._data, self._n)
 
     cpdef VectorF copy(self):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
 
         cdef VectorF new = VectorF.__new__(VectorF)
         new._n = new._shape[0] = self._n
-        new._data = <float*> malloc(self._n * sizeof(float))
-        if new._data == NULL:
-            raise AllocationError("float*")
-        with nogil:
-            libeasel.vec.esl_vec_FCopy(self._data, self._n, new._data)
+
+        if self._n > 0:
+            new._data = <float*> malloc(self._n * sizeof(float))
+            if new._data == NULL:
+                raise AllocationError("float*")
+            with nogil:
+                libeasel.vec.esl_vec_FCopy(self._data, self._n, new._data)
+
         return new
 
-    cpdef float max(self):
-        assert self._data != NULL
+    cpdef float max(self) except *:
+        assert self._data != NULL or self._n == 0
+        if self._n == 0:
+            raise ValueError("max() called on an empty vector")
         with nogil:
             return libeasel.vec.esl_vec_FMax(self._data, self._n)
 
-    cpdef float min(self):
-        assert self._data != NULL
+    cpdef float min(self) except *:
+        assert self._data != NULL or self._n == 0
+        if self._n == 0:
+            raise ValueError("argmin() called on an empty vector")
         with nogil:
             return libeasel.vec.esl_vec_FMin(self._data, self._n)
 
-    cpdef void normalize(self):
+    cpdef object normalize(self):
         r"""Normalize a vector so that all elements sum to 1.
 
         Caution:
@@ -1061,17 +1085,19 @@ cdef class VectorF(Vector):
             where :math:`n` is the size of the vector.
 
         """
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
         with nogil:
             libeasel.vec.esl_vec_FNorm(self._data, self._n)
+        return None
 
-    cpdef void reverse(self):
-        assert self._data != NULL
+    cpdef object reverse(self):
+        assert self._data != NULL or self._n == 0
         with nogil:
             libeasel.vec.esl_vec_FReverse(self._data, self._data, self._n)
+        return None
 
     cpdef float sum(self):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
         with nogil:
             return libeasel.vec.esl_vec_FSum(self._data, self._n)
 
@@ -1091,10 +1117,10 @@ cdef class VectorU8(Vector):
             raise ValueError("Cannot create a vector with negative size")
         cdef VectorU8 vec = VectorU8.__new__(VectorU8)
         vec._n = vec._shape[0] = n
-        vec._data = <uint8_t*> calloc(n, sizeof(uint8_t))
-
-        if vec._data == NULL:
-            raise AllocationError("uint8_t*")
+        if n > 0:
+            vec._data = <uint8_t*> calloc(n, sizeof(uint8_t))
+            if vec._data == NULL:
+                raise AllocationError("uint8_t*")
         return vec
 
     # --- Magic methods ------------------------------------------------------
@@ -1119,20 +1145,26 @@ cdef class VectorU8(Vector):
         # make sure the vector has a positive size
         if n < 0:
             raise ValueError("Cannot create a vector with negative size")
-        # use malloc to allocate a buffer for the vector
+        # record the vector dimensions
         self._n = self._shape[0] = n
-        self._data = <uint8_t*> malloc(n * sizeof(uint8_t))
-        if self._data == NULL:
-            raise AllocationError("uint8_t*")
-        # assign the items given to the constructor
-        for i, item in enumerate(iterable):
-            self._data[i] = item
+        # NB: this is to maintain compatibility with systems where `malloc`
+        #     is not able to allocate zero-sized memory. In such case, it
+        #     would return NULL, which we would interpretate as an
+        #     allocation error
+        if n > 0:
+            # use malloc to allocate a buffer for the vector if needed
+            self._data = <uint8_t*> malloc(n * sizeof(uint8_t))
+            if self._data == NULL:
+                raise AllocationError("uint8_t*")
+            # assign the items given to the constructor
+            for i, item in enumerate(iterable):
+                self._data[i] = item
 
     def __eq__(self, object other):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
 
         cdef unsigned char[::1] buffer
-        cdef int                cmp
+        cdef int                cmp    = 0
 
         try:
             buffer = other
@@ -1143,7 +1175,7 @@ cdef class VectorU8(Vector):
         if buffer.shape[0] != self._n:
             return False
         with nogil:
-            cmp = memcmp(&buffer[0], &self._data[0], self._n)
+            cmp = 0 if self._n == 0 else memcmp(&buffer[0], self._data, self._n)
         return cmp == 0
 
     def __copy__(self):
@@ -1153,7 +1185,7 @@ cdef class VectorU8(Vector):
         return self._n
 
     def __getitem__(self, object index):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
 
         cdef VectorU8 new
         cdef int      idx
@@ -1168,7 +1200,7 @@ cdef class VectorU8(Vector):
             new = VectorU8.__new__(VectorU8)
             new._owner = self
             new._n = new._shape[0] = stop - start
-            new._data = &(self._data[start])
+            new._data = NULL if new._n == 0 else &(self._data[start])
             return new
         else:
             idx = index
@@ -1179,7 +1211,7 @@ cdef class VectorU8(Vector):
             return self._data[idx]
 
     def __setitem__(self, object index, uint8_t value):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
 
         cdef ssize_t x
 
@@ -1195,13 +1227,13 @@ cdef class VectorU8(Vector):
             self._data[x] = value
 
     def __getbuffer__(self, Py_buffer* buffer, int flags):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
 
         if flags & PyBUF_FORMAT:
             buffer.format = "B"
         else:
             buffer.format = NULL
-        buffer.buf = <void*> &(self._data[0])
+        buffer.buf = <void*> self._data
         buffer.internal = NULL
         buffer.itemsize = sizeof(uint8_t)
         buffer.len = self._n * sizeof(uint8_t)
@@ -1216,12 +1248,12 @@ cdef class VectorU8(Vector):
         pass
 
     def __add__(VectorU8 self, object other):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
         cdef VectorU8 new = self.copy()
         return new.__iadd__(other)
 
     def __iadd__(self, object other):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
 
         cdef VectorU8 other_vec
         cdef uint8_t  other_f
@@ -1229,7 +1261,7 @@ cdef class VectorU8(Vector):
 
         if isinstance(other, VectorU8):
             other_vec = other
-            assert other_vec._data != NULL
+            assert other_vec._data != NULL or other_vec._n == 0
             if self._n != other_vec._n:
                 raise ValueError("cannot add vectors of different size")
             for i in range(self._n):
@@ -1241,12 +1273,12 @@ cdef class VectorU8(Vector):
         return self
 
     def __mul__(VectorU8 self, object other):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
         cdef VectorU8 new = self.copy()
         return new.__imul__(other)
 
     def __imul__(self, object other):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
 
         cdef VectorU8 other_vec
         cdef uint8_t  other_f
@@ -1256,9 +1288,9 @@ cdef class VectorU8(Vector):
             other_vec = other
             if self._n != other_vec._n:
                 raise ValueError("cannot pairwise multiply vectors of different size")
-            assert other_vec._data != NULL
+            assert other_vec._data != NULL or other_vec._n == 0
             # NB(@althonos): There is no function in `vectorops.h` to do this
-            # for now...
+            #                for now...
             for i in range(self._n):
                 self._data[i] *= other_vec._data[i]
         else:
@@ -1268,23 +1300,24 @@ cdef class VectorU8(Vector):
         return self
 
     def __matmul__(VectorU8 self, object other):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
 
-        cdef long int res = 0
         cdef int      i
         cdef uint8_t* data
         cdef VectorU8 other_vec
+        cdef long int res       = 0
 
-        if isinstance(other, VectorU8):
-            other_vec = other
-            assert other_vec._data != NULL
-            if len(self) != len(other):
-                raise ValueError("cannot multiply vectors of different size")
+        if not isinstance(other, VectorU8):
+            return NotImplemented
+
+        other_vec = other
+        assert other_vec._data != NULL or other_vec._n == 0
+        if self._n != other_vec._n:
+            raise ValueError("cannot multiply vectors of different size")
+        with nogil:
             for i in range(self._n):
                 res += self._data[i] * other_vec._data[i]
-            return res
-
-        return NotImplemented
+        return res
 
     def __repr__(self):
         return f"VectorU8({list(self)!r})"
@@ -1294,24 +1327,28 @@ cdef class VectorU8(Vector):
 
     # --- Methods ------------------------------------------------------------
 
-    cpdef int argmax(self):
-        assert self._data != NULL
+    cpdef int argmax(self) except -1:
+        assert self._data != NULL or self._n == 0
 
         cdef int i
-        cdef int best = 0;
+        cdef int best = 0
 
+        if self._n == 0:
+            raise ValueError("argmax() called on an empty vector")
         with nogil:
             for i in range(1, self._n):
                 if self._data[i] > self._data[best]:
                     best = i
         return best
 
-    cpdef int argmin(self):
-        assert self._data != NULL
+    cpdef int argmin(self) except -1:
+        assert self._data != NULL or self._n == 0
 
         cdef int i
         cdef int best = 0;
 
+        if self._n == 0:
+            raise ValueError("argmin() called on an empty vector")
         with nogil:
             for i in range(1, self._n):
                 if self._data[i] < self._data[best]:
@@ -1319,25 +1356,28 @@ cdef class VectorU8(Vector):
         return best
 
     cpdef VectorU8 copy(self):
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
 
         cdef VectorU8 new = VectorU8.__new__(VectorU8)
         new._n = new._shape[0] = self._n
-        new._data = <uint8_t*> malloc(self._n * sizeof(uint8_t))
 
-        if new._data == NULL:
-          raise AllocationError("uint8_t*")
-        with nogil:
-            memcpy(<void*> new._data, <void*> self._data, self._n * sizeof(uint8_t))
+        if self._n > 0:
+            new._data = <uint8_t*> malloc(self._n * sizeof(uint8_t))
+            if new._data == NULL:
+                raise AllocationError("uint8_t*")
+            with nogil:
+                memcpy(<void*> new._data, <void*> self._data, self._n * sizeof(uint8_t))
 
         return new
 
-    cpdef uint8_t max(self):
-        assert self._data != NULL
+    cpdef uint8_t max(self) except *:
+        assert self._data != NULL or self._n == 0
 
         cdef int     i
         cdef uint8_t best
 
+        if self._n == 0:
+            raise ValueError("max() called on an empty vector")
         with nogil:
             best = self._data[0]
             for i in range(1, self._n):
@@ -1345,12 +1385,14 @@ cdef class VectorU8(Vector):
                     best = self._data[i]
         return best
 
-    cpdef uint8_t min(self):
-        assert self._data != NULL
+    cpdef uint8_t min(self) except *:
+        assert self._data != NULL or self._n == 0
 
         cdef int     i
         cdef uint8_t best
 
+        if self._n == 0:
+            raise ValueError("min() called on an empty vector")
         with nogil:
             best = self._data[0]
             for i in range(1, self._n):
@@ -1358,8 +1400,8 @@ cdef class VectorU8(Vector):
                     best = self._data[i]
         return best
 
-    cpdef void reverse(self):
-        assert self._data != NULL
+    cpdef object reverse(self):
+        assert self._data != NULL or self._n == 0
 
         cdef int     i
         cdef uint8_t x
@@ -1369,6 +1411,8 @@ cdef class VectorU8(Vector):
                 x = self._data[self._n - i - 1]
                 self._data[self._n - i - 1] = self._data[i]
                 self._data[i] = x
+
+        return None
 
     cpdef uint8_t sum(self):
         """Returns the scalar sum of all elements in the vector.
@@ -1382,7 +1426,7 @@ cdef class VectorU8(Vector):
 
         """
 
-        assert self._data != NULL
+        assert self._data != NULL or self._n == 0
 
         cdef int     i
         cdef uint8_t sum = 0

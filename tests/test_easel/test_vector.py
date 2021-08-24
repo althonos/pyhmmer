@@ -2,6 +2,7 @@ import array
 import unittest
 import pickle
 import struct
+import sys
 
 from pyhmmer.easel import Vector, VectorF, VectorU8
 
@@ -26,6 +27,10 @@ class _TestVectorBase(object):
         self.assertFalse(v2)
         self.assertFalse(v1)
 
+        if sys.implementation.name != "pypy":
+            v3 = self.Vector.zeros(3)
+            self.assertLess(sys.getsizeof(v1), sys.getsizeof(v3))
+
     def test_init(self):
         vec = self.Vector([1, 2, 3])
         self.assertEqual(vec[0], 1)
@@ -40,12 +45,18 @@ class _TestVectorBase(object):
     def test_shape(self):
         vec = self.Vector([1, 2, 3])
         self.assertEqual(vec.shape, (3,))
+        vec2 = self.Vector.zeros(100)
+        self.assertEqual(vec2.shape, (100,))
+        vec3 = self.Vector.zeros(0)
+        self.assertEqual(vec3.shape, (0,))
 
     def test_len(self):
         vec = self.Vector([1, 2, 3])
         self.assertEqual(len(vec), 3)
-        vec = self.Vector.zeros(100)
-        self.assertEqual(len(vec), 100)
+        vec2 = self.Vector.zeros(100)
+        self.assertEqual(len(vec2), 100)
+        vec3 = self.Vector([])
+        self.assertEqual(len(vec3), 0)
 
     def test_copy(self):
         vec = self.Vector([1, 2, 3])
@@ -56,18 +67,29 @@ class _TestVectorBase(object):
         self.assertEqual(vec2[1], 2)
         self.assertEqual(vec2[2], 3)
 
+        vec3 = self.Vector([])
+        vec4 = vec3.copy()
+        self.assertEqual(vec3, vec4)
+        self.assertEqual(len(vec4), 0)
+
     def test_reverse(self):
         vec = self.Vector([1, 2, 3])
         vec.reverse()
         self.assertEqual(vec[0], 3)
         self.assertEqual(vec[1], 2)
         self.assertEqual(vec[2], 1)
+
         vec2 = self.Vector([1, 2, 3, 4])
         vec2.reverse()
         self.assertEqual(vec2[0], 4)
         self.assertEqual(vec2[1], 3)
         self.assertEqual(vec2[2], 2)
         self.assertEqual(vec2[3], 1)
+
+        vec3 = self.Vector([])
+        vec3.reverse()
+        self.assertEqual(vec3, self.Vector([]))
+        self.assertEqual(len(vec3), 0)
 
     def test_add(self):
         vec = self.Vector([1, 2, 3])
@@ -79,12 +101,20 @@ class _TestVectorBase(object):
         with self.assertRaises(ValueError):
             vec + self.Vector([1])
 
+        v2 = self.Vector([])
+        v3 = v2 + self.Vector([])
+        self.assertEqual(v3, self.Vector([]))
+
     def test_iadd_scalar(self):
         vec = self.Vector([1, 2, 3])
         vec += 3
         self.assertEqual(vec[0], 4)
         self.assertEqual(vec[1], 5)
         self.assertEqual(vec[2], 6)
+
+        v2 = self.Vector([])
+        v2 += 3
+        self.assertEqual(v2, self.Vector([]))
 
     def test_iadd_vector(self):
         vec = self.Vector([4, 5, 6])
@@ -93,12 +123,23 @@ class _TestVectorBase(object):
         self.assertEqual(vec[1], 16)
         self.assertEqual(vec[2], 18)
 
+        with self.assertRaises(ValueError):
+            vec += self.Vector([1])
+
+        v2 = self.Vector([])
+        v2 += self.Vector([])
+        self.assertEqual(v2, self.Vector([]))
+
     def test_mul_scalar(self):
         vec = self.Vector([1, 2, 3])
         v2 = vec * 3
         self.assertEqual(v2[0], 3)
         self.assertEqual(v2[1], 6)
         self.assertEqual(v2[2], 9)
+
+        v2 = self.Vector([])
+        v3 = v2 * 3
+        self.assertEqual(v3, self.Vector([]))
 
     def test_mul_vector(self):
         vec = self.Vector([1, 2, 3])
@@ -108,6 +149,10 @@ class _TestVectorBase(object):
         self.assertEqual(v3[1], 12)
         self.assertEqual(v3[2], 27)
 
+        v2 = self.Vector([])
+        v3 = v2 * self.Vector([])
+        self.assertEqual(v3, self.Vector([]))
+
     def test_imul_scalar(self):
         vec = self.Vector([1, 2, 3])
         vec *= 3
@@ -115,14 +160,25 @@ class _TestVectorBase(object):
         self.assertEqual(vec[1], 6)
         self.assertEqual(vec[2], 9)
 
+        v2 = self.Vector([])
+        v2 *= 3
+        self.assertEqual(v2, self.Vector([]))
+
     def test_matmul_vector(self):
         u = self.Vector([4, 5, 6])
         v = self.Vector([1, 2, 3])
         self.assertEqual(u @ v, 1*4 + 2*5 + 3*6)
 
+        x = self.Vector([])
+        y = self.Vector([])
+        self.assertEqual(x @ y, 0)
+
     def test_sum(self):
         vec = self.Vector([1, 2, 3])
         self.assertEqual(vec.sum(), 1 + 2 + 3)
+
+        vec2 = self.Vector([])
+        self.assertEqual(vec2.sum(), 0)
 
     def test_slice(self):
         vec = self.Vector([1, 2, 3, 4])
@@ -152,18 +208,29 @@ class _TestVectorBase(object):
         vec = self.Vector([1, 2, 3])
         self.assertEqual(vec.min(), 1)
 
+        v2 = self.Vector([])
+        self.assertRaises(ValueError, v2.min)
+
     def test_max(self):
         vec = self.Vector([1, 2, 3])
         self.assertEqual(vec.max(), 3)
+
+        v2 = self.Vector([])
+        self.assertRaises(ValueError, v2.max)
 
     def test_argmin(self):
         vec = self.Vector([4, 2, 8])
         self.assertEqual(vec.argmin(), 1)
 
+        v2 = self.Vector([])
+        self.assertRaises(ValueError, v2.argmin)
+
     def test_argmax(self):
         vec = self.Vector([2, 8, 4])
         self.assertEqual(vec.argmax(), 1)
 
+        v2 = self.Vector([])
+        self.assertRaises(ValueError, v2.argmax)
 
 class TestVector(unittest.TestCase):
 
@@ -186,6 +253,9 @@ class TestVectorF(_TestVectorBase, unittest.TestCase):
         vec.normalize()
         self.assertEqual(vec[0], 1/4)
         self.assertEqual(vec[1], 3/4)
+
+        vec2 = self.Vector([])
+        vec2.normalize()
 
     def test_memoryview_tolist(self):
         vec = self.Vector([1, 2, 3])

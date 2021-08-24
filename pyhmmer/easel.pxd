@@ -58,24 +58,24 @@ cdef class Vector:
 cdef class VectorF(Vector):
     cdef float* _data
 
-    cpdef int argmax(self)
-    cpdef int argmin(self)
+    cpdef int argmax(self) except -1
+    cpdef int argmin(self) except -1
     cpdef VectorF copy(self)
-    cpdef float max(self)
-    cpdef float min(self)
-    cpdef void normalize(self)
-    cpdef void reverse(self)
+    cpdef float max(self) except *
+    cpdef float min(self) except *
+    cpdef object normalize(self)
+    cpdef object reverse(self)
     cpdef float sum(self)
 
 cdef class VectorU8(Vector):
     cdef uint8_t* _data
 
-    cpdef int argmax(self)
-    cpdef int argmin(self)
+    cpdef int argmax(self) except -1
+    cpdef int argmin(self) except -1
     cpdef VectorU8 copy(self)
-    cpdef uint8_t max(self)
-    cpdef uint8_t min(self)
-    cpdef void reverse(self)
+    cpdef uint8_t max(self) except *
+    cpdef uint8_t min(self) except *
+    cpdef object reverse(self)
     cpdef uint8_t sum(self)
 
 cdef class Matrix:
