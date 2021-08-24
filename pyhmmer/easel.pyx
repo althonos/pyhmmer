@@ -3170,6 +3170,10 @@ cdef class Randomness:
     def __copy__(self):
         return self.copy()
 
+    def __reduce__(self):
+        state = self.getstate()
+        return Randomness, (state[0], state[1]), state
+
     def __getstate__(self):
         return self.getstate()
 
@@ -3201,10 +3205,6 @@ cdef class Randomness:
 
         """
         assert self._rng != NULL
-        if self._rng == NULL:
-            self._rng = <ESL_RANDOMNESS*> malloc(sizeof(ESL_RANDOMNESS))
-            if self._rng == NULL:
-                raise AllocationError("ESL_RANDOMNESS")
 
         self._rng.seed = state[1]
         if state[0]:
