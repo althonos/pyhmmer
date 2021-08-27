@@ -1489,16 +1489,15 @@ cdef class HMM:
     def __setstate__(self, dict state):
         assert self._hmm != NULL
 
-        cdef int      i
-        cdef int      M         = self._hmm.M
-        cdef int      K         = self._hmm.abc.K
-        cdef MatrixF  t         = state["t"]
-        cdef MatrixF  mat       = state["mat"]
-        cdef MatrixF  ins       = state["ins"]
-        cdef VectorF  evparam   = state["evparam"]
-        cdef VectorF  cutoff    = state["cutoff"]
-        cdef VectorF  compo     = state["compo"]
-        cdef int[::1] map_
+        cdef int        M         = self._hmm.M
+        cdef int        K         = self._hmm.abc.K
+        cdef MatrixF    t         = state["t"]
+        cdef MatrixF    mat       = state["mat"]
+        cdef MatrixF    ins       = state["ins"]
+        cdef float[::1] evparam   = state["evparam"]
+        cdef float[::1] cutoff    = state["cutoff"]
+        cdef float[::1] compo
+        cdef int[::1]   map_
 
         # check the HMM has the right dimensions
         if self._hmm.M != state["M"]:
@@ -1559,15 +1558,22 @@ cdef class HMM:
         self._hmm.offset = state["offset"]
 
         # vector data that must be copied
-        assert self._hmm.ins != NULL
-        assert self._hmm.mat != NULL
-        assert self._hmm.t != NULL
-        memcpy(self._hmm.ins[0],  ins._data[0], (M+1) * K                * sizeof(float))
-        memcpy(self._hmm.mat[0],  mat._data[0], (M+1) * K                * sizeof(float))
-        memcpy(self._hmm.t[0],    t._data[0],   (M+1) * p7H_NTRANSITIONS * sizeof(float))
-        memcpy(self._hmm.evparam, evparam._data,        p7_NEVPARAM      * sizeof(float))
-        memcpy(self._hmm.cutoff,  cutoff._data,         p7_NCUTOFFS      * sizeof(float))
-        memcpy(self._hmm.compo,   compo._data,          K                * sizeof(float))
+        assert self._hmm.ins != NULL and self._hmm.ins[0] != NULL
+        assert self._hmm.mat != NULL and self._hmm.mat[0] != NULL
+        assert self._hmm.t != NULL and self._hmm.t[0] != NULL
+        memcpy(self._hmm.ins[0],  ins._data[0],  (M+1) * K                * sizeof(float))
+        memcpy(self._hmm.mat[0],  mat._data[0],  (M+1) * K                * sizeof(float))
+        memcpy(self._hmm.t[0],    t._data[0],    (M+1) * p7H_NTRANSITIONS * sizeof(float))
+
+        # arrays that must be copied (compo may be None in the stat dictionary)
+        assert evparam.ndim == 1 and evparam.shape[0] == p7_NEVPARAM
+        assert cutoff.ndim == 1 and cutoff.shape[0] == p7_NCUTOFFS
+        memcpy(&self._hmm.evparam[0], &evparam[0], p7_NEVPARAM * sizeof(float))
+        memcpy(&self._hmm.cutoff[0], &cutoff[0], p7_NCUTOFFS * sizeof(float))
+        if self._hmm.flags & libhmmer.p7_hmm.p7H_COMPO:
+            compo = state["compo"]
+            assert compo.ndim == 1 and compo.shape[0] == K
+            memcpy(&self._hmm.cutoff[0], &compo[0], K * sizeof(float))
 
         # copy alignment map only if it is available
         if self._hmm.flags & p7H_MAP == 0:
