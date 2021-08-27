@@ -22,7 +22,7 @@ ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
 cimport cython
 from cpython cimport Py_buffer
 from cpython.bytes cimport PyBytes_FromString, PyBytes_FromStringAndSize
-from cpython.buffer cimport PyBUF_READ, PyBUF_WRITE, PyBUF_FORMAT, PyBuffer_FillContiguousStrides
+from cpython.buffer cimport PyBUF_FORMAT
 from cpython.unicode cimport PyUnicode_DecodeASCII
 from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t
 from libc.stdio cimport fclose
@@ -709,15 +709,7 @@ cdef class Vector:
     def strides(self):
         """`tuple`: The strides of the vector.
         """
-        cdef Py_ssize_t[1] strides
-        PyBuffer_FillContiguousStrides(
-            1,
-            <Py_ssize_t*> &self._shape,
-            <Py_ssize_t*> &strides,
-            self.itemsize,
-            b"C"
-        )
-        return tuple(strides)
+        return (self.itemsize,)
 
     @property
     def itemsize(self):
@@ -963,11 +955,21 @@ cdef class VectorF(Vector):
         buffer.obj = self
         buffer.readonly = 0
         buffer.shape = self._shape
-        buffer.strides = NULL # C-contiguous memory
         buffer.suboffsets = NULL
 
+        IF SYS_IMPLEMENTATION_NAME == "pypy":
+            buffer.internal = malloc(sizeof(Py_ssize_t))
+            if buffer.internal == NULL:
+                raise AllocationError("Py_ssize_t*")
+            buffer.strides = <Py_ssize_t*> buffer.internal
+            buffer.strides[0] = self.strides[0]
+        ELSE:
+            buffer.strides = NULL
+
     def __releasebuffer__(self, Py_buffer* buffer):
-        pass
+        IF SYS_IMPLEMENTATION_NAME == "pypy":
+            free(buffer.internal)
+            buffer.internal = NULL
 
     def __add__(VectorF self, object other):
         assert self._data != NULL or self._n == 0
@@ -1259,11 +1261,21 @@ cdef class VectorU8(Vector):
         buffer.obj = self
         buffer.readonly = 0
         buffer.shape = self._shape
-        buffer.strides = NULL  # C-contiguous memory
         buffer.suboffsets = NULL
 
+        IF SYS_IMPLEMENTATION_NAME == "pypy":
+            buffer.internal = malloc(sizeof(Py_ssize_t))
+            if buffer.internal == NULL:
+                raise AllocationError("Py_ssize_t*")
+            buffer.strides = <Py_ssize_t*> buffer.internal
+            buffer.strides[0] = self.strides[0]
+        ELSE:
+            buffer.strides = NULL
+
     def __releasebuffer__(self, Py_buffer* buffer):
-        pass
+        IF SYS_IMPLEMENTATION_NAME == "pypy":
+            free(buffer.internal)
+            buffer.internal = NULL
 
     def __add__(VectorU8 self, object other):
         assert self._data != NULL or self._n == 0
@@ -1513,15 +1525,7 @@ cdef class Matrix:
     def strides(self):
         """`tuple`: The strides of the matrix.
         """
-        cdef Py_ssize_t[2] strides
-        PyBuffer_FillContiguousStrides(
-            2,
-            <Py_ssize_t*> &self._shape,
-            <Py_ssize_t*> &strides,
-            self.itemsize,
-            b"C"
-        )
-        return tuple(strides)
+        return (self._shape[1] * self.itemsize, self.itemsize)
 
     @property
     def itemsize(self):
@@ -1828,11 +1832,22 @@ cdef class MatrixF(Matrix):
         buffer.obj = self
         buffer.readonly = 0
         buffer.shape = self._shape
-        buffer.strides = NULL # C-contiguous memory
         buffer.suboffsets = NULL
 
+        IF SYS_IMPLEMENTATION_NAME == "pypy":
+            buffer.internal = malloc(2*sizeof(Py_ssize_t))
+            if buffer.internal == NULL:
+                raise AllocationError("Py_ssize_t*")
+            buffer.strides = <Py_ssize_t*> buffer.internal
+            buffer.strides[0] = self.strides[0]
+            buffer.strides[1] = self.strides[1]
+        ELSE:
+            buffer.strides = NULL
+
     def __releasebuffer__(self, Py_buffer* buffer):
-        pass
+        IF SYS_IMPLEMENTATION_NAME == "pypy":
+            free(buffer.internal)
+            buffer.internal = NULL
 
     def __repr__(self):
         cdef VectorF row
@@ -2161,11 +2176,22 @@ cdef class MatrixU8(Matrix):
         buffer.obj = self
         buffer.readonly = 0
         buffer.shape = self._shape
-        buffer.strides = NULL # C-contiguous memory
         buffer.suboffsets = NULL
 
+        IF SYS_IMPLEMENTATION_NAME == "pypy":
+            buffer.internal = malloc(2*sizeof(Py_ssize_t))
+            if buffer.internal == NULL:
+                raise AllocationError("Py_ssize_t*")
+            buffer.strides = <Py_ssize_t*> buffer.internal
+            buffer.strides[0] = self.strides[0]
+            buffer.strides[1] = self.strides[1]
+        ELSE:
+            buffer.strides = NULL
+
     def __releasebuffer__(self, Py_buffer* buffer):
-        pass
+        IF SYS_IMPLEMENTATION_NAME == "pypy":
+            free(buffer.internal)
+            buffer.internal = NULL
 
     def __repr__(self):
         return f"MatrixU8({[list(row) for row in self]!r})"
