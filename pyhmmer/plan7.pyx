@@ -326,7 +326,6 @@ cdef class Background:
         new.residue_frequencies._data = &(new._bg.f[0])
         new.residue_frequencies._owner = new
         new.residue_frequencies._n = new.residue_frequencies._shape[0] = new.alphabet.K
-
         return new
 
 
@@ -1489,21 +1488,21 @@ cdef class HMM:
     def __setstate__(self, dict state):
         assert self._hmm != NULL
 
-        cdef int        M         = self._hmm.M
-        cdef int        K         = self._hmm.abc.K
-        cdef MatrixF    t         = state["t"]
-        cdef MatrixF    mat       = state["mat"]
-        cdef MatrixF    ins       = state["ins"]
-        cdef float[::1] evparam   = state["evparam"]
-        cdef float[::1] cutoff    = state["cutoff"]
-        cdef float[::1] compo
-        cdef int[::1]   map_
+        cdef int                 M         = self._hmm.M
+        cdef int                 K         = self._hmm.abc.K
+        cdef const float[:, ::1] t         = state["t"]
+        cdef const float[:, ::1] mat       = state["mat"]
+        cdef const float[:, ::1] ins       = state["ins"]
+        cdef const float[::1]    evparam   = state["evparam"]
+        cdef const float[::1]    cutoff    = state["cutoff"]
+        cdef const float[::1]    compo
+        cdef const int[::1]      map_
 
         # check the HMM has the right dimensions
         if self._hmm.M != state["M"]:
             raise ValueError(f"HMM has a different node count ({self._hmm.M}, state has {state['M']})")
         if self.alphabet != state["alphabet"]:
-            raise ValueError(f"HMM has a different alphabet ({self.alphabet}, state has {state['alphabet']})")
+            raise AlphabetMismatch(self.alphabet, state["alphabet"])
         self._hmm.flags = state["flags"]
 
         # attributes settable via a property
@@ -1561,9 +1560,12 @@ cdef class HMM:
         assert self._hmm.ins != NULL and self._hmm.ins[0] != NULL
         assert self._hmm.mat != NULL and self._hmm.mat[0] != NULL
         assert self._hmm.t != NULL and self._hmm.t[0] != NULL
-        memcpy(self._hmm.ins[0],  ins._data[0],  (M+1) * K                * sizeof(float))
-        memcpy(self._hmm.mat[0],  mat._data[0],  (M+1) * K                * sizeof(float))
-        memcpy(self._hmm.t[0],    t._data[0],    (M+1) * p7H_NTRANSITIONS * sizeof(float))
+        assert ins.ndim == 2 and ins.shape[0] == M+1 and ins.shape[1] == K
+        assert mat.ndim == 2 and mat.shape[0] == M+1 and mat.shape[1] == K
+        assert t.ndim == 2 and t.shape[0] == M+1 and t.shape[1] == p7H_NTRANSITIONS
+        memcpy(self._hmm.ins[0],  &ins[0][0], (M+1) * K                * sizeof(float))
+        memcpy(self._hmm.mat[0],  &mat[0][0], (M+1) * K                * sizeof(float))
+        memcpy(self._hmm.t[0],    &t[0][0],   (M+1) * p7H_NTRANSITIONS * sizeof(float))
 
         # arrays that must be copied (compo may be None in the stat dictionary)
         assert evparam.ndim == 1 and evparam.shape[0] == p7_NEVPARAM
@@ -1583,13 +1585,13 @@ cdef class HMM:
         else:
             map_ = state["map"]
             if self._hmm.map != NULL:
-                self._hmm.map = <int*> realloc(self._hmm.map, (self._hmm.M + 1) * sizeof(int))
+                self._hmm.map = <int*> realloc(self._hmm.map, (M + 1) * sizeof(int))
             else:
-                self._hmm.map = <int*> calloc(self._hmm.M + 1, sizeof(int))
+                self._hmm.map = <int*> calloc(M + 1, sizeof(int))
             if self._hmm.map == NULL:
                 raise AllocationError("int*")
-            assert map_.ndim == 1 and map_.shape[0] == self._hmm.M + 1
-            memcpy(&self._hmm.map[0], &map_[0], (self._hmm.M + 1) * sizeof(int))
+            assert map_.ndim == 1 and map_.shape[0] == M + 1
+            memcpy(&self._hmm.map[0], &map_[0], (M + 1) * sizeof(int))
 
         return None
 
@@ -1824,7 +1826,6 @@ cdef class HMM:
         cdef MatrixF mat = MatrixF.__new__(MatrixF)
         mat._m = mat._shape[0] = self._hmm.M + 1
         mat._n = mat._shape[1] = libhmmer.p7_hmm.p7H_NTRANSITIONS
-        mat._strides = (sizeof(float), mat._m * sizeof(float))
         mat._owner = self
         mat._data = self._hmm.t
         return mat
@@ -1861,7 +1862,6 @@ cdef class HMM:
         cdef MatrixF mat = MatrixF.__new__(MatrixF)
         mat._m = mat._shape[0] = self._hmm.M + 1
         mat._n = mat._shape[1] = self.alphabet.K
-        mat._strides = (sizeof(float), mat._m * sizeof(float))
         mat._owner = self
         mat._data = self._hmm.mat
         return mat
@@ -1888,7 +1888,6 @@ cdef class HMM:
         cdef MatrixF mat = MatrixF.__new__(MatrixF)
         mat._m = mat._shape[0] = self._hmm.M + 1
         mat._n = mat._shape[1] = self.alphabet.K
-        mat._strides = (sizeof(float), mat._m * sizeof(float))
         mat._owner = self
         mat._data = self._hmm.ins
         return mat
@@ -2531,7 +2530,6 @@ cdef class OptimizedProfile:
         cdef MatrixU8 mat = MatrixU8.__new__(MatrixU8)
         mat._m = mat._shape[0] = self.alphabet.Kp
         mat._n = mat._shape[1] = 16 * nqs
-        mat._strides = (sizeof(uint8_t), mat._m * sizeof(uint8_t))
         mat._owner = self
         mat._data = <uint8_t**> self._om.sbv
         return mat
@@ -2545,7 +2543,6 @@ cdef class OptimizedProfile:
         cdef MatrixU8 mat = MatrixU8.__new__(MatrixU8)
         mat._m = mat._shape[0] = self.alphabet.Kp
         mat._n = mat._shape[1] = 16 * p7O_NQB(self._om.M)
-        mat._strides = (sizeof(uint8_t), mat._m * sizeof(uint8_t))
         mat._owner = self
         mat._data = <uint8_t**> self._om.rbv
         return mat
