@@ -1432,7 +1432,7 @@ cdef class HMM:
     def __reduce__(self):
         return HMM, (self.M, self.alphabet), self.__getstate__()
 
-    def __getstate__(self):
+    cpdef dict __getstate__(self):
         assert self._hmm != NULL
 
         cdef dict   state
@@ -1485,7 +1485,7 @@ cdef class HMM:
 
         return state
 
-    def __setstate__(self, dict state):
+    cpdef object __setstate__(self, dict state):
         assert self._hmm != NULL
 
         cdef int                 M         = self._hmm.M
@@ -1592,8 +1592,6 @@ cdef class HMM:
                 raise AllocationError("int*")
             assert map_.ndim == 1 and map_.shape[0] == M + 1
             memcpy(&self._hmm.map[0], &map_[0], (M + 1) * sizeof(int))
-
-        return None
 
     # --- Properties ---------------------------------------------------------
 
