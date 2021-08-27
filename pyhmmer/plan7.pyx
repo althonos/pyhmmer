@@ -1519,32 +1519,37 @@ cdef class HMM:
             free(self._hmm.rf)
             self._hmm.rf = NULL
         if self._hmm.flags & libhmmer.p7_hmm.p7H_RF:
-            self._hmm.rf = <char*> malloc((self._hmm.M + 2) * sizeof(char))
-            memcpy(self._hmm.rf, <const char*> state["rf"], (self._hmm.M + 2) * sizeof(char))
+            self._hmm.rf = strndup(<const char*> state["rf"], M+2)
+            if self._hmm.rf == NULL:
+                raise AllocationError("char*")
         if self._hmm.mm != NULL:
             free(self._hmm.mm)
             self._hmm.mm = NULL
         if self._hmm.flags & libhmmer.p7_hmm.p7H_MM:
-            self._hmm.mm = <char*> malloc((self._hmm.M + 2) * sizeof(char))
-            memcpy(self._hmm.mm, <const char*> state["mm"], (self._hmm.M + 2) * sizeof(char))
+            self._hmm.mm = strndup(<const char*> state["mm"], M+2)
+            if self._hmm.mm == NULL:
+                raise AllocationError("char*")
         if self._hmm.consensus != NULL:
             free(self._hmm.consensus)
             self._hmm.consensus = NULL
         if self._hmm.flags & libhmmer.p7_hmm.p7H_CONS:
-            self._hmm.consensus = <char*> malloc((self._hmm.M + 2) * sizeof(char))
-            memcpy(self._hmm.consensus, <const char*> state["consensus"], (self._hmm.M + 2) * sizeof(char))
+            self._hmm.consensus = strndup(<const char*> state["consensus"], M+2)
+            if self._hmm.consensus == NULL:
+                raise AllocationError("char*")
         if self._hmm.cs != NULL:
             free(self._hmm.cs)
             self._hmm.cs = NULL
         if self._hmm.flags & libhmmer.p7_hmm.p7H_CS:
-            self._hmm.cs = <char*> malloc((self._hmm.M + 2) * sizeof(char))
-            memcpy(self._hmm.cs, <const char*> state["cs"], (self._hmm.M + 2) * sizeof(char))
+            self._hmm.cs = strndup(<const char*> state["cs"], M+2)
+            if self._hmm.cs == NULL:
+                raise AllocationError("char*")
         if self._hmm.ca != NULL:
             free(self._hmm.ca)
             self._hmm.ca = NULL
         if self._hmm.flags & libhmmer.p7_hmm.p7H_CA:
-            self._hmm.ca = <char*> malloc((self._hmm.M + 2) * sizeof(char))
-            memcpy(self._hmm.ca, <const char*> state["ca"], (self._hmm.M + 2) * sizeof(char))
+            self._hmm.ca = strndup(<const char*> state["ca"], M+2)
+            if self._hmm.ca == NULL:
+                raise AllocationError("char*")
 
         # numerical values that can be set directly on the C struct
         self._hmm.nseq = state["nseq"]
@@ -1554,6 +1559,9 @@ cdef class HMM:
         self._hmm.offset = state["offset"]
 
         # vector data that must be copied
+        assert self._hmm.ins != NULL
+        assert self._hmm.mat != NULL
+        assert self._hmm.t != NULL
         memcpy(self._hmm.ins[0],  ins._data[0], (M+1) * K                * sizeof(float))
         memcpy(self._hmm.mat[0],  mat._data[0], (M+1) * K                * sizeof(float))
         memcpy(self._hmm.t[0],    t._data[0],   (M+1) * p7H_NTRANSITIONS * sizeof(float))
