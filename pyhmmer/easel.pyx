@@ -22,7 +22,7 @@ ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
 cimport cython
 from cpython cimport Py_buffer
 from cpython.bytes cimport PyBytes_FromString, PyBytes_FromStringAndSize
-from cpython.buffer cimport PyBUF_READ, PyBUF_WRITE, PyBUF_FORMAT, PyBUF_F_CONTIGUOUS
+from cpython.buffer cimport PyBUF_READ, PyBUF_WRITE, PyBUF_FORMAT, PyBuffer_FillContiguousStrides
 from cpython.unicode cimport PyUnicode_DecodeASCII
 from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t
 from libc.stdio cimport fclose
@@ -709,7 +709,21 @@ cdef class Vector:
     def strides(self):
         """`tuple`: The strides of the vector.
         """
-        return tuple(self._strides)
+        cdef Py_ssize_t[1] strides
+        PyBuffer_FillContiguousStrides(
+            1,
+            <Py_ssize_t*> &self._shape,
+            <Py_ssize_t*> &strides,
+            self.itemsize,
+            b"C"
+        )
+        return tuple(strides)
+
+    @property
+    def itemsize(self):
+        """`int`: The size of each item in the vector, in bytes.
+        """
+        raise NotImplementedError("Vector.itemsize")
 
     # --- Methods ------------------------------------------------------------
 
@@ -828,7 +842,6 @@ cdef class VectorF(Vector):
 
     def __cinit__(self):
         self._data = NULL
-        self._strides = (sizeof(float),)
 
     def __dealloc__(self):
         if self._owner is None and self._data != NULL:
@@ -846,7 +859,7 @@ cdef class VectorF(Vector):
         # make sure the vector has a positive size
         if n < 0:
             raise ValueError("Cannot create a vector with negative size")
-        # record the vector dimensions
+        # record the vector dimensions and strides
         self._n = self._shape[0] = n
         # NB: this is to maintain compatibility with systems where `malloc`
         #     is not able to allocate zero-sized memory. In such case, it
@@ -950,7 +963,7 @@ cdef class VectorF(Vector):
         buffer.obj = self
         buffer.readonly = 0
         buffer.shape = self._shape
-        buffer.strides = self._strides
+        buffer.strides = NULL # C-contiguous memory
         buffer.suboffsets = NULL
 
     def __releasebuffer__(self, Py_buffer* buffer):
@@ -1031,6 +1044,12 @@ cdef class VectorF(Vector):
 
     def __sizeof__(self):
         return self._n * sizeof(float) + sizeof(self)
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def itemsize(self):
+        return sizeof(float)
 
     # --- Methods ------------------------------------------------------------
 
@@ -1127,7 +1146,6 @@ cdef class VectorU8(Vector):
 
     def __cinit__(self):
         self._data = NULL
-        self._strides = (sizeof(uint8_t),)
 
     def __dealloc__(self):
         if self._owner is None and self._data != NULL:
@@ -1241,7 +1259,7 @@ cdef class VectorU8(Vector):
         buffer.obj = self
         buffer.readonly = 0
         buffer.shape = self._shape
-        buffer.strides = self._strides
+        buffer.strides = NULL  # C-contiguous memory
         buffer.suboffsets = NULL
 
     def __releasebuffer__(self, Py_buffer* buffer):
@@ -1324,6 +1342,12 @@ cdef class VectorU8(Vector):
 
     def __sizeof__(self):
         return self._n * sizeof(uint8_t) + sizeof(self)
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def itemsize(self):
+        return sizeof(uint8_t)
 
     # --- Methods ------------------------------------------------------------
 
@@ -1489,7 +1513,21 @@ cdef class Matrix:
     def strides(self):
         """`tuple`: The strides of the matrix.
         """
-        return tuple(self._strides)
+        cdef Py_ssize_t[2] strides
+        PyBuffer_FillContiguousStrides(
+            2,
+            <Py_ssize_t*> &self._shape,
+            <Py_ssize_t*> &strides,
+            self.itemsize,
+            b"C"
+        )
+        return tuple(strides)
+
+    @property
+    def itemsize(self):
+        """`int`: The size of each item in the matrix, in bytes.
+        """
+        raise NotImplementedError("Matrix.itemsize")
 
     # --- Methods ------------------------------------------------------------
 
@@ -1565,7 +1603,6 @@ cdef class MatrixF(Matrix):
         mat = MatrixF.__new__(MatrixF)
         mat._m = mat._shape[0] = m
         mat._n = mat._shape[1] = n
-        mat._strides = (sizeof(float), mat._m * sizeof(float))
 
         # allocate the array of pointers
         mat._data    = <float**> calloc(m, sizeof(float*))
@@ -1588,7 +1625,6 @@ cdef class MatrixF(Matrix):
 
     def __cinit__(self):
         self._data = NULL
-        self._strides = (sizeof(float), self._n * sizeof(float))
 
     def __dealloc__(self):
         if self._owner is None and self._data != NULL:
@@ -1617,8 +1653,6 @@ cdef class MatrixF(Matrix):
         if self._n < 0:
             raise ValueError("Cannot create a matrix with a negative number of rows")
 
-        # mark the strides
-        self._strides = (self._m * sizeof(float), sizeof(float))
         # allocate the buffer
         if self._m > 0 and self._n > 0:
             self._data = libeasel.matrixops.esl_mat_FCreate(self._m, self._n)
@@ -1739,7 +1773,6 @@ cdef class MatrixF(Matrix):
             new._owner = self
             new._m = new._shape[0] = stop - start
             new._n = new._shape[1] = self._n
-            new._strides = self._strides
             new._data = &(self._data[start])
             return new
 
@@ -1795,7 +1828,7 @@ cdef class MatrixF(Matrix):
         buffer.obj = self
         buffer.readonly = 0
         buffer.shape = self._shape
-        buffer.strides = self._strides
+        buffer.strides = NULL # C-contiguous memory
         buffer.suboffsets = NULL
 
     def __releasebuffer__(self, Py_buffer* buffer):
@@ -1811,6 +1844,12 @@ cdef class MatrixF(Matrix):
           + self._m * self._n * sizeof(float)
           + sizeof(self)
         )
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def itemsize(self):
+        return sizeof(float)
 
     # --- Methods ------------------------------------------------------------
 
@@ -1846,7 +1885,6 @@ cdef class MatrixF(Matrix):
         cdef MatrixF mat = MatrixF.__new__(MatrixF)
         mat._m = mat._shape[0] = self._m
         mat._n = mat._shape[1] = self._n
-        mat._strides = self._strides
         with nogil:
             mat._data = libeasel.matrixops.esl_mat_FClone(self._data, self._m, self._n)
         if mat._data == NULL:
@@ -1889,7 +1927,6 @@ cdef class MatrixU8(Matrix):
         mat = MatrixU8.__new__(MatrixU8)
         mat._m = mat._shape[0] = m
         mat._n = mat._shape[1] = n
-        mat._strides = (sizeof(uint8_t), mat._m * sizeof(uint8_t))
 
         # allocate the array of pointers
         mat._data    = <uint8_t**> calloc(m, sizeof(uint8_t*))
@@ -1913,7 +1950,6 @@ cdef class MatrixU8(Matrix):
 
     def __cinit__(self):
         self._data = NULL
-        self._strides = (sizeof(uint8_t), self._n * sizeof(uint8_t))
 
     def __dealloc__(self):
         if self._owner is None and self._data != NULL:
@@ -1942,8 +1978,6 @@ cdef class MatrixU8(Matrix):
         if self._n < 0:
             raise ValueError("Cannot create a matrix with a negative number of rows")
 
-        # mark the strides
-        self._strides = (self._m * sizeof(uint8_t), sizeof(uint8_t))
         # allocate the buffer
         self._data    = <uint8_t**> calloc(self._m, sizeof(uint8_t*))
         if self._data == NULL:
@@ -2072,7 +2106,6 @@ cdef class MatrixU8(Matrix):
             new._owner = self
             new._m = new._shape[0] = stop - start
             new._n = new._shape[1] = self._n
-            new._strides = self._strides
             new._data = &(self._data[start])
             return new
 
@@ -2128,7 +2161,7 @@ cdef class MatrixU8(Matrix):
         buffer.obj = self
         buffer.readonly = 0
         buffer.shape = self._shape
-        buffer.strides = self._strides
+        buffer.strides = NULL # C-contiguous memory
         buffer.suboffsets = NULL
 
     def __releasebuffer__(self, Py_buffer* buffer):
@@ -2143,6 +2176,12 @@ cdef class MatrixU8(Matrix):
           + self._m * self._n * sizeof(uint8_t)
           + sizeof(self)
         )
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def itemsize(self):
+        return sizeof(uint8_t)
 
     # --- Methods ------------------------------------------------------------
 
@@ -2184,7 +2223,6 @@ cdef class MatrixU8(Matrix):
         cdef MatrixU8 mat = MatrixU8.__new__(MatrixU8)
         mat._m = mat._shape[0] = self._m
         mat._n = mat._shape[1] = self._n
-        mat._strides = self._strides
 
         with nogil:
             # allocate array of pointers

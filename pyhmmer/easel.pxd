@@ -53,7 +53,6 @@ cdef class Vector:
     cdef object _owner
     cdef int _n
     cdef readonly Py_ssize_t _shape[1]
-    cdef readonly Py_ssize_t _strides[1]
 
 cdef class VectorF(Vector):
     cdef float* _data
@@ -83,7 +82,6 @@ cdef class Matrix:
     cdef int _n
     cdef int _m
     cdef readonly Py_ssize_t _shape[2]
-    cdef readonly Py_ssize_t _strides[2]
 
 cdef class MatrixF(Matrix):
     cdef float** _data
