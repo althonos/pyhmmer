@@ -21,6 +21,7 @@ ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
 
 cimport cython
 from cpython cimport Py_buffer
+from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.bytes cimport PyBytes_FromString, PyBytes_FromStringAndSize
 from cpython.buffer cimport PyBUF_FORMAT
 from cpython.unicode cimport PyUnicode_DecodeASCII
@@ -721,10 +722,18 @@ cdef class Vector:
 
     def argmax(self):
         """Return index of the maximum element in the vector.
+
+        Raises:
+            `ValueError`: When called on an empty vector.
+
         """
 
     def argmin(self):
         """Return index of the minimum element in the vector.
+
+        Raises:
+            `ValueError`: When called on an empty vector.
+
         """
 
     def copy(self):
@@ -733,10 +742,18 @@ cdef class Vector:
 
     def max(self):
         """Return value of the maximum element in the vector.
+
+        Raises:
+            `ValueError`: When called on an empty vector.
+
         """
 
     def min(self):
         """Return value of the minimum element in the vector.
+
+        Raises:
+            `ValueError`: When called on an empty vector.
+
         """
 
     def reverse(self):
@@ -958,7 +975,7 @@ cdef class VectorF(Vector):
         buffer.suboffsets = NULL
 
         IF SYS_IMPLEMENTATION_NAME == "pypy":
-            buffer.internal = malloc(sizeof(Py_ssize_t))
+            buffer.internal = PyMem_Malloc(sizeof(Py_ssize_t))
             if buffer.internal == NULL:
                 raise AllocationError("Py_ssize_t*")
             buffer.strides = <Py_ssize_t*> buffer.internal
@@ -968,7 +985,7 @@ cdef class VectorF(Vector):
 
     def __releasebuffer__(self, Py_buffer* buffer):
         IF SYS_IMPLEMENTATION_NAME == "pypy":
-            free(buffer.internal)
+            PyMem_Free(buffer.internal)
             buffer.internal = NULL
 
     def __add__(VectorF self, object other):
@@ -1264,7 +1281,7 @@ cdef class VectorU8(Vector):
         buffer.suboffsets = NULL
 
         IF SYS_IMPLEMENTATION_NAME == "pypy":
-            buffer.internal = malloc(sizeof(Py_ssize_t))
+            buffer.internal = PyMem_Malloc(sizeof(Py_ssize_t))
             if buffer.internal == NULL:
                 raise AllocationError("Py_ssize_t*")
             buffer.strides = <Py_ssize_t*> buffer.internal
@@ -1274,7 +1291,7 @@ cdef class VectorU8(Vector):
 
     def __releasebuffer__(self, Py_buffer* buffer):
         IF SYS_IMPLEMENTATION_NAME == "pypy":
-            free(buffer.internal)
+            PyMem_Free(buffer.internal)
             buffer.internal = NULL
 
     def __add__(VectorU8 self, object other):
@@ -1537,10 +1554,18 @@ cdef class Matrix:
 
     def argmax(self):
         """Return the coordinates of the maximum element in the matrix.
+
+        Raises:
+            `ValueError`: When called on an empty matrix.
+
         """
 
     def argmin(self):
         """Return the coordinates of the minimum element in the matrix.
+
+        Raises:
+            `ValueError`: When called on an empty matrix.
+
         """
 
     def copy(self):
@@ -1549,10 +1574,18 @@ cdef class Matrix:
 
     def max(self):
         """Return the value of the maximum element in the matrix.
+
+        Raises:
+            `ValueError`: When called on an empty matrix.
+
         """
 
     def min(self):
         """Return the value of the minimum element in the matrix.
+
+        Raises:
+            `ValueError`: When called on an empty matrix.
+
         """
 
     def sum(self):
@@ -1835,7 +1868,7 @@ cdef class MatrixF(Matrix):
         buffer.suboffsets = NULL
 
         IF SYS_IMPLEMENTATION_NAME == "pypy":
-            buffer.internal = malloc(2*sizeof(Py_ssize_t))
+            buffer.internal = PyMem_Malloc(2*sizeof(Py_ssize_t))
             if buffer.internal == NULL:
                 raise AllocationError("Py_ssize_t*")
             buffer.strides = <Py_ssize_t*> buffer.internal
@@ -1846,7 +1879,7 @@ cdef class MatrixF(Matrix):
 
     def __releasebuffer__(self, Py_buffer* buffer):
         IF SYS_IMPLEMENTATION_NAME == "pypy":
-            free(buffer.internal)
+            PyMem_Free(buffer.internal)
             buffer.internal = NULL
 
     def __repr__(self):
@@ -2179,7 +2212,7 @@ cdef class MatrixU8(Matrix):
         buffer.suboffsets = NULL
 
         IF SYS_IMPLEMENTATION_NAME == "pypy":
-            buffer.internal = malloc(2*sizeof(Py_ssize_t))
+            buffer.internal = PyMem_Malloc(2*sizeof(Py_ssize_t))
             if buffer.internal == NULL:
                 raise AllocationError("Py_ssize_t*")
             buffer.strides = <Py_ssize_t*> buffer.internal
@@ -2190,7 +2223,7 @@ cdef class MatrixU8(Matrix):
 
     def __releasebuffer__(self, Py_buffer* buffer):
         IF SYS_IMPLEMENTATION_NAME == "pypy":
-            free(buffer.internal)
+            PyMem_Free(buffer.internal)
             buffer.internal = NULL
 
     def __repr__(self):
