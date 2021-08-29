@@ -50,13 +50,12 @@ cdef class KeyHash:
 # --- Matrix & Vector --------------------------------------------------------
 
 cdef class Vector:
-    cdef object _owner
-    cdef int _n
+    cdef object              _owner
+    cdef int                 _n
     cdef readonly Py_ssize_t _shape[1]
+    cdef void*               _data
 
 cdef class VectorF(Vector):
-    cdef float* _data
-
     cpdef int argmax(self) except -1
     cpdef int argmin(self) except -1
     cpdef VectorF copy(self)
@@ -67,8 +66,6 @@ cdef class VectorF(Vector):
     cpdef float sum(self)
 
 cdef class VectorU8(Vector):
-    cdef uint8_t* _data
-
     cpdef int argmax(self) except -1
     cpdef int argmin(self) except -1
     cpdef VectorU8 copy(self)
