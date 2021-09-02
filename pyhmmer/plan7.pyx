@@ -2771,7 +2771,7 @@ cdef class Pipeline:
 
     M_HINT = 100         # default model size
     L_HINT = 100         # default sequence size
-    LONG_TARGETS = False
+    LONG_TARGETS = False # always False for now
 
     # --- Magic methods ------------------------------------------------------
 
@@ -2817,9 +2817,9 @@ cdef class Pipeline:
 
         Keyword Arguments:
             bias_filter (`bool`): Whether or not to enable composition bias
-                filter. Defaults to ``True``.
+                filter. Defaults to `True`.
             null2 (`bool`): Whether or not to compute biased composition score
-                corrections. Defaults to ``True``.
+                corrections. Defaults to `True`.
             seed (`int`, optional): The seed to use with the random number
                 generator. Pass *0* to use a one-time arbitrary seed, or
                 `None` to keep the default seed from HMMER.
@@ -2840,6 +2840,13 @@ cdef class Pipeline:
                 a hit in the resulting `TopHits`.
             incdomE (`float`): The per-domain E-value threshold for including
                 a domain in the resulting `TopHits`.
+
+        Hint:
+            In order to run the pipeline in slow/max mode, disable the bias
+            filter, and set the three filtering parameters to :math:`1.0`::
+
+                >>> dna = easel.Alphabet.dna()
+                >>> max_pli = Pipeline(dna, bias_filter=False, F1=1.0, F2=1.0, F3=1.0)
 
         .. versionchanged:: 0.4.6
            Added keywords arguments to set the E-value thresholds.
@@ -3110,6 +3117,8 @@ cdef class Pipeline:
         Reset the pipeline configuration to its default state.
 
         """
+        assert self._pli != NULL
+
         cdef int      status
         cdef uint32_t seed
 
@@ -3126,105 +3135,6 @@ cdef class Pipeline:
         self.randomness._seed(self._seed)
         # reinitialize the domaindef
         libhmmer.p7_domaindef.p7_domaindef_Reuse(self._pli.ddef)
-
-        # # not needed
-        # self._pli.do_alignment_score_calc = 0
-        # self._pli.long_targets = self.LONG_TARGETS
-
-        # # Configure reporting thresholds
-        # self._pli.by_E            = True
-        # self._pli.E               = 10.0
-        # self._pli.T               = 0.0
-        # self._pli.dom_by_E        = True
-        # self._pli.domE            = 10.0
-        # self._pli.domT            = 0.0
-        # self._pli.use_bit_cutoffs = False
-        # if (go && esl_opt_IsOn(go, "-T"))
-        #   {
-        #     pli->T    = esl_opt_GetReal(go, "-T");
-        #     pli->by_E = FALSE;
-        #   }
-        # if (go && esl_opt_IsOn(go, "--domT"))
-        #   {
-        #     pli->domT     = esl_opt_GetReal(go, "--domT");
-        #     pli->dom_by_E = FALSE;
-        #   }
-
-        # # Configure inclusion thresholds
-        # self._pli.inc_by_E           = True
-        # self._pli.incE               = 0.01
-        # self._pli.incT               = 0.0
-        # self._pli.incdom_by_E        = True
-        # self._pli.incdomE            = 0.01
-        # self._pli.incdomT            = 0.0
-        # if (go && esl_opt_IsOn(go, "--incT"))
-        #   {
-        #     pli->incT     = esl_opt_GetReal(go, "--incT");
-        #     pli->inc_by_E = FALSE;
-        #   }
-        # if (go && esl_opt_IsOn(go, "--incdomT"))
-        #   {
-        #     pli->incdomT     = esl_opt_GetReal(go, "--incdomT");
-        #     pli->incdom_by_E = FALSE;
-        #   }
-
-        # # Configure for one of the model-specific thresholding options
-        # if (go && esl_opt_GetBoolean(go, "--cut_ga"))
-        #   {
-        #     pli->T        = pli->domT        = 0.0;
-        #     pli->by_E     = pli->dom_by_E    = FALSE;
-        #     pli->incT     = pli->incdomT     = 0.0;
-        #     pli->inc_by_E = pli->incdom_by_E = FALSE;
-        #     pli->use_bit_cutoffs = p7H_GA;
-        #   }
-        # if (go && esl_opt_GetBoolean(go, "--cut_nc"))
-        #   {
-        #     pli->T        = pli->domT        = 0.0;
-        #     pli->by_E     = pli->dom_by_E    = FALSE;
-        #     pli->incT     = pli->incdomT     = 0.0;
-        #     pli->inc_by_E = pli->incdom_by_E = FALSE;
-        #     pli->use_bit_cutoffs = p7H_NC;
-        #   }
-        # if (go && esl_opt_GetBoolean(go, "--cut_tc"))
-        #   {
-        #     pli->T        = pli->domT        = 0.0;
-        #     pli->by_E     = pli->dom_by_E    = FALSE;
-        #     pli->incT     = pli->incdomT     = 0.0;
-        #     pli->inc_by_E = pli->incdom_by_E = FALSE;
-        #     pli->use_bit_cutoffs = p7H_TC;
-        #   }
-
-        # # Configure search space sizes for E value calculations
-        # self._pli.Z       = self._pli.domZ       = 0.0
-        # self._pli.Z_setby = self._pli.domZ_setby = p7_zsetby_e.p7_ZSETBY_NTARGETS
-        # if (go && esl_opt_IsOn(go, "-Z"))
-        #   {
-        #     pli->Z_setby = p7_ZSETBY_OPTION;
-        #     pli->Z       = esl_opt_GetReal(go, "-Z");
-        #   }
-        # if (go && esl_opt_IsOn(go, "--domZ"))
-        #   {
-        #     pli->domZ_setby = p7_ZSETBY_OPTION;
-        #     pli->domZ       = esl_opt_GetReal(go, "--domZ");
-        #   }
-
-        # # Configure acceleration pipeline thresholds
-        # self._pli.do_max      = False
-        # if self._pli.long_targets:
-        #     self._pli.B1     = 100
-        #     self._pli.B2     = 240
-        #     self._pli.B3     = 1000
-        # else:
-        #     self._pli.B1 = self._pli.B2 = self._pli.B3 = -1
-
-        # if (go && esl_opt_GetBoolean(go, "--max"))
-        #   {
-        #     pli->do_max        = TRUE;
-        #     pli->do_biasfilter = FALSE;
-        #
-        #     pli->F2 = pli->F3 = 1.0;
-        #     pli->F1 = (pli->long_targets ? 0.3 : 1.0); // need to set some threshold for F1 even on long targets. Should this be tighter?
-        #   }
 
         # Reset accounting values
         self._pli.nmodels         = 0
@@ -3573,7 +3483,7 @@ cdef class Pipeline:
             libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
 
             # advance to next sequence
-            sq = &(sq[1])
+            sq += 1 #&(sq[1])
 
         # Return 0 to indicate success
         return 0
