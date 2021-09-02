@@ -2797,8 +2797,12 @@ cdef class Pipeline:
         double F1=0.02,
         double F2=1e-3,
         double F3=1e-5,
+        double E=10.0,
+        double domE=10.0,
+        double incE=0.01,
+        double incdomE=0.01
     ):
-        """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None)\n--
+        """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None, F1=0.02, F2=1e-3, F3=1e-5, E=10.0, domE=10.0, incE=0.01, incdomE=0.01)\n--
 
         Instantiate and configure a new accelerated comparison pipeline.
 
@@ -2828,6 +2832,17 @@ cdef class Pipeline:
             F1 (`float`): The MSV filter threshold.
             F2 (`float`): The Viterbi filter threshold.
             F3 (`float`): The uncorrected Forward filter threshold.
+            E (`float`): The per-target E-value threshold for reporting
+                a hit.
+            domE (`float`): The per-domain E-value threshold for reporting
+                a domain hit.
+            incE (`float`): The per-target E-value threshold for including
+                a hit in the resulting `TopHits`.
+            incdomE (`float`): The per-domain E-value threshold for including
+                a domain in the resulting `TopHits`.
+
+        .. versionchanged:: 0.4.6
+           Added keywords arguments to set the E-value thresholds.
 
         """
         # extract default parameters from the class attributes
@@ -2874,6 +2889,10 @@ cdef class Pipeline:
         self.F1 = F1
         self.F2 = F2
         self.F3 = F3
+        self.E = E
+        self.domE = domE
+        self.incE = incE
+        self.incdomE = incdomE
 
     def __dealloc__(self):
         libhmmer.p7_pipeline.p7_pipeline_Destroy(self._pli)
@@ -3023,6 +3042,66 @@ cdef class Pipeline:
         assert self._pli != NULL
         self._pli.F3 = F3
 
+    @property
+    def E(self):
+        """`float`: The per-target E-value threshold for reporting a hit.
+
+        .. versionadded:: 0.4.6
+
+        """
+        assert self._pli != NULL
+        return self._pli.E
+
+    @E.setter
+    def E(self, double E):
+        assert self._pli != NULL
+        self._pli.E = E
+
+    @property
+    def domE(self):
+        """`float`: The per-domain E-value threshold for reporting a hit.
+
+        .. versionadded:: 0.4.6
+
+        """
+        assert self._pli != NULL
+        return self._pli.domE
+
+    @domE.setter
+    def domE(self, double domE):
+        assert self._pli != NULL
+        self._pli.domE = domE
+
+    @property
+    def incE(self):
+        """`float`: The per-target E-value threshold for including a hit.
+
+        .. versionadded:: 0.4.6
+
+        """
+        assert self._pli != NULL
+        return self._pli.incE
+
+    @incE.setter
+    def incE(self, double incE):
+        assert self._pli != NULL
+        self._pli.incE = incE
+
+    @property
+    def incdomE(self):
+        """`float`: The per-domain E-value threshold for including a hit.
+
+        .. versionadded:: 0.4.6
+
+        """
+        assert self._pli != NULL
+        return self._pli.incdomE
+
+    @incdomE.setter
+    def incdomE(self, double incdomE):
+        assert self._pli != NULL
+        self._pli.incdomE = incdomE
+
     # --- Methods ------------------------------------------------------------
 
     cpdef void clear(self):
@@ -3164,8 +3243,6 @@ cdef class Pipeline:
         self._pli.pos_output      = 0
         self._pli.strands         = 0
         self._pli.W               = 0
-        #self._pli.show_accessions = True  #(go && esl_opt_GetBoolean(go, "--acc")   ? TRUE  : FALSE);
-        #self._pli.show_alignments = False #(go && esl_opt_GetBoolean(go, "--noali") ? FALSE : TRUE);
         self._pli.hfp             = NULL
         self._pli.errbuf[0]       = b'\0'
 
