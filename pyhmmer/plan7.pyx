@@ -1866,10 +1866,15 @@ cdef class HMM:
         per node (plus one extra row for the entry probabilities), and one
         column per transition.
 
-        Columns indices correspond to the following: 0 for :math:`M_n \to M_{n+1}``,
-        1 for :math:`M_n \to I_{n+1}`, 2 for :math:`M_n \to M_{n+1}`,
-        3 for :math:`I_n \to M_{n+1}`, 4 for :math:`I_n \to I_{n+1}`,
-        5 for :math:`D_n \to D_{n+1}`, 6 for :math:`D_n \to D_{n+1}`.
+        Columns indices correspond to the following transitions weights:
+
+        - 0 for :math:`M_n \to M_{n+1}`
+        - 1 for :math:`M_n \to I_{n+1}`
+        - 2 for :math:`M_n \to D_{n+1}`
+        - 3 for :math:`I_n \to M_{n+1}`
+        - 4 for :math:`I_n \to I_{n+1}`
+        - 5 for :math:`D_n \to M_{n+1}`
+        - 6 for :math:`D_n \to D_{n+1}`
 
         Example:
             >>> t = thioesterase.transition_probabilities
@@ -2193,8 +2198,8 @@ cdef class HMM:
                 scaling). Often computed using the ratio of effective
                 sequences (:math:`\\frac{n_{eff}}{n_{seq}}`)
             exponential (`bool`): When set to `True`, use ``scale`` as an
-                exponential factor (:math:`C_i = C_i \exp{s}`) instead of
-                a multiplicative factor (:math: `C_i = C_i \\times s`),
+                exponential factor (:math:`C_i = C_i^s`) instead of
+                a multiplicative factor (:math:`C_i = C_i \\times s`),
                 resulting in a non-uniform scaling across columns. This
                 can be useful when some heavily fragmented sequences are
                 used to reconstruct a family MSA.
@@ -2270,7 +2275,7 @@ cdef class HMMFile:
                 containing the HMMs to read, or a file-like object opened in
                 binary-mode.
             db (`bool`): Set to `False` to force the parser to ignore the
-                pressed HMM database if it finds one. Defaults to `False`.
+                pressed HMM database if it finds one. Defaults to `True`.
 
         """
         cdef int       status
