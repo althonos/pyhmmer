@@ -158,11 +158,12 @@ cdef class _Offsets:
 
 
 cdef class Pipeline:
-    cdef          object     _Z       # either `Z` as an int, or `None`
-    cdef          object     _domZ    # either `domZ` as an int, or `None`
-    cdef          uint32_t   _seed    # the seed passed at pipeline initialization
-    cdef          void**     _refs    # the array to pass the references to the C code
-    cdef          ssize_t    _nref    # the total size of `self._refs`
+    cdef          object     _Z            # either `Z` as an int, or `None`
+    cdef          object     _domZ         # either `domZ` as an int, or `None`
+    cdef          uint32_t   _seed         # the seed passed at pipeline initialization
+    cdef          void**     _refs         # the array to pass the references to the C code
+    cdef          ssize_t    _nref         # the total size of `self._refs`
+    cdef          dict       _cutoff_save  # a local save of the reporting parameters
 
     cdef readonly Alphabet         alphabet
     cdef readonly Background       background
@@ -173,6 +174,8 @@ cdef class Pipeline:
     cdef OptimizedProfile _optimized
     cdef P7_PIPELINE* _pli
 
+    cdef int _save_cutoff_parameters(self) except 1
+    cdef int _restore_cutoff_parameters(self) except 1
     cpdef void    clear(self)
     cpdef TopHits search_hmm(self, HMM query, object seqs)
     cpdef TopHits search_msa(self, DigitalMSA query, object seqs, Builder builder = ?)

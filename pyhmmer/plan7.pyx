@@ -495,7 +495,7 @@ cdef class Builder:
                     self._bld.prior = libhmmer.p7_prior.p7_prior_CreateNucleic()
                 else:
                     self._bld.prior = libhmmer.p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
-            elif prior_scheme != "alphabet":
+            else:
                 raise ValueError("Invalid value for 'prior_scheme': {prior_scheme}")
 
         # set the probability using alphabet-specific defaults or given values
@@ -2773,6 +2773,12 @@ cdef class Pipeline:
     L_HINT = 100         # default sequence size
     LONG_TARGETS = False # always False for now
 
+    _BIT_CUTOFFS = {
+        "gathering": libhmmer.p7_hmm.p7H_GA,
+        "noise": libhmmer.p7_hmm.p7H_NC,
+        "trusted": libhmmer.p7_hmm.p7H_TC,
+    }
+
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
@@ -2800,7 +2806,8 @@ cdef class Pipeline:
         double E=10.0,
         double domE=10.0,
         double incE=0.01,
-        double incdomE=0.01
+        double incdomE=0.01,
+        str bit_cutoffs=None,
     ):
         """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None, F1=0.02, F2=1e-3, F3=1e-5, E=10.0, domE=10.0, incE=0.01, incdomE=0.01)\n--
 
@@ -2840,6 +2847,11 @@ cdef class Pipeline:
                 a hit in the resulting `TopHits`.
             incdomE (`float`): The per-domain E-value threshold for including
                 a domain in the resulting `TopHits`.
+            bit_cutoffs (`str`, optional): The model-specific thresholding
+                option to use for reporting hits. With `None` (the default),
+                use global pipeline options; otherwise pass one of
+                ``"noise"``, ``"gathering"`` or ``"trusted"`` to use the
+                appropriate cutoffs.
 
         Hint:
             In order to run the pipeline in slow/max mode, disable the bias
@@ -2900,6 +2912,10 @@ cdef class Pipeline:
         self.domE = domE
         self.incE = incE
         self.incdomE = incdomE
+
+        # setup the model-specific reporting cutoffs
+        self._save_cutoff_parameters()
+        self.bit_cutoffs = bit_cutoffs
 
     def __dealloc__(self):
         libhmmer.p7_pipeline.p7_pipeline_Destroy(self._pli)
@@ -3109,7 +3125,67 @@ cdef class Pipeline:
         assert self._pli != NULL
         self._pli.incdomE = incdomE
 
+    @property
+    def bit_cutoffs(self):
+        """`str` or `None`: The model-specific thresholding option, if any.
+
+        .. versionadded:: 0.4.6
+
+        """
+        assert self._pli != NULL
+        return next(
+            (k for k,v in self._BIT_CUTOFFS.items() if v == self._pli.use_bit_cutoffs),
+            None
+        )
+
+    @bit_cutoffs.setter
+    def bit_cutoffs(self, str bit_cutoffs):
+        assert self._pli == NULL
+        if bit_cutoffs is not None:
+            #
+            flag = self._BIT_CUTOFFS.get(bit_cutoffs)
+            if flag is None:
+                raise ValueError(f"invalid bit cutoff: {bit_cutoffs}")
+            self._pli.use_bit_cutoffs = flag
+            # save previous values before overwriting
+            self._save_cutoff_parameters()
+            # disable thresholding by E and T values
+            self._pli.T = self._pli.domT = 0.0
+            self._pli.by_E = self._pli.dom_by_E = False
+            self._pli.incT = self._pli.incdomT = 0.0
+            self._pli.inc_by_E = self._pli.incdom_by_E = False
+        else:
+            # disable bit cutoffs
+            self._pli.use_bit_cutoffs = False
+            # restore previous configuration
+            self._restore_cutoff_parameters()
+
     # --- Methods ------------------------------------------------------------
+
+    cdef int _save_cutoff_parameters(self) except 1:
+        assert self._pli != NULL
+        self._cutoff_save = {
+            "T": self._pli.T,
+            "domT": self._pli.domT,
+            "by_E": self._pli.by_E,
+            "dom_by_E": self._pli.dom_by_E,
+            "incT": self._pli.incT,
+            "incdomT": self._pli.incdomT,
+            "inc_by_E": self._pli.inc_by_E,
+            "incdom_by_E": self._pli.incdom_by_E,
+        }
+        return 0
+
+    cdef int _restore_cutoff_parameters(self) except 1:
+        assert self._pli != NULL
+        self._pli.T = self._cutoff_save['T']
+        self._pli.domT = self._cutoff_save['domT']
+        self._pli.by_E = self._cutoff_save['by_E']
+        self._pli.dom_by_E = self._cutoff_save['dom_by_E']
+        self._pli.incT = self._cutoff_save['incT']
+        self._pli.incdomT = self._cutoff_save['incdomT']
+        self._pli.inc_by_E = self._cutoff_save['inc_by_E']
+        self._pli.incdom_by_E = self._cutoff_save['incdom_by_E']
 
     cpdef void clear(self):
         """clear(self)\n--

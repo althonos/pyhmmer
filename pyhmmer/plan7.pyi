@@ -5,6 +5,11 @@ import os
 import types
 import typing
 
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
+
 from .easel import (
     Alphabet,
     Sequence,
@@ -16,6 +21,14 @@ from .easel import (
     VectorU8,
     MatrixU8,
 )
+
+CUTOFFS = Literal["gathering", "trusted", "noise"]
+SORT_KEY = Literal["key", "seqidx"]
+ARCHITECTURE = Literal["fast", "hand"]
+WEIGHTING = Literal["pb", "gsc", "blosum", "none", "given"]
+EFFECTIVE = Literal["entropy", "exp", "clust", "none"]
+PRIOR_SCHEME = Literal["laplace", "alphabet"]
+
 
 class Alignment(collections.abc.Sized):
     domain: Domain
@@ -61,14 +74,20 @@ class Background(object):
 class Builder(object):
     alphabet: Alphabet
     randomness: Randomness
+    architecture: ARCHITECTURE
+    weighting: WEIGHTING
+    effective_number: typing.Union[EFFECTIVE, int, float]
+    prior_scheme: typing.Optional[PRIOR_SCHEME]
+    popen: float
+    pextend: float
     def __init__(
         self,
         alphabet: Alphabet,
         *,
-        architecture: str = "fast",
-        weighting: str = "pb",
-        effective_number: typing.Union[str, int, float] = "entropy",
-        prior_scheme: typing.Optional[str] = "alphabet",
+        architecture: ARCHITECTURE = "fast",
+        weighting: WEIGHTING = "pb",
+        effective_number: typing.Union[EFFECTIVE, int, float] = "entropy",
+        prior_scheme: typing.Optional[PRIOR_SCHEME] = "alphabet",
         symfrac: float = 0.5,
         fragthresh: float = 0.5,
         wid: float = 0.62,
@@ -87,6 +106,10 @@ class Builder(object):
         pextend: typing.Optional[float] = None,
     ) -> None: ...
     def __copy__(self) -> Builder: ...
+    @property
+    def seed(self) -> int: ...
+    @seed.setter
+    def seed(self, seed: int) -> None: ...
     def build(
         self,
         sequence: DigitalSequence,
@@ -353,6 +376,7 @@ class Pipeline(object):
         domE: float = 10.0,
         incE: float = 0.01,
         incdomE: float = 0.01,
+        bit_cutoffs: typing.Optional[BIT_CUTOFFS] = None,
     ) -> None: ...
     @property
     def Z(self) -> typing.Optional[float]: ...
@@ -398,6 +422,10 @@ class Pipeline(object):
     def incdomE(self) -> float: ...
     @incdomE.setter
     def incdomE(self, incdomE: float) -> None: ...
+    @property
+    def bit_cutoffs(self) -> typing.Optional[BIT_CUTOFFS]: ...
+    @bit_cutoffs.setter
+    def bit_cutoffs(self, bit_cutoffs: typing.Optional[BIT_CUTOFFS]) -> None: ...
     def clear(self) -> None: ...
     def search_hmm(
         self,
@@ -467,8 +495,8 @@ class TopHits(typing.Sequence[Hit]):
     @typing.overload
     def __getitem__(self, index: slice) -> typing.Sequence[Hit]: ...
     def __iadd__(self, other: TopHits) -> TopHits: ...
-    def sort(self, by: str = "key") -> None: ...
-    def is_sorted(self, by: str = "key") -> bool: ...
+    def sort(self, by: SORT_KEY = "key") -> None: ...
+    def is_sorted(self, by: SORT_KEY = "key") -> bool: ...
     def to_msa(
         self,
         alphabet: Alphabet,
