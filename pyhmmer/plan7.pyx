@@ -934,7 +934,7 @@ cdef class Cutoffs:
             return (self._flags[0] & p7H_NC) != 0
 
     cpdef VectorF as_vector(self):
-        """as_vector(self)\n --
+        """as_vector(self)\n--
 
         Return a view over the score cutoffs as a `~VectorF`.
 
