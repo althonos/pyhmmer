@@ -105,3 +105,25 @@ Alignment
 .. autoclass:: pyhmmer.plan7.Alignment
    :special-members: __init__
    :members:
+
+
+Miscellaneous
+-------------
+
+Cutoffs
+^^^^^^^
+
+.. autoclass:: pyhmmer.plan7.Cutoffs
+   :members:
+
+EvalueParameters
+^^^^^^^^^^^^^^^^
+
+.. autoclass:: pyhmmer.plan7.EvalueParameters
+   :members:
+
+Offsets
+^^^^^^^
+
+.. autoclass:: pyhmmer.plan7.Offsets
+   :members:

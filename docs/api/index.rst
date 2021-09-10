@@ -139,6 +139,17 @@ API Reference
         pyhmmer.plan7.Alignment
 
 
+    Miscellaneous
+    ^^^^^^^^^^^^^
+
+    .. autosummary::
+        :nosignatures:
+
+        pyhmmer.plan7.Cutoffs
+        pyhmmer.plan7.EvalueParameters
+        pyhmmer.plan7.Offsets
+
+
     Errors
     ------
 

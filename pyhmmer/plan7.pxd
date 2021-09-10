@@ -67,7 +67,7 @@ cdef class Builder:
     cpdef Builder copy(self)
 
 
-cdef class _Cutoffs:
+cdef class Cutoffs:
     cdef object              _owner
     cdef int*                _flags
     cdef bint                _is_profile
@@ -89,7 +89,7 @@ cdef class Domains:
     cdef readonly Hit hit
 
 
-cdef class _EvalueParameters:
+cdef class EvalueParameters:
     cdef object              _owner
     cdef float[p7_NEVPARAM]* _evparams
 
@@ -114,8 +114,8 @@ cdef class HMM:
     # a reference to the Alphabet Python object to avoid deallocation of the
     # inner ESL_ALPHABET; the Python object provides reference counting for free
     cdef readonly Alphabet          alphabet
-    cdef readonly _EvalueParameters evalue_parameters
-    cdef readonly _Cutoffs          cutoffs
+    cdef readonly EvalueParameters evalue_parameters
+    cdef readonly Cutoffs          cutoffs
 
     cpdef dict __getstate__(self)
     cpdef object __setstate__(self, dict state)
@@ -140,7 +140,7 @@ cdef class HMMFile:
 cdef class OptimizedProfile:
     cdef P7_OPROFILE* _om
     cdef readonly Alphabet alphabet
-    cdef readonly _Offsets offsets
+    cdef readonly Offsets offsets
 
     cpdef OptimizedProfile copy(self)
     cpdef bint is_local(self)
@@ -152,7 +152,7 @@ cdef class OptimizedProfile:
     cpdef object ssv_filter(self, DigitalSequence seq)
 
 
-cdef class _Offsets:
+cdef class Offsets:
     cdef object              _owner
     cdef off_t[p7_NOFFSETS]* _offs
 
@@ -204,9 +204,9 @@ cdef class Pipeline:
 cdef class Profile:
     cdef P7_PROFILE* _gm
     cdef readonly Alphabet          alphabet
-    cdef readonly _Offsets          offsets
-    cdef readonly _Cutoffs          cutoffs
-    cdef readonly _EvalueParameters evalue_parameters
+    cdef readonly Offsets          offsets
+    cdef readonly Cutoffs          cutoffs
+    cdef readonly EvalueParameters evalue_parameters
 
     cdef int _clear(self) nogil except 1
     cdef int _configure(self, HMM hmm, Background background, int L, bint multihit=*, bint local=*) nogil except 1

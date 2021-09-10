@@ -651,12 +651,12 @@ cdef class Builder:
             raise UnexpectedError(status, "p7_SingleBuilder")
 
         # setup attributes
-        hmm.evalue_parameters = _EvalueParameters(hmm)
-        hmm.cutoffs = _Cutoffs(hmm)
-        profile.offsets = _Offsets(profile)
-        profile.evalue_parameters = _EvalueParameters(profile)
-        profile.cutoffs = _Cutoffs(profile)
-        opti.offsets = _Offsets(opti)
+        hmm.evalue_parameters = EvalueParameters(hmm)
+        hmm.cutoffs = Cutoffs(hmm)
+        profile.offsets = Offsets(profile)
+        profile.evalue_parameters = EvalueParameters(profile)
+        profile.cutoffs = Cutoffs(profile)
+        opti.offsets = Offsets(opti)
         # return newly built HMM, profile and optimized profile
         return hmm, profile, opti
 
@@ -744,12 +744,12 @@ cdef class Builder:
             raise UnexpectedError(status, "p7_Builder")
 
         # setup attributes
-        hmm.evalue_parameters = _EvalueParameters(hmm)
-        hmm.cutoffs = _Cutoffs(hmm)
-        profile.offsets = _Offsets(profile)
-        profile.evalue_parameters = _EvalueParameters(profile)
-        profile.cutoffs = _Cutoffs(profile)
-        opti.offsets = _Offsets(opti)
+        hmm.evalue_parameters = EvalueParameters(hmm)
+        hmm.cutoffs = Cutoffs(hmm)
+        profile.offsets = Offsets(profile)
+        profile.evalue_parameters = EvalueParameters(profile)
+        profile.cutoffs = Cutoffs(profile)
+        opti.offsets = Offsets(opti)
         # return newly built HMM, profile and optimized profile
         return hmm, profile, opti
 
@@ -785,7 +785,7 @@ cdef class Builder:
         )
 
 
-cdef class _Cutoffs:
+cdef class Cutoffs:
     """A read-only view over the Pfam score cutoffs of a `HMM` or a `Profile`.
 
     .. versionadded:: 0.4.6
@@ -817,8 +817,8 @@ cdef class _Cutoffs:
             raise TypeError("expected Profile or HMM, found {ty}")
 
     def __copy__(self):
-        cdef _Cutoffs c
-        c = _Cutoffs.__new__(_Cutoffs)
+        cdef Cutoffs c
+        c = Cutoffs.__new__(Cutoffs)
         c._owner = self._owner
         c._cutoffs = self._cutoffs
         c._flags = self._flags
@@ -832,7 +832,7 @@ cdef class _Cutoffs:
         )
 
     def __eq__(self, object other):
-        if isinstance(other, _Cutoffs):
+        if isinstance(other, Cutoffs):
             return self.as_vector() == other.as_vector()
         return NotImplemented
 
@@ -1063,7 +1063,7 @@ cdef class Domains:
         return Domain(self.hit, <size_t> index)
 
 
-cdef class _EvalueParameters:
+cdef class EvalueParameters:
     """A mutable view over the e-value parameters of a `HMM` or a `Profile`.
 
     The e-value for each filter is estimated based off a maximum likelihood
@@ -1094,8 +1094,8 @@ cdef class _EvalueParameters:
             raise TypeError("expected Profile or HMM, found {ty}")
 
     def __copy__(self):
-        cdef _EvalueParameters ev
-        ev = _EvalueParameters.__new__(_EvalueParameters)
+        cdef EvalueParameters ev
+        ev = EvalueParameters.__new__(EvalueParameters)
         ev._owner = self._owner
         ev._evparams = self._evparams
         return ev
@@ -1107,7 +1107,7 @@ cdef class _EvalueParameters:
         )
 
     def __eq__(self, object other):
-        if isinstance(other, _EvalueParameters):
+        if isinstance(other, EvalueParameters):
             return self.as_vector() == other.as_vector()
         return NotImplemented
 
@@ -1385,9 +1385,9 @@ cdef class HMM:
 
     Attributes:
         alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
-        evalue_parameters (`~pyhmmer.plan7._EvalueParameters`): The e-value
+        evalue_parameters (`~pyhmmer.plan7.EvalueParameters`): The e-value
             parameters for this HMM.
-        cutoffs (`~pyhmmer.plan7._Cutoffs`): The Pfam score cutoffs for this
+        cutoffs (`~pyhmmer.plan7.Cutoffs`): The Pfam score cutoffs for this
             HMM, if any.
 
     .. versionchanged:: 0.4.6
@@ -1428,11 +1428,11 @@ cdef class HMM:
             raise UnexpectedError(status, "p7_hmm_SetConsensus")
         self._hmm.flags &= ~libhmmer.p7_hmm.p7H_CONS
         # expose the e-value parameters as the `evalue_parameters` attribute
-        self.evalue_parameters = _EvalueParameters.__new__(_EvalueParameters)
+        self.evalue_parameters = EvalueParameters.__new__(EvalueParameters)
         self.evalue_parameters._evparams = &self._hmm.evparam
         self.evalue_parameters._owner = self
         # expose the score cutoffs as the `cutoffs` attribute
-        self.cutoffs = _Cutoffs.__new__(_Cutoffs)
+        self.cutoffs = Cutoffs.__new__(Cutoffs)
         self.cutoffs._cutoffs = &self._hmm.cutoff
         self.cutoffs._flags = &self._hmm.flags
         self.cutoffs._is_profile = False
@@ -2160,8 +2160,8 @@ cdef class HMM:
 
         cdef HMM new = HMM.__new__(HMM)
         new.alphabet = self.alphabet
-        new.evalue_parameters = _EvalueParameters(new)
-        new.cutoffs = _Cutoffs(new)
+        new.evalue_parameters = EvalueParameters(new)
+        new.cutoffs = Cutoffs(new)
 
         with nogil:
             new._hmm = libhmmer.p7_hmm.p7_hmm_Clone(self._hmm)
@@ -2336,8 +2336,8 @@ cdef class HMMFile:
             py_hmm = HMM.__new__(HMM)
             py_hmm.alphabet = self._alphabet # keep a reference to the alphabet
             py_hmm._hmm = hmm
-            py_hmm.evalue_parameters = _EvalueParameters(py_hmm)
-            py_hmm.cutoffs = _Cutoffs(py_hmm)
+            py_hmm.evalue_parameters = EvalueParameters(py_hmm)
+            py_hmm.cutoffs = Cutoffs(py_hmm)
             return py_hmm
         elif status == libeasel.eslEOF:
             raise StopIteration()
@@ -2473,7 +2473,7 @@ cdef class OptimizedProfile:
     Attributes:
         alphabet (`~pyhmmer.easel.Alphabet`): The alphabet for which this
             optimized profile is configured.
-        offsets (`~pyhmmer.plan7._Offsets`): The disk offsets for this
+        offsets (`~pyhmmer.plan7.Offsets`): The disk offsets for this
             optimized profile, if it was loaded from a pressed HMM file.
 
     """
@@ -2508,7 +2508,7 @@ cdef class OptimizedProfile:
         if self._om == NULL:
             raise AllocationError("P7_OPROFILE")
         # expose the disk offsets as the `offsets` attribute
-        self.offsets = _Offsets.__new__(_Offsets)
+        self.offsets = Offsets.__new__(Offsets)
         self.offsets._offs = &self._om.offs
         self.offsets._owner = self
 
@@ -2646,7 +2646,7 @@ cdef class OptimizedProfile:
         assert self._om != NULL
         cdef OptimizedProfile new = OptimizedProfile.__new__(OptimizedProfile)
         new.alphabet = self.alphabet
-        new.offsets = _Offsets(new)
+        new.offsets = Offsets(new)
         with nogil:
             new._om = p7_oprofile.p7_oprofile_Clone(self._om)
         if new._om == NULL:
@@ -2767,7 +2767,7 @@ cdef class OptimizedProfile:
             raise NotImplementedError("p7_SSVFilter is not available on VMX platforms")
 
 
-cdef class _Offsets:
+cdef class Offsets:
     """A mutable view over the disk offsets of a profile.
     """
 
@@ -2790,7 +2790,7 @@ cdef class _Offsets:
 
     def __copy__(self):
         assert self._offs != NULL
-        cdef _Offsets copy = _Offsets.__new__(_Offsets)
+        cdef Offsets copy = Offsets.__new__(Offsets)
         copy._offs = self._offs
         copy._owner = self._owner
         return copy
@@ -3826,11 +3826,11 @@ cdef class Profile:
     Attributes:
         alphabet (`~pyhmmer.easel.Alphabet`): The alphabet for which this
             profile was configured.
-        offsets (`~pyhmmer.plan7._Offsets`): The disk offsets for this
+        offsets (`~pyhmmer.plan7.Offsets`): The disk offsets for this
             profile, if it was loaded from a pressed HMM file.
-        evalue_parameters (`~pyhmmer.plan7._EvalueParameters`): The e-value
+        evalue_parameters (`~pyhmmer.plan7.EvalueParameters`): The e-value
             parameters for this profile.
-        cutoffs (`~pyhmmer.plan7._Cutoffs`): The Pfam score cutoffs for this
+        cutoffs (`~pyhmmer.plan7.Cutoffs`): The Pfam score cutoffs for this
             profile, if any.
 
     .. versionchanged:: 0.4.6
@@ -3866,15 +3866,15 @@ cdef class Profile:
         if not self._gm:
             raise AllocationError("P7_PROFILE")
         # expose the disk offsets as the `offsets` attribute
-        self.offsets = _Offsets.__new__(_Offsets)
+        self.offsets = Offsets.__new__(Offsets)
         self.offsets._offs = &self._gm.offs
         self.offsets._owner = self
         # expose the e-value parameters as the `evalue_parameters` attribute
-        self.evalue_parameters = _EvalueParameters.__new__(_EvalueParameters)
+        self.evalue_parameters = EvalueParameters.__new__(EvalueParameters)
         self.evalue_parameters._evparams = &self._gm.evparam
         self.evalue_parameters._owner = self
         # expose the score cutoffs as the `cutoffs` attribute
-        self.cutoffs = _Cutoffs.__new__(_Cutoffs)
+        self.cutoffs = Cutoffs.__new__(Cutoffs)
         self.cutoffs._cutoffs = &self._gm.cutoff
         self.cutoffs._flags = NULL
         self.cutoffs._is_profile = True
@@ -4055,9 +4055,9 @@ cdef class Profile:
         cdef int status
         cdef Profile new = Profile.__new__(Profile)
         new.alphabet = self.alphabet
-        new.offsets = _Offsets(new)
-        new.evalue_parameters = _EvalueParameters(new)
-        new.cutoffs = _Cutoffs(new)
+        new.offsets = Offsets(new)
+        new.evalue_parameters = EvalueParameters(new)
+        new.cutoffs = Cutoffs(new)
 
         # allocate a new profile
         with nogil:
