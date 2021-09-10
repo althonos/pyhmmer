@@ -6,7 +6,33 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.5...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.6...HEAD
+
+
+## [v0.4.6] - 2021-09-10
+[v0.4.6]: https://github.com/althonos/pyhmmer/compare/v0.4.5...v0.4.6
+
+### Added
+- `pickle` protocol for `easel.Alphabet`, `easel.Bitfield`, `easel.KeyHash`, `easel.Vector`, `easel.Matrix` and `plan7.HMM`.
+- `taxonomy_id` and `residue_markups` properties to `easel.Sequence`.
+- `sum_score` property to `plan7.Hit`.
+- `plan7.EvalueParameters` class to expose the e-value parameters of a `plan7.HMM` or a `plan7.Profile`.
+- Equality checks and slicing for `easel.Matrix` and `easel.Vector`.
+- Support for creating and manipulating zero-sized `easel` matrices and vectors.
+- `plan7.Cutoffs` class to expose the Pfam score cutoffs of a `plan7.HMM` or a `plan7.Profile`.
+- Keyword arguments to configure E-value thresholds when creating a `plan7.Pipeline` object.
+- Support for using model-specific thresholding options in `plan7.Pipeline`.
+
+### Changed
+- Use the *replace* error handler when decoding error messages to skip potential decoding issues when already building an exception.
+- Improve `pyhmmer.hmmer` to ensure background threads exit on a `KeyboardInterrupt`.
+- `easel.VectorU8.__eq__` accepts any object implementing the buffer protocol.
+- `plan7.HMM.creation_time` now takes and returns a `datetime.datetime` object, assuming the field is only ever set with `asctime`.
+- Refactor `easel.Vector` and `easel.Matrix` and mark exposed memory as C-contiguous.
+
+### Fixed
+- `easel.Alphabet` not reporting potential allocation errors.
+- Potential buffer overflow in `easel.Matrix` and `easel.Vector` when calling `__init__` more than once.
 
 
 ## [v0.4.5] - 2021-07-19
