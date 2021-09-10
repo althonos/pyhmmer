@@ -8,7 +8,7 @@ import typing
 try:
     from typing import Literal
 except ImportError:
-    from typing_extensions import Literal
+    from typing_extensions import Literal  # type: ignore
 
 from .easel import (
     Alphabet,
@@ -22,7 +22,7 @@ from .easel import (
     MatrixU8,
 )
 
-CUTOFFS = Literal["gathering", "trusted", "noise"]
+BIT_CUTOFFS = Literal["gathering", "trusted", "noise"]
 SORT_KEY = Literal["key", "seqidx"]
 ARCHITECTURE = Literal["fast", "hand"]
 WEIGHTING = Literal["pb", "gsc", "blosum", "none", "given"]

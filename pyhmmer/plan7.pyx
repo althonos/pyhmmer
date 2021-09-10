@@ -405,15 +405,48 @@ cdef class Builder:
                 expects the sequences to be in.
 
         Keyword Arguments:
+            architecture (`str`): The algorithm to use to determine the
+                model architecture, either ``"fast"`` (the default), or
+                ``"hand"``.
+            weighting (`str`): The algorithm to use for relative sequence
+                weighting, either ``"pb"`` (the default), ``"gsc"``,
+                ``"blosum"``, ``"none"``, or ``"given"``.
+            effective_number (`str`, `int`, or `float`): The algorithm to
+                use to determine the effective sequence number, either
+                ``"entropy"`` (the default), ``"exp"``, ``"clust"``, ``"none"``.
+                A number can also be given directly to set the effective
+                sequence number manually.
+            prior_scheme (`str`): The choice of mixture Dirichlet prior when
+                parameterizing  from counts, either ``"laplace"`` (the default)
+                or ``"alphabet"``.
+            symfrac (`float`): The residue occurrence threshold for fast
+                architecture determination.
+            fragthresh (`float`): A threshold such that a sequence is called
+                a fragment when :math:`L \\le fragthresh \times alen`.
+            wid (`double`): The percent identity threshold for BLOSUM relative
+                weighting.
+            esigma (`float`): The minimum total relative entropy parameter
+                for effective number entropy weights.
+            eid (`float`): The percent identity threshold for effective
+                number clustering.
+            EmL (`int`): The length of sequences generated for MSV fitting.
+            EmN (`int`): The number of sequences generated for MSV fitting.
+            EvL (`int`): The lenght of sequences generated for Viterbi fitting.
+            EvN (`int`): The number of sequences generated for Viterbi fitting.
+            EfL (`int`): The lenght of sequences generated for Forward fitting.
+            EfN (`int`): The number of sequences generated for Forward fitting.
+            Eft (`float`): The tail mass used for Forward fitting.
+            seed (`int`): The seed to use to initialize the internal random
+                number generator. If ``0`` is given, an arbitrary seed will
+                be chosen based on the current time.
+            ere (`double`, optional): The relative entropy target for effective
+                number weighting, or `None`.
             popen (`float`): The *gap open* probability to use with the score
                 system. Default depends on the alphabet: *0.02* for proteins,
                 *0.03125* for nucleotides.
             pextend (`float`): The *gap extend* probability to use with the
                 score system. Default depends on the alphabet: *0.4* for
                 proteins, *0.75* for nucleotides.
-            seed (`int`): The seed to use to initialize the internal random
-                number generator. If ``0`` is given, an arbitrary seed will
-                be chosen based on the current time.
 
         """
         # extract alphabet and create raw P7_BUILDER object
@@ -478,8 +511,7 @@ cdef class Builder:
             raise TypeError(f"Invalid type for 'effective_number': {ty}")
 
         # set the RE target if given one
-        if ere is not None:
-            self._bld.re_target = ere
+        self._bld.re_target = -1 if ere is None else ere
 
         # set the prior scheme
         self.prior_scheme = prior_scheme
@@ -808,7 +840,7 @@ cdef class _Cutoffs:
 
     @property
     def gathering1(self):
-        r"""`float` or `None`: The first gathering threshold, if any.
+        """`float` or `None`: The first gathering threshold, if any.
         """
         if self.gathering_available():
             return self._cutoffs[0][<int> p7_cutoffs_e.p7_GA1]
@@ -816,7 +848,7 @@ cdef class _Cutoffs:
 
     @property
     def gathering2(self):
-        r"""`float` or `None`: The second gathering threshold, if any.
+        """`float` or `None`: The second gathering threshold, if any.
         """
         if self.gathering_available():
             return self._cutoffs[0][<int> p7_cutoffs_e.p7_GA2]
@@ -824,7 +856,7 @@ cdef class _Cutoffs:
 
     @property
     def trusted1(self):
-        r"""`float` or `None`: The first trusted score cutoff, if any.
+        """`float` or `None`: The first trusted score cutoff, if any.
         """
         if self.trusted_available():
             return self._cutoffs[0][<int> p7_cutoffs_e.p7_TC1]
@@ -832,7 +864,7 @@ cdef class _Cutoffs:
 
     @property
     def trusted2(self):
-        r"""`float` or `None`: The second trusted score cutoff, if any.
+        """`float` or `None`: The second trusted score cutoff, if any.
         """
         if self.trusted_available():
             return self._cutoffs[0][<int> p7_cutoffs_e.p7_TC2]
@@ -840,7 +872,7 @@ cdef class _Cutoffs:
 
     @property
     def noise1(self):
-        r"""`float` or `None`: The first noise cutoff, if any.
+        """`float` or `None`: The first noise cutoff, if any.
         """
         if self.noise_available():
             return self._cutoffs[0][<int> p7_cutoffs_e.p7_NC1]
@@ -848,7 +880,7 @@ cdef class _Cutoffs:
 
     @property
     def noise2(self):
-        r"""`float` or `None`: The second noise cutoff, if any.
+        """`float` or `None`: The second noise cutoff, if any.
         """
         if self.noise_available():
             return self._cutoffs[0][<int> p7_cutoffs_e.p7_NC2]
@@ -857,7 +889,10 @@ cdef class _Cutoffs:
     # --- Methods ------------------------------------------------------------
 
     cpdef bint gathering_available(self):
-        """Check whether the gathering thresholds are available.
+        """gathering_available(self)\n--
+
+        Check whether the gathering thresholds are available.
+
         """
         assert self._cutoffs != NULL
         if self._is_profile:
@@ -869,7 +904,10 @@ cdef class _Cutoffs:
             return (self._flags[0] & p7H_GA) != 0
 
     cpdef bint trusted_available(self):
-        """Check whether the trusted cutoffs are available.
+        """trusted_available(self)\n--
+
+        Check whether the trusted cutoffs are available.
+
         """
         assert self._cutoffs != NULL
         if self._is_profile:
@@ -881,7 +919,10 @@ cdef class _Cutoffs:
             return (self._flags[0] & p7H_TC) != 0
 
     cpdef bint noise_available(self):
-        """Check whether the noise cutoffs are available.
+        """noise_available(self)\n--
+
+        Check whether the noise cutoffs are available.
+
         """
         assert self._cutoffs != NULL
         if self._is_profile:
@@ -893,7 +934,10 @@ cdef class _Cutoffs:
             return (self._flags[0] & p7H_NC) != 0
 
     cpdef VectorF as_vector(self):
-        """Return a view over the score cutoffs as a `~VectorF`.
+        """as_vector(self)\n --
+
+        Return a view over the score cutoffs as a `~VectorF`.
+
         """
         assert self._cutoffs != NULL
 
@@ -927,11 +971,15 @@ cdef class Domain:
 
     @property
     def env_from(self):
+        """`int`: The start coordinate of the domain envelope.
+        """
         assert self._dom != NULL
         return self._dom.ienv
 
     @property
     def env_to(self):
+        """`int`: The end coordinate of the domain envelope.
+        """
         assert self._dom != NULL
         return self._dom.jenv
 
@@ -1164,7 +1212,10 @@ cdef class _EvalueParameters:
     # --- Methods ------------------------------------------------------------
 
     cpdef VectorF as_vector(self):
-        """Return a view over the e-value parameters as a `~VectorF`.
+        """as_vector(self)\n--
+
+        Return a view over the e-value parameters as a `~VectorF`.
+
         """
         assert self._evparams != NULL
 
@@ -1288,18 +1339,43 @@ cdef class Hit:
     # --- Methods ------------------------------------------------------------
 
     cpdef bint is_included(self):
+        """is_included(self)\n--
+
+        Check if the hit should be included with respect to the thresholds.
+
+        """
         return self._hit.flags & p7_hitflags_e.p7_IS_INCLUDED != 0
 
     cpdef bint is_reported(self):
+        """is_reported(self)\n--
+
+        Check if the hit should be reported with respect to the thresholds.
+
+        """
         return self._hit.flags & p7_hitflags_e.p7_IS_REPORTED != 0
 
     cpdef bint is_new(self):
+        """is_new(self)\n--
+
+        Check if the hit is a new hit.
+
+        """
         return self._hit.flags & p7_hitflags_e.p7_IS_NEW != 0
 
     cpdef bint is_dropped(self):
+        """is_dropped(self)\n--
+
+        Check if the hit was dropped.
+
+        """
         return self._hit.flags & p7_hitflags_e.p7_IS_DROPPED != 0
 
     cpdef bint is_duplicate(self):
+        """is_duplicate(self)\n--
+
+        Check if the hit is a duplicate.
+
+        """
         return self._hit.flags & p7_hitflags_e.p7_IS_DUPLICATE
 
 
@@ -2634,7 +2710,7 @@ cdef class OptimizedProfile:
             raise UnexpectedError(status, "p7_oprofile_Convert")
 
     cpdef object ssv_filter(self, DigitalSequence seq):
-        r"""ssv_filter(self, seq)\n--
+        """ssv_filter(self, seq)\n--
 
         Compute the SSV filter score for the given sequence.
 
@@ -2647,7 +2723,7 @@ cdef class OptimizedProfile:
         Note:
             * `math.inf` may be returned if an overflow occurs that will also
               occur in the MSV filter. This is the case whenever
-              :math:`\text{base} - \text{tjb} - \text{tbm} \ge 128`
+              :math:`\\text{base} - \\text{tjb} - \\text{tbm} \\ge 128`
             * `None` may be returned if the MSV filter score needs to be
               recomputed (because it may not overflow even though the SSV
               filter did).
@@ -2727,29 +2803,35 @@ cdef class _Offsets:
 
     @property
     def model(self):
+        assert self._offs != NULL
         cdef off_t model = self._offs[0][<int> p7_offsets_e.p7_MOFFSET]
         return None if model == -1 else model
 
     @model.setter
     def model(self, object model):
+        assert self._offs != NULL
         self._offs[0][<int> p7_offsets_e.p7_MOFFSET] = -1 if model is None else model
 
     @property
     def filter(self):
+        assert self._offs != NULL
         cdef off_t filter = self._offs[0][<int> p7_offsets_e.p7_FOFFSET]
         return None if filter == -1 else filter
 
     @filter.setter
     def filter(self, object filter):
+        assert self._offs != NULL
         self._offs[0][<int> p7_offsets_e.p7_FOFFSET] = -1 if filter is None else filter
 
     @property
     def profile(self):
+        assert self._offs != NULL
         cdef off_t profile = self._offs[0][<int> p7_offsets_e.p7_POFFSET]
         return None if profile == -1 else profile
 
     @profile.setter
     def profile(self, object profile):
+        assert self._offs != NULL
         self._offs[0][<int> p7_offsets_e.p7_MOFFSET] = -1 if profile is None else profile
 
 
@@ -2809,7 +2891,7 @@ cdef class Pipeline:
         double incdomE=0.01,
         str bit_cutoffs=None,
     ):
-        """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None, F1=0.02, F2=1e-3, F3=1e-5, E=10.0, domE=10.0, incE=0.01, incdomE=0.01)\n--
+        """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None, F1=0.02, F2=1e-3, F3=1e-5, E=10.0, domE=10.0, incE=0.01, incdomE=0.01, bit_cutoffs=None)\n--
 
         Instantiate and configure a new accelerated comparison pipeline.
 
@@ -3247,6 +3329,9 @@ cdef class Pipeline:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
 
         Raises:
+            `ValueError`: When the pipeline is configured to use model-specific
+                reporting thresholds but the `HMM` query doesn't have the right
+                cutoffs available.
             `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
                 current pipeline does not match the alphabet of the given
                 HMM.
