@@ -3222,7 +3222,7 @@ cdef class Pipeline:
 
     @bit_cutoffs.setter
     def bit_cutoffs(self, str bit_cutoffs):
-        assert self._pli == NULL
+        assert self._pli != NULL
         if bit_cutoffs is not None:
             #
             flag = self._BIT_CUTOFFS.get(bit_cutoffs)
