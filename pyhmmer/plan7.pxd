@@ -245,6 +245,9 @@ cdef class Traces:
 
 
 cdef class TraceAligner:
+    cdef ESL_SQ** _seqs
+    cdef size_t   _nseq
+
     cpdef Traces compute_traces(self, HMM hmm, object sequences)
     cpdef MSA align_traces(
         self,

@@ -22,7 +22,7 @@ from libc.math cimport exp, ceil
 from libc.stdlib cimport calloc, malloc, realloc, free
 from libc.stdint cimport uint8_t, uint32_t
 from libc.stdio cimport fprintf, FILE, stdout, fclose
-from libc.string cimport strdup, strndup, strlen, strncpy
+from libc.string cimport memset, strdup, strndup, strlen, strncpy
 from libc.time cimport ctime, strftime, time, time_t, tm, localtime_r
 from unicode cimport PyUnicode_DATA, PyUnicode_KIND, PyUnicode_READ, PyUnicode_READY, PyUnicode_GET_LENGTH
 
@@ -4424,7 +4424,7 @@ cdef class Traces:
 
         if idx < 0:
             idx += self.N
-        if idx >= self._N or idx < 0:
+        if idx >= <ssize_t> self._N or idx < 0:
             raise IndexError("list index out of range")
 
         trace = Trace.__new__(Trace)
@@ -4449,10 +4449,11 @@ cdef class TraceAligner:
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
-        pass
+        self._seqs = NULL
+        self._nseq = 0
 
-    def __init__(self):
-        pass
+    def __dealloc__(self):
+        free(self._seqs)
 
     # --- Methods ------------------------------------------------------------
 
@@ -4475,12 +4476,11 @@ cdef class TraceAligner:
                 of the sequences does not correspond to the HMM alphabet.
 
         """
-        cdef ESL_SQ**        seq_array
-        cdef Trace           trace
-        cdef Traces          traces    = Traces()
+        cdef int             status
         cdef ssize_t         i
         cdef DigitalSequence seq
-        cdef int             status
+        cdef Trace           trace
+        cdef Traces          traces    = Traces()
         cdef ssize_t         nseq      = len(sequences)
 
         if nseq < 0:
@@ -4498,20 +4498,23 @@ cdef class TraceAligner:
             if traces._traces[i] == NULL:
                 raise AllocationError("P7_TRACE*")
 
-        # allocate the temporary array of sequences and check alphabets
-        seq_array = <ESL_SQ**> calloc(nseq, sizeof(ESL_SQ*))
-        if seq_array == NULL:
-            raise AllocationError("ESL_SQ**")
+        # reallocate the array of sequence pointers if needed
+        if <size_t> nseq > self._nseq:
+            self._nseq = nseq
+            self._seqs = <ESL_SQ**> realloc(self._seqs, nseq * sizeof(ESL_SQ*))
+            if self._seqs == NULL:
+                raise AllocationError("ESL_SQ**")
+        # store sequence pointers and check alphabets
         for i, seq in enumerate(sequences):
             if seq.alphabet != hmm.alphabet:
                 raise AlphabetMismatch(hmm.alphabet, seq.alphabet)
-            seq_array[i] = seq._sq
+            self._seqs[i] = seq._sq
 
         # compute the traces
         with nogil:
             status = libhmmer.tracealign.p7_tracealign_computeTraces(
                 hmm._hmm,
-                seq_array,
+                self._seqs,
                 0,
                 nseq,
                 traces._traces
@@ -4519,9 +4522,9 @@ cdef class TraceAligner:
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tracealign_computeTraces")
 
-        # free the array of sequences (but not the pointers, they are owned
+        # clear the array of sequences (but not the pointers, they are owned
         # by the DigitalSequence objects) and return the array of traces
-        free(seq_array)
+        memset(self._seqs, 0, self._nseq * sizeof(ESL_SQ*))
         return traces
 
     cpdef MSA align_traces(
@@ -4566,12 +4569,10 @@ cdef class TraceAligner:
                 of the sequences does not correspond to the HMM alphabet.
 
         """
-        cdef MSA             msa
-        cdef ESL_SQ**        seq_array
-        cdef Trace           trace
+        cdef int             status
         cdef size_t          i
         cdef DigitalSequence seq
-        cdef int             status
+        cdef MSA             msa
         cdef ssize_t         nseq      = len(sequences)
         cdef ssize_t         ntr       = len(traces)
         cdef int             flags     = 0
@@ -4595,19 +4596,22 @@ cdef class TraceAligner:
         elif nseq == 0:
             return msa
 
-        # allocate the temporary array of sequences and check alphabets
-        seq_array = <ESL_SQ**> calloc(nseq, sizeof(ESL_SQ*))
-        if seq_array == NULL:
-            raise AllocationError("ESL_SQ**")
+        # reallocate the array of sequence pointers if needed
+        if <size_t> nseq > self._nseq:
+            self._nseq = nseq
+            self._seqs = <ESL_SQ**> realloc(self._seqs, nseq * sizeof(ESL_SQ*))
+            if self._seqs == NULL:
+                raise AllocationError("ESL_SQ**")
+        # store sequence pointers and check alphabets
         for i, seq in enumerate(sequences):
             if seq.alphabet != hmm.alphabet:
                 raise AlphabetMismatch(hmm.alphabet, seq.alphabet)
-            seq_array[i] = seq._sq
+            self._seqs[i] = seq._sq
 
         # make the alignments
         with nogil:
             status = libhmmer.tracealign.p7_tracealign_Seqs(
-                seq_array,
+                self._seqs,
                 traces._traces,
                 nseq,
                 hmm._hmm.M,
@@ -4620,7 +4624,7 @@ cdef class TraceAligner:
 
         # free the array of sequences (but not the pointers, they are owned
         # by the DigitalSequence objects) and return the MSA
-        free(seq_array)
+        memset(self._seqs, 0, self._nseq * sizeof(ESL_SQ*))
         return msa
 
 
