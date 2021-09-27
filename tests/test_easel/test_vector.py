@@ -34,11 +34,15 @@ class _TestVectorBase(object):
     def test_empty_vector(self):
         v1 = self.Vector([])
         v2 = self.Vector.zeros(0)
+        v3 = self.Vector()
         self.assertEqual(len(v1), 0)
         self.assertEqual(len(v2), 0)
+        self.assertEqual(len(v3), 0)
         self.assertEqual(v1, v2)
-        self.assertFalse(v2)
+        self.assertEqual(v1, v3)
         self.assertFalse(v1)
+        self.assertFalse(v2)
+        self.assertFalse(v3)
 
         if sys.implementation.name != "pypy":
             v3 = self.Vector.zeros(3)

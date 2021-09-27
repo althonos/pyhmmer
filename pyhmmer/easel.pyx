@@ -743,6 +743,9 @@ cdef class Vector:
 
     def __init__(self, object iterable = None):
         """__init__(self, iterable=None)\n--
+
+        Create a new vector from the given iterable of values.
+
         """
         raise TypeError("Can't instantiate abstract class 'Vector'")
 
@@ -974,11 +977,18 @@ cdef class VectorF(Vector):
 
     # --- Magic methods ------------------------------------------------------
 
-    def __init__(self, object iterable):
-        cdef int        n    = len(iterable)
+    def __init__(self, object iterable = None):
+        cdef int        n
         cdef size_t     i
         cdef float      item
         cdef float[::1] view
+
+        # allow creating a new empty vector without arguments
+        if iterable is None:
+            iterable = ()
+            n = 0
+        else:
+            n = len(iterable)
 
         # make sure __init__ is only called once
         if self._data != NULL:
@@ -1257,11 +1267,18 @@ cdef class VectorU8(Vector):
 
     # --- Magic methods ------------------------------------------------------
 
-    def __init__(self, object iterable):
-        cdef int          n    = len(iterable)
+    def __init__(self, object iterable = None):
+        cdef int          n
         cdef size_t       i
         cdef uint8_t      item
         cdef uint8_t[::1] view
+
+        # allow creating a new empty vector without arguments
+        if iterable is None:
+            iterable = ()
+            n = 0
+        else:
+            n = len(iterable)
 
         # make sure __init__ is only called once
         if self._data != NULL:
