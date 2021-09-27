@@ -20,10 +20,11 @@ ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
 # --- C imports --------------------------------------------------------------
 
 cimport cython
-from cpython cimport Py_buffer, array
+from cpython cimport Py_buffer
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
+from cpython.memoryview cimport PyMemoryView_FromMemory
 from cpython.bytes cimport PyBytes_FromString, PyBytes_FromStringAndSize
-from cpython.buffer cimport PyBUF_FORMAT
+from cpython.buffer cimport PyBUF_FORMAT, PyBUF_READ
 from cpython.unicode cimport PyUnicode_DecodeASCII
 from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t
 from libc.stdio cimport fclose
@@ -315,25 +316,23 @@ cdef class Bitfield:
     def __getstate__(self):
         assert self._b != NULL
 
-        cdef size_t      nu = (self._b.nb // 64) + (self._b.nb % 64 != 0)
-        cdef array.array b  = array.array("Q")
+        cdef size_t nu    = (self._b.nb // 64) + (self._b.nb % 64 != 0)
+        cdef object mview = PyMemoryView_FromMemory(<char*> self._b.b, nu * sizeof(uint64_t), PyBUF_READ)
+        cdef object b     = array.array("Q")
 
-        array.resize(b, nu)
-        with nogil:
-            memcpy(b.data.as_ulonglongs, self._b.b, nu * sizeof(uint64_t))
+        b.frombytes(mview)
 
         return {"nb": self._b.nb, "b": b}
 
     def __setstate__(self, state):
         self.__init__(state["nb"])
 
-        cdef size_t      nu = (self._b.nb // 64) + (self._b.nb % 64 != 0)
-        cdef array.array b  = state["b"]
+        cdef size_t        nu = (self._b.nb // 64) + (self._b.nb % 64 != 0)
+        cdef uint64_t[::1] b  = state["b"]
 
-        assert len(b) <= <ssize_t> nu
-        assert b.typecode == "Q"
+        assert b.shape[0] <= <ssize_t> nu
         with nogil:
-            memcpy(self._b.b, b.data.as_ulonglongs, nu * sizeof(uint64_t))
+            memcpy(self._b.b, &b[0], nu * sizeof(uint64_t))
 
     def __sizeof__(self):
         assert self._b != NULL
@@ -525,22 +524,21 @@ cdef class KeyHash:
     def __getstate__(self):
         assert self._kh != NULL
 
-        cdef ssize_t   i
-        cdef array.array hashtable  = array.array("i")
-        cdef array.array key_offset = array.array("i")
-        cdef array.array nxt        = array.array("i")
-        cdef array.array smem       = array.array("b")
+        cdef ssize_t i
 
-        array.resize(smem,       self._kh.salloc)
-        array.resize(hashtable,  self._kh.hashsize)
-        array.resize(key_offset, self._kh.nkeys)
-        array.resize(nxt,        self._kh.nkeys)
+        cdef object  smem       = array.array("b")
+        cdef object  hashtable  = array.array("i")
+        cdef object  key_offset = array.array("i")
+        cdef object  nxt        = array.array("i")
+        cdef object  sview      = PyMemoryView_FromMemory(<char*> self._kh.smem,       self._kh.salloc   * sizeof(char), PyBUF_READ)
+        cdef object  hview      = PyMemoryView_FromMemory(<char*> self._kh.hashtable,  self._kh.hashsize * sizeof(int),  PyBUF_READ)
+        cdef object  kview      = PyMemoryView_FromMemory(<char*> self._kh.key_offset, self._kh.nkeys    * sizeof(int),  PyBUF_READ)
+        cdef object  nview      = PyMemoryView_FromMemory(<char*> self._kh.nxt,        self._kh.nkeys    * sizeof(int),  PyBUF_READ)
 
-        with nogil:
-            memcpy(smem.data.as_ints,       <const void*> self._kh.smem,       self._kh.salloc   * sizeof(char))
-            memcpy(hashtable.data.as_ints,  <const void*> self._kh.hashtable,  self._kh.hashsize * sizeof(int))
-            memcpy(key_offset.data.as_ints, <const void*> self._kh.key_offset, self._kh.nkeys    * sizeof(int))
-            memcpy(nxt.data.as_chars,       <const void*> self._kh.nxt,        self._kh.nkeys    * sizeof(int))
+        smem.frombytes(sview)
+        hashtable.frombytes(hview)
+        key_offset.frombytes(kview)
+        nxt.frombytes(nview)
 
         return {
             "hashtable": hashtable,
@@ -555,20 +553,16 @@ cdef class KeyHash:
         }
 
     def __setstate__(self, state):
-        cdef size_t      i
-        cdef array.array smem       = state["smem"]
-        cdef array.array hashtable  = state["hashtable"]
-        cdef array.array key_offset = state["key_offset"]
-        cdef array.array nxt        = state["nxt"]
+        cdef size_t    i
+        cdef char[::1] smem       = state["smem"]
+        cdef int[::1]  hashtable  = state["hashtable"]
+        cdef int[::1]  key_offset = state["key_offset"]
+        cdef int[::1]  nxt        = state["nxt"]
 
-        assert len(smem) <= state["salloc"]
-        assert smem.typecode == "b"
-        assert len(hashtable) <= state["hashsize"]
-        assert hashtable.typecode == "i"
-        assert len(key_offset) <= state["nkeys"]
-        assert key_offset.typecode == "i"
-        assert len(nxt) <= state["nkeys"]
-        assert nxt.typecode == "i"
+        assert smem.shape[0] <= state["salloc"]
+        assert hashtable.shape[0] <= state["hashsize"]
+        assert key_offset.shape[0] <= state["nkeys"]
+        assert nxt.shape[0] <= state["nkeys"]
 
         # FIXME: avoid reallocation if possible?
         if self._kh != NULL:
@@ -588,10 +582,10 @@ cdef class KeyHash:
 
         # copy data
         with nogil:
-            memcpy(<void*> self._kh.smem,       smem.data.as_ints,       self._kh.salloc   * sizeof(char))
-            memcpy(<void*> self._kh.hashtable,  hashtable.data.as_ints,  self._kh.hashsize * sizeof(int))
-            memcpy(<void*> self._kh.key_offset, key_offset.data.as_ints, self._kh.nkeys    * sizeof(int))
-            memcpy(<void*> self._kh.nxt,        nxt.data.as_chars,       self._kh.nkeys    * sizeof(int))
+            memcpy(<void*> self._kh.smem,       &smem[0],       self._kh.salloc   * sizeof(char))
+            memcpy(<void*> self._kh.hashtable,  &hashtable[0],  self._kh.hashsize * sizeof(int))
+            memcpy(<void*> self._kh.key_offset, &key_offset[0], self._kh.nkeys    * sizeof(int))
+            memcpy(<void*> self._kh.nxt,        &nxt[0],        self._kh.nkeys    * sizeof(int))
 
     def __sizeof__(self):
         assert self._kh != NULL
@@ -719,10 +713,10 @@ cdef class Vector:
         """
         cdef Vector       vec      = cls.zeros(n)
         cdef size_t       itemsize = vec.itemsize
-        cdef object       view     = memoryview(buffer).cast(vec.format)
+        cdef object       view     = memoryview(buffer)
         cdef uint8_t[::1] bytes    = view.cast("B")
 
-        assert view.shape[0] == n
+        assert bytes.shape[0] == n * vec.itemsize
         if n > 0:
             with nogil:
                 memcpy(vec._data, &bytes[0], vec._n * itemsize)
@@ -800,20 +794,17 @@ cdef class Vector:
     def __reduce_ex__(self, int protocol):
         assert self._data != NULL or self._n == 0
 
-        cdef size_t      itemsize
-        cdef array.array a
+        cdef object buffer
 
         # use out-of-band pickling (only supported since protocol 5, see
         # https://docs.python.org/3/library/pickle.html#out-of-band-buffers)
         if protocol >= 5:
-            return self._from_raw_bytes, (pickle.PickleBuffer(self), self._n)
+            buffer = pickle.PickleBuffer(self)
+        else:
+            buffer = array.array(self.format)
+            buffer.frombytes(memoryview(self).cast("b"))
 
-        itemsize = self.itemsize
-        a = array.array(self.format)
-        array.resize(a, self._n)
-        with nogil:
-            memcpy(a.data.as_voidptr, self._data, itemsize * self._n)
-        return type(self), (a,)
+        return self._from_raw_bytes, (buffer, self._n)
 
     # --- Properties ---------------------------------------------------------
 
@@ -1637,12 +1628,12 @@ cdef class Matrix:
         cdef ssize_t      i
         cdef Matrix       mat      = cls.zeros(m, n)
         cdef size_t       itemsize = mat.itemsize
-        cdef object       view     = memoryview(buffer).cast(mat.format)
+        cdef object       view     = memoryview(buffer)
         cdef uint8_t[::1] bytes    = view.cast("B")
         cdef float**      data     = <float**> mat._data
 
         # assign the items
-        assert view.shape[0] == m * n
+        assert bytes.shape[0] == m * n * mat.itemsize
         with nogil:
             memcpy(data[0], &bytes[0], m * n * itemsize)
 
@@ -1666,11 +1657,11 @@ cdef class Matrix:
     def __init__(self, object iterable = None):
       raise TypeError("Can't instantiate abstract class 'Matrix'")
 
-    def __len__(self):
-        return self._m
-
     def __bool__(self):
         return self._m != 0 and self._n != 0
+
+    def __len__(self):
+        return self._m
 
     def __copy__(self):
         return self.copy()
@@ -1723,12 +1714,17 @@ cdef class Matrix:
     def __reduce_ex__(self, int protocol):
         assert self._data != NULL
 
+        cdef object buffer
+
         # use out-of-band pickling (only supported since protocol 5, see
         # https://docs.python.org/3/library/pickle.html#out-of-band-buffers)
         if protocol >= 5:
-            return self._from_raw_bytes, (pickle.PickleBuffer(self), self._m, self._n)
+            buffer = pickle.PickleBuffer(self)
+        else:
+            buffer = array.array(self.format)
+            buffer.frombytes(memoryview(self).cast("b"))
 
-        return type(self), (list(self),)
+        return self._from_raw_bytes, (buffer, self._m, self._n)
 
     # --- Properties ---------------------------------------------------------
 
