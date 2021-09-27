@@ -20,7 +20,7 @@ ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
 # --- C imports --------------------------------------------------------------
 
 cimport cython
-from cpython cimport Py_buffer
+from cpython cimport Py_buffer, array
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.bytes cimport PyBytes_FromString, PyBytes_FromStringAndSize
 from cpython.buffer cimport PyBUF_FORMAT
@@ -315,24 +315,25 @@ cdef class Bitfield:
     def __getstate__(self):
         assert self._b != NULL
 
-        cdef size_t        i
-        cdef size_t        nu   = (self._b.nb // 64) + (self._b.nb % 64 != 0)
-        cdef object        b    = array.array("Q")
+        cdef size_t      nu = (self._b.nb // 64) + (self._b.nb % 64 != 0)
+        cdef array.array b  = array.array("Q")
 
-        for i in range(nu):
-            b.append(self._b.b[i])
+        array.resize(b, nu)
+        with nogil:
+            memcpy(b.data.as_ulonglongs, self._b.b, nu * sizeof(uint64_t))
 
         return {"nb": self._b.nb, "b": b}
 
     def __setstate__(self, state):
         self.__init__(state["nb"])
 
-        cdef size_t        nu   = (self._b.nb // 64) + (self._b.nb % 64 != 0)
-        cdef uint64_t[::1] view = state["b"]
+        cdef size_t      nu = (self._b.nb // 64) + (self._b.nb % 64 != 0)
+        cdef array.array b  = state["b"]
 
-        assert view.shape[0] <= nu
+        assert len(b) <= <ssize_t> nu
+        assert b.typecode == "Q"
         with nogil:
-            memcpy(<void*> self._b.b, <const void*> &view[0], nu * sizeof(uint64_t))
+            memcpy(self._b.b, b.data.as_ulonglongs, nu * sizeof(uint64_t))
 
     def __sizeof__(self):
         assert self._b != NULL
@@ -525,18 +526,21 @@ cdef class KeyHash:
         assert self._kh != NULL
 
         cdef ssize_t   i
-        cdef object    hashtable  = array.array("i")
-        cdef object    key_offset = array.array("i")
-        cdef object    nxt        = array.array("i")
-        cdef object    smem       = bytearray(self._kh.salloc)
-        cdef char[::1] view       = smem
+        cdef array.array hashtable  = array.array("i")
+        cdef array.array key_offset = array.array("i")
+        cdef array.array nxt        = array.array("i")
+        cdef array.array smem       = array.array("b")
 
-        memcpy(<void*> &view[0], <const void*> self._kh.smem, self._kh.salloc * sizeof(char))
-        for i in range(self._kh.hashsize):
-            hashtable.append(self._kh.hashtable[i])
-        for i in range(self._kh.nkeys):
-            key_offset.append(self._kh.key_offset[i])
-            nxt.append(self._kh.nxt[i])
+        array.resize(smem,       self._kh.salloc)
+        array.resize(hashtable,  self._kh.hashsize)
+        array.resize(key_offset, self._kh.nkeys)
+        array.resize(nxt,        self._kh.nkeys)
+
+        with nogil:
+            memcpy(smem.data.as_ints,       <const void*> self._kh.smem,       self._kh.salloc   * sizeof(char))
+            memcpy(hashtable.data.as_ints,  <const void*> self._kh.hashtable,  self._kh.hashsize * sizeof(int))
+            memcpy(key_offset.data.as_ints, <const void*> self._kh.key_offset, self._kh.nkeys    * sizeof(int))
+            memcpy(nxt.data.as_chars,       <const void*> self._kh.nxt,        self._kh.nkeys    * sizeof(int))
 
         return {
             "hashtable": hashtable,
@@ -551,11 +555,20 @@ cdef class KeyHash:
         }
 
     def __setstate__(self, state):
-        cdef size_t    i
-        cdef char[::1] sview = state["smem"]
-        cdef int[::1]  hview = state["hashtable"]
-        cdef int[::1]  kview = state["key_offset"]
-        cdef int[::1]  nview = state["nxt"]
+        cdef size_t      i
+        cdef array.array smem       = state["smem"]
+        cdef array.array hashtable  = state["hashtable"]
+        cdef array.array key_offset = state["key_offset"]
+        cdef array.array nxt        = state["nxt"]
+
+        assert len(smem) <= state["salloc"]
+        assert smem.typecode == "b"
+        assert len(hashtable) <= state["hashsize"]
+        assert hashtable.typecode == "i"
+        assert len(key_offset) <= state["nkeys"]
+        assert key_offset.typecode == "i"
+        assert len(nxt) <= state["nkeys"]
+        assert nxt.typecode == "i"
 
         # FIXME: avoid reallocation if possible?
         if self._kh != NULL:
@@ -568,17 +581,17 @@ cdef class KeyHash:
         )
         if not self._kh:
             raise AllocationError("ESL_KEYHASH")
-        # copy keys
-        assert sview.shape[0] <= state["salloc"]
+
+        # copy numeric values
         self._kh.sn = state["sn"]
-        memcpy(<void*> self._kh.smem, <const void*> &sview[0], state["salloc"] * sizeof(char))
-        # copy hashes and indices
-        assert kview.shape[0] <= state["nkeys"]
-        assert nview.shape[0] <= state["nkeys"]
         self._kh.nkeys = state["nkeys"]
-        memcpy(<void*> self._kh.hashtable,  <const void*> &hview[0], self._kh.hashsize * sizeof(int))
-        memcpy(<void*> self._kh.key_offset, <const void*> &kview[0], self._kh.nkeys    * sizeof(int))
-        memcpy(<void*> self._kh.nxt,        <const void*> &nview[0], self._kh.nkeys    * sizeof(int))
+
+        # copy data
+        with nogil:
+            memcpy(<void*> self._kh.smem,       smem.data.as_ints,       self._kh.salloc   * sizeof(char))
+            memcpy(<void*> self._kh.hashtable,  hashtable.data.as_ints,  self._kh.hashsize * sizeof(int))
+            memcpy(<void*> self._kh.key_offset, key_offset.data.as_ints, self._kh.nkeys    * sizeof(int))
+            memcpy(<void*> self._kh.nxt,        nxt.data.as_chars,       self._kh.nkeys    * sizeof(int))
 
     def __sizeof__(self):
         assert self._kh != NULL
@@ -699,9 +712,6 @@ cdef class Vector:
     def __init__(self, object iterable = None):
         raise TypeError("Can't instantiate abstract class 'Vector'")
 
-    def __reduce__(self):
-        return type(self), (array.array(self.format, self),)
-
     def __bool__(self):
         return self._n != 0
 
@@ -751,7 +761,16 @@ cdef class Vector:
         return self._n * self.itemsize + sizeof(self)
 
     def __reduce__(self):
-        return type(self), (array.array(self.format, self),)
+        assert self._data != NULL or self._n == 0
+
+        cdef size_t      itemsize = self.itemsize
+        cdef array.array a        = array.array(self.format)
+
+        array.resize(a, self._n)
+        with nogil:
+            memcpy(a.data.as_voidptr, self._data, itemsize * self._n)
+
+        return type(self), (a,)
 
     # --- Properties ---------------------------------------------------------
 
