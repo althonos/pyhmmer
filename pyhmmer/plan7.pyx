@@ -4328,7 +4328,10 @@ cdef class TopHits:
 
 
 cdef class Trace:
-    """A traceback for hte alignment of a model to a sequence.
+    """A traceback for the alignment of a model to a sequence.
+
+    .. versionadded:: 0.4.7
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -4396,7 +4399,10 @@ cdef class Trace:
 
 
 cdef class Traces:
-    """A list of tracebacks obtained by aligning a model to several sequences.
+    """A list of tracebacks obtained by aligning several sequences to a model.
+
+    .. versionadded:: 0.4.7
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -4429,12 +4435,14 @@ cdef class Traces:
 
 
 cdef class TraceAligner:
-    """A factory for aligning an HMM model to reference sequences.
+    """A factory for aligning several sequences to a reference model.
 
     Example:
         >>> aligner = TraceAligner()
         >>> traces = aligner.compute_traces(thioesterase, proteins[:100])
         >>> msa = aligner.align_traces(thioesterase, proteins[:100], traces)
+
+    .. versionadded:: 0.4.7
 
     """
 

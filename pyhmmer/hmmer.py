@@ -702,6 +702,8 @@ def hmmalign(
         intermediate tracebacks obtained for each alignment before building
         a MSA.
 
+    .. versionadded:: 0.4.7
+
     """
 
     if map_alignment:
