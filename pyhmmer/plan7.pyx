@@ -4568,11 +4568,6 @@ cdef class TraceAligner:
         cdef ssize_t         ntr       = len(traces)
         cdef int             flags     = 0
 
-        if nseq <= 0:
-            raise ValueError("Some sequences are required to compute traces")
-        elif nseq != ntr:
-            raise ValueError(f"Sequences and traces lengths mismatch ({nseq} sequences, {ntr} traces)")
-
         # check optional flags and prepare the returned MSA
         if trim:
             flags |= libhmmer.p7_TRIM
@@ -4583,6 +4578,14 @@ cdef class TraceAligner:
             msa = DigitalMSA.__new__(DigitalMSA, hmm.alphabet)
         else:
             msa = TextMSA.__new__(TextMSA)
+
+        # checm
+        if nseq < 0:
+            raise ValueError("align compute traces for a negative number of sequences")
+        elif nseq != ntr:
+            raise ValueError(f"Sequences and traces lengths mismatch ({nseq} sequences, {ntr} traces)")
+        elif nseq == 0:
+            return msa
 
         # allocate the temporary array of sequences and check alphabets
         seq_array = <ESL_SQ**> calloc(nseq, sizeof(ESL_SQ*))
