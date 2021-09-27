@@ -1,5 +1,6 @@
 import pickle
 import unittest
+import sys
 
 from pyhmmer.easel import Matrix, MatrixF, MatrixU8, Vector, VectorF, VectorU8
 
@@ -9,11 +10,38 @@ class _TestMatrixBase(object):
     Matrix = NotImplemented
 
     def test_pickle(self):
-        v1 = self.Matrix([[1, 2], [3, 4]])
-        v2 = pickle.loads(pickle.dumps(v1))
-        for i in range(v1.shape[0]):
-            for j in range(v1.shape[1]):
-                self.assertEqual(v1[i,j], v2[i,j])
+        m1 = self.Matrix([[1, 2], [3, 4]])
+        m2 = pickle.loads(pickle.dumps(m1))
+        self.assertEqual(m1.shape, m2.shape)
+        self.assertSequenceEqual(memoryview(m1), memoryview(m2))
+        # self.assertSequenceEqual(m1, m2)
+        for i in range(m1.shape[0]):
+            self.assertEqual(m1[i], m2[i])
+            for j in range(m1.shape[1]):
+                self.assertEqual(m1[i,j], m2[i,j])
+
+    def test_pickle_protocol4(self):
+        m1 = self.Matrix([[1, 2], [3, 4]])
+        m2 = pickle.loads(pickle.dumps(m1, protocol=4))
+        self.assertEqual(m1.shape, m2.shape)
+        self.assertSequenceEqual(memoryview(m1), memoryview(m2))
+        # self.assertSequenceEqual(m1, m2)
+        for i in range(m1.shape[0]):
+            self.assertEqual(m1[i], m2[i])
+            for j in range(m1.shape[1]):
+                self.assertEqual(m1[i,j], m2[i,j])
+
+    @unittest.skipUnless(sys.version_info >= (3, 8), "pickle protocol 5 requires Python 3.8+")
+    def test_pickle_protocol5(self):
+        m1 = self.Matrix([[1, 2], [3, 4]])
+        m2 = pickle.loads(pickle.dumps(m1, protocol=5))
+        self.assertEqual(m1.shape, m2.shape)
+        self.assertSequenceEqual(memoryview(m1), memoryview(m2))
+        # self.assertSequenceEqual(m1, m2)
+        for i in range(m1.shape[0]):
+            self.assertEqual(m1[i], m2[i])
+            for j in range(m1.shape[1]):
+                self.assertEqual(m1[i,j], m2[i,j])
 
     def test_empty_matrix(self):
         m1 = self.Matrix([])

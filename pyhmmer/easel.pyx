@@ -711,23 +711,19 @@ cdef class Vector:
         return vec
 
     @classmethod
-    def _from_raw_bytes(cls, buffer, n):
+    def _from_raw_bytes(cls, buffer, int n):
         """_from_raw_bytes(cls, buffer, n)\n--
 
         Create a new vector using the given bytes to fill its contents.
 
         """
-        cdef Vector       vec      = cls([])
+        cdef Vector       vec      = cls.zeros(n)
         cdef size_t       itemsize = vec.itemsize
         cdef object       view     = memoryview(buffer).cast(vec.format)
         cdef uint8_t[::1] bytes    = view.cast("B")
 
         assert view.shape[0] == n
         if n > 0:
-            vec._n = vec._shape[0] = n
-            vec._data = <uint8_t*> malloc(vec._n * itemsize)
-            if vec._data == NULL:
-                raise AllocationError("void*")
             with nogil:
                 memcpy(vec._data, &bytes[0], vec._n * itemsize)
         return vec
@@ -982,7 +978,7 @@ cdef class VectorF(Vector):
         cdef int        n    = len(iterable)
         cdef size_t     i
         cdef float      item
-        cdef float[::1] view = None
+        cdef float[::1] view
 
         # make sure __init__ is only called once
         if self._data != NULL:
@@ -1005,8 +1001,7 @@ cdef class VectorF(Vector):
             # try to copy the memory quickly if *iterable* implements the buffer
             # protocol, otherwise fall back to cop
             try:
-                if view is None:
-                    view = iterable
+                view = iterable
             except (TypeError, ValueError):
                 for i, item in enumerate(iterable):
                     (<float*> self._data)[i] = item
@@ -1587,13 +1582,14 @@ cdef class Matrix:
         Create a new :math:`m \\times n` matrix filled with zeros.
 
         """
-        cdef Matrix mat
-        cdef int     i
+        cdef int    i
+        cdef Matrix mat      = cls([])
+        cdef size_t itemsize = mat.itemsize
 
         if m < 0 or n < 0:
             raise ValueError("Cannot create a matrix with negative dimension")
 
-        mat = cls([])
+        mat
         mat._m = mat._shape[0] = m
         mat._n = mat._shape[1] = n
 
@@ -1604,13 +1600,34 @@ cdef class Matrix:
 
         # allocate the data array
         if mat._m > 0:
-            mat._data[0] = calloc(m*n, mat.itemsize)
+            mat._data[0] = calloc(m*n, itemsize)
             if mat._data[0] == NULL:
                 raise AllocationError("void*")
 
         # update the pointer offsets in the array of pointers
         for i in range(1, m):
-            mat._data[i] = mat._data[0] + i*n
+            mat._data[i] = mat._data[0] + i*n*itemsize
+
+        return mat
+
+    @classmethod
+    def _from_raw_bytes(cls, buffer, int m, int n):
+        """_from_raw_bytes(cls, buffer, m, n)\n--
+
+        Create a new matrix using the given bytes to fill its contents.
+
+        """
+        cdef ssize_t      i
+        cdef Matrix       mat      = cls.zeros(m, n)
+        cdef size_t       itemsize = mat.itemsize
+        cdef object       view     = memoryview(buffer).cast(mat.format)
+        cdef uint8_t[::1] bytes    = view.cast("B")
+        cdef float**      data     = <float**> mat._data
+
+        # assign the items
+        assert view.shape[0] == m * n
+        with nogil:
+            memcpy(data[0], &bytes[0], m * n * itemsize)
 
         return mat
 
@@ -1634,9 +1651,6 @@ cdef class Matrix:
 
     def __len__(self):
         return self._m
-
-    def __reduce__(self):
-        return type(self), (list(self),)
 
     def __bool__(self):
         return self._m != 0 and self._n != 0
@@ -1679,7 +1693,7 @@ cdef class Matrix:
             buffer.internal = NULL
 
     def __repr__(self):
-        cdef VectorF row
+        cdef Vector row
         return f"{type(self).__name__}({[list(row) for row in self]!r})"
 
     def __sizeof__(self):
@@ -1688,6 +1702,16 @@ cdef class Matrix:
           + self._m * self._n * self.itemsize
           + sizeof(self)
         )
+
+    def __reduce_ex__(self, int protocol):
+        assert self._data != NULL
+
+        # use out-of-band pickling (only supported since protocol 5, see
+        # https://docs.python.org/3/library/pickle.html#out-of-band-buffers)
+        if protocol >= 5:
+            return self._from_raw_bytes, (pickle.PickleBuffer(self), self._m, self._n)
+
+        return type(self), (list(self),)
 
     # --- Properties ---------------------------------------------------------
 
@@ -1923,6 +1947,7 @@ cdef class MatrixF(Matrix):
         cdef str     ty
         cdef VectorF row
         cdef MatrixF new
+        cdef float** data = <float**> self._data
 
         if isinstance(index, int):
             x = index
@@ -1934,7 +1959,7 @@ cdef class MatrixF(Matrix):
             row = VectorF.__new__(VectorF)
             row._owner = self
             row._n = row._shape[0] = self._n
-            row._data = self._data[x]
+            row._data = <void*> &(data[x][0])
             return row
 
         elif isinstance(index, slice):
@@ -1946,7 +1971,7 @@ cdef class MatrixF(Matrix):
             new._owner = self
             new._m = new._shape[0] = stop - start
             new._n = new._shape[1] = self._n
-            new._data = &(self._data[start])
+            new._data = <void**> &data[start]
             return new
 
         elif isinstance(index, tuple):
@@ -1959,7 +1984,7 @@ cdef class MatrixF(Matrix):
                 raise IndexError("matrix row index out of range")
             if y < 0 or y >= self._n:
                 raise IndexError("matrix column index out of range")
-            return (<float**> self._data)[x][y]
+            return data[x][y]
 
         else:
             ty = type(index).__name__
@@ -1970,6 +1995,7 @@ cdef class MatrixF(Matrix):
 
         cdef int x
         cdef int y
+        cdef float** data = <float**> self._data
 
         if isinstance(index, tuple):
             x, y = index
@@ -1981,7 +2007,7 @@ cdef class MatrixF(Matrix):
                 raise IndexError("matrix row index out of range")
             if y < 0 or y >= self._n:
                 raise IndexError("matrix column index out of range")
-            (<float**> self._data)[x][y] = value
+            data[x][y] = value
 
         else:
             raise TypeError("Matrix.__setitem__ can only be used with a 2D index")
@@ -2187,11 +2213,12 @@ cdef class MatrixU8(Matrix):
     def __getitem__(self, object index):
         assert self._data != NULL
 
-        cdef int      x
-        cdef int      y
-        cdef str      ty
-        cdef VectorU8 row
-        cdef MatrixU8 new
+        cdef int       x
+        cdef int       y
+        cdef str       ty
+        cdef VectorU8  row
+        cdef MatrixU8  new
+        cdef uint8_t** data = <uint8_t**> self._data
 
         if isinstance(index, int):
             x = index
@@ -2203,7 +2230,7 @@ cdef class MatrixU8(Matrix):
             row = VectorU8.__new__(VectorU8)
             row._owner = self
             row._n = row._shape[0] = self._n
-            row._data = self._data[x]
+            row._data = data[x]
             return row
 
         elif isinstance(index, slice):
@@ -2215,7 +2242,7 @@ cdef class MatrixU8(Matrix):
             new._owner = self
             new._m = new._shape[0] = stop - start
             new._n = new._shape[1] = self._n
-            new._data = &(self._data[start])
+            new._data = <void**> &data[start]
             return new
 
         elif isinstance(index, tuple):
@@ -2228,7 +2255,7 @@ cdef class MatrixU8(Matrix):
                 raise IndexError("matrix row index out of range")
             if y < 0 or y >= self._n:
                 raise IndexError("matrix column index out of range")
-            return (<uint8_t**> self._data)[x][y]
+            return data[x][y]
 
         else:
             ty = type(index).__name__
@@ -2237,8 +2264,9 @@ cdef class MatrixU8(Matrix):
     def __setitem__(self, object index, uint8_t value):
         assert self._data != NULL
 
-        cdef int x
-        cdef int y
+        cdef int       x
+        cdef int       y
+        cdef uint8_t** data = <uint8_t**> self._data
 
         if isinstance(index, tuple):
             x, y = index
@@ -2250,7 +2278,7 @@ cdef class MatrixU8(Matrix):
                 raise IndexError("matrix row index out of range")
             if y < 0 or y >= self._n:
                 raise IndexError("matrix column index out of range")
-            (<uint8_t**> self._data)[x][y] = value
+            data[x][y] = value
 
         else:
             raise TypeError("Matrix.__setitem__ can only be used with a 2D index")

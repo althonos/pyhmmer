@@ -19,13 +19,17 @@ class _TestVectorBase(object):
     def test_pickle_protocol4(self):
         v1 = self.Vector(range(6))
         v2 = pickle.loads(pickle.dumps(v1, protocol=4))
+        self.assertEqual(v1.shape, v2.shape)
         self.assertSequenceEqual(v1, v2)
+        self.assertSequenceEqual(memoryview(v1), memoryview(v2))
 
     @unittest.skipUnless(sys.version_info >= (3, 8), "pickle protocol 5 requires Python 3.8+")
     def test_pickle_protocol5(self):
         v1 = self.Vector(range(6))
         v2 = pickle.loads(pickle.dumps(v1, protocol=5))
+        self.assertEqual(v1.shape, v2.shape)
         self.assertSequenceEqual(v1, v2)
+        self.assertSequenceEqual(memoryview(v1), memoryview(v2))
 
     def test_empty_vector(self):
         v1 = self.Vector([])
