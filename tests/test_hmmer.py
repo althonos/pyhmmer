@@ -10,7 +10,7 @@ import pkg_resources
 
 import pyhmmer
 from pyhmmer.plan7 import Pipeline, HMMFile, TopHits
-from pyhmmer.easel import Alphabet, SequenceFile, TextSequence
+from pyhmmer.easel import Alphabet, MSAFile, SequenceFile, TextSequence
 
 
 class _TestSearch(metaclass=abc.ABCMeta):
@@ -263,3 +263,25 @@ class TestPhmmer(unittest.TestCase):
                 self.assertEqual(domain.alignment.target_to, int(fields[18]))
                 self.assertEqual(domain.env_from, int(fields[19]))
                 self.assertEqual(domain.env_to, int(fields[20]))
+
+
+class TestHmmalign(unittest.TestCase):
+
+    def setUp(self):
+        self.tmpout = tempfile.NamedTemporaryFile(suffix=".hmm", delete=False).name
+
+    def test_luxc(self):
+        hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/LuxC.hmm")
+        seqs_path = pkg_resources.resource_filename("tests", "data/seqs/LuxC.faa")
+        ref_path = pkg_resources.resource_filename("tests", "data/msa/LuxC.hmmalign.sto")
+
+        with HMMFile(hmm_path) as hmm_file:
+            hmm = next(hmm_file)
+        with SequenceFile(seqs_path) as seqs_file:
+            seqs_file.set_digital(hmm.alphabet)
+            seqs = list(seqs_file)
+        with MSAFile(ref_path) as ref_file:
+            ref = next(ref_file)
+
+        msa = pyhmmer.hmmalign(hmm, seqs, trim=True)
+        self.assertEqual(msa, ref)

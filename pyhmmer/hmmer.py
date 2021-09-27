@@ -7,6 +7,7 @@ import contextlib
 import collections
 import ctypes
 import itertools
+import io
 import queue
 import time
 import threading
@@ -16,8 +17,8 @@ import multiprocessing
 
 import psutil
 
-from .easel import Alphabet, DigitalSequence, DigitalMSA, TextSequence, SequenceFile, SSIWriter
-from .plan7 import Builder, Background, Pipeline, TopHits, HMM, HMMFile, Profile
+from .easel import Alphabet, DigitalSequence, DigitalMSA, MSA, MSAFile, TextSequence, SequenceFile, SSIWriter
+from .plan7 import Builder, Background, Pipeline, TopHits, HMM, HMMFile, Profile, TraceAligner
 from .utils import peekable
 
 # the query type for the pipeline
@@ -665,6 +666,59 @@ def hmmpress(
     return nmodel
 
 
+# --- hmmalign ---------------------------------------------------------------
+
+def hmmalign(
+    hmm: HMM,
+    sequences: typing.Collection[DigitalSequence],
+    map_alignment: bool = False,
+    trim: bool = False,
+    digitize: bool = False,
+    all_consensus_cols: bool = True,
+) -> MSA:
+    """Align several sequences to a reference HMM, and return the MSA.
+
+    Arguments:
+        hmm (`~pyhmmer.plan7.HMM`): The reference HMM to use for the
+            alignment.
+        sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
+            sequences to align to the HMM.
+        trim (`bool`): Trim off any residues that get assigned to
+            flanking :math:`N` and :math:`C` states (in profile traces)
+            or :math:`I_0` and :math:`I_m` (in core traces).
+        digitize (`bool`): If set to `True`, returns a `DigitalMSA`
+            instead of a `TextMSA`.
+        all_consensus_cols (`bool`): Force a column to be created for
+            every consensus column in the model, even if it means having
+            all gap character in a column.
+
+    Returns:
+        `~pyhmmer.easel.MSA`: A multiple sequence alignment containing
+        the aligned sequences, either a `TextMSA` or a `DigitalMSA`
+        depending on the value of the ``digitize`` argument.
+
+    See Also:
+        The `~pyhmmer.plan7.TraceAligner` class, which lets you inspect the
+        intermediate tracebacks obtained for each alignment before building
+        a MSA.
+
+    """
+
+    if map_alignment:
+        raise NotImplementedError("map_alignment=True")
+
+    aligner = TraceAligner()
+    traces = aligner.compute_traces(hmm, sequences)
+    return aligner.align_traces(
+        hmm,
+        sequences,
+        traces,
+        trim=trim,
+        digitize=digitize,
+        all_consensus_cols=all_consensus_cols
+    )
+
+
 # add a very limited CLI so that this module can be invoked in a shell:
 #     $ python -m pyhmmer.hmmsearch <hmmfile> <seqdb>
 if __name__ == "__main__":
@@ -741,6 +795,32 @@ if __name__ == "__main__":
 
         return 0
 
+    def _hmmalign(args: argparse.Namespace) -> int:
+        with SequenceFile(args.seqfile) as seqfile:
+            alphabet = seqfile.guess_alphabet()
+            if alphabet is None:
+                print("could not guess alphabet of input, exiting", file=sys.stderr)
+                return 1
+            seqfile.set_digital(alphabet)
+            sequences: typing.List[DigitalSequence] = list(seqfile)  # type: ignore
+
+        with HMMFile(args.hmmfile) as hmms:
+            hmm = next(hmms)
+            if next(hmms, None) is not None:
+                print("HMM file contains more than one HMM, exiting", file=sys.stderr)
+                return 1
+
+        msa = hmmalign(hmm, sequences, map_alignment=args.mapali, trim=args.trim)
+        if args.output == "-":
+            with io.BytesIO() as out:
+                msa.write(out, args.outformat)
+                print(out.getvalue().decode("ascii"), end="")
+        else:
+            with open(args.output, "wb") as out:
+                msa.write(out, args.outformat)
+
+        return 0
+
     parser = argparse.ArgumentParser()
     parser.add_argument("-j", "--jobs", required=False, default=0, type=int)
     subparsers = parser.add_subparsers(
@@ -748,21 +828,63 @@ if __name__ == "__main__":
     )
 
     parser_hmmsearch = subparsers.add_parser("hmmsearch")
+    parser_hmmsearch.set_defaults(call=_hmmsearch)
     parser_hmmsearch.add_argument("hmmfile")
     parser_hmmsearch.add_argument("seqdb")
 
     parser_phmmer = subparsers.add_parser("phmmer")
+    parser_phmmer.set_defaults(call=_phmmer)
     parser_phmmer.add_argument("seqfile")
     parser_phmmer.add_argument("seqdb")
 
     parser_hmmpress = subparsers.add_parser("hmmpress")
+    parser_hmmpress.set_defaults(call=_hmmpress)
     parser_hmmpress.add_argument("hmmfile")
     parser_hmmpress.add_argument("-f", "--force", action="store_true")
 
+    parser_hmmalign = subparsers.add_parser("hmmalign")
+    parser_hmmalign.set_defaults(call=_hmmalign)
+    parser_hmmalign.add_argument(
+        "hmmfile",
+        metavar="<hmmfile>"
+    )
+    parser_hmmalign.add_argument(
+        "seqfile",
+        metavar="<seqfile>",
+    )
+    parser_hmmalign.add_argument(
+        "-o",
+        "--output",
+        action="store",
+        default="-",
+        metavar="<f>",
+        help="output alignment to file <f>, not stdout"
+    )
+    parser_hmmalign.add_argument(
+        "--mapali",
+        action="store_true",
+        help="include the HMM alignment in the output",
+    )
+    parser_hmmalign.add_argument(
+        "--trim",
+        action="store_true",
+        help="trim terminal tails of nonaligned residues from alignment"
+    )
+    parser_hmmalign.add_argument(
+        "--informat",
+        action="store",
+        metavar="<s>",
+        help="assert <seqfile> is in format <s> (no autodetection)",
+        choices=SequenceFile._formats.keys(),
+    )
+    parser_hmmalign.add_argument(
+        "--outformat",
+        action="store",
+        metavar="<s>",
+        help="output alignment in format <s>",
+        default="stockholm",
+        choices=MSAFile._formats.keys(),
+    )
+
     args = parser.parse_args()
-    if args.cmd == "hmmsearch":
-        sys.exit(_hmmsearch(args))
-    elif args.cmd == "hmmpress":
-        sys.exit(_hmmpress(args))
-    elif args.cmd == "phmmer":
-        sys.exit(_phmmer(args))
+    sys.exit(args.call(args))

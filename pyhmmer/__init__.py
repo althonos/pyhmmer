@@ -20,7 +20,7 @@ from . import errors
 from . import easel
 from . import plan7
 
-from .hmmer import hmmsearch, hmmpress, nhmmer, phmmer
+from .hmmer import hmmalign, hmmsearch, hmmpress, nhmmer, phmmer
 
 
 __author__ = "Martin Larralde <martin.larralde@embl.de>"
@@ -30,6 +30,7 @@ __all__ = [
     errors.__name__,
     easel.__name__,
     plan7.__name__,
+    hmmalign.__name__,
     hmmsearch.__name__,
     hmmpress.__name__,
     phmmer.__name__,

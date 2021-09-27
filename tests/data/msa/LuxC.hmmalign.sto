@@ -1,0 +1,96 @@
+# STOCKHOLM 1.0
+
+#=GS sp|P19841|LUXC_PHOPO           DE Long-chain acyl-protein thioester reductase OS=Photobacterium phosphoreum OX=659 GN=luxC PE=1 SV=3
+#=GS sp|P08639|LUXC_VIBHA           DE Long-chain acyl-protein thioester reductase OS=Vibrio harveyi OX=669 GN=luxC PE=3 SV=1
+#=GS sp|P12748|LUXC_ALIFS           DE Long-chain acyl-protein thioester reductase OS=Aliivibrio fischeri OX=668 GN=luxC PE=3 SV=3
+#=GS sp|Q7N577|LUXC_PHOLL           DE Long-chain acyl-protein thioester reductase OS=Photorhabdus laumondii subsp. laumondii (strain DSM 15139 / CIP 105565 / TT01) OX=243265 GN=luxC PE=3 SV=1
+#=GS sp|Q03324|LUXC1_PHOLE          DE Long-chain acyl-protein thioester reductase 1 OS=Photobacterium leiognathi OX=553611 GN=luxC PE=3 SV=1
+#=GS sp|P29236|LUXC2_PHOLE          DE Long-chain acyl-protein thioester reductase 2 OS=Photobacterium leiognathi OX=553611 GN=luxC PE=3 SV=1
+#=GS sp|P23113|LUXC_PHOLU           DE Long-chain acyl-protein thioester reductase OS=Photorhabdus luminescens OX=29488 GN=luxC PE=3 SV=2
+#=GS tr|A0A2H5XB72|A0A2H5XB72_9BACT DE Long-chain-fatty-acyl-CoA reductase OS=bacterium HR17 OX=2035412 GN=luxC PE=3 SV=1
+#=GS tr|A0A644X819|A0A644X819_9ZZZZ DE Long-chain-fatty-acyl-CoA reductase OS=bioreactor metagenome OX=1076179 GN=luxC PE=3 SV=1
+#=GS tr|Q5DZ03|Q5DZ03_ALIF1         DE Acyl-CoA reductase OS=Aliivibrio fischeri (strain ATCC 700601 / ES114) OX=312309 GN=luxC PE=3 SV=1
+#=GS tr|B6ESM7|B6ESM7_ALISL         DE Acyl-CoA reductase OS=Aliivibrio salmonicida (strain LFI1238) OX=316275 GN=luxC PE=3 SV=1
+#=GS tr|S3DGB3|S3DGB3_9GAMM         DE Acyl-CoA reductase OS=Candidatus Photodesmus katoptron Akat1 OX=1236703 GN=luxC PE=3 SV=1
+
+sp|P19841|LUXC_PHOPO                   -NNLNINQIVNFLYTVGQKWKSENYSRRltYIRDLVRFLGYSPEMAK-.LEAnwiSMILSSKSALYDIVETELG..SRHIVDEWL....PQGD..........CYVKAMPKGKSVHLLAGNVPLSGVTSIIRAILTKNECIIKTSSADPFTAIALASSFIDTDEHHPISRSMSVMYWsHNEDIAIPQQIMNCADVVVSWG
+#=GR sp|P19841|LUXC_PHOPO           PP .799*******************************************..8*9999*******************..*********....****..........*************************************************************************************************
+sp|P08639|LUXC_VIBHA                   -NDLNINNIINFLYTTGQRWKSEEYSRRraYIRSLITYLGYSPQMAK-.LEAnwiAMILCSKSALYDIIDTELG..STHIQDEWL....PQGE..........CYVRAFPKGRTMHLLAGNVPLSGVTSILRGILTRNQCIVRMSASDPFTAHALAMSFIDVDPNHPISRSISVLYWpHASDTTLAEELLSHMDAVVAWG
+#=GR sp|P08639|LUXC_VIBHA           PP .799*******************************************..8*99*********************..*********....****..........*************************************************************************************************
+sp|P12748|LUXC_ALIFS                   -INLNLNQIVNFLYTVGQRWKSEEYNRRrtYIRELKTYLGYSDEMAR-.LEAnwiAMLLCSKSALYDIVNYDLG..SIHVLDEWL....PRGD..........CYVKAQPKGVSVHLLAGNVPLSGVTSILRAILTKNECIIKTSSSDPFTANALVSSFIDVNADHPITKSMSVMYWpHDEDMTLSQRIMNHADVVIAWG
+#=GR sp|P12748|LUXC_ALIFS           PP .589*******************************************..8*99*********************..*********....****..........*************************************************************************************************
+sp|Q7N577|LUXC_PHOLL                   -NKLRLHNIVNFLYTVGQRWKNEEYSRRrtYIRDLKKYMGYSEAMAK-.LEAnwiSMILCSKGGLYDVVENELG..SRHIMDEWL....PQDE..........SYIKAFPKGKSIHLLAGNVPLSGIMSILRAILTKNQCIIKTSSTDPFTANALALSFIDVDPNHPITRSLSVVYWpHQGDTSLAKEIMQHMDVIVAWG
+#=GR sp|Q7N577|LUXC_PHOLL           PP .6899******************************************..8*99*********************..*********....****..........*************************************************************************************************
+sp|Q03324|LUXC1_PHOLE                  -NKLNINQIVNFLYTVGQKWKSENYSRRltYIRDLVKFMGYSPEMAK-.LEAnwiSMILCSKSALYDIVENDLS..SRHIVDEWL....PQGD..........CYVKALPKGKSIHLLAGNVPLSGVTSILRAILTKNECIIKTSSADPFTATALASSFIDTDANHPITRSMSVMYWsHNEDITIPQKIMNCADVVVAWG
+#=GR sp|Q03324|LUXC1_PHOLE          PP .689*******************************************..8*99*********************..*********....****..........*************************************************************************************************
+sp|P29236|LUXC2_PHOLE                  -NKLTINQIVNFLYTVGQKWKSETYSRRltYIRDLIKFLGYSQEMAK-.LEAnwiSMILCSKSALYDIVENDLS..SRHIIDEWI....PQGE..........CYVKALPKGKSVHLLAGNVPLSGVTSILRAILTKNECIIKTSSADPFTATALVNSFIDVDAEHPITRSISVMYWsHSEDLAIPKQIMSCADVVIAWG
+#=GR sp|P29236|LUXC2_PHOLE          PP .6899******************************************..8*99*********************..*********....****..........*************************************************************************************************
+sp|P23113|LUXC_PHOLU                   -NELQLHNIINFLYTVGQRWKNEEYSRRrtYIRDLKRYMGYSEEMAK-.LEAnwiSMILCSKGGLYDLVKNELG..SRHIMDEWL....PQDE..........SYIRAFPKGKSVHLLTGNVPLSGVLSILRAILTKNQCIIKTSSTDPFTANALALSFIDVDPHHPVTRSLSVVYWqHQGDISLAKEIMQHADVVVAWG
+#=GR sp|P23113|LUXC_PHOLU           PP .6899******************************************..8*99*********************..*********....****..........*************************************************************************************************
+tr|A0A2H5XB72|A0A2H5XB72_9BACT         -RAMPVAAIAAALERVAHRWQDRTAPERriALAELPQRVPFGRPVCERaLDA...LFEPLTAPRLLALLDDLLG..THQALDAFVplvrH--TssilpsesasVRRKAFGADVALLILAGNIIGVGIWDIAFCLLCKTPVLVKPSSDEPLLPALFAQSLAAAAPE--LADAVASL--.-PPDVQL--EVWDGIDAVIVYG
+#=GR tr|A0A2H5XB72|A0A2H5XB72_9BACT PP .6799*****************98876669999***********99999***...*******************..********955441..2334444333334577888889999***********************************************5..********....455554..566788*******
+tr|A0A644X819|A0A644X819_9ZZZZ         ----EREAVTAACDALSQKLNGEEYLQM.lVSSGLNRIQAAEELAF--.---...AKNMFSRLYLEERLKRELGglDDETFLPLG....EKNT..........VRLEWRPLGVLLHLPAGNADALPVYSVIEGLLTGNVNILKLPAEGDVLSEWILAELIKLEP--RISHKVFTFRL.SSNDRASMEKLASLADAIVIWG
+#=GR tr|A0A644X819|A0A644X819_9ZZZZ PP ....5677888889999********999.88888999998888777.........469***************612333344445....6666..........8889*********************************************************..69999999999.999999999999**********
+tr|Q5DZ03|Q5DZ03_ALIF1                 --DLNLNQIVNFLYTVGQRWKNEEYNRRrtYIRELKKYLGYSDEMAR-.LEAnwiAMLLCSKSALYDIVNYDLG..SIHVLDEWL....PRGD..........CYVKAQAKGVSIHLLAGNVPLSGVTSILRAILTKNECIIKTSSSDPFTATALASSFIDVNAEHPITKSMSVMYWpHNEDMTLPQRIMNHADIVIAWG
+#=GR tr|Q5DZ03|Q5DZ03_ALIF1         PP ..789******************************************..8*99*********************..*********....****..........*************************************************************************************************
+tr|B6ESM7|B6ESM7_ALISL                 -NNLRLNQVVNFLYTVGQRWRSEEYTRRrtYIRDLTNFLGYSNEMAK-.LEAnwiAMLLCSKSALYDIVQHDLG..SLHIIDEWI....PQGD..........CYIKALPKGKSVHLLAGNVPLSGVTSILRAILTKNECIIKTSSTDPFTATALVSSFIDVNADHPITRSMSVMYWsHNEDMSLPKKIMNHADVV-AWG
+#=GR tr|B6ESM7|B6ESM7_ALISL         PP .899*******************************************..8*99*********************..*********....****..........*******************************************************************************************98.***
+tr|S3DGB3|S3DGB3_9GAMM                 ----KLHTIINFLYTVGQRWKSEEYSRRrtYIRNLVTFLGYSEQMAK-.LEAnwiSMILCSKSALYDIITNDLG..SRHIIDEWI....PQDE..........CYIKAFPKGKSVHLLAGNVPLSGITSIIRALLTKNQCIIKMSSSDPFTPTALAMSFIDVSPTHPITRSLSIIYWsHSEDVILASKIMDEADVVIAWG
+#=GR tr|S3DGB3|S3DGB3_9GAMM         PP ....789****************************************..8*99*********************..*********....****..........*************************************************************************************************
+#=GC PP_cons                           .68999********************99..*****************9.9**...9******************..9999999*9....9**9..........999***********************************************************************.*999999**9************
+#=GC RF                                xxxxxxxxxxxxxxxxxxxxxxxxxxxx..xxxxxxxxxxxxxxxxxx.xxx...xxxxxxxxxxxxxxxxxxx..xxxxxxxxx....xxxx..........xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xxxxxxxxxxxxxxxxxxxxxx
+
+sp|P19841|LUXC_PHOPO                   GYDAIKWATEHTPVNVDILKFGPKKSIAIVDNPVDITASAIGVAHDICFYDQQACFSTQDIYYI---GDNIDAFFDELVEQLNLYMDILPKGDQTFDEKASFSLIEKE-----CQFAKYKVEKGDNQSWLLVKSPLG.....SFGNQPLARSAYIHHVSDISEITPYIENRIT.-QTVTVTPWESSFKYRDV-LASHGAE
+#=GR sp|P19841|LUXC_PHOPO           PP ****************************************************************...88***************************************.....************************.....*****************************98..*****************.*******
+sp|P08639|LUXC_VIBHA                   GRDAIDWAVKHSPSHIDVLKFGPKKSFTVLDHPADLEEAASGVAHDICFYDQNACFSTQNIYFS---GDKYEEFKLKLVEKLNLYQEVLPKSKQSFDDEALFSMTRLE-----CQFSGLKVISEPENNWMIIESEPG.....VEYNHPLSRCVYVHKINKVDDVVQYIEKHQT.-QTISFYPWESSKKYRDA-FAAKGVE
+#=GR sp|P08639|LUXC_VIBHA           PP ****************************************************************...88***************************************.....9***********************.....*****************************98..*****************.*******
+sp|P12748|LUXC_ALIFS                   GDEAIKWAVKYSPPHVDILKFGPKKSLSIIEAPKDIEAAAMGVAHDICFYDQQACFSTQDVYYI---GDNLPLFLNELEKQLDRYAKILPKGSNSFDEKAAFTLTEKE-----SLFAGYEVRKGDKQAWLIVVSPTN.....SFGNQPLSRSVYVHQVSDIKEIIPFVNKNRT.-QTVSIYPWEASLKYRDK-LARSGVE
+#=GR sp|P12748|LUXC_ALIFS           PP ****************************************************************...88***************************************.....************************.....******************************8..*****************.*******
+sp|Q7N577|LUXC_PHOLL                   GEDAINWAVEHAPPYADVIKFGSKKSFCIIDNPVDLTSAATGAAHDICFYDQRACFSAQNIYYM---GNQYEEFKLALIEKLNLYAHILPNAKKDFDEKAAYSLVQKE-----SLFAGLKVEVDVHQRWMIIESNAG.....VEFNQPLGRCVYLHHVDNIEQVLPYVQKNKT.-QTISIFPWESAFKYRDA-LALRGAE
+#=GR sp|Q7N577|LUXC_PHOLL           PP ****************************************************************...9****************************************.....999999******************.....******************************8..*****************.*******
+sp|Q03324|LUXC1_PHOLE                  GNDAIKWATKHSPAHVDILKFGPKKSISIVDNPTDIKAAAIGVAHDICFYDQQACFSTQDIYYM---GDKLDVFFDELTKQLNIYKVILPKGDQSFDEKGAFSLTERE-----CLFAKYKVQKGEEQAWLLTQSPAG.....TFGNQPLSRSAYIHHVNDISEITPYIQNDIT.-QTVSITPWEASFKYRDT-LASHGAE
+#=GR sp|Q03324|LUXC1_PHOLE          PP ****************************************************************...88***************************************.....************************.....******************************8..*****************.*******
+sp|P29236|LUXC2_PHOLE                  GDDAIKWATEHAPSHADILKFGPKKSISIVDNPTDIKAAAIGVAHDICFYDQQACFSTQDIYYI---GDSIDIFFDELAQQLNKYKDILPKGERNFDEKAAFSLTERE-----CLFAKYKVQKGESQSWLLTQSPAG.....SFGNQPLSRSAYIHQVNDISEVIPFVHKAVT.-QTVAIAPWESSFKYRDI-LAEHGAE
+#=GR sp|P29236|LUXC2_PHOLE          PP ****************************************************************...88***************************************.....************************.....*****************************98..*****************.*******
+sp|P23113|LUXC_PHOLU                   GEDAINWAVKHAPPDIDVMKFGPKKSFCIIDNPVDLVSAATGAAHDVCFYDQQACFSTQNIYYM---GSHYEEFKLALIEKLNLYAHILPNTKKDFDEKAAYSLVQKE-----CLFAGLKVEVDVHQRWMVIESNAG.....VELNQPLGRCVYLHHVDNIEQILPYVRKNKT.-QTISVFPWEAALKYRDL-LALKGAE
+#=GR sp|P23113|LUXC_PHOLU           PP ****************************************************************...99***************************************.....************************.....******************************8..*****************.*******
+tr|A0A2H5XB72|A0A2H5XB72_9BACT         TDETVTAVKRCAPAKVRVIERGHRFSVAIVDAAYADERTAQLLALDIARFDQRGCLSPQVCFVV--GRAATAAFGHKVAEALQRLNAELPPVLRDS-ERARVTHFRLT-----CQMLGAQVLAPSDASWTVAVWDAPtmcdaWQKVACSARVVHIVAMDTLDAVFDALRPLGQfLQGVAVAMDETMAERAAEALGHMGAS
+#=GR tr|A0A2H5XB72|A0A2H5XB72_9BACT PP ****************************************************************..89**********************988875.67777777777.....5666677999********887776577766778899**********************999**************************
+tr|A0A644X819|A0A644X819_9ZZZZ         GDEAVSAVRKLAKPDTRIIEWGHKISFAYVSGDLVSDADLEGLADNICSTNQLLCSSCQGIFVDTEDSKDVSAFSERFFAVLDQRASADPLDNDLFRAAQLTLELYTE-ELE---AEGRERKAWRNERCAVIACSDS.....ALTVSHLFRSVWVKPLPRY-RILHELKQHKNhLQTAALLCSPEDRVRLEELLITAGIA
+#=GR tr|A0A644X819|A0A644X819_9ZZZZ PP ****************************************************************************************99888888877777777777.444...4444444568889999998888.....*******************.9*************************************
+tr|Q5DZ03|Q5DZ03_ALIF1                 GEEAIKWAAKHSPPHADVLKFGPKKSLSIIEEPEDMEEAAMGVAHDICFYDQQACFSTQDVYYI---GEHLPLFLSELEKQLDRYAKILPKGLKNFDEKAAFSLTERE-----GIFAGYDVKKGDNQAWLMIISPTN.....SSGNQPLSRSVYIHQVSDINEVLPFVNKNST.-QTVSIYPWEASLKYRDK-LAMSGAE
+#=GR tr|Q5DZ03|Q5DZ03_ALIF1         PP ****************************************************************...89***************************************.....************************.....*****************************98..*****************.*******
+tr|B6ESM7|B6ESM7_ALISL                 GDEAIKWAVKHSPHHVDIVKFGPKKSLSIIDDPEDITAAATGVAHDICFYDQQACFSTQNIYYI---GNKLNLFIDELEKKLNVYAKILPKGCQNFDEKAAFTLTEKE-----CLFAGYQVRKGENQSWIIIQSPLD.....AFGNQPLSRSVYIHQVSSIEDILPFINKNTT.-QTVSIAPWESSFKYRDE-LAKHGAE
+#=GR tr|B6ESM7|B6ESM7_ALISL         PP ****************************************************************...9****************************************.....************************.....*****************************87..*****************.*******
+tr|S3DGB3|S3DGB3_9GAMM                 GENSIKWAVKHTPAHIDILKFGPKKSLSIIDNPDNLTAAASGVAHDVCFYDQQACFSTQNVYFI---GENFYKFKKELRSKLELYSKILPKGKQDFESKAAFSLAERE-----CLFAGYDVQVGEQKNWMIVESPMD.....VLTSQPLGRCVYIHHVLDIQDACNYINKYTT.-QTVSIYPWKSSFKYRDK-LAYYGVE
+#=GR tr|S3DGB3|S3DGB3_9GAMM         PP ****************************************************************...88999************************************.....************************.....*****************************87..*****************.*******
+#=GC PP_cons                           ******************************************************************989**************************9*9*****99999.444.9999999999*************9.....*****************************98.**************************
+#=GC RF                                xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.....xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxx
+
+sp|P19841|LUXC_PHOPO                   RIVESGMNNIFRVGGAHDGMRPLQRLVKY
+#=GR sp|P19841|LUXC_PHOPO           PP ***************************86
+sp|P08639|LUXC_VIBHA                   RIVESGMNNIFRAGGAHDAMRPLQRLVRF
+#=GR sp|P08639|LUXC_VIBHA           PP ***************************96
+sp|P12748|LUXC_ALIFS                   RIVESGMNNIFRVGGAHDSLSPLQYLVRF
+#=GR sp|P12748|LUXC_ALIFS           PP ***************************96
+sp|Q7N577|LUXC_PHOLL                   RIVEAGMNNIFRVGGSHDGMRPLQRLVTY
+#=GR sp|Q7N577|LUXC_PHOLL           PP **************************985
+sp|Q03324|LUXC1_PHOLE                  RIIESGMNNIFRVGGAHDGMRPLQRLVKY
+#=GR sp|Q03324|LUXC1_PHOLE          PP ***************************86
+sp|P29236|LUXC2_PHOLE                  RIIEAGMNNIFRVGGAHDGMRPLQRLVNY
+#=GR sp|P29236|LUXC2_PHOLE          PP ***************************86
+sp|P23113|LUXC_PHOLU                   RIVEAGMNNIFRVGGAHDGMRPLQRLVTY
+#=GR sp|P23113|LUXC_PHOLU           PP **************************985
+tr|A0A2H5XB72|A0A2H5XB72_9BACT         RVCPVGRLQTPPLEWSQDGKHLIAELVRW
+#=GR tr|A0A2H5XB72|A0A2H5XB72_9BACT PP ************99*************98
+tr|A0A644X819|A0A644X819_9ZZZZ         RITRGENMSRSYCGMPHDGEYALRRYVR-
+#=GR tr|A0A644X819|A0A644X819_9ZZZZ PP *************************998.
+tr|Q5DZ03|Q5DZ03_ALIF1                 RIVESGMNNIFRVGGAHDSLSPLQYLVRF
+#=GR tr|Q5DZ03|Q5DZ03_ALIF1         PP ***************************96
+tr|B6ESM7|B6ESM7_ALISL                 RIVESGMNNIFRVGGAHDGMRPLQYLVNY
+#=GR tr|B6ESM7|B6ESM7_ALISL         PP ***************************86
+tr|S3DGB3|S3DGB3_9GAMM                 RIVESGMNNIFRVGGAHDTMRPLQRLVRF
+#=GR tr|S3DGB3|S3DGB3_9GAMM         PP ***************************96
+#=GC PP_cons                           ***************************86
+#=GC RF                                xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+//
