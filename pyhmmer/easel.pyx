@@ -1215,10 +1215,12 @@ cdef class VectorF(Vector):
             return libeasel.vec.esl_vec_FMin(<float*> self._data, self._n)
 
     cpdef object normalize(self):
-        r"""Normalize a vector so that all elements sum to 1.
+        """normalize(self)\n--
+
+        Normalize a vector so that all elements sum to 1.
 
         Caution:
-            If sum is zero, sets all elements to :math:`\frac{1}{n}`,
+            If sum is zero, sets all elements to :math:`\\frac{1}{n}`,
             where :math:`n` is the size of the vector.
 
         """
@@ -1239,7 +1241,7 @@ cdef class VectorF(Vector):
         Returns the scalar sum of all elements in the vector.
 
         Floating point summations use Kahan compensated summation, in order
-        to minimize roundoff error accumulation.  Additionally, they are most
+        to minimize roundoff error accumulation. Additionally, they are most
         accurate if the vector is sorted in increasing order, from small to
         large, so you may consider sorting the vector before summing it.
 
@@ -1551,7 +1553,9 @@ cdef class VectorU8(Vector):
         return None
 
     cpdef uint8_t sum(self):
-        """Returns the scalar sum of all elements in the vector.
+        """sum(self)\n--
+
+        Returns the scalar sum of all elements in the vector.
 
         Caution:
             The sum is wrapping::
@@ -1750,10 +1754,9 @@ cdef class Matrix:
     def itemsize(self):
         """`int`: The size of each item in the matrix, in bytes.
 
-        .. versionadded:: 0.4.6
+        .. versionadded:: 0.4.7
 
         """
-        raise NotImplementedError("Matrix.itemsize")
 
     @property
     def format(self):
@@ -1770,7 +1773,9 @@ cdef class Matrix:
     # --- Methods ------------------------------------------------------------
 
     def argmax(self):
-        """Return the coordinates of the maximum element in the matrix.
+        """argmax(self)\n--
+
+        Return the coordinates of the maximum element in the matrix.
 
         Raises:
             `ValueError`: When called on an empty matrix.
@@ -1778,7 +1783,9 @@ cdef class Matrix:
         """
 
     def argmin(self):
-        """Return the coordinates of the minimum element in the matrix.
+        """argmin(self)\n--
+
+        Return the coordinates of the minimum element in the matrix.
 
         Raises:
             `ValueError`: When called on an empty matrix.
@@ -1786,11 +1793,16 @@ cdef class Matrix:
         """
 
     def copy(self):
-        """Create a copy of the matrix, allocating a new buffer.
+        """copy(self)\n--
+
+        Create a copy of the matrix, allocating a new buffer.
+
         """
 
     def max(self):
-        """Return the value of the maximum element in the matrix.
+        """max(self)\n--
+
+        Return the value of the maximum element in the matrix.
 
         Raises:
             `ValueError`: When called on an empty matrix.
@@ -1798,7 +1810,9 @@ cdef class Matrix:
         """
 
     def min(self):
-        """Return the value of the minimum element in the matrix.
+        """min(self)\n--
+
+        Return the value of the minimum element in the matrix.
 
         Raises:
             `ValueError`: When called on an empty matrix.
@@ -1806,7 +1820,10 @@ cdef class Matrix:
         """
 
     def sum(self):
-        """Return the sum of all elements in the matrix.
+        """sum(self)\n--
+
+        Return the sum of all elements in the matrix.
+
         """
 
 

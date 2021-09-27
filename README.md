@@ -58,8 +58,9 @@ HMMER internals, which has the following advantages over CLI wrappers
   multiple CPUs.
 
 *This library is still a work-in-progress, and in an experimental stage,
-but it should already pack enough features to run biological analyses
-involving `hmmsearch` or `phmmer`.*
+but it should already pack enough features to run biological analyses or
+workflows involving `hmmsearch`, `nhmmer`, `phmmer`, `hmmbuild` and
+`hmmalign`.*
 
 
 ## 🔧 Installing

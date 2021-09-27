@@ -27,6 +27,7 @@ API Reference
         pyhmmer.hmmer.phmmer
         pyhmmer.hmmer.nhmmer
         pyhmmer.hmmer.hmmpress
+        pyhmmer.hmmer.hmmalign
 
 
     Easel

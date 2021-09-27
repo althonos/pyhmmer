@@ -29,3 +29,9 @@ hmmpress
 --------
 
 .. autofunction:: pyhmmer.hmmer.hmmpress(hmms, output)
+
+
+hmmalign
+--------
+
+.. autofunction:: pyhmmer.hmmer.hmmalign(hmm, sequences, trim=False, digitize=False, all_consensus_cols=True)
