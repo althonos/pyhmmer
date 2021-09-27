@@ -145,7 +145,7 @@ cdef class OptimizedProfile:
 
     cpdef OptimizedProfile copy(self)
     cpdef bint is_local(self)
-    cpdef void write(self, object fh_filter, object fh_profile)
+    cpdef void write(self, object fh_filter, object fh_profile) except *
 
     # @staticmethod
     cdef int _convert(self, P7_PROFILE* gm) nogil except 1

@@ -372,7 +372,7 @@ cdef class Bitfield:
             count_ = libeasel.bitfield.esl_bitfield_Count(self._b)
         return count_ if value else self._b.nb - count_
 
-    cpdef void toggle(self, int index):
+    cpdef void toggle(self, int index) except *:
         """toggle(self, index)\n--
 
         Switch the value of one single bit.
@@ -638,7 +638,7 @@ cdef class KeyHash:
         else:
             raise UnexpectedError(status, "esl_keyhash_Store")
 
-    cpdef void clear(self):
+    cpdef void clear(self) except *:
         """clear(self)\n--
 
         Remove all entries from the collection.
@@ -1629,7 +1629,6 @@ cdef class Matrix:
         Create a new matrix using the given bytes to fill its contents.
 
         """
-        cdef ssize_t      i
         cdef Matrix       mat      = cls.zeros(m, n)
         cdef size_t       itemsize = mat.itemsize
         cdef object       view     = memoryview(buffer)
@@ -1637,7 +1636,7 @@ cdef class Matrix:
         cdef float**      data     = <float**> mat._data
 
         # assign the items
-        assert bytes.shape[0] == m * n * mat.itemsize
+        assert bytes.shape[0] == m * n * itemsize
         with nogil:
             memcpy(data[0], &bytes[0], m * n * itemsize)
 
@@ -3444,7 +3443,7 @@ cdef class Randomness:
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_randomness_Init")
 
-    cpdef void seed(self, object n=None):
+    cpdef void seed(self, object n=None) except *:
         """seed([n])\n--
 
         Reinitialize the random number generator with the given seed.
@@ -3774,7 +3773,7 @@ cdef class Sequence:
         else:
             raise UnexpectedError(status, "esl_sq_Checksum")
 
-    cpdef void clear(self):
+    cpdef void clear(self) except *:
         """clear(self)\n--
 
         Reinitialize the sequence for re-use.
@@ -4709,7 +4708,7 @@ cdef class SSIWriter:
 
     # --- Methods ------------------------------------------------------------
 
-    cpdef uint16_t add_file(self, str filename, int format = 0):
+    cpdef uint16_t add_file(self, str filename, int format = 0) except *:
         """add_file(self, filename, format=0)\n--
 
         Add a new file to the index.
@@ -4742,7 +4741,7 @@ cdef class SSIWriter:
         off_t record_offset,
         off_t data_offset = 0,
         int64_t record_length = 0
-    ):
+    ) except *:
         """add_key(self, key, fd, record_offset, data_offset=0, record_length=0)\n--
 
         Add a new entry to the index with the given ``key``.
@@ -4762,7 +4761,7 @@ cdef class SSIWriter:
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_newssi_AddKey")
 
-    cpdef void add_alias(self, bytes alias, bytes key):
+    cpdef void add_alias(self, bytes alias, bytes key) except *:
         """add_alias(self, alias, key)\n--
 
         Make ``alias`` an alias of ``key`` in the index.
@@ -4781,7 +4780,7 @@ cdef class SSIWriter:
         else:
             raise UnexpectedError(status, "esl_newssi_AddAlias")
 
-    def close(self):
+    cpdef void close(self) except *:
         """close(self)\n--
 
         Close the SSI file writer.

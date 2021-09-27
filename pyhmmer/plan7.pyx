@@ -2658,7 +2658,7 @@ cdef class OptimizedProfile:
             raise AllocationError("P7_OPROFILE")
         return new
 
-    cpdef void write(self, object fh_filter, object fh_profile):
+    cpdef void write(self, object fh_filter, object fh_profile) except *:
         """write(self, fh_filter, fh_profile)\n--
 
         Write an optimized profile to two separate files.

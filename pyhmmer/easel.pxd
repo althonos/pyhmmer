@@ -34,7 +34,7 @@ cdef class Bitfield:
 
     cdef size_t _wrap_index(self, int index) except -1
     cpdef size_t count(self, bint value=*)
-    cpdef void toggle(self, int index)
+    cpdef void toggle(self, int index) except *
 
 
 # --- KeyHash ----------------------------------------------------------------
@@ -43,7 +43,7 @@ cdef class KeyHash:
     cdef ESL_KEYHASH* _kh
 
     cpdef int add(self, bytes key) except -1
-    cpdef void clear(self)
+    cpdef void clear(self) except *
     cpdef KeyHash copy(self)
 
 
@@ -155,7 +155,7 @@ cdef class Randomness:
 
     cdef int _seed(self, uint32_t n) except 1
 
-    cpdef void seed(self, object n=*)
+    cpdef void seed(self, object n=*) except *
     cpdef Randomness copy(self)
     cpdef double random(self)
     cpdef double normalvariate(self, double mu, double sigma)
@@ -167,7 +167,7 @@ cdef class Randomness:
 cdef class Sequence:
     cdef ESL_SQ* _sq
 
-    cpdef void clear(self)
+    cpdef void clear(self) except *
     cpdef uint32_t checksum(self)
     cpdef void write(self, object fh) except *
 
@@ -216,8 +216,8 @@ cdef class SSIWriter:
 
     cdef void _on_write(self)
 
-    cpdef void     add_alias(self, bytes alias, bytes key)
-    cpdef uint16_t add_file(self, str filename, int format = *)
+    cpdef void     add_alias(self, bytes alias, bytes key) except *
+    cpdef uint16_t add_file(self, str filename, int format = *) except *
     cpdef void     add_key(
         self,
         bytes key,
@@ -225,4 +225,5 @@ cdef class SSIWriter:
         off_t record_offset,
         off_t data_offset = *,
         int64_t record_length = *
-    )
+    ) except *
+    cpdef void close(self) except *
