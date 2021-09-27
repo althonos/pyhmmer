@@ -75,14 +75,13 @@ cdef class VectorU8(Vector):
     cpdef uint8_t sum(self)
 
 cdef class Matrix:
-    cdef object _owner
-    cdef int _n
-    cdef int _m
+    cdef object              _owner
+    cdef int                 _n
+    cdef int                 _m
     cdef readonly Py_ssize_t _shape[2]
+    cdef void**              _data
 
 cdef class MatrixF(Matrix):
-    cdef float** _data
-
     cpdef tuple argmax(self)
     cpdef tuple argmin(self)
     cpdef MatrixF copy(self)
@@ -91,8 +90,6 @@ cdef class MatrixF(Matrix):
     cpdef float sum(self)
 
 cdef class MatrixU8(Matrix):
-    cdef uint8_t** _data
-
     cpdef tuple argmax(self)
     cpdef tuple argmin(self)
     cpdef MatrixU8 copy(self)

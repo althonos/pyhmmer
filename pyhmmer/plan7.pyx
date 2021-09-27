@@ -1911,7 +1911,7 @@ cdef class HMM:
         mat._m = mat._shape[0] = self._hmm.M + 1
         mat._n = mat._shape[1] = libhmmer.p7_hmm.p7H_NTRANSITIONS
         mat._owner = self
-        mat._data = self._hmm.t
+        mat._data = <void**> self._hmm.t
         return mat
 
     @property
@@ -1947,7 +1947,7 @@ cdef class HMM:
         mat._m = mat._shape[0] = self._hmm.M + 1
         mat._n = mat._shape[1] = self.alphabet.K
         mat._owner = self
-        mat._data = self._hmm.mat
+        mat._data = <void**> self._hmm.mat
         return mat
 
     @property
@@ -1973,7 +1973,7 @@ cdef class HMM:
         mat._m = mat._shape[0] = self._hmm.M + 1
         mat._n = mat._shape[1] = self.alphabet.K
         mat._owner = self
-        mat._data = self._hmm.ins
+        mat._data = <void**> self._hmm.ins
         return mat
 
     @property
@@ -2615,7 +2615,7 @@ cdef class OptimizedProfile:
         mat._m = mat._shape[0] = self.alphabet.Kp
         mat._n = mat._shape[1] = 16 * nqs
         mat._owner = self
-        mat._data = <uint8_t**> self._om.sbv
+        mat._data = <void**> self._om.sbv
         return mat
 
     @property
@@ -2628,7 +2628,7 @@ cdef class OptimizedProfile:
         mat._m = mat._shape[0] = self.alphabet.Kp
         mat._n = mat._shape[1] = 16 * p7O_NQB(self._om.M)
         mat._owner = self
-        mat._data = <uint8_t**> self._om.rbv
+        mat._data = <void**> self._om.rbv
         return mat
 
     # --- Methods ------------------------------------------------------------

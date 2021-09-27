@@ -763,7 +763,7 @@ cdef class Vector:
         assert self._data != NULL or self._n == 0
 
         if flags & PyBUF_FORMAT:
-            buffer.format = strdup(self.format.encode('ascii'))
+            buffer.format = strdup(self.format.encode("utf-8"))
             if buffer.format == NULL:
                 raise AllocationError("char*")
         else:
@@ -1565,7 +1565,6 @@ cdef class VectorU8(Vector):
         cdef uint8_t        sum  = 0
         cdef const uint8_t* data = <uint8_t*> self._data
 
-
         with nogil:
             for i in range(self._n):
                 sum += data[i]
@@ -1583,9 +1582,37 @@ cdef class Matrix:
 
     @classmethod
     def zeros(cls, int m, int n):
-        r"""Create a new :math:`m \times n` matrix filled with zeros.
+        """zeros(cls, m, n)\n--
+
+        Create a new :math:`m \\times n` matrix filled with zeros.
+
         """
-        raise TypeError("Can't instantiate abstract class 'Matrix'")
+        cdef Matrix mat
+        cdef int     i
+
+        if m < 0 or n < 0:
+            raise ValueError("Cannot create a matrix with negative dimension")
+
+        mat = cls([])
+        mat._m = mat._shape[0] = m
+        mat._n = mat._shape[1] = n
+
+        # allocate the array of pointers
+        mat._data    = <void**> calloc(m, sizeof(void*))
+        if mat._data == NULL:
+            raise AllocationError("void**")
+
+        # allocate the data array
+        if mat._m > 0:
+            mat._data[0] = calloc(m*n, mat.itemsize)
+            if mat._data[0] == NULL:
+                raise AllocationError("void*")
+
+        # update the pointer offsets in the array of pointers
+        for i in range(1, m):
+            mat._data[i] = mat._data[0] + i*n
+
+        return mat
 
     # --- Magic methods ------------------------------------------------------
 
@@ -1593,6 +1620,14 @@ cdef class Matrix:
         self._owner = None
         self._n = self._m = 0
         self._shape = (self._n, self._m)
+        self._data = NULL
+
+    def __dealloc__(self):
+        if self._owner is None and self._data != NULL:
+            if self._m > 0:
+                free(self._data[0])
+            free(self._data)
+        self._data = NULL
 
     def __init__(self, object iterable = None):
       raise TypeError("Can't instantiate abstract class 'Matrix'")
@@ -1605,6 +1640,54 @@ cdef class Matrix:
 
     def __bool__(self):
         return self._m != 0 and self._n != 0
+
+    def __copy__(self):
+        return self.copy()
+
+    def __getbuffer__(self, Py_buffer* buffer, int flags):
+        assert self._data != NULL
+
+        if flags & PyBUF_FORMAT:
+            buffer.format = strdup(self.format.encode("utf-8"))
+            if buffer.format == NULL:
+                raise AllocationError("char*")
+        else:
+            buffer.format = NULL
+        buffer.buf = self._data[0]
+        buffer.internal = NULL
+        buffer.itemsize = self.itemsize
+        buffer.len = self._m * self._n * self.itemsize
+        buffer.ndim = 2
+        buffer.obj = self
+        buffer.readonly = 0
+        buffer.shape = self._shape
+        buffer.suboffsets = NULL
+
+        IF SYS_IMPLEMENTATION_NAME == "pypy":
+            buffer.internal = PyMem_Malloc(2*sizeof(Py_ssize_t))
+            if buffer.internal == NULL:
+                raise AllocationError("Py_ssize_t*")
+            buffer.strides = <Py_ssize_t*> buffer.internal
+            buffer.strides[0] = self.strides[0]
+            buffer.strides[1] = self.strides[1]
+        ELSE:
+            buffer.strides = NULL
+
+    def __releasebuffer__(self, Py_buffer* buffer):
+        IF SYS_IMPLEMENTATION_NAME == "pypy":
+            PyMem_Free(buffer.internal)
+            buffer.internal = NULL
+
+    def __repr__(self):
+        cdef VectorF row
+        return f"{type(self).__name__}({[list(row) for row in self]!r})"
+
+    def __sizeof__(self):
+        return (
+            self._n * sizeof(void*)
+          + self._m * self._n * self.itemsize
+          + sizeof(self)
+        )
 
     # --- Properties ---------------------------------------------------------
 
@@ -1629,6 +1712,9 @@ cdef class Matrix:
     @property
     def itemsize(self):
         """`int`: The size of each item in the matrix, in bytes.
+
+        .. versionadded:: 0.4.6
+
         """
         raise NotImplementedError("Matrix.itemsize")
 
@@ -1721,48 +1807,7 @@ cdef class MatrixF(Matrix):
 
     """
 
-    # --- Class methods ------------------------------------------------------
-
-    @classmethod
-    def zeros(cls, int m, int n):
-        cdef MatrixF mat
-        cdef int     i
-
-        if m < 0 or n < 0:
-            raise ValueError("Cannot create a matrix with negative dimension")
-
-        mat = MatrixF.__new__(MatrixF)
-        mat._m = mat._shape[0] = m
-        mat._n = mat._shape[1] = n
-
-        # allocate the array of pointers
-        mat._data    = <float**> calloc(m, sizeof(float*))
-        if mat._data == NULL:
-            raise AllocationError("float**")
-
-        # allocate the data array
-        if mat._m > 0:
-            mat._data[0] = <float*> calloc(m*n, sizeof(float))
-            if mat._data[0] == NULL:
-                raise AllocationError("float*")
-
-        # update the pointer offsets in the array of pointers
-        for i in range(1, m):
-            mat._data[i] = mat._data[0] + i*n
-
-        return mat
-
     # --- Magic methods ------------------------------------------------------
-
-    def __cinit__(self):
-        self._data = NULL
-
-    def __dealloc__(self):
-        if self._owner is None and self._data != NULL:
-            if self._m > 0:
-                free(self._data[0])
-            free(self._data)
-        self._data = NULL
 
     def __init__(self, object iterable):
         cdef size_t i
@@ -1786,9 +1831,9 @@ cdef class MatrixF(Matrix):
 
         # allocate the buffer
         if self._m > 0 and self._n > 0:
-            self._data = libeasel.matrixops.esl_mat_FCreate(self._m, self._n)
+            self._data = <void**> libeasel.matrixops.esl_mat_FCreate(self._m, self._n)
         else:
-            self._data = <float**> malloc(0)
+            self._data = <void**> malloc(0)
         if self._data == NULL:
             raise AllocationError("float**")
 
@@ -1797,10 +1842,7 @@ cdef class MatrixF(Matrix):
             if len(row) != self._n:
                 raise ValueError("Inconsistent number of rows in input")
             for j, val in enumerate(row):
-                self._data[i][j] = val
-
-    def __copy__(self):
-        return self.copy()
+                (<float**> self._data)[i][j] = val
 
     def __eq__(self, object other):
         assert self._data != NULL
@@ -1809,7 +1851,7 @@ cdef class MatrixF(Matrix):
         cdef int     j
         # check matrix type
         if not isinstance(other, MatrixF):
-            return False
+            return NotImplemented
         # check dimensions
         other_ = other
         assert other_._data != NULL
@@ -1818,7 +1860,7 @@ cdef class MatrixF(Matrix):
         # check values
         for i in range(self._m):
             for j in range(self._n):
-                if self._data[i][j] != other_._data[i][j]:
+                if (<float**> self._data)[i][j] != (<float**> other_._data)[i][j]:
                     return False
         return True
 
@@ -1839,11 +1881,11 @@ cdef class MatrixF(Matrix):
             if other_mat._m != self._m or other_mat._n != self._n:
                 raise ValueError(f"cannot pairwise add {other_mat.shape} matrix to {self.shape} matrix")
             with nogil:
-                libeasel.vec.esl_vec_FAdd( self._data[0], other_mat._data[0], self._m * self._n )
+                libeasel.vec.esl_vec_FAdd(<float*> self._data[0], <float*> other_mat._data[0], self._m * self._n)
         else:
             other_f = other
             with nogil:
-                libeasel.vec.esl_vec_FIncrement(self._data[0], self._m*self._n, other_f)
+                libeasel.vec.esl_vec_FIncrement(<float*> self._data[0], self._m*self._n, other_f)
         return self
 
     def __mul__(MatrixF self, object other):
@@ -1866,11 +1908,11 @@ cdef class MatrixF(Matrix):
             # NB(@althonos): There is no function in `vectorops.h` to do this
             # for now...
             for i in range(self._n * self._m):
-                self._data[0][i] *= other_mat._data[0][i]
+                (<float**> self._data)[0][i] *= (<float**> other_mat._data)[0][i]
         else:
             other_f = other
             with nogil:
-                libeasel.matrixops.esl_mat_FScale(self._data, self._m, self._n, other_f)
+                libeasel.matrixops.esl_mat_FScale(<float**> self._data, self._m, self._n, other_f)
         return self
 
     def __getitem__(self, object index):
@@ -1917,7 +1959,7 @@ cdef class MatrixF(Matrix):
                 raise IndexError("matrix row index out of range")
             if y < 0 or y >= self._n:
                 raise IndexError("matrix column index out of range")
-            return self._data[x][y]
+            return (<float**> self._data)[x][y]
 
         else:
             ty = type(index).__name__
@@ -1939,53 +1981,10 @@ cdef class MatrixF(Matrix):
                 raise IndexError("matrix row index out of range")
             if y < 0 or y >= self._n:
                 raise IndexError("matrix column index out of range")
-            self._data[x][y] = value
+            (<float**> self._data)[x][y] = value
 
         else:
             raise TypeError("Matrix.__setitem__ can only be used with a 2D index")
-
-    def __getbuffer__(self, Py_buffer* buffer, int flags):
-        assert self._data != NULL
-
-        if flags & PyBUF_FORMAT:
-            buffer.format = "f"
-        else:
-            buffer.format = NULL
-        buffer.buf = <void*> &(self._data[0][0])
-        buffer.internal = NULL
-        buffer.itemsize = sizeof(float)
-        buffer.len = self._m * self._n * sizeof(float)
-        buffer.ndim = 2
-        buffer.obj = self
-        buffer.readonly = 0
-        buffer.shape = self._shape
-        buffer.suboffsets = NULL
-
-        IF SYS_IMPLEMENTATION_NAME == "pypy":
-            buffer.internal = PyMem_Malloc(2*sizeof(Py_ssize_t))
-            if buffer.internal == NULL:
-                raise AllocationError("Py_ssize_t*")
-            buffer.strides = <Py_ssize_t*> buffer.internal
-            buffer.strides[0] = self.strides[0]
-            buffer.strides[1] = self.strides[1]
-        ELSE:
-            buffer.strides = NULL
-
-    def __releasebuffer__(self, Py_buffer* buffer):
-        IF SYS_IMPLEMENTATION_NAME == "pypy":
-            PyMem_Free(buffer.internal)
-            buffer.internal = NULL
-
-    def __repr__(self):
-        cdef VectorF row
-        return f"MatrixF({[list(row) for row in self]!r})"
-
-    def __sizeof__(self):
-        return (
-            self._n * sizeof(float*)
-          + self._m * self._n * sizeof(float)
-          + sizeof(self)
-        )
 
     # --- Properties ---------------------------------------------------------
 
@@ -2007,7 +2006,7 @@ cdef class MatrixF(Matrix):
         cdef int y
 
         with nogil:
-            n = libeasel.vec.esl_vec_FArgMax(self._data[0], self._m*self._n)
+            n = libeasel.vec.esl_vec_FArgMax(<float*> self._data[0], self._m*self._n)
             x = n // self._m
             y = n % self._n
 
@@ -2021,7 +2020,7 @@ cdef class MatrixF(Matrix):
         cdef int y
 
         with nogil:
-            n = libeasel.vec.esl_vec_FArgMin(self._data[0], self._m*self._n)
+            n = libeasel.vec.esl_vec_FArgMin(<float*> self._data[0], self._m*self._n)
             x = n // self._m
             y = n % self._n
 
@@ -2032,7 +2031,7 @@ cdef class MatrixF(Matrix):
         mat._m = mat._shape[0] = self._m
         mat._n = mat._shape[1] = self._n
         with nogil:
-            mat._data = libeasel.matrixops.esl_mat_FClone(self._data, self._m, self._n)
+            mat._data = <void**> libeasel.matrixops.esl_mat_FClone(<float**> self._data, self._m, self._n)
         if mat._data == NULL:
             raise AllocationError("float**")
         return mat
@@ -2040,17 +2039,17 @@ cdef class MatrixF(Matrix):
     cpdef float max(self):
         assert self._data != NULL
         with nogil:
-            return libeasel.matrixops.esl_mat_FMax(self._data, self._m, self._n)
+            return libeasel.matrixops.esl_mat_FMax(<float**> self._data, self._m, self._n)
 
     cpdef float min(self):
         assert self._data != NULL
         with nogil:
-            return libeasel.vec.esl_vec_FMin(self._data[0], self._m*self._n)
+            return libeasel.vec.esl_vec_FMin(<float*> self._data[0], self._m*self._n)
 
     cpdef float sum(self):
         assert self._data != NULL
         with nogil:
-            return libeasel.vec.esl_vec_FSum(self._data[0], self._m*self._n)
+            return libeasel.vec.esl_vec_FSum(<float*> self._data[0], self._m*self._n)
 
 
 cdef class MatrixU8(Matrix):
@@ -2060,49 +2059,7 @@ cdef class MatrixU8(Matrix):
 
     """
 
-    # --- Class methods ------------------------------------------------------
-
-    @classmethod
-    def zeros(cls, int m, int n):
-        cdef MatrixU8 mat
-        cdef int i
-
-        if n < 0 or m < 0:
-            raise ValueError("Cannot create a matrix with negative dimension")
-
-        mat = MatrixU8.__new__(MatrixU8)
-        mat._m = mat._shape[0] = m
-        mat._n = mat._shape[1] = n
-
-        # allocate the array of pointers
-        mat._data    = <uint8_t**> calloc(m, sizeof(uint8_t*))
-        if mat._data == NULL:
-            raise AllocationError("uint8_t**")
-
-        # allocate the data array
-        if mat._m > 0:
-            mat._data[0] = <uint8_t*> calloc(m*n, sizeof(uint8_t))
-            if mat._data[0] == NULL:
-                raise AllocationError("uint8_t*")
-
-        # update the pointer offsets in the array of pointers
-
-        for i in range(1, m):
-            mat._data[i] = mat._data[0] + i*n
-
-        return mat
-
     # --- Magic methods ------------------------------------------------------
-
-    def __cinit__(self):
-        self._data = NULL
-
-    def __dealloc__(self):
-        if self._owner is None and self._data != NULL:
-            if self._m > 0:
-                free(self._data[0])
-            free(self._data)
-        self._data = NULL
 
     def __init__(self, object iterable):
         cdef int     i
@@ -2125,11 +2082,11 @@ cdef class MatrixU8(Matrix):
             raise ValueError("Cannot create a matrix with a negative number of rows")
 
         # allocate the buffer
-        self._data    = <uint8_t**> calloc(self._m, sizeof(uint8_t*))
+        self._data    = <void**> calloc(self._m, sizeof(uint8_t*))
         if self._data == NULL:
             raise AllocationError("uint8_t**")
         # allocate the data array
-        self._data[0] = <uint8_t*> calloc(self._m*self._n, sizeof(uint8_t))
+        self._data[0] = <void*> calloc(self._m*self._n, sizeof(uint8_t))
         if self._data[0] == NULL:
             raise AllocationError("uint8_t*")
         # update the pointer offsets in the array of pointers
@@ -2141,29 +2098,29 @@ cdef class MatrixU8(Matrix):
             if len(row) != self._n:
                 raise ValueError("Inconsistent number of rows in input")
             for j, val in enumerate(row):
-                self._data[i][j] = val
-
-    def __copy__(self):
-        return self.copy()
+                (<uint8_t**> self._data)[i][j] = val
 
     def __eq__(self, object other):
         assert self._data != NULL
-        cdef MatrixU8 other_
+
+        cdef uint8_t* data       = <uint8_t*> self._data[0]
+        cdef uint8_t* other_data
+        cdef MatrixU8 other_mat
         cdef int      i
-        cdef int      j
+
         # check matrix type
         if not isinstance(other, MatrixU8):
-            return False
+            return NotImplemented
         # check dimensions
-        other_ = other
-        assert other_._data != NULL
-        if self._m != other_._m or self._n != other_._n:
+        other_mat = other
+        assert other_mat._data != NULL
+        other_data = <uint8_t*> other_mat._data[0]
+        if self._m != other_mat._m or self._n != other_mat._n:
             return False
         # check values
-        for i in range(self._m):
-            for j in range(self._n):
-                if self._data[i][j] != other_._data[i][j]:
-                    return False
+        for i in range(self._m * self._n):
+            if data[i] != other_data[i]:
+                return False
         return True
 
     def __add__(MatrixU8 self, object other):
@@ -2174,23 +2131,26 @@ cdef class MatrixU8(Matrix):
     def __iadd__(self, object other):
         assert self._data != NULL
 
-        cdef int      i
+        cdef uint8_t* data       = <uint8_t*> self._data[0]
+        cdef uint8_t* other_data
         cdef MatrixU8 other_mat
         cdef uint8_t  other_n
+        cdef int      i
 
         if isinstance(other, MatrixU8):
             other_mat = other
             assert other_mat._data != NULL
+            other_data = <uint8_t*> other_mat._data[0]
             if other_mat._m != self._m or other_mat._n != self._n:
                 raise ValueError(f"cannot pairwise add {other_mat.shape} matrix to {self.shape} matrix")
             with nogil:
                 for i in range(self._m * self._n):
-                    self._data[0][i] += other_mat._data[0][i]
+                    data[i] += other_data[i]
         else:
             other_n = other
             with nogil:
                 for i in range(self._m * self._n):
-                    self._data[0][i] += other_n
+                    data[i] += other_n
         return self
 
     def __mul__(MatrixU8 self, object other):
@@ -2201,6 +2161,8 @@ cdef class MatrixU8(Matrix):
     def __imul__(self, object other):
         assert self._data != NULL
 
+        cdef uint8_t* data       = <uint8_t*> self._data[0]
+        cdef uint8_t* other_data
         cdef MatrixU8 other_mat
         cdef uint8_t  other_n
         cdef int      i
@@ -2208,17 +2170,18 @@ cdef class MatrixU8(Matrix):
         if isinstance(other, MatrixU8):
             other_mat = other
             assert other_mat._data != NULL
+            other_data = <uint8_t*> other_mat._data[0]
             if other_mat._m != self._m or other_mat._n != self._n:
                 raise ValueError(f"cannot pairwise multiply {other_mat.shape} matrix with {self.shape} matrix")
             # NB(@althonos): There is no function in `vectorops.h` to do this
             # for now...
             for i in range(self._n * self._m):
-                self._data[0][i] *= other_mat._data[0][i]
+                data[i] *= other_data[i]
         else:
             other_n = other
             with nogil:
                 for i in range(self._n * self._m):
-                    self._data[0][i] *= other_n
+                    data[i] *= other_n
         return self
 
     def __getitem__(self, object index):
@@ -2265,7 +2228,7 @@ cdef class MatrixU8(Matrix):
                 raise IndexError("matrix row index out of range")
             if y < 0 or y >= self._n:
                 raise IndexError("matrix column index out of range")
-            return self._data[x][y]
+            return (<uint8_t**> self._data)[x][y]
 
         else:
             ty = type(index).__name__
@@ -2287,52 +2250,10 @@ cdef class MatrixU8(Matrix):
                 raise IndexError("matrix row index out of range")
             if y < 0 or y >= self._n:
                 raise IndexError("matrix column index out of range")
-            self._data[x][y] = value
+            (<uint8_t**> self._data)[x][y] = value
 
         else:
             raise TypeError("Matrix.__setitem__ can only be used with a 2D index")
-
-    def __getbuffer__(self, Py_buffer* buffer, int flags):
-        assert self._data != NULL
-
-        if flags & PyBUF_FORMAT:
-            buffer.format = "B"
-        else:
-            buffer.format = NULL
-        buffer.buf = <void*> &(self._data[0][0])
-        buffer.internal = NULL
-        buffer.itemsize = sizeof(uint8_t)
-        buffer.len = self._m * self._n * sizeof(uint8_t)
-        buffer.ndim = 2
-        buffer.obj = self
-        buffer.readonly = 0
-        buffer.shape = self._shape
-        buffer.suboffsets = NULL
-
-        IF SYS_IMPLEMENTATION_NAME == "pypy":
-            buffer.internal = PyMem_Malloc(2*sizeof(Py_ssize_t))
-            if buffer.internal == NULL:
-                raise AllocationError("Py_ssize_t*")
-            buffer.strides = <Py_ssize_t*> buffer.internal
-            buffer.strides[0] = self.strides[0]
-            buffer.strides[1] = self.strides[1]
-        ELSE:
-            buffer.strides = NULL
-
-    def __releasebuffer__(self, Py_buffer* buffer):
-        IF SYS_IMPLEMENTATION_NAME == "pypy":
-            PyMem_Free(buffer.internal)
-            buffer.internal = NULL
-
-    def __repr__(self):
-        return f"MatrixU8({[list(row) for row in self]!r})"
-
-    def __sizeof__(self):
-        return (
-            self._n * sizeof(uint8_t*)
-          + self._m * self._n * sizeof(uint8_t)
-          + sizeof(self)
-        )
 
     # --- Properties ---------------------------------------------------------
 
@@ -2349,14 +2270,15 @@ cdef class MatrixU8(Matrix):
     cpdef tuple argmax(self):
         assert self._data != NULL
 
-        cdef int i
-        cdef int best = 0
-        cdef int x
-        cdef int y
+        cdef       int      i
+        cdef       int      x
+        cdef       int      y
+        cdef       int      best = 0
+        cdef const uint8_t* data = <uint8_t*> self._data[0]
 
         with nogil:
             for i in range(1, self._m * self._n):
-                if self._data[0][i] > self._data[0][best]:
+                if data[i] > data[best]:
                     best = i
             x = best // self._m
             y = best % self._n
@@ -2365,14 +2287,15 @@ cdef class MatrixU8(Matrix):
     cpdef tuple argmin(self):
         assert self._data != NULL
 
-        cdef int i
-        cdef int best = 0
-        cdef int x
-        cdef int y
+        cdef       int      i
+        cdef       int      x
+        cdef       int      y
+        cdef       int      best = 0
+        cdef const uint8_t* data = <uint8_t*> self._data[0]
 
         with nogil:
             for i in range(1, self._m * self._n):
-                if self._data[0][i] < self._data[0][best]:
+                if data[i] < data[best]:
                     best = i
             x = best // self._m
             y = best % self._n
@@ -2387,58 +2310,57 @@ cdef class MatrixU8(Matrix):
 
         with nogil:
             # allocate array of pointers
-            mat._data = <uint8_t**> malloc(sizeof(uint8_t*) * self._m)
+            mat._data = <void**> malloc(sizeof(uint8_t*) * self._m)
             if mat._data == NULL:
                 raise AllocationError("uint8_t**")
             # allocate memory block
-            mat._data[0] = <uint8_t*> malloc(sizeof(uint8_t) * self._m * self._n)
+            mat._data[0] = <void*> malloc(sizeof(uint8_t) * self._m * self._n)
             if mat._data == NULL:
                 raise AllocationError("uint8_t*")
             # update array of pointers
             for i in range(self._m):
                 mat._data[i] = mat._data[0] + i * self._n
             # copy data
-            memcpy(
-                <void*> mat._data[0],
-                <void*> self._data[0],
-                self._m * self._n * sizeof(uint8_t)
-            )
+            memcpy(mat._data[0], self._data[0], self._m * self._n * sizeof(uint8_t))
 
         return mat
 
     cpdef uint8_t max(self):
         assert self._data != NULL
 
-        cdef int     i
-        cdef uint8_t best = self._data[0][0]
+        cdef       int      i
+        cdef const uint8_t* data = <uint8_t*> self._data[0]
+        cdef       uint8_t  best = data[0]
 
         with nogil:
             for i in range(1, self._m * self._n):
-                if self._data[0][i] > best:
-                    best = self._data[0][i]
+                if data[i] > best:
+                    best = data[i]
         return best
 
     cpdef uint8_t min(self):
         assert self._data != NULL
 
-        cdef int     i
-        cdef uint8_t best = self._data[0][0]
+        cdef       int      i
+        cdef const uint8_t* data = <uint8_t*> self._data[0]
+        cdef       uint8_t  best  = data[0]
 
         with nogil:
             for i in range(1, self._m * self._n):
-                if self._data[0][i] < best:
-                    best = self._data[0][i]
+                if data[i] < best:
+                    best = data[i]
         return best
 
     cpdef uint8_t sum(self):
         assert self._data != NULL
 
-        cdef int     i
-        cdef uint8_t sum = 0
+        cdef       int      i
+        cdef const uint8_t* data = <uint8_t*> self._data[0]
+        cdef       uint8_t  sum  = 0
 
         with nogil:
             for i in range(self._m * self._n):
-                sum += self._data[0][i]
+                sum += data[i]
         return sum
 
 
