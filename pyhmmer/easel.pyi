@@ -218,6 +218,9 @@ class Matrix(typing.Sequence[Vector[_T]], typing.Generic[_T], abc.ABC):
     @property
     @abc.abstractmethod
     def itemsize(self) -> int: ...
+    @property
+    @abc.abstractmethod
+    def format(self) -> str: ...
     @abc.abstractmethod
     def argmax(self) -> typing.Tuple[int, int]: ...
     @abc.abstractmethod
@@ -258,6 +261,8 @@ class MatrixF(Matrix[float]):
     def sum(self) -> float: ...
     @property
     def itemsize(self) -> int: ...
+    @property
+    def format(self) -> str: ...
 
 class MatrixU8(Matrix[int]):
     @classmethod
@@ -286,7 +291,9 @@ class MatrixU8(Matrix[int]):
     def sum(self) -> int: ...
     @property
     def itemsize(self) -> int: ...
-
+    @property
+    def format(self) -> str: ...
+    
 # --- Multiple Sequences Alignment -------------------------------------------
 
 class _MSASequences(typing.Sequence[Sequence], abc.ABC):

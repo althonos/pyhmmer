@@ -692,7 +692,10 @@ cdef class Vector:
 
     @classmethod
     def zeros(cls, int n):
-        """Create a vector of size ``n`` filled with zeros.
+        """zeros(cls, n)\n--
+
+        Create a vector of size ``n`` filled with zeros.
+
         """
         raise TypeError("Can't instantiate abstract class 'Vector'")
 
@@ -710,6 +713,8 @@ cdef class Vector:
         self._data = NULL
 
     def __init__(self, object iterable = None):
+        """__init__(self, iterable=None)\n--
+        """
         raise TypeError("Can't instantiate abstract class 'Vector'")
 
     def __bool__(self):
@@ -949,9 +954,10 @@ cdef class VectorF(Vector):
     # --- Magic methods ------------------------------------------------------
 
     def __init__(self, object iterable):
-        cdef int    n    = len(iterable)
-        cdef size_t i
-        cdef float  item
+        cdef int        n    = len(iterable)
+        cdef size_t     i
+        cdef float      item
+        cdef float[::1] view
 
         # make sure __init__ is only called once
         if self._data != NULL:
@@ -961,6 +967,7 @@ cdef class VectorF(Vector):
             raise ValueError("Cannot create a vector with negative size")
         # record the vector dimensions and strides
         self._n = self._shape[0] = n
+
         # NB: this is to maintain compatibility with systems where `malloc`
         #     is not able to allocate zero-sized memory. In such case, it
         #     would return NULL, which we would interpretate as an
@@ -970,9 +977,17 @@ cdef class VectorF(Vector):
             self._data = malloc(n * sizeof(float))
             if self._data == NULL:
                 raise AllocationError("float*")
-            # assign the items given to the constructor
+
+        # try to copy the memory quickly if *iterable* implements the buffer
+        # protocol, otherwise fall back to cop
+        try:
+            view = iterable
+        except TypeError:
             for i, item in enumerate(iterable):
                 (<float*> self._data)[i] = item
+        else:
+            with nogil:
+                memcpy(self._data, &view[0], n * sizeof(float))
 
     def __eq__(self, object other):
         assert self._data != NULL or self._n == 0
@@ -1237,9 +1252,10 @@ cdef class VectorU8(Vector):
     # --- Magic methods ------------------------------------------------------
 
     def __init__(self, object iterable):
-        cdef int     n    = len(iterable)
-        cdef size_t  i
-        cdef uint8_t item
+        cdef int          n    = len(iterable)
+        cdef size_t       i
+        cdef uint8_t      item
+        cdef uint8_t[::1] view
 
         # make sure __init__ is only called once
         if self._data != NULL:
@@ -1249,6 +1265,7 @@ cdef class VectorU8(Vector):
             raise ValueError("Cannot create a vector with negative size")
         # record the vector dimensions
         self._n = self._shape[0] = n
+
         # NB: this is to maintain compatibility with systems where `malloc`
         #     is not able to allocate zero-sized memory. In such case, it
         #     would return NULL, which we would interpretate as an
@@ -1258,9 +1275,17 @@ cdef class VectorU8(Vector):
             self._data = malloc(n * sizeof(uint8_t))
             if self._data == NULL:
                 raise AllocationError("uint8_t*")
-            # assign the items given to the constructor
+
+        # try to copy the memory quickly if *iterable* implements the buffer
+        # protocol, or fall back to copying each element with a for loop
+        try:
+            view = iterable
+        except TypeError:
             for i, item in enumerate(iterable):
                 (<uint8_t*> self._data)[i] = item
+        else:
+            with nogil:
+                memcpy(self._data, &view[0], n * sizeof(uint8_t))
 
     def __eq__(self, object other):
         assert self._data != NULL or self._n == 0
@@ -1596,6 +1621,18 @@ cdef class Matrix:
         """`int`: The size of each item in the matrix, in bytes.
         """
         raise NotImplementedError("Matrix.itemsize")
+
+    @property
+    def format(self):
+        """`str`: The format of each item in the matrix.
+
+        See Also:
+            The `array` module of the Python standard library for a detail
+            about available type codes.
+
+        .. versionadded:: 0.4.7
+
+        """
 
     # --- Methods ------------------------------------------------------------
 
@@ -1946,6 +1983,10 @@ cdef class MatrixF(Matrix):
     def itemsize(self):
         return sizeof(float)
 
+    @property
+    def format(self):
+        return "f"
+
     # --- Methods ------------------------------------------------------------
 
     cpdef tuple argmax(self):
@@ -2288,6 +2329,10 @@ cdef class MatrixU8(Matrix):
     @property
     def itemsize(self):
         return sizeof(uint8_t)
+
+    @property
+    def format(self):
+        return "B"
 
     # --- Methods ------------------------------------------------------------
 
