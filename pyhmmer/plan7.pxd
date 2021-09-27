@@ -16,6 +16,7 @@ from libhmmer.p7_hmmfile cimport P7_HMMFILE
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e
 from libhmmer.p7_profile cimport P7_PROFILE
 from libhmmer.p7_tophits cimport P7_TOPHITS, P7_HIT
+from libhmmer.p7_trace cimport P7_TRACE
 
 IF HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
@@ -229,3 +230,28 @@ cdef class TopHits:
     cdef int _sort_by_seqidx(self) nogil except 1
 
     cpdef MSA to_msa(self, Alphabet alphabet, bint trim=*, bint digitize=?, bint all_consensus_cols=?)
+
+
+cdef class Trace:
+    cdef readonly Traces traces
+    cdef P7_TRACE* _tr
+
+    cpdef float expected_accuracy(self)
+
+
+cdef class Traces:
+    cdef P7_TRACE** _traces
+    cdef size_t     _N
+
+
+cdef class TraceAligner:
+    cpdef Traces compute_traces(self, HMM hmm, object sequences)
+    cpdef MSA align_traces(
+        self,
+        HMM hmm,
+        object sequences,
+        Traces traces,
+        bint trim=*,
+        bint digitize=*,
+        bint all_consensus_cols=*
+    )

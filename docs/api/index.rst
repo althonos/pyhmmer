@@ -139,6 +139,17 @@ API Reference
         pyhmmer.plan7.Alignment
 
 
+    Traces
+    ^^^^^^^
+
+    .. autosummary::
+        :nosignatures:
+
+        pyhmmer.plan7.TraceAligner
+        pyhmmer.plan7.Traces
+        pyhmmer.plan7.Trace
+
+
     Miscellaneous
     ^^^^^^^^^^^^^
 

@@ -16,6 +16,7 @@ from .easel import (
     DigitalSequence,
     MSA,
     DigitalMSA,
+    TextMSA,
     Randomness,
     VectorF,
     VectorU8,
@@ -503,4 +504,39 @@ class TopHits(typing.Sequence[Hit]):
         trim: bool = False,
         digitize: bool = False,
         all_consensus_cols: bool = False
+    ) -> MSA: ...
+
+class Trace(object):
+    def __eq__(self, other: object) -> bool: ...
+    @property
+    def M(self) -> int: ...
+    @property
+    def L(self) -> int: ...
+    @property
+    def posterior_probabilities(self) -> VectorF: ...
+    def expected_accuracy(self) -> float: ...
+
+class Traces(typing.Sequence[Trace]):
+    def __init__(self) -> None: ...
+    def __len__(self) -> int: ...
+    @typing.overload
+    def __getitem__(self, index: int) -> Trace: ...
+    @typing.overload
+    def __getitem__(self, index: slice) -> typing.Sequence[Trace]: ...
+
+class TraceAligner(object):
+    def __init__(self) -> None: ...
+    def compute_traces(
+        self,
+        hmm: HMM,
+        sequences: typing.Iterable[DigitalSequence],
+    ) -> Traces: ...
+    def align_traces(
+        self,
+        hmm: HMM,
+        sequences: typing.Iterable[DigitalSequence],
+        traces: Traces,
+        trim: bool = False,
+        digitize: bool = False,
+        all_consensus_cols: bool = False,
     ) -> MSA: ...
