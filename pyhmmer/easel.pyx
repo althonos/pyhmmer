@@ -697,7 +697,40 @@ cdef class Vector:
         Create a vector of size ``n`` filled with zeros.
 
         """
-        raise TypeError("Can't instantiate abstract class 'Vector'")
+        cdef Vector       vec      = cls([])
+        cdef size_t       itemsize = vec.itemsize
+
+        if n < 0:
+            raise ValueError("Cannot create a vector with negative size")
+        elif n > 0:
+            vec._n = vec._shape[0] = n
+            with nogil:
+                vec._data = <float*> calloc(vec._n, sizeof(float))
+            if vec._data == NULL:
+                raise AllocationError("void*")
+        return vec
+
+    @classmethod
+    def _from_raw_bytes(cls, buffer, n):
+        """_from_raw_bytes(cls, buffer, n)\n--
+
+        Create a new vector using the given bytes to fill its contents.
+
+        """
+        cdef Vector       vec      = cls([])
+        cdef size_t       itemsize = vec.itemsize
+        cdef object       view     = memoryview(buffer).cast(vec.format)
+        cdef uint8_t[::1] bytes    = view.cast("B")
+
+        assert view.shape[0] == n
+        if n > 0:
+            vec._n = vec._shape[0] = n
+            vec._data = <uint8_t*> malloc(vec._n * itemsize)
+            if vec._data == NULL:
+                raise AllocationError("void*")
+            with nogil:
+                memcpy(vec._data, &bytes[0], vec._n * itemsize)
+        return vec
 
     # --- Magic methods ------------------------------------------------------
 
@@ -765,16 +798,22 @@ cdef class Vector:
     def __sizeof__(self):
         return self._n * self.itemsize + sizeof(self)
 
-    def __reduce__(self):
+    def __reduce_ex__(self, int protocol):
         assert self._data != NULL or self._n == 0
 
-        cdef size_t      itemsize = self.itemsize
-        cdef array.array a        = array.array(self.format)
+        cdef size_t      itemsize
+        cdef array.array a
 
+        # use out-of-band pickling (only supported since protocol 5, see
+        # https://docs.python.org/3/library/pickle.html#out-of-band-buffers)
+        if protocol >= 5:
+            return self._from_raw_bytes, (pickle.PickleBuffer(self), self._n)
+
+        itemsize = self.itemsize
+        a = array.array(self.format)
         array.resize(a, self._n)
         with nogil:
             memcpy(a.data.as_voidptr, self._data, itemsize * self._n)
-
         return type(self), (a,)
 
     # --- Properties ---------------------------------------------------------
@@ -937,27 +976,13 @@ cdef class VectorF(Vector):
 
     """
 
-    # --- Class methods ------------------------------------------------------
-
-    @classmethod
-    def zeros(cls, n):
-        if n < 0:
-            raise ValueError("Cannot create a vector with negative size")
-        cdef VectorF vec = VectorF.__new__(VectorF)
-        vec._n = vec._shape[0] = n
-        if n > 0:
-            vec._data = <float*> calloc(n, sizeof(float))
-            if vec._data == NULL:
-                raise AllocationError("float*")
-        return vec
-
     # --- Magic methods ------------------------------------------------------
 
     def __init__(self, object iterable):
         cdef int        n    = len(iterable)
         cdef size_t     i
         cdef float      item
-        cdef float[::1] view
+        cdef float[::1] view = None
 
         # make sure __init__ is only called once
         if self._data != NULL:
@@ -977,17 +1002,17 @@ cdef class VectorF(Vector):
             self._data = malloc(n * sizeof(float))
             if self._data == NULL:
                 raise AllocationError("float*")
-
-        # try to copy the memory quickly if *iterable* implements the buffer
-        # protocol, otherwise fall back to cop
-        try:
-            view = iterable
-        except TypeError:
-            for i, item in enumerate(iterable):
-                (<float*> self._data)[i] = item
-        else:
-            with nogil:
-                memcpy(self._data, &view[0], n * sizeof(float))
+            # try to copy the memory quickly if *iterable* implements the buffer
+            # protocol, otherwise fall back to cop
+            try:
+                if view is None:
+                    view = iterable
+            except (TypeError, ValueError):
+                for i, item in enumerate(iterable):
+                    (<float*> self._data)[i] = item
+            else:
+                with nogil:
+                    memcpy(self._data, &view[0], n * sizeof(float))
 
     def __eq__(self, object other):
         assert self._data != NULL or self._n == 0
@@ -1235,20 +1260,6 @@ cdef class VectorU8(Vector):
 
     """
 
-    # --- Class methods ------------------------------------------------------
-
-    @classmethod
-    def zeros(cls, n):
-        if n < 0:
-            raise ValueError("Cannot create a vector with negative size")
-        cdef VectorU8 vec = VectorU8.__new__(VectorU8)
-        vec._n = vec._shape[0] = n
-        if n > 0:
-            vec._data = <uint8_t*> calloc(n, sizeof(uint8_t))
-            if vec._data == NULL:
-                raise AllocationError("uint8_t*")
-        return vec
-
     # --- Magic methods ------------------------------------------------------
 
     def __init__(self, object iterable):
@@ -1275,17 +1286,16 @@ cdef class VectorU8(Vector):
             self._data = malloc(n * sizeof(uint8_t))
             if self._data == NULL:
                 raise AllocationError("uint8_t*")
-
-        # try to copy the memory quickly if *iterable* implements the buffer
-        # protocol, or fall back to copying each element with a for loop
-        try:
-            view = iterable
-        except TypeError:
-            for i, item in enumerate(iterable):
-                (<uint8_t*> self._data)[i] = item
-        else:
-            with nogil:
-                memcpy(self._data, &view[0], n * sizeof(uint8_t))
+            # try to copy the memory quickly if *iterable* implements the buffer
+            # protocol, or fall back to copying each element with a for loop
+            try:
+                view = iterable
+            except (TypeError, ValueError):
+                for i, item in enumerate(iterable):
+                    (<uint8_t*> self._data)[i] = item
+            else:
+                with nogil:
+                    memcpy(self._data, &view[0], n * sizeof(uint8_t))
 
     def __eq__(self, object other):
         assert self._data != NULL or self._n == 0

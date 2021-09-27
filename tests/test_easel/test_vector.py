@@ -12,11 +12,20 @@ class _TestVectorBase(object):
     Vector = NotImplemented
 
     def test_pickle(self):
-        v1 = self.Vector([1, 2, 3, 4, 5, 6])
+        v1 = self.Vector(range(6))
         v2 = pickle.loads(pickle.dumps(v1))
+        self.assertSequenceEqual(v1, v2)
 
-        for i in range(len(v1)):
-            self.assertEqual(v1[i], v2[i])
+    def test_pickle_protocol4(self):
+        v1 = self.Vector(range(6))
+        v2 = pickle.loads(pickle.dumps(v1, protocol=4))
+        self.assertSequenceEqual(v1, v2)
+
+    @unittest.skipUnless(sys.version_info >= (3, 8), "pickle protocol 5 requires Python 3.8+")
+    def test_pickle_protocol5(self):
+        v1 = self.Vector(range(6))
+        v2 = pickle.loads(pickle.dumps(v1, protocol=5))
+        self.assertSequenceEqual(v1, v2)
 
     def test_empty_vector(self):
         v1 = self.Vector([])
@@ -36,6 +45,12 @@ class _TestVectorBase(object):
         self.assertEqual(vec[0], 1)
         self.assertEqual(vec[1], 2)
         self.assertEqual(vec[2], 3)
+
+    def test_init_memcpy(self):
+        v1 = self.Vector([1, 2, 3])
+        a  = array.array(v1.format, v1)
+        v2 = self.Vector(a)
+        self.assertEqual(v1, v2)
 
     def test_init_error(self):
         self.assertRaises(TypeError, self.Vector, 1)
