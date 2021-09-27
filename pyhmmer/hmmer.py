@@ -671,7 +671,6 @@ def hmmpress(
 def hmmalign(
     hmm: HMM,
     sequences: typing.Collection[DigitalSequence],
-    map_alignment: bool = False,
     trim: bool = False,
     digitize: bool = False,
     all_consensus_cols: bool = True,
@@ -705,10 +704,6 @@ def hmmalign(
     .. versionadded:: 0.4.7
 
     """
-
-    if map_alignment:
-        raise NotImplementedError("map_alignment=True")
-
     aligner = TraceAligner()
     traces = aligner.compute_traces(hmm, sequences)
     return aligner.align_traces(
@@ -798,7 +793,7 @@ if __name__ == "__main__":
         return 0
 
     def _hmmalign(args: argparse.Namespace) -> int:
-        with SequenceFile(args.seqfile) as seqfile:
+        with SequenceFile(args.seqfile, format=args.informat) as seqfile:
             alphabet = seqfile.guess_alphabet()
             if alphabet is None:
                 print("could not guess alphabet of input, exiting", file=sys.stderr)
@@ -812,7 +807,7 @@ if __name__ == "__main__":
                 print("HMM file contains more than one HMM, exiting", file=sys.stderr)
                 return 1
 
-        msa = hmmalign(hmm, sequences, map_alignment=args.mapali, trim=args.trim)
+        msa = hmmalign(hmm, sequences, trim=args.trim)
         if args.output == "-":
             with io.BytesIO() as out:
                 msa.write(out, args.outformat)
@@ -861,11 +856,6 @@ if __name__ == "__main__":
         default="-",
         metavar="<f>",
         help="output alignment to file <f>, not stdout"
-    )
-    parser_hmmalign.add_argument(
-        "--mapali",
-        action="store_true",
-        help="include the HMM alignment in the output",
     )
     parser_hmmalign.add_argument(
         "--trim",
