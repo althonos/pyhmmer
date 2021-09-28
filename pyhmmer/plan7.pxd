@@ -241,7 +241,7 @@ cdef class Trace:
 
 cdef class Traces:
     cdef P7_TRACE** _traces
-    cdef size_t     _N
+    cdef size_t     _ntraces
 
 
 cdef class TraceAligner:

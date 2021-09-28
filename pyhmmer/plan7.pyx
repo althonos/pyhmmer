@@ -4338,9 +4338,11 @@ cdef class Trace:
 
     def __cinit__(self):
         self._tr = NULL
+        self.traces = None
 
     def __dealloc__(self):
-        libhmmer.p7_trace.p7_trace_Destroy(self._tr)
+        if self.traces is None:
+            libhmmer.p7_trace.p7_trace_Destroy(self._tr)
 
     def __eq__(self, object other):
         assert self._tr != NULL
@@ -4409,13 +4411,13 @@ cdef class Traces:
 
     def __cinit__(self):
         self._traces = NULL
-        self._N = 0
+        self._ntraces = 0
 
     def __dealloc__(self):
-        libhmmer.p7_trace.p7_trace_DestroyArray(self._traces, self._N)
+        libhmmer.p7_trace.p7_trace_DestroyArray(self._traces, self._ntraces)
 
     def __len__(self):
-        return self._N
+        return self._ntraces
 
     def __getitem__(self, ssize_t idx):
         assert self._traces != NULL
@@ -4423,8 +4425,8 @@ cdef class Traces:
         cdef Trace trace
 
         if idx < 0:
-            idx += self.N
-        if idx >= <ssize_t> self._N or idx < 0:
+            idx += self._ntraces
+        if idx >= <ssize_t> self._ntraces or idx < 0:
             raise IndexError("list index out of range")
 
         trace = Trace.__new__(Trace)
@@ -4432,6 +4434,28 @@ cdef class Traces:
         trace._tr = self._traces[idx]
 
         return trace
+
+    def __eq__(self, object other):
+        assert self._traces != NULL
+
+        cdef size_t i
+        cdef int    status
+        cdef Traces other_tr
+
+        if not isinstance(other, Traces):
+            return NotImplemented
+        other_tr = <Traces> other
+
+        if self._ntraces != other_tr._ntraces:
+            return False
+        for i in range(self._ntraces):
+            status = libhmmer.p7_trace.p7_trace_Compare(self._traces[i], other_tr._traces[i], 0.0)
+            if status == libeasel.eslFAIL:
+                return False
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_trace_Compare")
+
+        return True
 
 
 cdef class TraceAligner:
@@ -4489,7 +4513,7 @@ cdef class TraceAligner:
             return traces
 
         # allocate the return array of traces and create empty traces
-        traces._N = nseq
+        traces._ntraces = nseq
         traces._traces = <P7_TRACE**> calloc(nseq, sizeof(P7_TRACE*))
         if traces._traces == NULL:
             raise AllocationError("P7_TRACE**")
