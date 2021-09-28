@@ -6,7 +6,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.6...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.7...HEAD
+
+
+## [v0.4.7] - 2021-09-28
+[v0.4.7]: https://github.com/althonos/pyhmmer/compare/v0.4.6...v0.4.7
+
+### Added
+- `TraceAligner`, `Trace` and `Traces` classes to `pyhmmer.plan7` to get tracebacks after aligning several sequences against an HMM.
+- `pyhmmer.hmmalign` function with the same features as the `hmmalign` binary from HMMER3.
+- Support for out-of-band pickling in `easel.Vector` and `easel.Matrix`.
+
+### Changed
+- Allow creating an empty `Vector` or `Matrix` by calling their constructor without arguments.
+
+### Fixed
+- Potential unreported exceptions in `plan7.OptimizedProfile.write` and several `plan7.SSIWriter` methods.
 
 
 ## [v0.4.6] - 2021-09-10
