@@ -2896,9 +2896,13 @@ cdef class Pipeline:
         double F2=1e-3,
         double F3=1e-5,
         double E=10.0,
+        object T=None,
         double domE=10.0,
+        object domT=None,
         double incE=0.01,
+        object incT=None,
         double incdomE=0.01,
+        object incdomT=None,
         str bit_cutoffs=None,
     ):
         """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None, F1=0.02, F2=1e-3, F3=1e-5, E=10.0, domE=10.0, incE=0.01, incdomE=0.01, bit_cutoffs=None)\n--
@@ -2933,12 +2937,23 @@ cdef class Pipeline:
             F3 (`float`): The uncorrected Forward filter threshold.
             E (`float`): The per-target E-value threshold for reporting
                 a hit.
+            T (`float`, optional): The per-target bit score threshold for
+                reporting a hit. *If given, takes precedence over* ``E``.
             domE (`float`): The per-domain E-value threshold for reporting
                 a domain hit.
+            domT (`float`, optional): The per-domain bit score threshold for
+                reporint a domain hit. *If given, takes precedence over*
+                ``domE``.
             incE (`float`): The per-target E-value threshold for including
                 a hit in the resulting `TopHits`.
+            incT (`float`, optional): The per-target bit score threshold for
+                including a hit in the resulting `TopHits`. *If given, takes
+                precedence over* ``incE``.
             incdomE (`float`): The per-domain E-value threshold for including
                 a domain in the resulting `TopHits`.
+            incdomT (`float`, optional): The per-domain bit score thresholds
+                for including a domain in the resulting `TopHits`. *If given,
+                takes precedence over* ``incdomE``.
             bit_cutoffs (`str`, optional): The model-specific thresholding
                 option to use for reporting hits. With `None` (the default),
                 use global pipeline options; otherwise pass one of
@@ -3001,9 +3016,13 @@ cdef class Pipeline:
         self.F2 = F2
         self.F3 = F3
         self.E = E
+        self.T = T
         self.domE = domE
+        self.domT = domT
         self.incE = incE
+        self.incT = incT
         self.incdomE = incdomE
+        self.incdomT = incdomT
 
         # setup the model-specific reporting cutoffs
         self._save_cutoff_parameters()
@@ -3173,6 +3192,29 @@ cdef class Pipeline:
         self._pli.E = E
 
     @property
+    def T(self):
+        """`float` or `None`: The per-target score threshold for reporting a hit.
+
+        If set to a non-`None` value, this threshold takes precedence over
+        the per-target E-value threshold (`Pipeline.E`).
+
+        .. versionadded:: 0.4.8
+
+        """
+        assert self._pli != NULL
+        return None if self._pli.by_E else self._pli.T
+
+    @T.setter
+    def T(self, object T):
+        assert self._pli != NULL
+        if T is None:
+            self._pli.T = 0.0
+            self._pli.by_E = True
+        else:
+            self._pli.T = T
+            self._pli.by_E = False
+
+    @property
     def domE(self):
         """`float`: The per-domain E-value threshold for reporting a hit.
 
@@ -3186,6 +3228,29 @@ cdef class Pipeline:
     def domE(self, double domE):
         assert self._pli != NULL
         self._pli.domE = domE
+
+    @property
+    def domT(self):
+        """`float` or `None`: The per-domain score threshold for reporting a hit.
+
+        If set to a non-`None` value, this threshold takes precedence over
+        the per-domain E-value threshold (`Pipeline.domE`).
+
+        .. versionadded:: 0.4.8
+
+        """
+        assert self._pli != NULL
+        return None if self._pli.dom_by_E else self._pli.domT
+
+    @domT.setter
+    def domT(self, object domT):
+        assert self._pli != NULL
+        if domT is None:
+            self._pli.domT = 0.0
+            self._pli.dom_by_E = True
+        else:
+            self._pli.domT = domT
+            self._pli.dom_by_E = False
 
     @property
     def incE(self):
@@ -3203,6 +3268,29 @@ cdef class Pipeline:
         self._pli.incE = incE
 
     @property
+    def incT(self):
+        """`float` or `None`: The per-target score threshold for including a hit.
+
+        If set to a non-`None` value, this threshold takes precedence over
+        the per-target E-value inclusion threshold (`Pipeline.incE`).
+
+        .. versionadded:: 0.4.8
+
+        """
+        assert self._pli != NULL
+        return None if self._pli.inc_by_E else self._pli.incT
+
+    @incT.setter
+    def incT(self, object incT):
+        assert self._pli != NULL
+        if incT is None:
+            self._pli.incT = 0.0
+            self._pli.inc_by_E = True
+        else:
+            self._pli.incT = incT
+            self._pli.inc_by_E = False
+
+    @property
     def incdomE(self):
         """`float`: The per-domain E-value threshold for including a hit.
 
@@ -3216,6 +3304,29 @@ cdef class Pipeline:
     def incdomE(self, double incdomE):
         assert self._pli != NULL
         self._pli.incdomE = incdomE
+
+    @property
+    def incdomT(self):
+        """`float` or `None`: The per-domain score threshold for including a hit.
+
+        If set to a non-`None` value, this threshold takes precedence over
+        the per-domain E-value inclusion threshold (`Pipeline.incdomE`).
+
+        .. versionadded:: 0.4.8
+
+        """
+        assert self._pli != NULL
+        return None if self._pli.incdom_by_E else self._pli.incdomT
+
+    @incdomT.setter
+    def incdomT(self, object incdomT):
+        assert self._pli != NULL
+        if incdomT is None:
+            self._pli.incdomT = 0.0
+            self._pli.incdom_by_E = True
+        else:
+            self._pli.incdomT = incdomT
+            self._pli.incdom_by_E = False
 
     @property
     def bit_cutoffs(self):
