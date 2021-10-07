@@ -111,7 +111,7 @@ class TestDigitalSequence(_TestSequenceBase, unittest.TestCase):
         self.assertNotEqual(seq1, 1)
         self.assertNotEqual(seq1, b"hello")
 
-    def test_digitize_roundtrip(self):
+    def test_textize_roundtrip(self):
         arr = bytearray([0, 1, 2, 3])
         dsq1 = easel.DigitalSequence(self.abc, name=b"TEST", sequence=arr)
         tsq1 = dsq1.textize()
@@ -200,6 +200,11 @@ class TestTextSequence(_TestSequenceBase, unittest.TestCase):
         seq2 = dsq1.textize()
         self.assertEqual(seq1.name, seq2.name)
         self.assertEqual(seq1, seq2)
+
+    def test_digitize_invalid(self):
+        seq1 = easel.TextSequence(name=b"TEST", sequence=">v3ry 1nv4l1d")
+        self.assertRaises(ValueError, seq1.digitize, easel.Alphabet.dna())
+        self.assertRaises(ValueError, seq1.digitize, easel.Alphabet.amino())
 
     def test_reverse_complement(self):
         seq = easel.TextSequence(sequence="ATGC")

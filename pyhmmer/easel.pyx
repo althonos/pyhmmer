@@ -2886,6 +2886,10 @@ cdef class TextMSA(MSA):
             `DigitalMSA`: An alignment in digital mode containing the same
             sequences digitized with ``alphabet``.
 
+        Raises:
+            `ValueError`: When the text sequence contains invalid characters
+                that cannot be converted according to ``alphabet.symbols``.
+
         """
         assert self._msa != NULL
         assert alphabet._abc != NULL
@@ -3880,7 +3884,7 @@ cdef class TextSequence(Sequence):
         Convert the text sequence to a digital sequence using ``alphabet``.
 
         Returns:
-            `DigitalSequence`: A copy of the sequence in digital-model,
+            `DigitalSequence`: A copy of the sequence in digital mode,
             digitized with ``alphabet``.
 
         """
@@ -3895,13 +3899,16 @@ cdef class TextSequence(Sequence):
             new._sq = libeasel.sq.esl_sq_CreateDigital(abc)
             if new._sq == NULL:
                 raise AllocationError("ESL_SQ")
-
             status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
-            if status != libeasel.eslOK:
-                raise UnexpectedError(status, "esl_sq_Copy")
 
-        assert libeasel.sq.esl_sq_IsDigital(new._sq)
-        return new
+        if status == libeasel.eslOK:
+            assert libeasel.sq.esl_sq_IsDigital(new._sq)
+            return new
+        elif status == libeasel.eslEINVAL:
+            raise ValueError(f"Cannot digitize sequence with alphabet {alphabet}: invalid chars in sequence")
+        else:
+            raise UnexpectedError(status, "esl_sq_Copy")
+
 
     cpdef TextSequence copy(self):
         """copy(self)\n--

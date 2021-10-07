@@ -174,6 +174,12 @@ class TestTextMSA(TestMSA, unittest.TestCase):
         self.assertEqual(msa_d.sequences[0].name, b"seq1")
         self.assertEqual(msa_d.sequences[0].sequence, easel.VectorU8([0, 1, 2, 3]))
 
+    def test_digitize_invalid(self):
+        dna = easel.Alphabet.dna()
+        s1 = easel.TextSequence(name=b"seq1", sequence=">v3ry 1nv4l1d")
+        msa_t = easel.TextMSA(sequences=[s1])
+        self.assertRaises(ValueError, msa_t.digitize, dna)
+
 
 class TestDigitalMSA(TestMSA, unittest.TestCase):
 
