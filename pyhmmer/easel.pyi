@@ -293,7 +293,7 @@ class MatrixU8(Matrix[int]):
     def itemsize(self) -> int: ...
     @property
     def format(self) -> str: ...
-    
+
 # --- Multiple Sequences Alignment -------------------------------------------
 
 class _MSASequences(typing.Sequence[Sequence], abc.ABC):
@@ -520,7 +520,10 @@ class SequenceFile(typing.ContextManager[SequenceFile], typing.Iterator[Sequence
     @classmethod
     def parseinto(cls, seq: Sequence, buffer: bytes, format: str) -> Sequence: ...
     def __init__(
-        self, file: str, format: typing.Optional[str] = None, ignore_gaps: bool = False
+        self,
+        file: typing.Union[typing.AnyStr, os.PathLike[typing.AnyStr], typing.BinaryIO],
+        format: typing.Optional[str] = None,
+        ignore_gaps: bool = False
     ) -> None: ...
     def __enter__(self) -> SequenceFile: ...
     def __exit__(

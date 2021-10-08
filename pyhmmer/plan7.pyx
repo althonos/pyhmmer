@@ -2284,7 +2284,7 @@ cdef class HMMFile:
         Arguments:
             file (`str` or file-like object): Either the path to a file
                 containing the HMMs to read, or a file-like object opened in
-                binary-mode.
+                **binary mode**.
             db (`bool`): Set to `False` to force the parser to ignore the
                 pressed HMM database if it finds one. Defaults to `True`.
 

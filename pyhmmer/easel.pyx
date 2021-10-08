@@ -4309,8 +4309,9 @@ cdef class SequenceFile:
         Create a new sequence file parser wrapping the given ``file``.
 
         Arguments:
-            file (`str`): The path to a file containing sequences in one of
-                the supported file formats.
+            file (`str` or file-like object): Either the path to a file
+                containing the sequences to read, or a file-like object
+                opened in **binary mode**.
             format (`str`, optional): The format of the file, or `None` to
                 autodetect. Supported values are: ``fasta``, ``embl``,
                 ``genbank``, ``ddbj``, ``uniprot``, ``ncbi``, ``daemon``,
@@ -4320,8 +4321,17 @@ cdef class SequenceFile:
                 such as ``fasta``. With `False`, stick to the default Easel
                 behaviour.
 
+        Raises:
+            `ValueError`: When ``format`` is not a valid sequence format.
+            `NotImplementedError`: When trying to read sequences from a
+                file-like object in one of the unsupported formats (
+                either NCBI, or any MSA format).
+
         .. versionchanged:: 0.4.4
            Added the ``ignore_gaps`` parameter.
+
+        .. versionchanged:: 0.4.8
+           Support reading from a file-like object (except NCBI format).
 
         """
         cdef int   fmt
