@@ -9,7 +9,7 @@ from libeasel.sqio.ascii cimport ESL_SQASCII_DATA
 from libeasel.sqio.ncbi cimport ESL_SQNCBI_DATA
 
 
-cdef extern from "esl_sqio.h" nogil:
+cdef extern from "esl_sqio.h":
 
     ctypedef union ESL_SQDATA:
         ESL_SQASCII_DATA ascii
@@ -91,21 +91,21 @@ cdef extern from "esl_sqio.h" nogil:
     int  esl_sqfile_SetDigital(ESL_SQFILE *sqfp, const ESL_ALPHABET *abc)
     int  esl_sqfile_GuessAlphabet(ESL_SQFILE *sqfp, int *ret_type)
 
-    int   esl_sqio_Read        (ESL_SQFILE *sqfp, ESL_SQ *sq)
-    int   esl_sqio_ReadInfo    (ESL_SQFILE *sqfp, ESL_SQ *sq)
-    int   esl_sqio_ReadWindow  (ESL_SQFILE *sqfp, int C, int W, ESL_SQ *sq)
-    int   esl_sqio_ReadSequence(ESL_SQFILE *sqfp, ESL_SQ *sq)
-    int   esl_sqio_ReadBlock   (ESL_SQFILE *sqfp, ESL_SQ_BLOCK *sqBlock, int max_residues, int max_sequences, int max_init_window, int long_target)
-    int   esl_sqio_Parse       (char *buffer, int size, ESL_SQ *s, int format)
+    int   esl_sqio_Read        (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
+    int   esl_sqio_ReadInfo    (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
+    int   esl_sqio_ReadWindow  (ESL_SQFILE *sqfp, int C, int W, ESL_SQ *sq) except -1
+    int   esl_sqio_ReadSequence(ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
+    int   esl_sqio_ReadBlock   (ESL_SQFILE *sqfp, ESL_SQ_BLOCK *sqBlock, int max_residues, int max_sequences, int max_init_window, int long_target) except -1
+    int   esl_sqio_Parse       (char *buffer, int size, ESL_SQ *s, int format) except -1
 
     int   esl_sqio_Write       (FILE *fp, ESL_SQ *s, int format, int update)
     int   esl_sqio_Echo        (ESL_SQFILE *sqfp, const ESL_SQ *sq, FILE *ofp)
 
-    const char  *esl_sqfile_GetErrorBuf(const ESL_SQFILE *sqfp)
-    int   esl_sqfile_IsRewindable(const ESL_SQFILE *sqfp)
-    int   esl_sqio_IsAlignment(int fmt)
-    int   esl_sqio_EncodeFormat(char *fmtstring)
-    char *esl_sqio_DecodeFormat(int fmt)
+    const char  *esl_sqfile_GetErrorBuf(const ESL_SQFILE *sqfp) nogil
+    int   esl_sqfile_IsRewindable(const ESL_SQFILE *sqfp) except -1
+    int   esl_sqio_IsAlignment(int fmt) nogil
+    int   esl_sqio_EncodeFormat(char *fmtstring) nogil
+    char *esl_sqio_DecodeFormat(int fmt) nogil
     int   esl_sqfile_Position(ESL_SQFILE *sqfp, off_t offset)
     int   esl_sqio_Ignore(ESL_SQFILE *sqfp, const char *ignoredchars)
     int   esl_sqio_AcceptAs(ESL_SQFILE *sqfp, char *xchars, char readas)

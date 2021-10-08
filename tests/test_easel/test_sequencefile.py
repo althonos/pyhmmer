@@ -37,6 +37,11 @@ class TestSequenceFile(_TestSequenceFileBase, unittest.TestCase):
             self.assertRaises(ValueError, easel.SequenceFile, empty.name)
             # with a format argument, we don't expect the file to be empty
             self.assertRaises(EOFError, easel.SequenceFile, empty.name, "fasta")
+        with io.BytesIO(b"") as buffer:
+            # without a format argument, we can't determine the file format
+            self.assertRaises(ValueError, easel.SequenceFile, buffer)
+            # with a format argument, we don't expect the file to be empty
+            self.assertRaises(EOFError, easel.SequenceFile, buffer, "fasta")
 
     def test_init_error_filenotfound(self):
         self.assertRaises(
@@ -133,7 +138,64 @@ class _TestReadFilename(object):
                 self.assertEqual(alphabet, self.alphabet)
 
 
-class TestFastaFile(_TestSequenceFileBase, _TestReadFilename, unittest.TestCase):
+class _TestReadFileObject(object):
+
+    def test_raise_errors(self):
+
+        class WeirdError(ValueError):
+            pass
+
+        class FailibleReader(object):
+            def __init__(self, handle, fault=0):
+                self.handle = handle
+            def read(self, n=-1):
+                raise WeirdError("oops")
+            def readable(self):
+                return True
+            def seekable(self):
+                return False
+            def writable(self):
+                return False
+
+        path = os.path.join(self.formats_folder, self.filenames[0])
+        with open(path, "rb") as f:
+            buffer = io.BytesIO(f.read())
+
+        # this should fail in the constructor if `buffer.read` immediately fails
+        self.assertRaises(WeirdError, easel.SequenceFile, FailibleReader(buffer, 0))
+
+    def test_read_fileobject_given_format(self):
+        # check reading a file while specifying the format works
+        for filename, start in zip(self.filenames, self.starts):
+            path = os.path.join(self.formats_folder, filename)
+            with open(path, "rb") as f:
+                buffer = io.BytesIO(f.read())
+            with easel.SequenceFile(buffer, self.format) as f:
+                seq = f.read()
+                self.assertEqual(seq.sequence[:10], start)
+
+    def test_read_filename_given_format(self):
+        # check reading a file while specifying the format works
+        for filename, start in zip(self.filenames, self.starts):
+            path = os.path.join(self.formats_folder, filename)
+            with open(path, "rb") as f:
+                buffer = io.BytesIO(f.read())
+            with easel.SequenceFile(buffer, self.format) as f:
+                seq = f.read()
+                self.assertEqual(seq.sequence[:10], start)
+
+    def test_read_filename_count_sequences(self):
+        # check reading a file while specifying the format works
+        for filename, count in zip(self.filenames, self.counts):
+            path = os.path.join(self.formats_folder, filename)
+            with open(path, "rb") as f:
+                buffer = io.BytesIO(f.read())
+            with easel.SequenceFile(buffer, self.format) as f:
+                sequences = list(f)
+                self.assertEqual(len(sequences), count)
+
+
+class TestFastaFile(_TestSequenceFileBase, _TestReadFilename, _TestReadFileObject, unittest.TestCase):
     filenames = ["fasta", "fasta.2"]
     starts    = ["MEMLPNQTIY", "MEMLPNQTIY"]
     format    = "fasta"
@@ -141,7 +203,7 @@ class TestFastaFile(_TestSequenceFileBase, _TestReadFilename, unittest.TestCase)
     alphabet  = easel.Alphabet.amino()
 
 
-class TestGenbankFile(_TestSequenceFileBase, _TestReadFilename, unittest.TestCase):
+class TestGenbankFile(_TestSequenceFileBase, _TestReadFilename, _TestReadFileObject, unittest.TestCase):
     filenames = ["genbank", "genbank.2"]
     starts    = ["atccacggcc", "atccacggcc"]
     format    = "genbank"
@@ -149,7 +211,7 @@ class TestGenbankFile(_TestSequenceFileBase, _TestReadFilename, unittest.TestCas
     alphabet  = easel.Alphabet.dna()
 
 
-class TestUniprotFile(_TestSequenceFileBase, _TestReadFilename, unittest.TestCase):
+class TestUniprotFile(_TestSequenceFileBase, _TestReadFilename, _TestReadFileObject, unittest.TestCase):
     filenames = ["uniprot"]
     starts    = ["MEMLPNQTIY"]
     format    = "uniprot"

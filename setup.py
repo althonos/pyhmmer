@@ -438,12 +438,21 @@ class build_clib(_build_clib):
         if not self.distribution.have_run["configure"]:
             self._configure_cmd.run()
 
+        # patch the `esl_sqio_ascii.c` so we can use functions it otherwise
+        # declares as `static`
+        libeasel = self.get_library("easel")
+        old = next(src for src in libeasel.sources if src.endswith("esl_sqio_ascii.c"))
+        new = os.path.join(self.build_temp, "esl_sqio_ascii.c")
+        self.make_file([old], new, self.destatic, (old, new))
+        libeasel.sources.remove(old)
+        libeasel.sources.append(new)
+
         # patch the `p7_hmmfile.c` so that we can use functions it otherwise
         # declares as `static`
-        libhmmer = next(lib for lib in self.libraries if lib.name == "hmmer")
-        old = next( src for src in libhmmer.sources if src.endswith("p7_hmmfile.c") )
+        libhmmer = self.get_library("hmmer")
+        old = next(src for src in libhmmer.sources if src.endswith("p7_hmmfile.c"))
         new = os.path.join(self.build_temp, "p7_hmmfile.c")
-        self.make_file([old], new, self.patch_p7_hmmfile, (old, new))
+        self.make_file([old], new, self.destatic, (old, new))
         libhmmer.sources.remove(old)
         libhmmer.sources.append(new)
 
@@ -487,7 +496,7 @@ class build_clib(_build_clib):
             debug=self.debug,
         )
 
-    def patch_p7_hmmfile(self, old, new):
+    def destatic(self, old, new):
         with open(old, "r") as f:
             lines = f.readlines()
         with open(new, "w") as f:

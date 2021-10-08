@@ -202,6 +202,9 @@ cdef class SequenceFile:
     cpdef Alphabet guess_alphabet(self)
     cpdef Alphabet set_digital(self, Alphabet)
 
+    @staticmethod
+    cdef ESL_SQFILE* _open_fileobj(object fh, int fmt) except NULL
+
 
 # --- Sequence/Subsequence Index ---------------------------------------------
 
