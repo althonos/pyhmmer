@@ -115,6 +115,28 @@ from .errors import AllocationError, UnexpectedError, AlphabetMismatch
 from .utils import peekable
 
 
+# --- Constants --------------------------------------------------------------
+
+cdef dict HMM_FILE_FORMATS = {
+    "2.0": p7_hmmfile_formats_e.p7_HMMFILE_20,
+    "3/a": p7_hmmfile_formats_e.p7_HMMFILE_3a,
+    "3/b": p7_hmmfile_formats_e.p7_HMMFILE_3b,
+    "3/c": p7_hmmfile_formats_e.p7_HMMFILE_3c,
+    "3/d": p7_hmmfile_formats_e.p7_HMMFILE_3d,
+    "3/e": p7_hmmfile_formats_e.p7_HMMFILE_3e,
+    "3/f": p7_hmmfile_formats_e.p7_HMMFILE_3f,
+}
+
+cdef dict HMM_FILE_MAGIC = {
+    v3a_magic: p7_hmmfile_formats_e.p7_HMMFILE_3a,
+    v3b_magic: p7_hmmfile_formats_e.p7_HMMFILE_3b,
+    v3c_magic: p7_hmmfile_formats_e.p7_HMMFILE_3c,
+    v3d_magic: p7_hmmfile_formats_e.p7_HMMFILE_3d,
+    v3e_magic: p7_hmmfile_formats_e.p7_HMMFILE_3e,
+    v3f_magic: p7_hmmfile_formats_e.p7_HMMFILE_3f,
+}
+
+
 # --- Cython classes ---------------------------------------------------------
 
 
@@ -2245,24 +2267,8 @@ cdef class HMMFile:
     """A wrapper around a file (or database), storing serialized HMMs.
     """
 
-    _FORMATS = {
-        "2.0": p7_hmmfile_formats_e.p7_HMMFILE_20,
-        "3/a": p7_hmmfile_formats_e.p7_HMMFILE_3a,
-        "3/b": p7_hmmfile_formats_e.p7_HMMFILE_3b,
-        "3/c": p7_hmmfile_formats_e.p7_HMMFILE_3c,
-        "3/d": p7_hmmfile_formats_e.p7_HMMFILE_3d,
-        "3/e": p7_hmmfile_formats_e.p7_HMMFILE_3e,
-        "3/f": p7_hmmfile_formats_e.p7_HMMFILE_3f,
-    }
-
-    _MAGIC = {
-        v3a_magic: p7_hmmfile_formats_e.p7_HMMFILE_3a,
-        v3b_magic: p7_hmmfile_formats_e.p7_HMMFILE_3b,
-        v3c_magic: p7_hmmfile_formats_e.p7_HMMFILE_3c,
-        v3d_magic: p7_hmmfile_formats_e.p7_HMMFILE_3d,
-        v3e_magic: p7_hmmfile_formats_e.p7_HMMFILE_3e,
-        v3f_magic: p7_hmmfile_formats_e.p7_HMMFILE_3f,
-    }
+    _FORMATS = HMM_FILE_FORMATS
+    _MAGIC = HMM_FILE_MAGIC
 
     # --- Magic methods ------------------------------------------------------
 
@@ -2296,7 +2302,7 @@ cdef class HMMFile:
                 function = "p7_hmmfile_OpenENoDB"
                 status = libhmmer.p7_hmmfile.p7_hmmfile_OpenENoDB(fspath, NULL, &self._hfp, errbuf)
         except TypeError:
-            self._hfp = self._open_fileobj(file)
+            self._hfp = HMMFile._open_fileobj(file)
             status    = libeasel.eslOK
 
         if status == libeasel.eslENOTFOUND:
@@ -2377,7 +2383,8 @@ cdef class HMMFile:
 
     # --- Utils --------------------------------------------------------------
 
-    cdef P7_HMMFILE* _open_fileobj(self, object fh) except *:
+    @staticmethod
+    cdef P7_HMMFILE* _open_fileobj(object fh) except *:
         cdef int         status
         cdef char*       token
         cdef int         token_len
@@ -2419,8 +2426,8 @@ cdef class HMMFile:
 
         # check if the parser is in binary format,
         magic = int.from_bytes(fh_.peek(4)[:4], sys.byteorder)
-        if magic in self._MAGIC:
-            hfp.format = self._MAGIC[magic]
+        if magic in HMM_FILE_MAGIC:
+            hfp.format = HMM_FILE_MAGIC[magic]
             hfp.parser = read_bin30hmm
             # NB: the file must be advanced, since read_bin30hmm assumes
             #     the binary tag has been skipped already, buf we only peeked
@@ -2454,8 +2461,8 @@ cdef class HMMFile:
         if token.startswith(b"HMMER3/"):
             hfp.parser = read_asc30hmm
             format = token[5:].decode("utf-8", "replace")
-            if format in self._FORMATS:
-                hfp.format = self._FORMATS[format]
+            if format in HMM_FILE_FORMATS:
+                hfp.format = HMM_FILE_FORMATS[format]
             else:
                 hfp.parser = NULL
         elif token.startswith(b"HMMER2.0"):

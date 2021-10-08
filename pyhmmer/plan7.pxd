@@ -135,7 +135,8 @@ cdef class HMMFile:
 
     cpdef void close(self)
 
-    cdef P7_HMMFILE* _open_fileobj(self, object fh) except *
+    @staticmethod
+    cdef P7_HMMFILE* _open_fileobj(object fh) except *
 
 
 cdef class OptimizedProfile:
