@@ -8,7 +8,9 @@ import tempfile
 from pyhmmer import easel
 
 
-class TestSequenceFile(unittest.TestCase):
+
+class _TestSequenceFileBase(object):
+
     @classmethod
     def setUpClass(cls):
         cls.formats_folder = os.path.realpath(
@@ -16,6 +18,9 @@ class TestSequenceFile(unittest.TestCase):
                 __file__, os.pardir, os.pardir, os.pardir, "vendor", "easel", "formats"
             )
         )
+
+
+class TestSequenceFile(_TestSequenceFileBase, unittest.TestCase):
 
     def test_guess_alphabet(self):
         embl = os.path.join(self.formats_folder, "embl")
@@ -81,71 +86,72 @@ class TestSequenceFile(unittest.TestCase):
             self.assertEqual(seq.name, b"SNRPA_DROME")
             self.assertEqual(seq.sequence, "")
 
-    def test_readformat_fasta(self):
-        for filename in ["fasta", "fasta.2", "fasta.odd.1"]:
-            fasta = os.path.join(self.formats_folder, filename)
-
-            # check reading a FASTA file works
-            with easel.SequenceFile(fasta, "fasta") as f:
-                seq = f.read()
-                self.assertNotEqual(seq.name, b"")
-
-            # check reading a FASTA file without specifying the format works too
-            with easel.SequenceFile(fasta) as f:
-                seq2 = f.read()
-                self.assertNotEqual(seq2.name, b"")
-
-            # check reading a FASTA file while giving another format fails
-            with easel.SequenceFile(fasta, "embl") as f:
-                self.assertRaises(ValueError, f.read)
-
-    def test_readformat_fasta_error(self):
-        fasta = os.path.join(self.formats_folder, "fasta.bad.1")
-        with easel.SequenceFile(fasta, "fasta") as f:
-            self.assertRaises(ValueError, f.read)
-
-    def test_readformat_embl(self):
-        embl = os.path.join(self.formats_folder, "embl")
-
-        # check reading an EMBL file works
-        with easel.SequenceFile(embl, "embl") as f:
-            seq = f.read()
-            self.assertNotEqual(seq.accession, b"")
-
-        # check reading an EMBL file without specifying the format works too
-        with easel.SequenceFile(embl) as f:
-            seq2 = f.read()
-            self.assertNotEqual(seq2.accession, b"")
-
-        # check reading an EMBL file while giving another format fails
-        with easel.SequenceFile(embl, "fasta") as f:
-            self.assertRaises(ValueError, f.read)
-
-    def test_readformat_genbank(self):
-        gbk = os.path.join(self.formats_folder, "genbank")
-
-        # check reading an EMBL file works
-        with easel.SequenceFile(gbk, "genbank") as f:
-            seq = f.read()
-            self.assertNotEqual(seq.accession, b"")
-
-        # check reading an GenBank file without specifying the format works too
-        with easel.SequenceFile(gbk) as f:
-            seq2 = f.read()
-            self.assertNotEqual(seq2.accession, b"")
-
-        # check reading an GenBank file while giving another format fails
-        with easel.SequenceFile(gbk, "fasta") as f:
-            self.assertRaises(ValueError, f.read)
-
     def test_ignore_gaps(self):
         luxc = os.path.realpath(
             os.path.join(__file__, os.pardir, os.pardir, "data", "msa", "LuxC.faa")
         )
-
+        # fails if not ignoring gaps (since if contains gaps)
         with easel.SequenceFile(luxc, "fasta") as seq_file:
             self.assertRaises(ValueError, seq_file.read)
-
+        # succeeds if ignoring gaps
         with easel.SequenceFile(luxc, "fasta", ignore_gaps=True) as seq_file:
             sequences = list(seq_file)
             self.assertEqual(len(sequences), 13)
+
+
+class _TestReadFilename(object):
+
+    def test_read_filename_guess_format(self):
+        # check reading a file without specifying the format works
+        for filename, start in zip(self.filenames, self.starts):
+            path = os.path.join(self.formats_folder, filename)
+            with easel.SequenceFile(path) as f:
+                seq = f.read()
+                self.assertEqual(seq.sequence[:10], start)
+
+    def test_read_filename_given_format(self):
+        # check reading a file while specifying the format works
+        for filename, start in zip(self.filenames, self.starts):
+            path = os.path.join(self.formats_folder, filename)
+            with easel.SequenceFile(path, self.format) as f:
+                seq = f.read()
+                self.assertEqual(seq.sequence[:10], start)
+
+    def test_read_filename_count_sequences(self):
+        # check reading a file while specifying the format works
+        for filename, count in zip(self.filenames, self.counts):
+            path = os.path.join(self.formats_folder, filename)
+            with easel.SequenceFile(path, self.format) as f:
+                sequences = list(f)
+                self.assertEqual(len(sequences), count)
+
+    def test_guess_alphabet(self):
+        for filename in self.filenames:
+            path = os.path.join(self.formats_folder, filename)
+            with easel.SequenceFile(path, self.format) as f:
+                alphabet = f.guess_alphabet()
+                self.assertEqual(alphabet, self.alphabet)
+
+
+class TestFastaFile(_TestSequenceFileBase, _TestReadFilename, unittest.TestCase):
+    filenames = ["fasta", "fasta.2"]
+    starts    = ["MEMLPNQTIY", "MEMLPNQTIY"]
+    format    = "fasta"
+    counts    = [2]
+    alphabet  = easel.Alphabet.amino()
+
+
+class TestGenbankFile(_TestSequenceFileBase, _TestReadFilename, unittest.TestCase):
+    filenames = ["genbank", "genbank.2"]
+    starts    = ["atccacggcc", "atccacggcc"]
+    format    = "genbank"
+    counts    = [2]
+    alphabet  = easel.Alphabet.dna()
+
+
+class TestUniprotFile(_TestSequenceFileBase, _TestReadFilename, unittest.TestCase):
+    filenames = ["uniprot"]
+    starts    = ["MEMLPNQTIY"]
+    format    = "uniprot"
+    counts    = [1]
+    alphabet  = easel.Alphabet.amino()
