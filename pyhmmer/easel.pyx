@@ -121,6 +121,7 @@ cdef dict SEQUENCE_FILE_FORMATS = {
     "daemon": libeasel.sqio.eslSQFILE_DAEMON,
     "hmmpgmd": libeasel.sqio.eslSQFILE_DAEMON,
     "fmindex": libeasel.sqio.eslSQFILE_FMINDEX,
+    **MSA_FILE_FORMATS,
 }
 
 
@@ -3227,7 +3228,7 @@ cdef class MSAFile:
 
     """
 
-    _FORMATS = MSA_FILE_FORMATS
+    _FORMATS = dict(MSA_FILE_FORMATS) # copy dict to prevent editing
 
     # --- Magic methods ------------------------------------------------------
 
@@ -3239,9 +3240,9 @@ cdef class MSAFile:
         cdef int fmt = libeasel.msafile.eslMSAFILE_UNKNOWN
         if format is not None:
             format_ = format.lower()
-            if format_ not in self._FORMATS:
+            if format_ not in MSA_FILE_FORMATS:
                 raise ValueError("Invalid MSA format: {!r}".format(format))
-            fmt = self._FORMATS[format_]
+            fmt = MSA_FILE_FORMATS[format_]
 
         cdef bytes fspath = os.fsencode(file)
         cdef int status = libeasel.msafile.esl_msafile_Open(NULL, fspath, NULL, fmt, NULL, &self._msaf)
@@ -4275,7 +4276,7 @@ cdef class SequenceFile:
 
     """
 
-    _FORMATS = SEQUENCE_FILE_FORMATS | MSA_FILE_FORMATS
+    _FORMATS = dict(SEQUENCE_FILE_FORMATS) # copy to prevent editing
 
     # --- Class methods ------------------------------------------------------
 
@@ -4519,9 +4520,9 @@ cdef class SequenceFile:
         fmt = libeasel.sqio.eslSQFILE_UNKNOWN
         if format is not None:
             format_ = format.lower()
-            if format_ not in self._FORMATS:
+            if format_ not in SEQUENCE_FILE_FORMATS:
                 raise ValueError("Invalid sequence format: {!r}".format(format))
-            fmt = self._FORMATS[format_]
+            fmt = SEQUENCE_FILE_FORMATS[format_]
 
         # open the given filename
         try:
