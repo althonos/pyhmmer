@@ -96,6 +96,33 @@ import warnings
 from .errors import AllocationError, UnexpectedError, AlphabetMismatch
 from .utils import peekable
 
+# --- Constants --------------------------------------------------------------
+
+cdef dict MSA_FILE_FORMATS = {
+    "stockholm": libeasel.msafile.eslMSAFILE_STOCKHOLM,
+    "pfam": libeasel.msafile.eslMSAFILE_PFAM,
+    "a2m": libeasel.msafile.eslMSAFILE_A2M,
+    "psiblast": libeasel.msafile.eslMSAFILE_PSIBLAST,
+    "selex": libeasel.msafile.eslMSAFILE_SELEX,
+    "afa": libeasel.msafile.eslMSAFILE_AFA,
+    "clustal": libeasel.msafile.eslMSAFILE_CLUSTAL,
+    "clustallike": libeasel.msafile.eslMSAFILE_CLUSTALLIKE,
+    "phylip": libeasel.msafile.eslMSAFILE_PHYLIP,
+    "phylips": libeasel.msafile.eslMSAFILE_PHYLIPS,
+}
+
+cdef dict SEQUENCE_FILE_FORMATS = {
+    "fasta": libeasel.sqio.eslSQFILE_FASTA,
+    "embl": libeasel.sqio.eslSQFILE_EMBL,
+    "genbank": libeasel.sqio.eslSQFILE_GENBANK,
+    "ddbj": libeasel.sqio.eslSQFILE_DDBJ,
+    "uniprot": libeasel.sqio.eslSQFILE_UNIPROT,
+    "ncbi": libeasel.sqio.eslSQFILE_NCBI,
+    "daemon": libeasel.sqio.eslSQFILE_DAEMON,
+    "hmmpgmd": libeasel.sqio.eslSQFILE_DAEMON,
+    "fmindex": libeasel.sqio.eslSQFILE_FMINDEX,
+}
+
 
 # --- Alphabet ---------------------------------------------------------------
 
@@ -2667,10 +2694,10 @@ cdef class MSA:
         cdef int    fmt
         cdef FILE*  file
 
-        if format not in MSAFile._formats:
+        if format not in MSA_FILE_FORMATS:
             raise ValueError("Invalid MSA format: {!r}".format(format))
 
-        fmt = MSAFile._formats[format]
+        fmt = MSA_FILE_FORMATS[format]
         file = fopen_obj(fh, mode="w")
         status = libeasel.msafile.esl_msafile_Write(file, self._msa, fmt)
         fclose(file)
@@ -3200,18 +3227,7 @@ cdef class MSAFile:
 
     """
 
-    _formats = {
-        "stockholm": libeasel.msafile.eslMSAFILE_STOCKHOLM,
-        "pfam": libeasel.msafile.eslMSAFILE_PFAM,
-        "a2m": libeasel.msafile.eslMSAFILE_A2M,
-        "psiblast": libeasel.msafile.eslMSAFILE_PSIBLAST,
-        "selex": libeasel.msafile.eslMSAFILE_SELEX,
-        "afa": libeasel.msafile.eslMSAFILE_AFA,
-        "clustal": libeasel.msafile.eslMSAFILE_CLUSTAL,
-        "clustallike": libeasel.msafile.eslMSAFILE_CLUSTALLIKE,
-        "phylip": libeasel.msafile.eslMSAFILE_PHYLIP,
-        "phylips": libeasel.msafile.eslMSAFILE_PHYLIPS,
-    }
+    _FORMATS = MSA_FILE_FORMATS
 
     # --- Magic methods ------------------------------------------------------
 
@@ -3223,9 +3239,9 @@ cdef class MSAFile:
         cdef int fmt = libeasel.msafile.eslMSAFILE_UNKNOWN
         if format is not None:
             format_ = format.lower()
-            if format_ not in self._formats:
+            if format_ not in self._FORMATS:
                 raise ValueError("Invalid MSA format: {!r}".format(format))
-            fmt = self._formats[format_]
+            fmt = self._FORMATS[format_]
 
         cdef bytes fspath = os.fsencode(file)
         cdef int status = libeasel.msafile.esl_msafile_Open(NULL, fspath, NULL, fmt, NULL, &self._msaf)
@@ -4238,23 +4254,28 @@ cdef class SequenceFile:
     detected, but it is also possible to pass an explicit format specifier
     when the `SequenceFile` is instantiated.
 
+    Hint:
+        `~pyhmmer.easel.SequenceFile` objects can also be used to parse
+        files containing multiple sequence alignments: in that case, the
+        sequences will be read sequentially, removing the gap characters::
+
+            >>> with SequenceFile("vendor/easel/formats/stockholm.1") as sf:
+            ...     sequences = list(sf)
+            >>> print(sequences[0].name, sequences[0].sequence)
+            b'seq1' GAATTC
+            >>> print(sequences[1].name, sequences[0].sequence)
+            b'seq2' GAATTC
+
     .. versionadded:: 0.2.0
        The ``alphabet`` attribute.
 
+    .. versionchanged:: 0.4.8
+       Support reading sequences from a file-like handle.
+       Support reading individual sequences from an MSA file.
+
     """
 
-    _formats = {
-        "fasta": libeasel.sqio.eslSQFILE_FASTA,
-        "embl": libeasel.sqio.eslSQFILE_EMBL,
-        "genbank": libeasel.sqio.eslSQFILE_GENBANK,
-        "ddbj": libeasel.sqio.eslSQFILE_DDBJ,
-        "uniprot": libeasel.sqio.eslSQFILE_UNIPROT,
-        "ncbi": libeasel.sqio.eslSQFILE_NCBI,
-        "daemon": libeasel.sqio.eslSQFILE_DAEMON,
-        "hmmpgmd": libeasel.sqio.eslSQFILE_DAEMON,
-        "fmindex": libeasel.sqio.eslSQFILE_FMINDEX,
-    }
-
+    _FORMATS = SEQUENCE_FILE_FORMATS | MSA_FILE_FORMATS
 
     # --- Class methods ------------------------------------------------------
 
@@ -4284,9 +4305,9 @@ cdef class SequenceFile:
         cdef int fmt = libeasel.sqio.eslSQFILE_UNKNOWN
         if format is not None:
             format_ = format.lower()
-            if format_ not in cls._formats:
+            if format_ not in cls._FORMATS:
                 raise ValueError("Invalid sequence format: {!r}".format(format))
-            fmt = cls._formats[format_]
+            fmt = cls._FORMATS[format_]
 
         cdef int status = libeasel.sqio.esl_sqio_Parse(buffer, len(buffer), seq._sq, fmt)
         if status == libeasel.eslEFORMAT:
@@ -4295,6 +4316,162 @@ cdef class SequenceFile:
             return seq
         else:
             raise UnexpectedError(status, "esl_sqio_Parse")
+
+
+    # --- Constructor --------------------------------------------------------
+
+    @staticmethod
+    cdef ESL_SQFILE* _open_fileobj(object fh, int fmt) except NULL:
+        """_open_fileobj(fh, fmt)\n--
+
+        Get an ``ESL_SQFILE*`` to read sequences from the file-like object ``fh``.
+
+        Adapted from the ``esl_sqfile_Open`` function in ``esl_sqio.c`` and
+        ``esl_sqascii_Open`` in ``esl_sqio_ascii.c`` to support using a
+        file-like object instead of a filename only.
+
+        Raises:
+            `~pyhmmer.errors.AllocationError`: When either the ``ESL_SQFILE``
+                or one of the string allocations fails.
+            `NotImplementedError`: When calling `HMMFile._open_fileobj` with
+                ``eslSQFILE_NCBI`` as the sequence format.
+
+        """
+        cdef int               n
+        cdef int               status
+        cdef ESL_SQFILE*       sqfp    = NULL
+        cdef ESL_SQASCII_DATA* ascii   = NULL
+        cdef FILE*             fp      = fopen_obj(fh)
+        cdef bytes             fh_repr = repr(fh).encode("ascii")
+
+        # bail out early if format is not supported
+        if fmt == libeasel.sqio.eslSQFILE_NCBI:
+            raise NotImplementedError("Cannot use a file-like object to read sequences from an NCBI database")
+        elif libeasel.sqio.esl_sqio_IsAlignment(fmt):
+            raise NotImplementedError("Cannot use a file-like object to read sequences from an MSA file")
+
+        # attempt to allocate space for the ESL_SQFILE
+        sqfp = <ESL_SQFILE*> malloc(sizeof(ESL_SQFILE))
+        if sqfp == NULL:
+            fclose(fp)
+            raise AllocationError("ESL_SQFILE")
+
+        # reset options
+        sqfp.filename   = NULL
+        sqfp.do_digital = False
+        sqfp.abc        = NULL
+        sqfp.format     = fmt
+
+        # initialize function pointers
+        sqfp.position       = &sqascii_Position
+        sqfp.close          = &sqascii_Close
+        sqfp.set_digital    = &sqascii_SetDigital
+        sqfp.guess_alphabet = &sqascii_GuessAlphabet
+        sqfp.is_rewindable  = &sqascii_IsRewindable
+        sqfp.read           = &sqascii_Read
+        sqfp.read_info      = &sqascii_ReadInfo
+        sqfp.read_seq       = &sqascii_ReadSequence
+        sqfp.read_window    = &sqascii_ReadWindow
+        sqfp.echo           = &sqascii_Echo
+        sqfp.read_block     = &sqascii_ReadBlock
+        sqfp.open_ssi       = &sqascii_OpenSSI
+        sqfp.pos_by_key     = &sqascii_PositionByKey
+        sqfp.pos_by_number  = &sqascii_PositionByNumber
+        sqfp.fetch          = &sqascii_Fetch
+        sqfp.fetch_info     = &sqascii_FetchInfo
+        sqfp.fetch_subseq   = &sqascii_FetchSubseq
+        sqfp.get_error      = &sqascii_GetError
+
+        # we don't need to look through the environment folder here, and
+        # we know we are going to read from an ASCII file, so we can just
+        # inline the `esl_sqascii_Open` function.
+        ascii                  = &sqfp.data.ascii
+        ascii.fp               = fp
+        ascii.do_gzip          = False
+        ascii.do_stdin         = False
+        ascii.do_buffer        = False
+        ascii.mem              = NULL
+        ascii.allocm           = 0
+        ascii.mn               = 0
+        ascii.mpos             = 0
+        ascii.moff             = -1
+        ascii.is_recording     = False
+        ascii.buf              = NULL
+        ascii.boff             = 0
+        ascii.balloc           = 0
+        ascii.nc               = 0
+        ascii.bpos             = 0
+        ascii.L                = 0
+        ascii.linenumber       = 0
+        ascii.bookmark_offset  = 0
+        ascii.bookmark_linenum = 0
+        ascii.is_linebased     = False
+        ascii.eof_is_ok        = False
+        ascii.parse_header     = NULL
+        ascii.skip_header      = NULL
+        ascii.parse_end        = NULL
+        ascii.afp              = NULL
+        ascii.msa              = NULL
+        ascii.idx              = -1
+        ascii.ssifile          = NULL
+        ascii.rpl              = -1
+        ascii.bpl              = -1
+        ascii.prvrpl           = -1
+        ascii.prvbpl           = -1
+        ascii.currpl           = -1
+        ascii.curbpl           = -1
+        ascii.ssi              = NULL
+
+        # use the repr string of the file-like object as a filename
+        sqfp.filename = strdup(<const char*> fh_repr)
+        if sqfp.filename == NULL:
+            libeasel.sqio.esl_sqfile_Close(sqfp)
+            raise AllocationError("char*")
+
+        # if we don't know the format yet, try to autodetect
+        if fmt == libeasel.sqio.eslSQFILE_UNKNOWN:
+            status = sqascii_GuessFileFormat(sqfp, &fmt)
+            if status == libeasel.eslOK:
+                sqfp.format = fmt
+            elif status == libeasel.eslEFORMAT:
+                libeasel.sqio.esl_sqfile_Close(sqfp)
+                raise ValueError("Could not determine format of file: {!r}".format(fh))
+            elif status != libeasel.eslEFORMAT:
+                libeasel.sqio.esl_sqfile_Close(sqfp)
+                raise UnexpectedError(status, "sqascii_GuessFileFormat")
+
+        # configure the parser and inmaps for this format
+        if fmt == libeasel.sqio.eslSQFILE_EMBL or fmt == libeasel.sqio.eslSQFILE_UNIPROT:
+            config_embl(sqfp)
+            inmap_embl(sqfp, NULL)
+        elif fmt == libeasel.sqio.eslSQFILE_GENBANK or fmt == libeasel.sqio.eslSQFILE_DDBJ:
+            config_genbank(sqfp)
+            inmap_genbank(sqfp, NULL)
+        elif fmt == libeasel.sqio.eslSQFILE_FASTA or fmt == libeasel.sqio.eslSQFILE_HMMPGMD:
+            config_fasta(sqfp)
+            inmap_fasta(sqfp, NULL)
+        elif fmt == libeasel.sqio.eslSQFILE_DAEMON:
+            config_daemon(sqfp)
+            inmap_daemon(sqfp,  NULL)
+        else:
+            libeasel.sqio.esl_sqfile_Close(sqfp)
+            raise ValueError("Unknown format code for `SequenceFile._open_fileobj`: {}".format(fmt))
+
+        # preload the first line
+        status = loadbuf(sqfp)
+        if status == libeasel.eslEOF:
+            libeasel.sqio.esl_sqfile_Close(sqfp)
+            raise EOFError("Sequence file is empty")
+        elif status != libeasel.eslOK:
+            libeasel.sqio.esl_sqfile_Close(sqfp)
+            raise UnexpectedError(status, "loadbuf")
+
+        # skip the first line of HMMPGMD files, which is a header
+        if fmt == libeasel.sqio.eslSQFILE_HMMPGMD:
+            fileheader_hmmpgmd(sqfp)
+
+        # return the newly created sequence reader
+        return sqfp
 
 
     # --- Magic methods ------------------------------------------------------
@@ -4342,9 +4519,9 @@ cdef class SequenceFile:
         fmt = libeasel.sqio.eslSQFILE_UNKNOWN
         if format is not None:
             format_ = format.lower()
-            if format_ not in self._formats:
+            if format_ not in self._FORMATS:
                 raise ValueError("Invalid sequence format: {!r}".format(format))
-            fmt = self._formats[format_]
+            fmt = self._FORMATS[format_]
 
         # open the given filename
         try:
@@ -4590,159 +4767,6 @@ cdef class SequenceFile:
             return self.alphabet
         else:
             raise UnexpectedError(status, "esl_sqfile_SetDigital")
-
-    @staticmethod
-    cdef ESL_SQFILE* _open_fileobj(object fh, int fmt) except NULL:
-        """_open_fileobj(fh, fmt)\n--
-
-        Get an ``ESL_SQFILE*`` to read sequences from the file-like object ``fh``.
-
-        Adapted from the ``esl_sqfile_Open`` function in ``esl_sqio.c`` and
-        ``esl_sqascii_Open`` in ``esl_sqio_ascii.c`` to support using a
-        file-like object instead of a filename only.
-
-        Raises:
-            `~pyhmmer.errors.AllocationError`: When either the ``ESL_SQFILE``
-                or one of the string allocations fails.
-            `NotImplementedError`: When calling `HMMFile._open_fileobj` with
-                ``eslSQFILE_NCBI`` as the sequence format.
-
-        """
-        cdef int               n
-        cdef int               status
-        cdef ESL_SQFILE*       sqfp    = NULL
-        cdef ESL_SQASCII_DATA* ascii   = NULL
-        cdef FILE*             fp      = fopen_obj(fh)
-        cdef bytes             fh_repr = repr(fh).encode("ascii")
-
-        # bail out early if format is not supported
-        if fmt == libeasel.sqio.eslSQFILE_NCBI:
-            raise NotImplementedError("Cannot use a file-like object to read sequences from an NCBI database")
-        elif libeasel.sqio.esl_sqio_IsAlignment(fmt):
-            raise NotImplementedError("Cannot use a file-like object to read sequences from an MSA file")
-
-        # attempt to allocate space for the ESL_SQFILE
-        sqfp = <ESL_SQFILE*> malloc(sizeof(ESL_SQFILE))
-        if sqfp == NULL:
-            fclose(fp)
-            raise AllocationError("ESL_SQFILE")
-
-        # reset options
-        sqfp.filename   = NULL
-        sqfp.do_digital = False
-        sqfp.abc        = NULL
-        sqfp.format     = fmt
-
-        # initialize function pointers
-        sqfp.position       = &sqascii_Position
-        sqfp.close          = &sqascii_Close
-        sqfp.set_digital    = &sqascii_SetDigital
-        sqfp.guess_alphabet = &sqascii_GuessAlphabet
-        sqfp.is_rewindable  = &sqascii_IsRewindable
-        sqfp.read           = &sqascii_Read
-        sqfp.read_info      = &sqascii_ReadInfo
-        sqfp.read_seq       = &sqascii_ReadSequence
-        sqfp.read_window    = &sqascii_ReadWindow
-        sqfp.echo           = &sqascii_Echo
-        sqfp.read_block     = &sqascii_ReadBlock
-        sqfp.open_ssi       = &sqascii_OpenSSI
-        sqfp.pos_by_key     = &sqascii_PositionByKey
-        sqfp.pos_by_number  = &sqascii_PositionByNumber
-        sqfp.fetch          = &sqascii_Fetch
-        sqfp.fetch_info     = &sqascii_FetchInfo
-        sqfp.fetch_subseq   = &sqascii_FetchSubseq
-        sqfp.get_error      = &sqascii_GetError
-
-        # we don't need to look through the environment folder here, and
-        # we know we are going to read from an ASCII file, so we can just
-        # inline the `esl_sqascii_Open` function.
-        ascii                  = &sqfp.data.ascii
-        ascii.fp               = fp
-        ascii.do_gzip          = False
-        ascii.do_stdin         = False
-        ascii.do_buffer        = False
-        ascii.mem              = NULL
-        ascii.allocm           = 0
-        ascii.mn               = 0
-        ascii.mpos             = 0
-        ascii.moff             = -1
-        ascii.is_recording     = False
-        ascii.buf              = NULL
-        ascii.boff             = 0
-        ascii.balloc           = 0
-        ascii.nc               = 0
-        ascii.bpos             = 0
-        ascii.L                = 0
-        ascii.linenumber       = 0
-        ascii.bookmark_offset  = 0
-        ascii.bookmark_linenum = 0
-        ascii.is_linebased     = False
-        ascii.eof_is_ok        = False
-        ascii.parse_header     = NULL
-        ascii.skip_header      = NULL
-        ascii.parse_end        = NULL
-        ascii.afp              = NULL
-        ascii.msa              = NULL
-        ascii.idx              = -1
-        ascii.ssifile          = NULL
-        ascii.rpl              = -1
-        ascii.bpl              = -1
-        ascii.prvrpl           = -1
-        ascii.prvbpl           = -1
-        ascii.currpl           = -1
-        ascii.curbpl           = -1
-        ascii.ssi              = NULL
-
-        # use the repr string of the file-like object as a filename
-        sqfp.filename = strdup(<const char*> fh_repr)
-        if sqfp.filename == NULL:
-            libeasel.sqio.esl_sqfile_Close(sqfp)
-            raise AllocationError("char*")
-
-        # if we don't know the format yet, try to autodetect
-        if fmt == libeasel.sqio.eslSQFILE_UNKNOWN:
-            status = sqascii_GuessFileFormat(sqfp, &fmt)
-            if status == libeasel.eslOK:
-                sqfp.format = fmt
-            elif status == libeasel.eslEFORMAT:
-                libeasel.sqio.esl_sqfile_Close(sqfp)
-                raise ValueError("Could not determine format of file: {!r}".format(fh))
-            elif status != libeasel.eslEFORMAT:
-                libeasel.sqio.esl_sqfile_Close(sqfp)
-                raise UnexpectedError(status, "sqascii_GuessFileFormat")
-
-        # configure the parser and inmaps for this format
-        if fmt == libeasel.sqio.eslSQFILE_EMBL or fmt == libeasel.sqio.eslSQFILE_UNIPROT:
-            config_embl(sqfp)
-            inmap_embl(sqfp, NULL)
-        elif fmt == libeasel.sqio.eslSQFILE_GENBANK or fmt == libeasel.sqio.eslSQFILE_DDBJ:
-            config_genbank(sqfp)
-            inmap_genbank(sqfp, NULL)
-        elif fmt == libeasel.sqio.eslSQFILE_FASTA or fmt == libeasel.sqio.eslSQFILE_HMMPGMD:
-            config_fasta(sqfp)
-            inmap_fasta(sqfp, NULL)
-        elif fmt == libeasel.sqio.eslSQFILE_DAEMON:
-            config_daemon(sqfp)
-            inmap_daemon(sqfp,  NULL)
-        else:
-            libeasel.sqio.esl_sqfile_Close(sqfp)
-            raise ValueError("Unknown format code for `SequenceFile._open_fileobj`: {}".format(fmt))
-
-        # preload the first line
-        status = loadbuf(sqfp)
-        if status == libeasel.eslEOF:
-            libeasel.sqio.esl_sqfile_Close(sqfp)
-            raise EOFError("Sequence file is empty")
-        elif status != libeasel.eslOK:
-            libeasel.sqio.esl_sqfile_Close(sqfp)
-            raise UnexpectedError(status, "loadbuf")
-
-        # skip the first line of HMMPGMD files, which is a header
-        if fmt == libeasel.sqio.eslSQFILE_HMMPGMD:
-            fileheader_hmmpgmd(sqfp)
-
-        # return the newly created sequence reader
-        return sqfp
 
 
 # --- Sequence/Subsequence Index ---------------------------------------------

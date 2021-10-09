@@ -2270,6 +2270,103 @@ cdef class HMMFile:
     _FORMATS = HMM_FILE_FORMATS
     _MAGIC = HMM_FILE_MAGIC
 
+    # --- Constructor --------------------------------------------------------
+
+    @staticmethod
+    cdef P7_HMMFILE* _open_fileobj(object fh) except *:
+        cdef int         status
+        cdef char*       token
+        cdef int         token_len
+        cdef bytes       filename
+        cdef object      fh_       = fh
+        cdef P7_HMMFILE* hfp       = NULL
+
+        # use buffered IO to be able to peek efficiently
+        if not hasattr(fh, "peek"):
+            fh_ = io.BufferedReader(fh)
+
+        # attempt to allocate space for the P7_HMMFILE
+        hfp = <P7_HMMFILE*> malloc(sizeof(P7_HMMFILE));
+        if hfp == NULL:
+            raise AllocationError("P7_HMMFILE")
+
+        # store options
+        hfp.f            = fopen_obj(fh_)
+        hfp.do_gzip      = False
+        hfp.do_stdin     = False
+        hfp.newly_opened = True
+        hfp.is_pressed   = False
+
+        # set pointers as NULL for now
+        hfp.parser    = NULL
+        hfp.efp       = NULL
+        hfp.ffp       = NULL
+        hfp.pfp       = NULL
+        hfp.ssi       = NULL
+        hfp.fname     = NULL
+        hfp.errbuf[0] = b"\0"
+
+        # extract the filename if the file handle has a `name` attribute
+        if hasattr(fh, "name"):
+            filename = fh.name.encode()
+            hfp.fname = strdup(filename)
+            if hfp.fname == NULL:
+                raise AllocationError("char*")
+
+        # check if the parser is in binary format,
+        magic = int.from_bytes(fh_.peek(4)[:4], sys.byteorder)
+        if magic in HMM_FILE_MAGIC:
+            hfp.format = HMM_FILE_MAGIC[magic]
+            hfp.parser = read_bin30hmm
+            # NB: the file must be advanced, since read_bin30hmm assumes
+            #     the binary tag has been skipped already, buf we only peeked
+            #     so far; note that we advance without seeking or rewinding.
+            fh_.read(4)
+            return hfp
+
+        # create and configure the file parser
+        hfp.efp = libeasel.fileparser.esl_fileparser_Create(hfp.f)
+        if hfp.efp == NULL:
+            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
+            raise AllocationError("ESL_FILEPARSER")
+        status = libeasel.fileparser.esl_fileparser_SetCommentChar(hfp.efp, b"#")
+        if status != libeasel.eslOK:
+            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
+            raise UnexpectedError(status, "esl_fileparser_SetCommentChar")
+
+        # get the magic string at the beginning
+        status = libeasel.fileparser.esl_fileparser_NextLine(hfp.efp)
+        if status == libeasel.eslEOF:
+            raise EOFError("HMM file is empty")
+        elif status != libeasel.eslOK:
+            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
+            raise UnexpectedError(status, "esl_fileparser_NextLine");
+        status = libeasel.fileparser.esl_fileparser_GetToken(hfp.efp, &token, &token_len)
+        if status != libeasel.eslOK:
+            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
+            raise UnexpectedError(status, "esl_fileparser_GetToken");
+
+        # detect the format
+        if token.startswith(b"HMMER3/"):
+            hfp.parser = read_asc30hmm
+            format = token[5:].decode("utf-8", "replace")
+            if format in HMM_FILE_FORMATS:
+                hfp.format = HMM_FILE_FORMATS[format]
+            else:
+                hfp.parser = NULL
+        elif token.startswith(b"HMMER2.0"):
+            hfp.parser = read_asc20hmm
+            hfp.format = p7_hmmfile_formats_e.p7_HMMFILE_20
+
+        # check the format tag was recognized
+        if hfp.parser == NULL:
+            text = token.decode("utf-8", "replace")
+            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
+            raise ValueError("Unrecognized format tag in HMM file: {!r}".format(text))
+
+        # return the finalized P7_HMMFILE*
+        return hfp
+
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
@@ -2382,101 +2479,6 @@ cdef class HMMFile:
             self._hfp = NULL
 
     # --- Utils --------------------------------------------------------------
-
-    @staticmethod
-    cdef P7_HMMFILE* _open_fileobj(object fh) except *:
-        cdef int         status
-        cdef char*       token
-        cdef int         token_len
-        cdef bytes       filename
-        cdef object      fh_       = fh
-        cdef P7_HMMFILE* hfp       = NULL
-
-        # use buffered IO to be able to peek efficiently
-        if not hasattr(fh, "peek"):
-            fh_ = io.BufferedReader(fh)
-
-        # attempt to allocate space for the P7_HMMFILE
-        hfp = <P7_HMMFILE*> malloc(sizeof(P7_HMMFILE));
-        if hfp == NULL:
-            raise AllocationError("P7_HMMFILE")
-
-        # store options
-        hfp.f            = fopen_obj(fh_)
-        hfp.do_gzip      = False
-        hfp.do_stdin     = False
-        hfp.newly_opened = True
-        hfp.is_pressed   = False
-
-        # set pointers as NULL for now
-        hfp.parser    = NULL
-        hfp.efp       = NULL
-        hfp.ffp       = NULL
-        hfp.pfp       = NULL
-        hfp.ssi       = NULL
-        hfp.fname     = NULL
-        hfp.errbuf[0] = b"\0"
-
-        # extract the filename if the file handle has a `name` attribute
-        if hasattr(fh, "name"):
-            filename = fh.name.encode()
-            hfp.fname = strdup(filename)
-            if hfp.fname == NULL:
-                raise AllocationError("char*")
-
-        # check if the parser is in binary format,
-        magic = int.from_bytes(fh_.peek(4)[:4], sys.byteorder)
-        if magic in HMM_FILE_MAGIC:
-            hfp.format = HMM_FILE_MAGIC[magic]
-            hfp.parser = read_bin30hmm
-            # NB: the file must be advanced, since read_bin30hmm assumes
-            #     the binary tag has been skipped already, buf we only peeked
-            #     so far; note that we advance without seeking or rewinding.
-            fh_.read(4)
-            return hfp
-
-        # create and configure the file parser
-        hfp.efp = libeasel.fileparser.esl_fileparser_Create(hfp.f)
-        if hfp.efp == NULL:
-            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
-            raise AllocationError("ESL_FILEPARSER")
-        status = libeasel.fileparser.esl_fileparser_SetCommentChar(hfp.efp, b"#")
-        if status != libeasel.eslOK:
-            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
-            raise UnexpectedError(status, "esl_fileparser_SetCommentChar")
-
-        # get the magic string at the beginning
-        status = libeasel.fileparser.esl_fileparser_NextLine(hfp.efp)
-        if status == libeasel.eslEOF:
-            raise EOFError("HMM file is empty")
-        elif status != libeasel.eslOK:
-            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
-            raise UnexpectedError(status, "esl_fileparser_NextLine");
-        status = libeasel.fileparser.esl_fileparser_GetToken(hfp.efp, &token, &token_len)
-        if status != libeasel.eslOK:
-            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
-            raise UnexpectedError(status, "esl_fileparser_GetToken");
-
-        # detect the format
-        if token.startswith(b"HMMER3/"):
-            hfp.parser = read_asc30hmm
-            format = token[5:].decode("utf-8", "replace")
-            if format in HMM_FILE_FORMATS:
-                hfp.format = HMM_FILE_FORMATS[format]
-            else:
-                hfp.parser = NULL
-        elif token.startswith(b"HMMER2.0"):
-            hfp.parser = read_asc20hmm
-            hfp.format = p7_hmmfile_formats_e.p7_HMMFILE_20
-
-        # check the format tag was recognized
-        if hfp.parser == NULL:
-            text = token.decode("utf-8", "replace")
-            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
-            raise ValueError("Unrecognized format tag in HMM file: {!r}".format(text))
-
-        # return the finalized P7_HMMFILE*
-        return hfp
 
 
 cdef class OptimizedProfile:
