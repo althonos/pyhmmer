@@ -162,7 +162,7 @@ class _TestReadFileObject(object):
             buffer = io.BytesIO(f.read())
 
         # this should fail in the constructor if `buffer.read` immediately fails
-        self.assertRaises(WeirdError, easel.SequenceFile, FailibleReader(buffer, 0))
+        self.assertRaises(WeirdError, easel.SequenceFile, FailibleReader(buffer, 0), format=self.format)
 
     def test_read_fileobject_given_format(self):
         # check reading a file while specifying the format works

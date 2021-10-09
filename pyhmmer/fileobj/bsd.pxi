@@ -73,7 +73,10 @@ cdef int fread_obj_readinto(void *cookie, char *buf, int size) except -1:
     ELSE:
         mem = PyMemoryView_FromMemory(buf, size, PyBUF_WRITE)
 
-    return obj.readinto(mem)
+    # NB: Make sure to cast the memoryview as unsigned char* : on PyPy,
+    #     `obj.readinto` sometimes complains that the memoryview is not
+    #     a byte-like object.
+    return obj.readinto(mem.cast('B'))
 
 
 # --- fseek implementation ---------------------------------------------------
