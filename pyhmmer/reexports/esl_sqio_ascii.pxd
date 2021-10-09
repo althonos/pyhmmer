@@ -30,43 +30,43 @@ cdef extern from "reexports/esl_sqio_ascii.h":
     int   sqascii_PositionByNumber(ESL_SQFILE *sqfp, int which)
     int   sqascii_Fetch           (ESL_SQFILE *sqfp, const char *key, ESL_SQ *sq)
     int   sqascii_FetchInfo       (ESL_SQFILE *sqfp, const char *key, ESL_SQ *sq)
-    int   sqascii_FetchSubseq     (ESL_SQFILE *sqfp, const char *source, int64_t start, int64_t end, ESL_SQ *sq) 
+    int   sqascii_FetchSubseq     (ESL_SQFILE *sqfp, const char *source, int64_t start, int64_t end, ESL_SQ *sq)
 
     # Internal routines shared by parsers.
-    int  loadmem  (ESL_SQFILE *sqfp) except *
-    int  loadbuf  (ESL_SQFILE *sqfp) except *
-    int  nextchar (ESL_SQFILE *sqfp, char *ret_c) except *
-    int  seebuf   (ESL_SQFILE *sqfp, int64_t maxn, int64_t *opt_nres, int64_t *opt_endpos) except *
+    int  loadmem  (ESL_SQFILE *sqfp) except -1
+    int  loadbuf  (ESL_SQFILE *sqfp) except -1
+    int  nextchar (ESL_SQFILE *sqfp, char *ret_c) except -1
+    int  seebuf   (ESL_SQFILE *sqfp, int64_t maxn, int64_t *opt_nres, int64_t *opt_endpos) except -1
     void addbuf   (ESL_SQFILE *sqfp, ESL_SQ *sq, int64_t nres) except *
     void skipbuf  (ESL_SQFILE *sqfp, int64_t nskip) except *
-    int  read_nres(ESL_SQFILE *sqfp, ESL_SQ *sq, int64_t nskip, int64_t nres, int64_t *opt_actual_nres) except *
-    int  skip_whitespace(ESL_SQFILE *sqfp) except *
+    int  read_nres(ESL_SQFILE *sqfp, ESL_SQ *sq, int64_t nskip, int64_t nres, int64_t *opt_actual_nres) except -1
+    int  skip_whitespace(ESL_SQFILE *sqfp) except -1
 
     # EMBL format also UniProt, TrEMBL
     void config_embl(ESL_SQFILE *sqfp) nogil
     void inmap_embl (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap) nogil
-    int  header_embl(ESL_SQFILE *sqfp, ESL_SQ *sq) except *
-    int  skip_embl  (ESL_SQFILE *sqfp, ESL_SQ *sq) except *
-    int  end_embl   (ESL_SQFILE *sqfp, ESL_SQ *sq) except *
+    int  header_embl(ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
+    int  skip_embl  (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
+    int  end_embl   (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
 
     # GenBank format also DDBJ
     void config_genbank(ESL_SQFILE *sqfp) nogil
     void inmap_genbank (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap) nogil
-    int  header_genbank(ESL_SQFILE *sqfp, ESL_SQ *sq) except *
-    int  skip_genbank  (ESL_SQFILE *sqfp, ESL_SQ *sq) except *
-    int  end_genbank   (ESL_SQFILE *sqfp, ESL_SQ *sq) except *
+    int  header_genbank(ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
+    int  skip_genbank  (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
+    int  end_genbank   (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
 
     # FASTA format
     void config_fasta(ESL_SQFILE *sqfp) nogil
     void inmap_fasta (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap) nogil
-    int  header_fasta(ESL_SQFILE *sqfp, ESL_SQ *sq) except *
-    int  skip_fasta  (ESL_SQFILE *sqfp, ESL_SQ *sq) except *
-    int  end_fasta   (ESL_SQFILE *sqfp, ESL_SQ *sq) except *
+    int  header_fasta(ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
+    int  skip_fasta  (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
+    int  end_fasta   (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
 
     # daemon format
     void config_daemon(ESL_SQFILE *sqfp) nogil
     void inmap_daemon (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap) nogil
-    int  end_daemon   (ESL_SQFILE *sqfp, ESL_SQ *sq) except *
+    int  end_daemon   (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
 
     # HMMPGMD format
-    int  fileheader_hmmpgmd(ESL_SQFILE *sqfp) except *
+    int  fileheader_hmmpgmd(ESL_SQFILE *sqfp) except -1

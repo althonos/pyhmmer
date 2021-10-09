@@ -84,12 +84,12 @@ cdef extern from "esl_sqio.h":
     cdef int eslREADBUFSIZE
 
 
-    int  esl_sqfile_Open(const char *seqfile, int fmt, const char *env, ESL_SQFILE **ret_sqfp)
-    void esl_sqfile_Close(ESL_SQFILE *sqfp)
+    int  esl_sqfile_Open(const char *seqfile, int fmt, const char *env, ESL_SQFILE **ret_sqfp) except -1
+    void esl_sqfile_Close(ESL_SQFILE *sqfp) except *
 
-    int  esl_sqfile_OpenDigital(const ESL_ALPHABET *abc, const char *filename, int format, const char *env, ESL_SQFILE **ret_sqfp)
-    int  esl_sqfile_SetDigital(ESL_SQFILE *sqfp, const ESL_ALPHABET *abc)
-    int  esl_sqfile_GuessAlphabet(ESL_SQFILE *sqfp, int *ret_type)
+    int  esl_sqfile_OpenDigital(const ESL_ALPHABET *abc, const char *filename, int format, const char *env, ESL_SQFILE **ret_sqfp) except -1
+    int  esl_sqfile_SetDigital(ESL_SQFILE *sqfp, const ESL_ALPHABET *abc) except -1
+    int  esl_sqfile_GuessAlphabet(ESL_SQFILE *sqfp, int *ret_type) except -1
 
     int   esl_sqio_Read        (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
     int   esl_sqio_ReadInfo    (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
@@ -106,17 +106,17 @@ cdef extern from "esl_sqio.h":
     int   esl_sqio_IsAlignment(int fmt) nogil
     int   esl_sqio_EncodeFormat(char *fmtstring) nogil
     char *esl_sqio_DecodeFormat(int fmt) nogil
-    int   esl_sqfile_Position(ESL_SQFILE *sqfp, off_t offset)
-    int   esl_sqio_Ignore(ESL_SQFILE *sqfp, const char *ignoredchars)
-    int   esl_sqio_AcceptAs(ESL_SQFILE *sqfp, char *xchars, char readas)
+    int   esl_sqfile_Position(ESL_SQFILE *sqfp, off_t offset) except -1
+    int   esl_sqio_Ignore(ESL_SQFILE *sqfp, const char *ignoredchars) except -1
+    int   esl_sqio_AcceptAs(ESL_SQFILE *sqfp, char *xchars, char readas) except -1
 
-    int   esl_sqfile_OpenSSI         (ESL_SQFILE *sqfp, const char *ssifile_hint)
-    int   esl_sqfile_PositionByKey   (ESL_SQFILE *sqfp, const char *key)
-    int   esl_sqfile_PositionByNumber(ESL_SQFILE *sqfp, int which)
+    int   esl_sqfile_OpenSSI         (ESL_SQFILE *sqfp, const char *ssifile_hint) except -1
+    int   esl_sqfile_PositionByKey   (ESL_SQFILE *sqfp, const char *key) except -1
+    int   esl_sqfile_PositionByNumber(ESL_SQFILE *sqfp, int which) except -1
 
-    int   esl_sqio_Fetch      (ESL_SQFILE *sqfp, const char *key, ESL_SQ *sq)
-    int   esl_sqio_FetchInfo  (ESL_SQFILE *sqfp, const char *key, ESL_SQ *sq)
-    int   esl_sqio_FetchSubseq(ESL_SQFILE *sqfp, const char *source, int64_t start, int64_t end, ESL_SQ *sq)
+    int   esl_sqio_Fetch      (ESL_SQFILE *sqfp, const char *key, ESL_SQ *sq) except -1
+    int   esl_sqio_FetchInfo  (ESL_SQFILE *sqfp, const char *key, ESL_SQ *sq) except -1
+    int   esl_sqio_FetchSubseq(ESL_SQFILE *sqfp, const char *source, int64_t start, int64_t end, ESL_SQ *sq) except -1
 
-    int   esl_sqfile_Cache(const ESL_ALPHABET *abc, const char *seqfile, int fmt, const char *env, ESL_SQCACHE **ret_sqcache)
-    void  esl_sqfile_Free(ESL_SQCACHE *sqcache)
+    int   esl_sqfile_Cache(const ESL_ALPHABET *abc, const char *seqfile, int fmt, const char *env, ESL_SQCACHE **ret_sqcache) except -1
+    void  esl_sqfile_Free(ESL_SQCACHE *sqcache) except *
