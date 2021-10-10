@@ -3226,6 +3226,13 @@ cdef class MSAFile:
     This class supports reading sequences stored in different formats, such
     as Stockholm, A2M, PSI-BLAST or Clustal.
 
+    Hint:
+        Some Clustal files created by alignment tools other than Clustal
+        (such as MUSCLE or MAFFT, for instance), may not contain the header
+        expected by Easel for the Clustal format. If you get an error while
+        trying to parse these files, use the ``"clustallike"`` format
+        instead of the ``"clustal"`` format when creating the `MSAFile`.
+
     """
 
     _FORMATS = dict(MSA_FILE_FORMATS) # copy dict to prevent editing

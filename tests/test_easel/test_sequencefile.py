@@ -4,6 +4,7 @@ import io
 import os
 import unittest
 import tempfile
+from itertools import zip_longest
 
 from pyhmmer import easel
 
@@ -21,13 +22,6 @@ EASEL_FOLDER = os.path.realpath(
 
 
 class TestSequenceFile(unittest.TestCase):
-
-    folder = os.path.join(EASEL_FOLDER, "formats")
-
-    def test_guess_alphabet(self):
-        embl = os.path.join(self.folder, "embl")
-        with easel.SequenceFile(embl, "embl") as f:
-            self.assertEqual(f.guess_alphabet(), easel.Alphabet.dna())
 
     def test_init_error_unknownformat(self):
         with self.assertRaises(ValueError):
@@ -51,7 +45,7 @@ class TestSequenceFile(unittest.TestCase):
         )
 
     def test_iter(self):
-        fasta = os.path.join(self.folder, "fasta")
+        fasta = os.path.join(EASEL_FOLDER, "formats", "fasta")
 
         with easel.SequenceFile(fasta) as f:
             seq1, seq2 = list(f)
@@ -68,7 +62,7 @@ class TestSequenceFile(unittest.TestCase):
             _file = easel.SequenceFile.parse(b"> EcoRI\nGAATTC\n", format="nonsense")
 
     def test_read_skip_info(self):
-        fasta = os.path.join(self.folder, "fasta")
+        fasta = os.path.join(EASEL_FOLDER, "formats", "fasta")
 
         with easel.SequenceFile(fasta) as f:
             seq = f.read()
@@ -81,7 +75,7 @@ class TestSequenceFile(unittest.TestCase):
             self.assertTrue(seq.sequence.startswith("MEMLPNQTIY"))
 
     def test_read_skip_sequence(self):
-        fasta = os.path.join(self.folder, "fasta")
+        fasta = os.path.join(EASEL_FOLDER, "formats", "fasta")
 
         with easel.SequenceFile(fasta) as f:
             seq = f.read()
@@ -110,7 +104,7 @@ class _TestReadFilename(object):
 
     def test_read_filename_guess_format(self):
         # check reading a file without specifying the format works
-        for filename, start in zip(self.filenames, self.starts):
+        for filename, start in zip_longest(self.filenames, self.starts):
             path = os.path.join(self.folder, filename)
             with easel.SequenceFile(path) as f:
                 seq = f.read()
@@ -118,7 +112,7 @@ class _TestReadFilename(object):
 
     def test_read_filename_given_format(self):
         # check reading a file while specifying the format works
-        for filename, start in zip(self.filenames, self.starts):
+        for filename, start in zip_longest(self.filenames, self.starts):
             path = os.path.join(self.folder, filename)
             with easel.SequenceFile(path, self.format) as f:
                 seq = f.read()
@@ -126,14 +120,14 @@ class _TestReadFilename(object):
 
     def test_read_filename_count_sequences(self):
         # check reading a file while specifying the format works
-        for filename, count in zip(self.filenames, self.counts):
+        for filename, count in zip_longest(self.filenames, self.counts):
             path = os.path.join(self.folder, filename)
             with easel.SequenceFile(path, self.format) as f:
                 sequences = list(f)
                 self.assertEqual(len(sequences), count)
 
-    def test_guess_alphabet(self):
-        for filename, alphabet in zip(self.filenames, self.alphabet):
+    def test_read_filename_guess_alphabet(self):
+        for filename, alphabet in zip_longest(self.filenames, self.alphabet):
             path = os.path.join(self.folder, filename)
             with easel.SequenceFile(path, self.format) as f:
                 if alphabet is not None:
@@ -151,7 +145,7 @@ class _TestReadFileObject(object):
 
     def test_read_fileobject_given_format(self):
         # check reading a file while specifying the format works
-        for filename, start in zip(self.filenames, self.starts):
+        for filename, start in zip_longest(self.filenames, self.starts):
             path = os.path.join(self.folder, filename)
             with open(path, "rb") as f:
                 buffer = io.BytesIO(f.read())
@@ -159,9 +153,9 @@ class _TestReadFileObject(object):
                 seq = f.read()
                 self.assertEqual(seq.sequence[:10], start)
 
-    def test_read_filename_given_format(self):
+    def test_read_fileobject_given_format(self):
         # check reading a file while specifying the format works
-        for filename, start in zip(self.filenames, self.starts):
+        for filename, start in zip_longest(self.filenames, self.starts):
             path = os.path.join(self.folder, filename)
             with open(path, "rb") as f:
                 buffer = io.BytesIO(f.read())
@@ -169,9 +163,9 @@ class _TestReadFileObject(object):
                 seq = f.read()
                 self.assertEqual(seq.sequence[:10], start)
 
-    def test_read_filename_count_sequences(self):
+    def test_read_fileobject_count_sequences(self):
         # check reading a file while specifying the format works
-        for filename, count in zip(self.filenames, self.counts):
+        for filename, count in zip_longest(self.filenames, self.counts):
             path = os.path.join(self.folder, filename)
             with open(path, "rb") as f:
                 buffer = io.BytesIO(f.read())
@@ -179,13 +173,21 @@ class _TestReadFileObject(object):
                 sequences = list(f)
                 self.assertEqual(len(sequences), count)
 
-    def test_guess_alphabet(self):
-        for filename, alphabet in zip(self.filenames, self.alphabet):
+    def test_read_fileobject_guess_alphabet(self):
+        for filename, alphabet in zip_longest(self.filenames, self.alphabet):
             path = os.path.join(self.folder, filename)
             with open(path, "rb") as f:
                 buffer = io.BytesIO(f.read())
             with easel.SequenceFile(buffer, self.format) as f:
-                self.assertEqual(f.guess_alphabet(), alphabet)
+                if alphabet is not None:
+                    self.assertEqual(f.guess_alphabet(), alphabet)
+                else:
+                    # FIXME: Until EddyRivasLab/easel#61 is merged, we cannot
+                    #        test the case where `guess_alphabet` would throw
+                    #        an error because of a bug in `sqascii_GuessAlphabet`
+                    #        causing `eslEOD` to be returned when `eslNOALPHABET`
+                    #        is expected.
+                    pass
 
 
 class TestEMBLFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
@@ -211,7 +213,7 @@ class TestGenbankFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase)
     filenames = ["genbank", "genbank.2"]
     starts    = ["atccacggcc", "atccacggcc"]
     format    = "genbank"
-    counts    = [2]
+    counts    = [2, 2]
     alphabet  = [easel.Alphabet.dna(), easel.Alphabet.dna()]
 
 
@@ -233,22 +235,34 @@ class TestA2MFile(_TestReadFilename, unittest.TestCase):
     alphabet  = [easel.Alphabet.amino(), easel.Alphabet.rna()]
 
 
-# class TestAlignedFastaFile(_TestReadFilename, unittest.TestCase):
-#     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "afa")
-#     filenames = ["afa.good.1", "afa.good.2", "afa.good.3"]
-#     starts    = ["VLSEGEWQLV", "UCCGAUAUAG", "mqifvktltg"]
-#     format    = "afa"
-#     counts    = [4, 5, 6]
-#     alphabet  = [easel.Alphabet.amino(), easel.Alphabet.rna(), easel.Alphabet.amino()]
+class TestAlignedFastaFile(_TestReadFilename, unittest.TestCase):
+    folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "afa")
+    filenames = ["afa.good.1", "afa.good.2", "afa.good.3"]
+    starts    = ["VLSEGEWQLV", "UCCGAUAUAG", "mqifvktltg"]
+    format    = "afa"
+    counts    = [4, 5, 6]
+    alphabet  = [easel.Alphabet.amino(), easel.Alphabet.rna(), easel.Alphabet.amino()]
+
+    def test_read_filename_guess_format(self):
+        unittest.skip("cannot guess format of aligned FASTA files")
 
 
-# class TestClustalFile(_TestReadFilename, unittest.TestCase):
-#     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "clustal")
-#     filenames = ["clustal.good.1", "clustal.good.2"]
-#     starts    = ["VLSEGEWQLV", "UCCGAUAUAG"]
-#     format    = "clustal"
-#     counts    = [4, 5]
-#     alphabet  = [easel.Alphabet.amino(), easel.Alphabet.rna()]
+class TestClustalFile(_TestReadFilename, unittest.TestCase):
+    folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "clustal")
+    filenames = ["clustal.good.2"]
+    starts    = ["UCCGAUAUAG"]
+    format    = "clustal"
+    counts    = [5]
+    alphabet  = [easel.Alphabet.rna()]
+
+
+class TestClustalLikeFile(_TestReadFilename, unittest.TestCase):
+    folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "clustal")
+    filenames = ["clustal.good.1"]
+    starts    = ["VLSEGEWQLV"]
+    format    = "clustallike"
+    counts    = [4]
+    alphabet  = [easel.Alphabet.amino()]
 
 
 class TestPhylipFile(_TestReadFilename, unittest.TestCase):
