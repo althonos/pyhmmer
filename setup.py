@@ -85,7 +85,6 @@ class build_ext(_build_ext):
             "include_path": ["include"],
             "compiler_directives": {},
             "compile_time_env": {
-                "FASTANI_PRIVATE_ACCESS": 1,
                 "SYS_IMPLEMENTATION_NAME": sys.implementation.name,
                 "SYS_VERSION_INFO_MAJOR": sys.version_info.major,
                 "SYS_VERSION_INFO_MINOR": sys.version_info.minor,

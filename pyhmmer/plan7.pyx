@@ -813,7 +813,7 @@ cdef class Builder:
 
 
 cdef class Cutoffs:
-    """A read-only view over the Pfam score cutoffs of a `HMM` or a `Profile`.
+    """A mutable view over the score cutoffs of a `HMM` or a `Profile`.
 
     .. versionadded:: 0.4.6
 
@@ -866,6 +866,62 @@ cdef class Cutoffs:
     # --- Properties ---------------------------------------------------------
 
     @property
+    def gathering(self):
+        """`tuple` of `float`, or `None`: The gathering thresholds, if any.
+
+        Example:
+            This property can be used to set the gathering cutoffs by
+            passing it an iterable of two `float`::
+
+                >>> thioesterase.cutoffs.gathering = (180.0, 120.0)
+                >>> thioesterase.cutoffs.gathering_available()
+                True
+                >>> thioesterase.cutoffs.gathering
+                (180.0, 120.0)
+
+            Set the attribute to `None` or delete it with `del` to clear
+            the gathering thresholds::
+
+                >>> thioesterase.cutoffs.gathering = None
+                >>> thioesterase.cutoffs.gathering_available()
+                False
+
+        .. versionadded:: 0.4.8
+
+        """
+        if self.gathering_available():
+            return (
+                self._cutoffs[0][<int> p7_cutoffs_e.p7_GA1],
+                self._cutoffs[0][<int> p7_cutoffs_e.p7_GA2]
+            )
+        return None
+
+    @gathering.setter
+    def gathering(self, object gathering):
+        assert self._cutoffs != NULL
+
+        if gathering is None:
+            del self.gathering
+            return
+
+        gathering1, gathering2 = gathering
+        self._cutoffs[0][<int> p7_cutoffs_e.p7_GA1] = gathering1
+        self._cutoffs[0][<int> p7_cutoffs_e.p7_GA2] = gathering2
+
+        if not self._is_profile:
+            self._flags[0] = self._flags[0] | p7H_GA
+
+    @gathering.deleter
+    def gathering(self):
+        assert self._cutoffs != NULL
+
+        self._cutoffs[0][<int> p7_cutoffs_e.p7_GA1] = p7_CUTOFF_UNSET
+        self._cutoffs[0][<int> p7_cutoffs_e.p7_GA2] = p7_CUTOFF_UNSET
+
+        if not self._is_profile:
+            self._flags[0] = self._flags[0] & (~p7H_GA)
+
+    @property
     def gathering1(self):
         """`float` or `None`: The first gathering threshold, if any.
         """
@@ -882,6 +938,42 @@ cdef class Cutoffs:
         return None
 
     @property
+    def trusted(self):
+        """`tuple` of `float`, or `None`: The trusted cutoffs, if available.
+        """
+        if self.trusted_available():
+            return (
+                self._cutoffs[0][<int> p7_cutoffs_e.p7_TC1],
+                self._cutoffs[0][<int> p7_cutoffs_e.p7_TC2]
+            )
+        return None
+
+    @trusted.setter
+    def trusted(self, object trusted):
+        assert self._cutoffs != NULL
+
+        if trusted is None:
+            del self.trusted
+            return
+
+        trusted1, trusted2 = trusted
+        self._cutoffs[0][<int> p7_cutoffs_e.p7_TC1] = trusted1
+        self._cutoffs[0][<int> p7_cutoffs_e.p7_TC2] = trusted2
+
+        if not self._is_profile:
+            self._flags[0] = self._flags[0] | p7H_TC
+
+    @trusted.deleter
+    def trusted(self):
+        assert self._cutoffs != NULL
+
+        self._cutoffs[0][<int> p7_cutoffs_e.p7_TC1] = p7_CUTOFF_UNSET
+        self._cutoffs[0][<int> p7_cutoffs_e.p7_TC2] = p7_CUTOFF_UNSET
+
+        if not self._is_profile:
+            self._flags[0] = self._flags[0] & (~p7H_TC)
+
+    @property
     def trusted1(self):
         """`float` or `None`: The first trusted score cutoff, if any.
         """
@@ -896,6 +988,42 @@ cdef class Cutoffs:
         if self.trusted_available():
             return self._cutoffs[0][<int> p7_cutoffs_e.p7_TC2]
         return None
+
+    @property
+    def noise(self):
+        """`tuple` of `float`, or `None`: The noise cutoffs, if available.
+        """
+        if self.noise_available():
+            return (
+                self._cutoffs[0][<int> p7_cutoffs_e.p7_NC1],
+                self._cutoffs[0][<int> p7_cutoffs_e.p7_NC2]
+            )
+        return None
+
+    @noise.setter
+    def noise(self, object noise):
+        assert self._cutoffs != NULL
+
+        if noise is None:
+            del self.noise
+            return
+
+        noise1, noise2 = noise
+        self._cutoffs[0][<int> p7_cutoffs_e.p7_NC1] = noise1
+        self._cutoffs[0][<int> p7_cutoffs_e.p7_NC2] = noise2
+
+        if not self._is_profile:
+            self._flags[0] = self._flags[0] | p7H_NC
+
+    @noise.deleter
+    def noise(self):
+        assert self._cutoffs != NULL
+
+        self._cutoffs[0][<int> p7_cutoffs_e.p7_NC1] = p7_CUTOFF_UNSET
+        self._cutoffs[0][<int> p7_cutoffs_e.p7_NC2] = p7_CUTOFF_UNSET
+
+        if not self._is_profile:
+            self._flags[0] = self._flags[0] & (~p7H_NC)
 
     @property
     def noise1(self):

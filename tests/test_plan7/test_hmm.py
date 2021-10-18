@@ -41,11 +41,11 @@ class TestHMM(unittest.TestCase):
         self.assertEqual(hmm.composition.shape, (hmm.alphabet.K,))
 
     def test_copy(self):
-        hmm2 = copy.copy(self.hmm)
-        self.assertEqual(self.hmm.name, hmm2.name)
-        self.assertEqual(self.hmm.accession, hmm2.accession)
-        self.assertEqual(self.hmm.description, hmm2.description)
-        self.assertEqual(self.hmm.consensus, hmm2.consensus)
+        hmm = copy.copy(self.hmm)
+        self.assertEqual(self.hmm.name, hmm.name)
+        self.assertEqual(self.hmm.accession, hmm.accession)
+        self.assertEqual(self.hmm.description, hmm.description)
+        self.assertEqual(self.hmm.consensus, hmm.consensus)
 
     def test_eq(self):
         abc = Alphabet.amino()
@@ -210,3 +210,78 @@ class TestHMM(unittest.TestCase):
         self.assertEqual(h1.composition, h2.composition)
 
         self.assertEqual(h1, h2)
+
+    def test_no_cutoffs(self):
+        hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/Thioesterase.hmm")
+        with HMMFile(hmm_path) as hmm_file:
+            hmm = next(hmm_file)
+
+        self.assertFalse(hmm.cutoffs.gathering_available())
+        self.assertIs(hmm.cutoffs.gathering, None)
+        self.assertIs(hmm.cutoffs.gathering1, None)
+        self.assertIs(hmm.cutoffs.gathering2, None)
+        self.assertFalse(hmm.cutoffs.noise_available())
+        self.assertIs(hmm.cutoffs.noise, None)
+        self.assertIs(hmm.cutoffs.noise1, None)
+        self.assertIs(hmm.cutoffs.noise2, None)
+        self.assertFalse(hmm.cutoffs.trusted_available())
+        self.assertIs(hmm.cutoffs.trusted, None)
+        self.assertIs(hmm.cutoffs.trusted1, None)
+        self.assertIs(hmm.cutoffs.trusted2, None)
+
+        hmm.cutoffs.gathering = (10.0, 12.0)
+        self.assertTrue(hmm.cutoffs.gathering_available())
+        self.assertFalse(hmm.cutoffs.noise_available())
+        self.assertFalse(hmm.cutoffs.trusted_available())
+        self.assertEqual(hmm.cutoffs.gathering, (10.0, 12.0))
+        self.assertEqual(hmm.cutoffs.gathering1, 10.0)
+        self.assertEqual(hmm.cutoffs.gathering2, 12.0)
+
+        hmm.cutoffs.noise = (8.0, 5.0)
+        self.assertTrue(hmm.cutoffs.gathering_available())
+        self.assertTrue(hmm.cutoffs.noise_available())
+        self.assertFalse(hmm.cutoffs.trusted_available())
+        self.assertEqual(hmm.cutoffs.noise, (8.0, 5.0))
+        self.assertEqual(hmm.cutoffs.noise1, 8.0)
+        self.assertEqual(hmm.cutoffs.noise2, 5.0)
+
+        hmm.cutoffs.trusted = (15.0, 14.0)
+        self.assertTrue(hmm.cutoffs.gathering_available())
+        self.assertTrue(hmm.cutoffs.noise_available())
+        self.assertTrue(hmm.cutoffs.trusted_available())
+        self.assertEqual(hmm.cutoffs.trusted, (15.0, 14.0))
+        self.assertEqual(hmm.cutoffs.trusted1, 15.0)
+        self.assertEqual(hmm.cutoffs.trusted2, 14.0)
+
+    def test_cutoffs(self):
+        hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/PF02826.hmm")
+        with HMMFile(hmm_path) as hmm_file:
+            hmm = next(hmm_file)
+
+        self.assertTrue(hmm.cutoffs.gathering_available())
+        self.assertTrue(hmm.cutoffs.noise_available())
+        self.assertTrue(hmm.cutoffs.trusted_available())
+
+        hmm.cutoffs.gathering = None
+        self.assertFalse(hmm.cutoffs.gathering_available())
+        self.assertTrue(hmm.cutoffs.noise_available())
+        self.assertTrue(hmm.cutoffs.trusted_available())
+        self.assertIs(hmm.cutoffs.gathering, None)
+        self.assertIs(hmm.cutoffs.gathering1, None)
+        self.assertIs(hmm.cutoffs.gathering2, None)
+
+        del hmm.cutoffs.noise
+        self.assertFalse(hmm.cutoffs.gathering_available())
+        self.assertFalse(hmm.cutoffs.noise_available())
+        self.assertTrue(hmm.cutoffs.trusted_available())
+        self.assertIs(hmm.cutoffs.noise, None)
+        self.assertIs(hmm.cutoffs.noise1, None)
+        self.assertIs(hmm.cutoffs.noise2, None)
+
+        hmm.cutoffs.trusted = None
+        self.assertFalse(hmm.cutoffs.gathering_available())
+        self.assertFalse(hmm.cutoffs.noise_available())
+        self.assertFalse(hmm.cutoffs.trusted_available())
+        self.assertIs(hmm.cutoffs.trusted, None)
+        self.assertIs(hmm.cutoffs.trusted1, None)
+        self.assertIs(hmm.cutoffs.trusted2, None)
