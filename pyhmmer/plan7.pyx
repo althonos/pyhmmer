@@ -940,6 +940,9 @@ cdef class Cutoffs:
     @property
     def trusted(self):
         """`tuple` of `float`, or `None`: The trusted cutoffs, if available.
+
+        .. versionadded:: 0.4.8
+
         """
         if self.trusted_available():
             return (
@@ -992,6 +995,9 @@ cdef class Cutoffs:
     @property
     def noise(self):
         """`tuple` of `float`, or `None`: The noise cutoffs, if available.
+
+        .. versionadded:: 0.4.8
+        
         """
         if self.noise_available():
             return (
