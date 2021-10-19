@@ -872,6 +872,21 @@ cdef class Vector:
 
         return self._from_raw_bytes, (buffer, self._n)
 
+    def __add__(Vector self, object other):
+        assert self._data != NULL or self._n == 0
+        cdef Vector new = self.copy()
+        return new.__iadd__(other)
+
+    def __sub__(Vector self, object other):
+        assert self._data != NULL or self._n == 0
+        cdef Vector new = self.copy()
+        return new.__isub__(other)
+
+    def __mul__(Vector self, object other):
+        assert self._data != NULL or self._n == 0
+        cdef Vector new = self.copy()
+        return new.__imul__(other)
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -1160,11 +1175,6 @@ cdef class VectorF(Vector):
 
         return new
 
-    def __add__(VectorF self, object other):
-        assert self._data != NULL or self._n == 0
-        cdef VectorF new = self.copy()
-        return new.__iadd__(other)
-
     def __iadd__(self, object other):
         assert self._data != NULL or self._n == 0
 
@@ -1186,11 +1196,6 @@ cdef class VectorF(Vector):
             with nogil:
                 libeasel.vec.esl_vec_FIncrement(data, self._n, other_f)
         return self
-
-    def __sub__(VectorF self, object other):
-        assert self._data != NULL or self._n == 0
-        cdef VectorF new = self.copy()
-        return new.__isub__(other)
 
     def __isub__(self, object other):
         assert self._data != NULL or self._n == 0
@@ -1216,11 +1221,6 @@ cdef class VectorF(Vector):
                 for i in range(self._n):
                     data[i] -= other_f
         return self
-
-    def __mul__(VectorF self, object other):
-        assert self._data != NULL or self._n == 0
-        cdef VectorF new = self.copy()
-        return new.__imul__(other)
 
     def __imul__(self, object other):
         assert self._data != NULL or self._n == 0
@@ -1504,11 +1504,6 @@ cdef class VectorU8(Vector):
                 raise IndexError("vector index out of range")
             data[x] = value
 
-    def __add__(VectorU8 self, object other):
-        assert self._data != NULL or self._n == 0
-        cdef VectorU8 new = self.copy()
-        return new.__iadd__(other)
-
     def __iadd__(self, object other):
         assert self._data != NULL or self._n == 0
 
@@ -1534,11 +1529,6 @@ cdef class VectorU8(Vector):
                     data[i] += other_u
         return self
 
-    def __sub__(VectorU8 self, object other):
-        assert self._data != NULL or self._n == 0
-        cdef VectorU8 new = self.copy()
-        return new.__isub__(other)
-
     def __isub__(self, object other):
         assert self._data != NULL or self._n == 0
 
@@ -1563,11 +1553,6 @@ cdef class VectorU8(Vector):
                 for i in range(self._n):
                     data[i] -= other_u
         return self
-
-    def __mul__(VectorU8 self, object other):
-        assert self._data != NULL or self._n == 0
-        cdef VectorU8 new = self.copy()
-        return new.__imul__(other)
 
     def __imul__(self, object other):
         assert self._data != NULL or self._n == 0
@@ -1928,6 +1913,16 @@ cdef class Matrix:
 
         return self._from_raw_bytes, (buffer, self._m, self._n)
 
+    def __add__(Matrix self, object other):
+        assert self._data != NULL
+        cdef Matrix new = self.copy()
+        return new.__iadd__(other)
+
+    def __mul__(Matrix self, object other):
+        assert self._data != NULL
+        cdef Matrix new = self.copy()
+        return new.__imul__(other)
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -2116,11 +2111,6 @@ cdef class MatrixF(Matrix):
                     return False
         return True
 
-    def __add__(MatrixF self, object other):
-        assert self._data != NULL
-        cdef MatrixF new = self.copy()
-        return new.__iadd__(other)
-
     def __iadd__(self, object other):
         assert self._data != NULL
 
@@ -2139,11 +2129,6 @@ cdef class MatrixF(Matrix):
             with nogil:
                 libeasel.vec.esl_vec_FIncrement(<float*> self._data[0], self._m*self._n, other_f)
         return self
-
-    def __mul__(MatrixF self, object other):
-        assert self._data != NULL
-        cdef MatrixF new = self.copy()
-        return new.__imul__(other)
 
     def __imul__(self, object other):
         assert self._data != NULL
@@ -2377,11 +2362,6 @@ cdef class MatrixU8(Matrix):
                 return False
         return True
 
-    def __add__(MatrixU8 self, object other):
-        assert self._data != NULL
-        cdef MatrixU8 new = self.copy()
-        return new.__iadd__(other)
-
     def __iadd__(self, object other):
         assert self._data != NULL
 
@@ -2406,11 +2386,6 @@ cdef class MatrixU8(Matrix):
                 for i in range(self._m * self._n):
                     data[i] += other_n
         return self
-
-    def __mul__(MatrixU8 self, object other):
-        assert self._data != NULL
-        cdef MatrixU8 new = self.copy()
-        return new.__imul__(other)
 
     def __imul__(self, object other):
         assert self._data != NULL
