@@ -21,10 +21,12 @@ ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
 
 cimport cython
 from cpython cimport Py_buffer
+from cpython.buffer cimport PyBUF_FORMAT, PyBUF_READ
+from cpython.bytes cimport PyBytes_FromString, PyBytes_FromStringAndSize
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.memoryview cimport PyMemoryView_FromMemory
-from cpython.bytes cimport PyBytes_FromString, PyBytes_FromStringAndSize
-from cpython.buffer cimport PyBUF_FORMAT, PyBUF_READ
+from cpython.ref cimport Py_INCREF
+from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 from cpython.unicode cimport PyUnicode_DecodeASCII
 from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t
 from libc.stdio cimport fclose
@@ -2626,7 +2628,7 @@ cdef class MSA:
 
     @property
     def description(self):
-        """`bytes` or `None`: The description of the sequence, if any.
+        """`bytes` or `None`: The description of the alignment, if any.
         """
         assert self._msa != NULL
         if self._msa.desc == NULL:
@@ -2647,6 +2649,47 @@ cdef class MSA:
             raise AllocationError("char*")
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_msa_SetDesc")
+
+    @property
+    def names(self):
+        """`tuple` of `bytes`: The name of each sequence in the alignment.
+
+        Every sequence in the alignment is required to have a name, so
+        no member of the `tuple` will ever be `None`.
+
+        Example:
+            >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
+            >>> s2 = TextSequence(name=b"seq2", sequence="ATGC")
+            >>> msa = TextMSA(name=b"msa", sequences=[s1, s2])
+            >>> msa.names
+            (b'seq1', b'seq2')
+
+        .. versionadded:: 0.4.8
+
+        """
+        assert self._msa != NULL
+        assert self._msa.sqname != NULL
+
+        cdef int64_t i
+        cdef bytes   name
+        cdef tuple   names
+
+        if self._msa.alen == 0 or self._msa.nseq == 0:
+            return ()
+
+        names = PyTuple_New(self._msa.nseq)
+        for i in range(self._msa.nseq):
+            # sequences must have a name
+            assert self._msa.sqname[i] != NULL
+            name = PyBytes_FromString(self._msa.sqname[i])
+            Py_INCREF(name)
+            PyTuple_SET_ITEM(names, i, name)
+
+        return names
+
+    # TODO: Implement `weights` property exposing the sequence weights as
+    #       a `Vector` object, needs implementation of a new `VectorD` class
+    #       given that MSA.wgt is an array of `double`
 
     # --- Utils --------------------------------------------------------------
 
@@ -2765,7 +2808,7 @@ cdef class _TextMSASequences(_MSASequences):
 
         # set the new sequence
         with nogil:
-            (<TextMSA> self.msa)._set_sequence(idx, (<TextSequence> seq)._sq)
+            (<TextMSA> self.msa)._set_sequence(idx, seq._sq)
             if hash_index != idx:
                 self.msa._rehash()
 
@@ -2817,16 +2860,12 @@ cdef class TextMSA(MSA):
            Allow creating an alignment from an iterable of `TextSequence`.
 
         """
-        cdef list    seqs  = [] if sequences is None else list(sequences)
-
-        for seq in seqs:
-            if not isinstance(seq, TextSequence):
-                ty = type(seq).__name__
-                raise TypeError(f"expected TextSequence, found {ty}")
-
-        cdef set     names = {seq.name for seq in seqs}
-        cdef int64_t alen  = len(seqs[0]) if seqs else -1
-        cdef int     nseq  = len(seqs) if seqs else 1
+        cdef TextSequence seq
+        cdef int          i
+        cdef list         seqs  = [] if sequences is None else list(sequences)
+        cdef set          names = {seq.name for seq in seqs}
+        cdef int64_t      alen  = len(seqs[0]) if seqs else -1
+        cdef int          nseq  = len(seqs) if seqs else 1
 
         if len(names) != len(seqs):
             raise ValueError("duplicate names in alignment sequences")
@@ -2847,9 +2886,60 @@ cdef class TextMSA(MSA):
         if author is not None:
             self.author = author
         for i, seq in enumerate(seqs):
-            self._set_sequence(i, (<TextSequence> seq)._sq)
+            self._set_sequence(i, seq._sq)
 
     # --- Properties ---------------------------------------------------------
+
+    @property
+    def alignment(self):
+        """`tuple` of `str`: A view of the aligned sequences as strings.
+
+        This property gives access to the aligned sequences, including gap
+        characters, so that they can be displayed or processed column by
+        column.
+
+        Examples:
+            Use `TextMSA.alignment` to display an alignment in text
+            format::
+
+                >>> for name, aligned in zip(luxc.names, luxc.alignment):
+                ...     print(name, " ", aligned[:40], "...")
+                b'Q9KV99.1'   LANQPLEAILGLINEARKSWSST------------PELDP ...
+                b'Q2WLE3.1'   IYSYPSEAMIEIINEYSKILCSD------------RKFLS ...
+                b'Q97GS8.1'   VHDIKTEETIDLLDRCAKLWLDDNYSKK--HIETLAQITN ...
+                b'Q3WCI9.1'   LLNVPLKEIIDFLVETGERIRDPRNTFMQDCIDRMAGTHV ...
+                b'P08639.1'   LNDLNINNIINFLYTTGQRWKSEEYSRRRAYIRSLITYLG ...
+                ...
+
+            Use the splat operator (*) in combination with the `zip`
+            builtin to iterate over the columns of an alignment:
+
+                >>> for idx, col in enumerate(zip(*luxc.alignment)):
+                ...     print(idx+1, col)
+                1 ('L', 'I', 'V', 'L', 'L', ...)
+                2 ('A', 'Y', 'H', 'L', 'N', ...)
+                ...
+
+        .. versionadded:: 0.4.8
+
+        """
+        assert self._msa != NULL
+        assert not (self._msa.flags & libeasel.msa.eslMSA_DIGITAL)
+
+        cdef int64_t i
+        cdef str     seq
+        cdef tuple   aligned
+
+        if self._msa.alen == 0 or self._msa.nseq == 0:
+            return ()
+
+        aligned = PyTuple_New(self._msa.nseq)
+        for i in range(self._msa.nseq):
+            seq = PyUnicode_DecodeASCII(self._msa.aseq[i], self._msa.alen, NULL)
+            Py_INCREF(seq) # refcount increased because PyTuple_SET_ITEM won't
+            PyTuple_SET_ITEM(aligned, i, seq)
+
+        return aligned
 
     @property
     def sequences(self):
@@ -2880,7 +2970,7 @@ cdef class TextMSA(MSA):
                 >>> msa.sequences[0].name
                 b'seq1'
 
-            Support for this feature will be added in a future version, but
+            Support for this feature may be added in a future version, but
             can be circumvented for now by forcingly setting the updated
             version of the object::
 
@@ -2893,6 +2983,8 @@ cdef class TextMSA(MSA):
         .. versionadded:: 0.3.0
 
         """
+        assert self._msa != NULL
+        assert not (self._msa.flags & libeasel.msa.eslMSA_DIGITAL)
         return _TextMSASequences(self)
 
     # --- Utils --------------------------------------------------------------
@@ -3294,12 +3386,6 @@ cdef class MSAFile:
         Raises:
             `ValueError`: When attempting to read an alignment from a closed
                 file, or when the file could not be parsed.
-
-        Hint:
-            This method allocates a new alignment, which is not efficient in
-            case the sequences are being read within a tight loop. Use
-            `SequenceFile.readinto` with an already initialized `Sequence`
-            if you can to recycle the internal buffers.
 
         """
         cdef MSA msa
