@@ -143,7 +143,7 @@ class _TestReadFilename(object):
 
 class _TestReadFileObject(object):
 
-    def test_read_fileobject_given_format(self):
+    def test_read_fileobject_guess_format(self):
         # check reading a file while specifying the format works
         for filename, start in zip_longest(self.filenames, self.starts):
             path = os.path.join(self.folder, filename)
@@ -226,7 +226,7 @@ class TestUniprotFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase)
     alphabet  = [easel.Alphabet.amino()]
 
 
-class TestA2MFile(_TestReadFilename, unittest.TestCase):
+class TestA2MFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "a2m")
     filenames = ["a2m.good.1", "a2m.good.2"]
     starts    = ["VLSEGEWQLV", "UCCGAUAUAG"]
@@ -234,8 +234,15 @@ class TestA2MFile(_TestReadFilename, unittest.TestCase):
     counts    = [4, 5]
     alphabet  = [easel.Alphabet.amino(), easel.Alphabet.rna()]
 
+    # @unittest.expectedFailure
+    def test_read_fileobject_guess_format(self):
+        # cannot guess format of A2M sequences, they get identified as AFA
+        # or FASTA, and then reading fails because sequences do not have the
+        # same length
+        super().test_read_fileobject_guess_format()
 
-class TestAlignedFastaFile(_TestReadFilename, unittest.TestCase):
+
+class TestAlignedFastaFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "afa")
     filenames = ["afa.good.1", "afa.good.2", "afa.good.3"]
     starts    = ["VLSEGEWQLV", "UCCGAUAUAG", "mqifvktltg"]
@@ -243,11 +250,12 @@ class TestAlignedFastaFile(_TestReadFilename, unittest.TestCase):
     counts    = [4, 5, 6]
     alphabet  = [easel.Alphabet.amino(), easel.Alphabet.rna(), easel.Alphabet.amino()]
 
+    @unittest.expectedFailure
     def test_read_filename_guess_format(self):
-        unittest.skip("cannot guess format of aligned FASTA files")
+        super().test_read_filename_guess_format()
 
 
-class TestClustalFile(_TestReadFilename, unittest.TestCase):
+class TestClustalFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "clustal")
     filenames = ["clustal.good.2"]
     starts    = ["UCCGAUAUAG"]
@@ -256,7 +264,7 @@ class TestClustalFile(_TestReadFilename, unittest.TestCase):
     alphabet  = [easel.Alphabet.rna()]
 
 
-class TestClustalLikeFile(_TestReadFilename, unittest.TestCase):
+class TestClustalLikeFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "clustal")
     filenames = ["clustal.good.1"]
     starts    = ["VLSEGEWQLV"]
@@ -265,7 +273,7 @@ class TestClustalLikeFile(_TestReadFilename, unittest.TestCase):
     alphabet  = [easel.Alphabet.amino()]
 
 
-class TestPhylipFile(_TestReadFilename, unittest.TestCase):
+class TestPhylipFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "phylip")
     filenames = ["phylip.good.1", "phylip.good.2", "phylip.good.3"]
     starts    = ["AAGCTNGGGC", "ATGGCGAAGG", "MKVILLFVLA"]
@@ -274,7 +282,7 @@ class TestPhylipFile(_TestReadFilename, unittest.TestCase):
     alphabet  = [easel.Alphabet.dna(), easel.Alphabet.dna(), easel.Alphabet.amino()]
 
 
-class TestPhylipsFile(_TestReadFilename, unittest.TestCase):
+class TestPhylipsFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "phylips")
     filenames = ["phylips.good.1", "phylips.good.2"]
     starts    = ["AAGCTNGGGC", "MKVILLFVLA"]
@@ -283,7 +291,7 @@ class TestPhylipsFile(_TestReadFilename, unittest.TestCase):
     alphabet  = [easel.Alphabet.dna(), easel.Alphabet.amino()]
 
 
-class TestPsiblastFile(_TestReadFilename, unittest.TestCase):
+class TestPsiblastFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "psiblast")
     filenames = ["psiblast.good.1", "psiblast.good.2"]
     starts    = ["VLSEGEWQLV", "UCCGAUAUAG"]
@@ -292,7 +300,7 @@ class TestPsiblastFile(_TestReadFilename, unittest.TestCase):
     alphabet  = [easel.Alphabet.amino(), easel.Alphabet.rna()]
 
 
-class TestSelexFile(_TestReadFilename, unittest.TestCase):
+class TestSelexFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "selex")
     filenames = ["selex.good.1", "selex.good.2", "selex.good.3", "selex.good.4"]
     starts    = ["ACDEFGHIKL", "ACDEFGHIKL", "ACDEFGHIKL", "gGAGUAAGAU"]
@@ -300,8 +308,23 @@ class TestSelexFile(_TestReadFilename, unittest.TestCase):
     counts    = [5, 5, 7, 11]
     alphabet  = [easel.Alphabet.amino(), easel.Alphabet.amino(), easel.Alphabet.amino(), easel.Alphabet.rna()]
 
+    @unittest.expectedFailure
+    def test_read_fileobject_given_format(self):
+        # unknown error: '#=RF line isn't in expected order in block'
+        super().test_read_fileobject_given_format()
 
-class TestStockholmFile(_TestReadFilename, unittest.TestCase):
+    @unittest.expectedFailure
+    def test_read_fileobject_guess_format(self):
+        # unknown error: '#=RF line isn't in expected order in block'
+        super().test_read_fileobject_guess_format()
+
+    @unittest.expectedFailure
+    def test_read_fileobject_count_sequences(self):
+        # unknown error: '#=RF line isn't in expected order in block'
+        super().test_read_fileobject_count_sequences()
+
+
+class TestStockholmFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "stockholm")
     filenames = ["stockholm.good.1"]
     starts    = ["ACDEFGHKLM"]
