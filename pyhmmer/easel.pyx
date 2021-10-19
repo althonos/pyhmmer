@@ -155,7 +155,7 @@ cdef class Alphabet:
             libeasel.alphabet.esl_alphabet_Destroy(self._abc)
         self._abc = libeasel.alphabet.esl_alphabet_Create(ty)
         if not self._abc:
-            raise AllocationError("ESL_ALPHABET")
+            raise AllocationError("ESL_ALPHABET", sizeof(ESL_ALPHABET))
         return 0
 
     @classmethod
@@ -338,7 +338,7 @@ cdef class Bitfield:
         with nogil:
             self._b = libeasel.bitfield.esl_bitfield_Create(length)
         if not self._b:
-            raise AllocationError("ESL_BITFIELD")
+            raise AllocationError("ESL_BITFIELD", sizeof(ESL_BITFIELD))
 
     def __len__(self):
         assert self._b != NULL
@@ -530,7 +530,7 @@ cdef class KeyHash:
             else:
                 libeasel.keyhash.esl_keyhash_Reuse(self._kh)
         if not self._kh:
-            raise AllocationError("ESL_KEYHASH")
+            raise AllocationError("ESL_KEYHASH", sizeof(ESL_KEYHASH))
 
     def __copy__(self):
         return self.copy()
@@ -640,7 +640,7 @@ cdef class KeyHash:
             state["salloc"]
         )
         if not self._kh:
-            raise AllocationError("ESL_KEYHASH")
+            raise AllocationError("ESL_KEYHASH", sizeof(ESL_KEYHASH))
 
         # copy numeric values
         self._kh.sn = state["sn"]
@@ -735,7 +735,7 @@ cdef class KeyHash:
         with nogil:
             new._kh = libeasel.keyhash.esl_keyhash_Clone(self._kh)
         if not new._kh:
-            raise AllocationError("ESL_KEYHASH")
+            raise AllocationError("ESL_KEYHASH", sizeof(ESL_KEYHASH))
         return new
 
 
@@ -759,18 +759,19 @@ cdef class Vector:
         """
         cdef Vector       vec      = cls([])
         cdef size_t       itemsize = vec.itemsize
+        cdef size_t       n_alloc  = 1 if n == 0 else n
 
         if n < 0:
             raise ValueError("Cannot create a vector with negative size")
 
+        # NB(@althonos): malloc and calloc are not guaranteed to return a
+        #                pointer when called with a null allocation size,
+        #                so we allocate a single item instead
         vec._n = vec._shape[0] = n
         with nogil:
-            # NB(@althonos): malloc and calloc are not guaranteed to return a
-            #                pointer when called with a null allocation size,
-            #                so we allocate a single item instead
-            vec._data = <float*> calloc(1 if n == 0 else n, sizeof(float))
+            vec._data = <float*> calloc(n_alloc, sizeof(float))
         if vec._data == NULL:
-            raise AllocationError("void*")
+            raise AllocationError("void*", sizeof(float), n_alloc)
 
         return vec
 
@@ -828,7 +829,7 @@ cdef class Vector:
         if flags & PyBUF_FORMAT:
             buffer.format = strdup(self.format.encode("utf-8"))
             if buffer.format == NULL:
-                raise AllocationError("char*")
+                raise AllocationError("char", sizeof(char), len(self.format))
         else:
             buffer.format = NULL
         buffer.buf = self._data
@@ -844,7 +845,7 @@ cdef class Vector:
         IF SYS_IMPLEMENTATION_NAME == "pypy":
             buffer.internal = PyMem_Malloc(sizeof(Py_ssize_t))
             if buffer.internal == NULL:
-                raise AllocationError("Py_ssize_t*")
+                raise AllocationError("ssize_t", sizeof(Py_ssize_t))
             buffer.strides = <Py_ssize_t*> buffer.internal
             buffer.strides[0] = self.strides[0]
         ELSE:
@@ -1058,6 +1059,8 @@ cdef class VectorF(Vector):
         cdef size_t     i
         cdef float      item
         cdef float[::1] view
+        cdef int        n_alloc
+        cdef float*     data
 
         # allow creating a new empty vector without arguments
         if iterable is None:
@@ -1074,6 +1077,7 @@ cdef class VectorF(Vector):
             raise ValueError("Cannot create a vector with negative size")
         # record the vector dimensions and strides
         self._n = self._shape[0] = n
+        n_alloc = 1 if n == 0 else n
 
         # NB(@althonos): malloc and calloc are not guaranteed to return a
         #                pointer when called with a null allocation size,
@@ -1082,17 +1086,18 @@ cdef class VectorF(Vector):
         # use malloc to allocate a buffer for the vector
         self._data = calloc(1 if n == 0 else n, sizeof(float))
         if self._data == NULL:
-            raise AllocationError("float*")
+            raise AllocationError("float", sizeof(float), n_alloc)
         # try to copy the memory quickly if *iterable* implements the buffer
         # protocol, otherwise fall back to cop
+        data = <float*> self._data
         try:
             view = iterable
         except (TypeError, ValueError):
             for i, item in enumerate(iterable):
-                (<float*> self._data)[i] = item
+                data[i] = item
         else:
             with nogil:
-                memcpy(self._data, &view[0], n * sizeof(float))
+                memcpy(data, &view[0], n * sizeof(float))
 
     def __eq__(self, object other):
         assert self._data != NULL
@@ -1330,17 +1335,17 @@ cdef class VectorF(Vector):
     cpdef VectorF copy(self):
         assert self._data != NULL
 
-        cdef VectorF new = VectorF.__new__(VectorF)
+        cdef VectorF new
+        cdef int     n_alloc = 1 if self._n == 0 else self._n
+
+        new = VectorF.__new__(VectorF)
         new._n = new._shape[0] = self._n
 
-        if self._n > 0:
-            new._data = malloc(self._n * sizeof(float))
-            if new._data == NULL:
-                raise AllocationError("float*")
-            with nogil:
-                memcpy(new._data, self._data, self._n * sizeof(float))
-        else:
-            new._data = calloc(1, sizeof(float))
+        new._data = calloc(n_alloc, sizeof(float))
+        if new._data == NULL:
+            raise AllocationError("float", sizeof(float), n_alloc)
+        with nogil:
+            memcpy(new._data, self._data, self._n * sizeof(float))
 
         return new
 
@@ -1409,6 +1414,8 @@ cdef class VectorU8(Vector):
         cdef size_t       i
         cdef uint8_t      item
         cdef uint8_t[::1] view
+        cdef int          n_alloc
+        cdef uint8_t*     data
 
         # allow creating a new empty vector without arguments
         if iterable is None:
@@ -1425,25 +1432,27 @@ cdef class VectorU8(Vector):
             raise ValueError("Cannot create a vector with negative size")
         # record the vector dimensions
         self._n = self._shape[0] = n
+        n_alloc = 1 if n == 0 else n
 
         # NB(@althonos): malloc and calloc are not guaranteed to return a
         #                pointer when called with a null allocation size,
         #                so we allocate a single item instead
 
         # use malloc to allocate a buffer for the vector if needed
-        self._data = calloc(1 if n == 0 else n, sizeof(uint8_t))
+        self._data = calloc(n_alloc, sizeof(uint8_t))
         if self._data == NULL:
-            raise AllocationError("uint8_t*")
+            raise AllocationError("uint8_t", sizeof(uint8_t), n_alloc)
         # try to copy the memory quickly if *iterable* implements the buffer
         # protocol, or fall back to copying each element with a for loop
+        data = <uint8_t*> self._data
         try:
             view = iterable
         except (TypeError, ValueError):
             for i, item in enumerate(iterable):
-                (<uint8_t*> self._data)[i] = item
+                data[i] = item
         else:
             with nogil:
-                memcpy(self._data, &view[0], n * sizeof(uint8_t))
+                memcpy(data, &view[0], n * sizeof(uint8_t))
 
     def __eq__(self, object other):
         assert self._data != NULL
@@ -1681,17 +1690,18 @@ cdef class VectorU8(Vector):
     cpdef VectorU8 copy(self):
         assert self._data != NULL
 
-        cdef VectorU8 new = VectorU8.__new__(VectorU8)
-        new._n = new._shape[0] = self._n
+        cdef VectorU8 new
+        cdef int      n_alloc
 
-        if self._n > 0:
-            new._data = malloc(self._n * sizeof(uint8_t))
-            if new._data == NULL:
-                raise AllocationError("uint8_t*")
-            with nogil:
-                memcpy(new._data, self._data, self._n * sizeof(uint8_t))
-        else:
-            new._data = calloc(1, sizeof(float))
+        new = VectorU8.__new__(VectorU8)
+        new._n = new._shape[0] = self._n
+        n_alloc = 1 if self._n == 0 else self._n
+
+        new._data = calloc(n_alloc, sizeof(uint8_t))
+        if new._data == NULL:
+            raise AllocationError("uint8_t", sizeof(uint8_t), n_alloc)
+        with nogil:
+            memcpy(new._data, self._data, self._n * sizeof(uint8_t))
 
         return new
 
@@ -1786,6 +1796,7 @@ cdef class Matrix:
         cdef int    i
         cdef Matrix mat      = cls([])
         cdef size_t itemsize = mat.itemsize
+        cdef int    m_alloc
 
         if m < 0 or n < 0:
             raise ValueError("Cannot create a matrix with negative dimension")
@@ -1793,6 +1804,7 @@ cdef class Matrix:
         mat
         mat._m = mat._shape[0] = m
         mat._n = mat._shape[1] = n
+        m_alloc = 1 if m == 0 else m
 
         # NB(@althonos): malloc and calloc are not guaranteed to return a
         #                pointer when called with a null allocation size, but
@@ -1801,15 +1813,15 @@ cdef class Matrix:
         #                without allocating the internal data
 
         # allocate the array of pointers
-        mat._data    = <void**> calloc(1 if m == 0 else m, sizeof(void*))
+        mat._data    = <void**> calloc(m_alloc, sizeof(void*))
         if mat._data == NULL:
-            raise AllocationError("void**")
+            raise AllocationError("void*", sizeof(void*), m_alloc)
 
         # allocate the data array
         if mat._m > 0:
             mat._data[0] = calloc(m*n, itemsize)
             if mat._data[0] == NULL:
-                raise AllocationError("void*")
+                raise AllocationError("void*", itemsize, m*n)
 
         # update the pointer offsets in the array of pointers
         for i in range(1, m):
@@ -1870,7 +1882,7 @@ cdef class Matrix:
         if flags & PyBUF_FORMAT:
             buffer.format = strdup(self.format.encode("utf-8"))
             if buffer.format == NULL:
-                raise AllocationError("char*")
+                raise AllocationError("char", sizeof(char), len(self.format))
         else:
             buffer.format = NULL
         buffer.buf = self._data[0]
@@ -1886,7 +1898,7 @@ cdef class Matrix:
         IF SYS_IMPLEMENTATION_NAME == "pypy":
             buffer.internal = PyMem_Malloc(2*sizeof(Py_ssize_t))
             if buffer.internal == NULL:
-                raise AllocationError("Py_ssize_t*")
+                raise AllocationError("Py_ssize_t", sizeof(Py_ssize_t), 2)
             buffer.strides = <Py_ssize_t*> buffer.internal
             buffer.strides[0] = self.strides[0]
             buffer.strides[1] = self.strides[1]
@@ -2091,13 +2103,15 @@ cdef class MatrixF(Matrix):
         # allocate the buffer
         if self._m > 0 and self._n > 0:
             self._data = <void**> libeasel.matrixops.esl_mat_FCreate(self._m, self._n)
+            if self._data == NULL:
+                raise AllocationError("float", sizeof(float), self._m * self._n)
         else:
             # NB(@althonos): malloc and calloc are not guaranteed to return a
             #                pointer when called with a null allocation size,
             #                so we allocate an array of one item instead
             self._data = <void**> malloc(sizeof(float*))
-        if self._data == NULL:
-            raise AllocationError("float**")
+            if self._data == NULL:
+                raise AllocationError("float*", sizeof(float*), 1)
 
         # assign the items
         data = <float**> self._data
@@ -2288,7 +2302,7 @@ cdef class MatrixF(Matrix):
         with nogil:
             mat._data = <void**> libeasel.matrixops.esl_mat_FClone(<float**> self._data, self._m, self._n)
         if mat._data == NULL:
-            raise AllocationError("float**")
+            raise AllocationError("float**", sizeof(float), self._m * self._n)
         return mat
 
     cpdef float max(self):
@@ -2323,6 +2337,7 @@ cdef class MatrixU8(Matrix):
         cdef uint8_t   val
         cdef uint8_t** data    = NULL
         cdef object    peeking = peekable(iterable)
+        cdef int       m_alloc
 
         # make sure __init__ is only called once
         if self._data != NULL:
@@ -2338,20 +2353,15 @@ cdef class MatrixU8(Matrix):
             raise ValueError("Cannot create a matrix with a negative number of rows")
 
         # allocate the buffer
-        if self._m > 0:
-            self._data = <void**> calloc(self._m, sizeof(uint8_t*))
-        else:
-            # NB(@althonos): malloc and calloc are not guaranteed to return a
-            #                pointer when called with a null allocation size,
-            #                so we allocate a single item instead
-            self._data = <void**> calloc(1, sizeof(uint8_t*))
+        m_alloc = 1 if self._m == 0 else self._m
+        self._data = <void**> calloc(self._m, sizeof(uint8_t*))
         if self._data == NULL:
-            raise AllocationError("uint8_t**")
+            raise AllocationError("uint8_t*", sizeof(uint8_t*), m_alloc)
         # allocate the data array
         if self._m > 0 and self._n > 0:
             self._data[0] = <void*> calloc(self._m*self._n, sizeof(uint8_t))
             if self._data[0] == NULL:
-                raise AllocationError("uint8_t*")
+                raise AllocationError("uint8_t", sizeof(uint8_t), self._m * self._n)
         # update the pointer offsets in the array of pointers
         for i in range(1, self._m):
             self._data[i] = self._data[0] + i * self._n
@@ -2568,11 +2578,11 @@ cdef class MatrixU8(Matrix):
             # allocate array of pointers
             mat._data = <void**> malloc(sizeof(uint8_t*) * self._m)
             if mat._data == NULL:
-                raise AllocationError("uint8_t**")
+                raise AllocationError("uint8_t*", sizeof(uint8_t*), self._m)
             # allocate memory block
             mat._data[0] = <void*> malloc(sizeof(uint8_t) * self._m * self._n)
             if mat._data == NULL:
-                raise AllocationError("uint8_t*")
+                raise AllocationError("uint8_t", sizeof(uint8_t), self._m * self._n)
             # update array of pointers
             for i in range(self._m):
                 mat._data[i] = mat._data[0] + i * self._n
@@ -2709,7 +2719,7 @@ cdef class MSA:
         with nogil:
             status = libeasel.msa.esl_msa_SetAccession(self._msa, acc, length)
         if status == libeasel.eslEMEM:
-            raise AllocationError("char*")
+            raise AllocationError("char", sizeof(char), length)
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_msa_SetAccession")
 
@@ -2733,7 +2743,7 @@ cdef class MSA:
         with nogil:
             status = libeasel.msa.esl_msa_SetAuthor(self._msa, au, length)
         if status == libeasel.eslEMEM:
-            raise AllocationError("char*")
+            raise AllocationError("char", sizeof(char), length)
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_msa_SetAuthor")
 
@@ -2757,7 +2767,7 @@ cdef class MSA:
         with nogil:
             status = libeasel.msa.esl_msa_SetName(self._msa, nm, length)
         if status == libeasel.eslEMEM:
-            raise AllocationError("char*")
+            raise AllocationError("char", sizeof(char), length)
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_msa_SetName")
 
@@ -2781,7 +2791,7 @@ cdef class MSA:
         with nogil:
             status = libeasel.msa.esl_msa_SetDesc(self._msa, desc, length)
         if status == libeasel.eslEMEM:
-            raise AllocationError("char*")
+            raise AllocationError("char", sizeof(char), length)
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_msa_SetDesc")
 
@@ -3010,7 +3020,7 @@ cdef class TextMSA(MSA):
         with nogil:
             self._msa = libeasel.msa.esl_msa_Create(nseq, alen)
         if self._msa == NULL:
-            raise AllocationError("ESL_MSA")
+            raise AllocationError("ESL_MSA", sizeof(ESL_MSA))
 
         if name is not None:
             self.name = name
@@ -3163,7 +3173,7 @@ cdef class TextMSA(MSA):
         with nogil:
             new._msa = libeasel.msa.esl_msa_Clone(self._msa)
         if new._msa == NULL:
-            raise AllocationError("ESL_MSA")
+            raise AllocationError("ESL_MSA", sizeof(ESL_MSA))
         return new
 
     cpdef DigitalMSA digitize(self, Alphabet alphabet):
@@ -3191,7 +3201,7 @@ cdef class TextMSA(MSA):
         with nogil:
             new._msa = libeasel.msa.esl_msa_Clone(self._msa)
             if new._msa == NULL:
-                raise AllocationError("ESL_MSA")
+                raise AllocationError("ESL_MSA", sizeof(ESL_MSA))
             status = libeasel.msa.esl_msa_Digitize(alphabet._abc, new._msa, <char*> &errbuf)
 
         if status == libeasel.eslOK:
@@ -3339,7 +3349,7 @@ cdef class DigitalMSA(MSA):
         with nogil:
             self._msa = libeasel.msa.esl_msa_CreateDigital(alphabet._abc, nseq, alen)
         if self._msa == NULL:
-            raise AllocationError("ESL_MSA")
+            raise AllocationError("ESL_MSA", sizeof(ESL_MSA))
 
         if name is not None:
             self.name = name
@@ -3411,7 +3421,7 @@ cdef class DigitalMSA(MSA):
         with nogil:
             new._msa = libeasel.msa.esl_msa_Clone(self._msa)
         if new._msa == NULL:
-            raise AllocationError("ESL_MSA")
+            raise AllocationError("ESL_MSA", sizeof(ESL_MSA))
         return new
 
     cpdef TextMSA textize(self):
@@ -3435,7 +3445,7 @@ cdef class DigitalMSA(MSA):
         with nogil:
             new._msa = libeasel.msa.esl_msa_Clone(self._msa)
             if new._msa == NULL:
-                raise AllocationError("ESL_MSA")
+                raise AllocationError("ESL_MSA", sizeof(ESL_MSA))
             status = libeasel.msa.esl_msa_Textize(new._msa)
 
         if status == libeasel.eslOK:
@@ -3558,7 +3568,7 @@ cdef class MSAFile:
         if status == libeasel.eslENOTFOUND:
             raise FileNotFoundError(2, "No such file or directory: {!r}".format(file))
         elif status == libeasel.eslEMEM:
-            raise AllocationError("ESL_MSAFILE")
+            raise AllocationError("ESL_MSAFILE", sizeof(ESL_MSAFILE))
         elif status == libeasel.eslENOFORMAT:
             if format is None:
                 raise ValueError("Could not determine format of file: {!r}".format(file))
@@ -3748,7 +3758,7 @@ cdef class Randomness:
             else:
                 self._rng = libeasel.random.esl_randomness_Create(_seed)
             if self._rng == NULL:
-                raise AllocationError("ESL_RANDOMNESS")
+                raise AllocationError("ESL_RANDOMNESS", sizeof(ESL_RANDOMNESS))
         else:
             self._seed(_seed)
 
@@ -3831,7 +3841,7 @@ cdef class Randomness:
         cdef Randomness new = Randomness.__new__(Randomness)
         new._rng = <ESL_RANDOMNESS*> malloc(sizeof(ESL_RANDOMNESS))
         if new._rng == NULL:
-            raise AllocationError("ESL_RANDOMNESS")
+            raise AllocationError("ESL_RANDOMNESS", sizeof(ESL_RANDOMNESS))
 
         memcpy(<void*> new._rng, <void*> self._rng, sizeof(ESL_RANDOMNESS))
         return new
@@ -3947,7 +3957,7 @@ cdef class Sequence:
         with nogil:
             status = libeasel.sq.esl_sq_SetAccession(self._sq, acc)
         if status == libeasel.eslEMEM:
-            raise AllocationError("char*")
+            raise AllocationError("char", sizeof(char), len(accession))
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_SetAccession")
 
@@ -3968,7 +3978,7 @@ cdef class Sequence:
         with nogil:
             status = libeasel.sq.esl_sq_SetName(self._sq, nm)
         if status == libeasel.eslEMEM:
-            raise AllocationError("char*")
+            raise AllocationError("char", sizeof(char), len(name))
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_SetName")
 
@@ -3989,7 +3999,7 @@ cdef class Sequence:
         with nogil:
             status = libeasel.sq.esl_sq_SetDesc(self._sq, desc)
         if status == libeasel.eslEMEM:
-            raise AllocationError("char*")
+            raise AllocationError("char", sizeof(char), len(description))
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_SetDesc")
 
@@ -4010,7 +4020,7 @@ cdef class Sequence:
         with nogil:
             status = libeasel.sq.esl_sq_SetSource(self._sq, src)
         if status == libeasel.eslEMEM:
-            raise AllocationError("char*")
+            raise AllocationError("char", sizeof(char), len(source))
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_SetSource")
 
@@ -4097,13 +4107,13 @@ cdef class Sequence:
             self._sq.xr = <char**> realloc(<void*> self._sq.xr, xrlen * sizeof(char*))
             self._sq.xr_tag = <char**> realloc(<void*> self._sq.xr_tag, xrlen * sizeof(char*))
             if self._sq.xr == NULL or self._sq.xr_tag == NULL:
-                raise AllocationError("char**")
+                raise AllocationError("char*", sizeof(char*), xrlen)
         # assign the new values
         for i, (tag, val) in enumerate(xr.items()):
             self._sq.xr_tag[i] = strdup(<const char*> tag)
             self._sq.xr[i] = <char*> calloc(xrdim, sizeof(char))
             if self._sq.xr_tag[i] == NULL or self._sq.xr[i] == NULL:
-                raise AllocationError("char*")
+                raise AllocationError("char", sizeof(char), xrdim)
             memcpy(&self._sq.xr[i][off], <const void*> (<const char*> val), len(val))
 
     # --- Abstract methods ---------------------------------------------------
@@ -4206,7 +4216,7 @@ cdef class TextSequence(Sequence):
         else:
             self._sq = libeasel.sq.esl_sq_Create()
         if self._sq == NULL:
-            raise AllocationError("ESL_SQ")
+            raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
         self._sq.abc = NULL
 
         if name is not None:
@@ -4257,7 +4267,7 @@ cdef class TextSequence(Sequence):
         with nogil:
             new._sq = libeasel.sq.esl_sq_CreateDigital(abc)
             if new._sq == NULL:
-                raise AllocationError("ESL_SQ")
+                raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
             status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
 
         if status == libeasel.eslOK:
@@ -4284,7 +4294,7 @@ cdef class TextSequence(Sequence):
         with nogil:
             new._sq = libeasel.sq.esl_sq_Create()
             if new._sq == NULL:
-                raise AllocationError("ESL_SQ")
+                raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
             new._sq.abc = NULL
 
             status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
@@ -4389,7 +4399,7 @@ cdef class DigitalSequence(Sequence):
         # create an empty digital sequence
         self._sq = libeasel.sq.esl_sq_CreateDigital(alphabet._abc)
         if self._sq == NULL:
-            raise AllocationError("ESL_SQ")
+            raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
 
         # NB: because the easel sequence has sentinel bytes that we hide from
         #     the user, we cannot just copy the sequence here or use the libeasel
@@ -4472,7 +4482,7 @@ cdef class DigitalSequence(Sequence):
         with nogil:
             new._sq = libeasel.sq.esl_sq_CreateDigital(abc)
             if new._sq == NULL:
-                raise AllocationError("ESL_SQ")
+                raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
 
             status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
             if status != libeasel.eslOK:
@@ -4501,7 +4511,7 @@ cdef class DigitalSequence(Sequence):
         with nogil:
             new._sq = libeasel.sq.esl_sq_Create()
             if new._sq == NULL:
-                raise AllocationError("ESL_SQ")
+                raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
 
             status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
             if status != libeasel.eslOK:
@@ -4598,7 +4608,7 @@ cdef class SequenceFile:
         cdef Sequence seq = TextSequence.__new__(TextSequence)
         seq._sq = libeasel.sq.esl_sq_Create()
         if not seq._sq:
-            raise AllocationError("ESL_SQ")
+            raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
         seq._sq.abc = NULL
         return cls.parseinto(seq, buffer, format)
 
@@ -4620,7 +4630,7 @@ cdef class SequenceFile:
 
         cdef int status = libeasel.sqio.esl_sqio_Parse(buffer, len(buffer), seq._sq, fmt)
         if status == libeasel.eslEFORMAT:
-            raise AllocationError("ESL_SQFILE")
+            raise AllocationError("ESL_SQFILE", sizeof(ESL_SQFILE))
         elif status == libeasel.eslOK:
             return seq
         else:
@@ -4662,7 +4672,7 @@ cdef class SequenceFile:
         sqfp = <ESL_SQFILE*> malloc(sizeof(ESL_SQFILE))
         if sqfp == NULL:
             fclose(fp)
-            raise AllocationError("ESL_SQFILE")
+            raise AllocationError("ESL_SQFILE", sizeof(ESL_SQFILE))
 
         # reset options
         sqfp.filename   = NULL
@@ -4734,7 +4744,7 @@ cdef class SequenceFile:
             # use the repr string of the file-like object as a filename
             sqfp.filename = strdup(<const char*> fh_repr)
             if sqfp.filename == NULL:
-                raise AllocationError("char*")
+                raise AllocationError("char", sizeof(char), len(fh_repr))
 
             # if we don't know the format yet, try to autodetect
             if fmt == libeasel.sqio.eslSQFILE_UNKNOWN:
@@ -4858,7 +4868,7 @@ cdef class SequenceFile:
         if status == libeasel.eslENOTFOUND:
             raise FileNotFoundError(2, "No such file or directory: {!r}".format(file))
         elif status == libeasel.eslEMEM:
-            raise AllocationError("ESL_SQFILE")
+            raise AllocationError("ESL_SQFILE", sizeof(ESL_SQFILE))
         elif status == libeasel.eslEFORMAT:
             if format is None:
                 raise ValueError("Could not determine format of file: {!r}".format(file))

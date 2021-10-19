@@ -64,14 +64,21 @@ class AllocationError(MemoryError):
     """A memory error that is caused by an unsuccessful allocation.
     """
 
-    def __init__(self, str ctype):
+    def __init__(self, str ctype, int itemsize, int count=1):
         self.ctype = ctype
+        self.itemsize = itemsize
+        self.count = count
 
     def __repr__(self):
-        return "{}({!r})".format(type(self).__name__, self.ctype)
+        cdef str typename = type(self).__name__
+        if self.count == 1:
+            return f"{typename}({self.ctype!r}, {self.itemsize})"
+        return f"{typename}({self.ctype!r}, {self.itemsize}, {self.count})"
 
     def __str__(self):
-        return "Could not allocate {!r}".format(self.ctype)
+        if self.count == 1:
+            return f"Could not allocate {self.itemsize} bytes for type {self.ctype}"
+        return f"Could not allocate {self.itemsize*self.count} bytes for an array of {self.count} {self.ctype}"
 
 
 class EaselError(RuntimeError):

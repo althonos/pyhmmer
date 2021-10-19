@@ -12,9 +12,13 @@ class TestErrors(unittest.TestCase):
         self.assertEqual(str(err), "Unexpected error occurred in 'p7_ReconfigLength': eslFAIL (status code 1)")
 
     def test_allocation_error(self):
-        err = AllocationError("ESL_SQ")
-        self.assertEqual(repr(err), "AllocationError('ESL_SQ')")
-        self.assertEqual(str(err), "Could not allocate 'ESL_SQ'")
+        err = AllocationError("ESL_SQ", 16)
+        self.assertEqual(repr(err), "AllocationError('ESL_SQ', 16)")
+        self.assertEqual(str(err), "Could not allocate 16 bytes for type ESL_SQ")
+
+        err2 = AllocationError("float", 4, 32)
+        self.assertEqual(repr(err2), "AllocationError('float', 4, 32)")
+        self.assertEqual(str(err2), "Could not allocate 128 bytes for an array of 32 float")
 
     def test_easel_error(self):
         err = EaselError(1, "failure")

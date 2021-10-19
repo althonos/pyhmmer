@@ -50,6 +50,7 @@ from libeasel cimport eslERRBUFSIZE, eslCONST_LOG2R
 from libeasel.alphabet cimport ESL_ALPHABET, esl_alphabet_Create, esl_abc_ValidateType
 from libeasel.getopts cimport ESL_GETOPTS, ESL_OPTIONS
 from libeasel.sq cimport ESL_SQ
+from libeasel.fileparser cimport ESL_FILEPARSER
 from libhmmer cimport p7_LOCAL, p7_EVPARAM_UNSET, p7_CUTOFF_UNSET, p7_NEVPARAM, p7_NCUTOFFS, p7_offsets_e, p7_cutoffs_e, p7_evparams_e
 from libhmmer.logsum cimport p7_FLogsumInit
 from libhmmer.p7_builder cimport P7_BUILDER, p7_archchoice_e, p7_wgtchoice_e, p7_effnchoice_e
@@ -271,7 +272,7 @@ cdef class Background:
             else:
                 self._bg = libhmmer.p7_bg.p7_bg_Create(alphabet._abc)
         if self._bg == NULL:
-            raise AllocationError("P7_BG")
+            raise AllocationError("P7_BG", sizeof(P7_BG))
         # expose the residue frequencies as the `residue_frequencies` attribute
         self.residue_frequencies = VectorF.__new__(VectorF)
         self.residue_frequencies._data = &(self._bg.f[0])
@@ -345,7 +346,7 @@ cdef class Background:
         with nogil:
             new._bg = libhmmer.p7_bg.p7_bg_Clone(self._bg)
         if new._bg == NULL:
-            raise AllocationError("P7_BG")
+            raise AllocationError("P7_BG", sizeof(P7_BG))
 
         new.alphabet = self.alphabet
         new.uniform = self.uniform
@@ -482,7 +483,7 @@ cdef class Builder:
         with nogil:
             self._bld = libhmmer.p7_builder.p7_builder_Create(NULL, alphabet._abc)
         if self._bld == NULL:
-            raise AllocationError("P7_BG")
+            raise AllocationError("P7_BG", sizeof(P7_BG))
 
         # create a Randomness object exposing the internal RNG
         self.randomness = Randomness.__new__(Randomness)
@@ -997,7 +998,7 @@ cdef class Cutoffs:
         """`tuple` of `float`, or `None`: The noise cutoffs, if available.
 
         .. versionadded:: 0.4.8
-        
+
         """
         if self.noise_available():
             return (
@@ -1580,7 +1581,7 @@ cdef class HMM:
         with nogil:
             self._hmm = libhmmer.p7_hmm.p7_hmm_Create(M, alphabet._abc)
         if not self._hmm:
-            raise AllocationError("P7_HMM")
+            raise AllocationError("P7_HMM", sizeof(P7_HMM))
         # FIXME(@althonos): Remove following block when
         # https://github.com/EddyRivasLab/hmmer/pull/236
         # is merged and released in a new HMMER version
@@ -1756,35 +1757,35 @@ cdef class HMM:
         if self._hmm.flags & libhmmer.p7_hmm.p7H_RF:
             self._hmm.rf = strndup(<const char*> state["rf"], M+2)
             if self._hmm.rf == NULL:
-                raise AllocationError("char*")
+                raise AllocationError("char", sizeof(char), M+2)
         if self._hmm.mm != NULL:
             free(self._hmm.mm)
             self._hmm.mm = NULL
         if self._hmm.flags & libhmmer.p7_hmm.p7H_MM:
             self._hmm.mm = strndup(<const char*> state["mm"], M+2)
             if self._hmm.mm == NULL:
-                raise AllocationError("char*")
+                raise AllocationError("char", sizeof(char), M+2)
         if self._hmm.consensus != NULL:
             free(self._hmm.consensus)
             self._hmm.consensus = NULL
         if self._hmm.flags & libhmmer.p7_hmm.p7H_CONS:
             self._hmm.consensus = strndup(<const char*> state["consensus"], M+2)
             if self._hmm.consensus == NULL:
-                raise AllocationError("char*")
+                raise AllocationError("char", sizeof(char), M+2)
         if self._hmm.cs != NULL:
             free(self._hmm.cs)
             self._hmm.cs = NULL
         if self._hmm.flags & libhmmer.p7_hmm.p7H_CS:
             self._hmm.cs = strndup(<const char*> state["cs"], M+2)
             if self._hmm.cs == NULL:
-                raise AllocationError("char*")
+                raise AllocationError("char", sizeof(char), M+2)
         if self._hmm.ca != NULL:
             free(self._hmm.ca)
             self._hmm.ca = NULL
         if self._hmm.flags & libhmmer.p7_hmm.p7H_CA:
             self._hmm.ca = strndup(<const char*> state["ca"], M+2)
             if self._hmm.ca == NULL:
-                raise AllocationError("char*")
+                raise AllocationError("char", sizeof(char), M+2)
 
         # numerical values that can be set directly on the C struct
         self._hmm.nseq = state["nseq"]
@@ -1826,7 +1827,7 @@ cdef class HMM:
             else:
                 self._hmm.map = <int*> calloc(M + 1, sizeof(int))
             if self._hmm.map == NULL:
-                raise AllocationError("int*")
+                raise AllocationError("int", sizeof(int), M+1)
             assert map_.ndim == 1 and map_.shape[0] == M + 1
             memcpy(&self._hmm.map[0], &map_[0], (M + 1) * sizeof(int))
 
@@ -1850,11 +1851,12 @@ cdef class HMM:
     def name(self, bytes name):
         assert self._hmm != NULL
 
-        cdef char* name_ = NULL if name is None else <char*> name
-        cdef int err = libhmmer.p7_hmm.p7_hmm_SetName(self._hmm, name_)
+        cdef char* name_  = NULL if name is None else <char*> name
+        cdef int   err    = libhmmer.p7_hmm.p7_hmm_SetName(self._hmm, name_)
+        cdef int   length = 0 if name is None else len(name)
 
         if err == libeasel.eslEMEM:
-            raise AllocationError("char*")
+            raise AllocationError("char", sizeof(char), length)
         elif err != libeasel.eslOK:
             raise UnexpectedError(err, "p7_hmm_SetName")
 
@@ -1869,11 +1871,12 @@ cdef class HMM:
     def accession(self, bytes accession):
         assert self._hmm != NULL
 
-        cdef char* acc = NULL if accession is None else <char*> accession
-        cdef int err = libhmmer.p7_hmm.p7_hmm_SetAccession(self._hmm, acc)
+        cdef char* acc    = NULL if accession is None else <char*> accession
+        cdef int   err    = libhmmer.p7_hmm.p7_hmm_SetAccession(self._hmm, acc)
+        cdef int   length = 0 if accession is None else len(accession)
 
         if err == libeasel.eslEMEM:
-            raise AllocationError("char*")
+            raise AllocationError("char", sizeof(char), length)
         elif err != libeasel.eslOK:
             raise UnexpectedError(err, "p7_hmm_SetAccession")
 
@@ -2011,11 +2014,12 @@ cdef class HMM:
     def description(self, bytes description):
         assert self._hmm != NULL
 
-        cdef char* desc = NULL if description is None else <char*> description
-        cdef int err = libhmmer.p7_hmm.p7_hmm_SetDescription(self._hmm, desc)
+        cdef char* desc   = NULL if description is None else <char*> description
+        cdef int   err    = libhmmer.p7_hmm.p7_hmm_SetDescription(self._hmm, desc)
+        cdef int   length = 0 if description is None else len(description)
 
         if err == libeasel.eslEMEM:
-            raise AllocationError("char*")
+            raise AllocationError("char", sizeof(char), length)
         elif err != libeasel.eslOK:
             raise UnexpectedError(err, "p7_hmm_SetDescription")
 
@@ -2172,7 +2176,7 @@ cdef class HMM:
             if self._hmm.comlog != NULL:
                 strncpy(self._hmm.comlog, <char*> cli_, n+1)
         if self._hmm.comlog == NULL:
-            raise AllocationError("char*")
+            raise AllocationError("char", sizeof(char), n+1)
 
     @property
     def nseq(self):
@@ -2263,7 +2267,7 @@ cdef class HMM:
         else:
             self._hmm.ctime = <char*> realloc(<void*> self._hmm.ctime, sizeof(char) * (n + 1))
         if self._hmm.ctime == NULL:
-            raise AllocationError("char*")
+            raise AllocationError("char", sizeof(char), n+1)
         if self._hmm.ctime != NULL:
             strncpy(self._hmm.ctime, <const char*> formatted, n + 1)
 
@@ -2327,7 +2331,7 @@ cdef class HMM:
         with nogil:
             new._hmm = libhmmer.p7_hmm.p7_hmm_Clone(self._hmm)
         if not new._hmm:
-            raise AllocationError("P7_HMM")
+            raise AllocationError("P7_HMM", sizeof(P7_HMM))
         return new
 
     cpdef void renormalize(self):
@@ -2422,7 +2426,7 @@ cdef class HMMFile:
         # attempt to allocate space for the P7_HMMFILE
         hfp = <P7_HMMFILE*> malloc(sizeof(P7_HMMFILE));
         if hfp == NULL:
-            raise AllocationError("P7_HMMFILE")
+            raise AllocationError("P7_HMMFILE", sizeof(P7_HMMFILE))
 
         # store options
         hfp.f            = fopen_obj(fh_)
@@ -2445,7 +2449,7 @@ cdef class HMMFile:
             filename = fh.name.encode()
             hfp.fname = strdup(filename)
             if hfp.fname == NULL:
-                raise AllocationError("char*")
+                raise AllocationError("char", sizeof(char), len(filename))
 
         # check if the parser is in binary format,
         magic = int.from_bytes(fh_.peek(4)[:4], sys.byteorder)
@@ -2462,7 +2466,7 @@ cdef class HMMFile:
         hfp.efp = libeasel.fileparser.esl_fileparser_Create(hfp.f)
         if hfp.efp == NULL:
             libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
-            raise AllocationError("ESL_FILEPARSER")
+            raise AllocationError("ESL_FILEPARSER", sizeof(ESL_FILEPARSER))
         status = libeasel.fileparser.esl_fileparser_SetCommentChar(hfp.efp, b"#")
         if status != libeasel.eslOK:
             libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
@@ -2584,7 +2588,7 @@ cdef class HMMFile:
         elif status == libeasel.eslEOF:
             raise StopIteration()
         elif status == libeasel.eslEMEM:
-            raise AllocationError("P7_HMM")
+            raise AllocationError("P7_HMM", sizeof(P7_HMM))
         elif status == libeasel.eslESYS:
             raise OSError(self._hfp.errbuf.decode("utf-8", "replace"))
         elif status == libeasel.eslEFORMAT:
@@ -2654,7 +2658,7 @@ cdef class OptimizedProfile:
         with nogil:
             self._om = p7_oprofile.p7_oprofile_Create(M, alphabet._abc)
         if self._om == NULL:
-            raise AllocationError("P7_OPROFILE")
+            raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
         # expose the disk offsets as the `offsets` attribute
         self.offsets = Offsets.__new__(Offsets)
         self.offsets._offs = &self._om.offs
@@ -2798,7 +2802,7 @@ cdef class OptimizedProfile:
         with nogil:
             new._om = p7_oprofile.p7_oprofile_Clone(self._om)
         if new._om == NULL:
-            raise AllocationError("P7_OPROFILE")
+            raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
         return new
 
     cpdef void write(self, object fh_filter, object fh_profile) except *:
@@ -2858,7 +2862,7 @@ cdef class OptimizedProfile:
         elif status == libeasel.eslEINVAL:
             raise ValueError("Standard and optimized profiles are not compatible.")
         elif status == libeasel.eslEMEM:
-            raise AllocationError("P7_OPROFILE")
+            raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_oprofile_Convert")
 
@@ -3138,7 +3142,7 @@ cdef class Pipeline:
                 p7_pipemodes_e.p7_SEARCH_SEQS
             )
         if self._pli == NULL:
-            raise AllocationError("P7_PIPELINE")
+            raise AllocationError("P7_PIPELINE", sizeof(P7_PIPELINE))
 
         # create a Randomness object exposing the internal pipeline RNG
         self.randomness = Randomness.__new__(Randomness)
@@ -3629,7 +3633,7 @@ cdef class Pipeline:
             self._nref = nseqs + 1
             self._refs = <void**> realloc(self._refs, sizeof(void*) * (self._nref))
             if self._refs == NULL:
-                raise AllocationError("void**")
+                raise AllocationError("void*", sizeof(void*), self._nref)
         for i, seq in enumerate(sequences):
             # check alphabet
             if not self.alphabet._eq(seq.alphabet):
@@ -3649,7 +3653,7 @@ cdef class Pipeline:
                 libhmmer.p7_profile.p7_profile_Destroy(self.profile._gm)
                 self.profile._gm = libhmmer.p7_profile.p7_profile_Create(query._hmm.M, self.alphabet._abc)
                 if self.profile._gm == NULL:
-                    raise AllocationError("P7_PROFILE")
+                    raise AllocationError("P7_PROFILE", sizeof(P7_OPROFILE))
             else:
                 self.profile._clear()
             # configure the profile from the query HMM
@@ -3659,7 +3663,7 @@ cdef class Pipeline:
                 p7_oprofile.p7_oprofile_Destroy(self.opt._om)
                 self.opt._om = p7_oprofile.p7_oprofile_Create(query._hmm.M, self.alphabet._abc)
                 if self.opt._om == NULL:
-                    raise AllocationError("P7_OPROFILE")
+                    raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
             # convert the profile to an optimized one
             self.opt._convert(self.profile._gm)
             # run the search loop on all database sequences while recycling memory
@@ -3738,7 +3742,7 @@ cdef class Pipeline:
             self._nref = len(sequences) + 1
             self._refs = <void**> realloc(self._refs, sizeof(void*) * (len(sequences)+1))
             if self._refs == NULL:
-                raise AllocationError("void**")
+                raise AllocationError("void*", sizeof(void*), len(sequences)+1)
 
         # collect sequences: we prepare an array of pointer to sequences
         # so that the C backend can iter through them without having to
@@ -3833,7 +3837,7 @@ cdef class Pipeline:
             self._nref = len(sequences) + 1
             self._refs = <void**> realloc(self._refs, sizeof(void*) * (len(sequences)+1))
             if self._refs == NULL:
-                raise AllocationError("void**")
+                raise AllocationError("void*", sizeof(void*), len(sequences) + 1)
 
         # collect sequences: we prepare an array of pointer to sequences
         # so that the C backend can iter through them without having to
@@ -4123,7 +4127,7 @@ cdef class Profile:
         with nogil:
             self._gm = libhmmer.p7_profile.p7_profile_Create(M, alphabet._abc)
         if not self._gm:
-            raise AllocationError("P7_PROFILE")
+            raise AllocationError("P7_PROFILE", sizeof(P7_PROFILE))
         # expose the disk offsets as the `offsets` attribute
         self.offsets = Offsets.__new__(Offsets)
         self.offsets._offs = &self._gm.offs
@@ -4322,7 +4326,7 @@ cdef class Profile:
         with nogil:
             new._gm = libhmmer.p7_profile.p7_profile_Create(self._gm.allocM, self.alphabet._abc)
         if not new._gm:
-            raise AllocationError("P7_PROFILE")
+            raise AllocationError("P7_PROFILE", sizeof(P7_PROFILE))
 
         # copy the current profile to the new profile
         with nogil:
@@ -4409,7 +4413,7 @@ cdef class TopHits:
         with nogil:
             self._th = libhmmer.p7_tophits.p7_tophits_Create()
         if self._th == NULL:
-            raise AllocationError("P7_TOPHITS")
+            raise AllocationError("P7_TOPHITS", sizeof(P7_TOPHITS))
 
     def __dealloc__(self):
         libhmmer.p7_tophits.p7_tophits_Destroy(self._th)
@@ -4770,18 +4774,18 @@ cdef class TraceAligner:
         traces._ntraces = nseq
         traces._traces = <P7_TRACE**> calloc(nseq, sizeof(P7_TRACE*))
         if traces._traces == NULL:
-            raise AllocationError("P7_TRACE**")
+            raise AllocationError("P7_TRACE**", sizeof(P7_TRACE*), nseq)
         for i in range(nseq):
             traces._traces[i] = libhmmer.p7_trace.p7_trace_CreateWithPP()
             if traces._traces[i] == NULL:
-                raise AllocationError("P7_TRACE*")
+                raise AllocationError("P7_TRACE", sizeof(P7_TRACE))
 
         # reallocate the array of sequence pointers if needed
         if <size_t> nseq > self._nseq:
             self._nseq = nseq
             self._seqs = <ESL_SQ**> realloc(self._seqs, nseq * sizeof(ESL_SQ*))
             if self._seqs == NULL:
-                raise AllocationError("ESL_SQ**")
+                raise AllocationError("ESL_SQ*", sizeof(ESL_SQ*), nseq)
         # store sequence pointers and check alphabets
         for i, seq in enumerate(sequences):
             if seq.alphabet != hmm.alphabet:
@@ -4879,7 +4883,7 @@ cdef class TraceAligner:
             self._nseq = nseq
             self._seqs = <ESL_SQ**> realloc(self._seqs, nseq * sizeof(ESL_SQ*))
             if self._seqs == NULL:
-                raise AllocationError("ESL_SQ**")
+                raise AllocationError("ESL_SQ*", sizeof(ESL_SQ*), nseq)
         # store sequence pointers and check alphabets
         for i, seq in enumerate(sequences):
             if seq.alphabet != hmm.alphabet:
