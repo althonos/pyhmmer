@@ -381,7 +381,11 @@ class DigitalMSA(MSA):
 
 class MSAFile(typing.ContextManager[MSAFile], typing.Iterator[MSA]):
     alphabet: typing.Optional[Alphabet]
-    def __init__(self, file: str, format: typing.Optional[str] = None) -> None: ...
+    def __init__(
+        self,
+        file: typing.Union[typing.AnyStr, os.PathLike[typing.AnyStr], typing.BinaryIO],
+        format: typing.Optional[str] = None
+    ) -> None: ...
     def __enter__(self) -> MSAFile: ...
     def __exit__(
         self,

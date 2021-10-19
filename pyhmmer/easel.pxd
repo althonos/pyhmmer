@@ -140,6 +140,9 @@ cdef class MSAFile:
     cdef ESL_MSAFILE* _msaf
     cdef readonly Alphabet alphabet
 
+    @staticmethod
+    cdef ESL_MSAFILE* _open_fileobj(object fh, int fmt) except NULL
+
     cpdef MSA read(self)
 
     cpdef void close(self)
@@ -192,6 +195,9 @@ cdef class SequenceFile:
     cdef ESL_SQFILE* _sqfp
     cdef readonly Alphabet alphabet
 
+    @staticmethod
+    cdef ESL_SQFILE* _open_fileobj(object fh, int fmt) except NULL
+
     cpdef Sequence read(self, bint skip_info=*, bint skip_sequence=*)
     cpdef Sequence readinto(self, Sequence, bint skip_info=*, bint skip_sequence=*)
 
@@ -201,9 +207,6 @@ cdef class SequenceFile:
     cpdef void close(self)
     cpdef Alphabet guess_alphabet(self)
     cpdef Alphabet set_digital(self, Alphabet)
-
-    @staticmethod
-    cdef ESL_SQFILE* _open_fileobj(object fh, int fmt) except NULL
 
 
 # --- Sequence/Subsequence Index ---------------------------------------------

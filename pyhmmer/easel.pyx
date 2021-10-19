@@ -37,6 +37,7 @@ from posix.types cimport off_t
 cimport libeasel
 cimport libeasel.alphabet
 cimport libeasel.bitfield
+cimport libeasel.buffer
 cimport libeasel.keyhash
 cimport libeasel.matrixops
 cimport libeasel.msa
@@ -48,6 +49,7 @@ cimport libeasel.sqio.ascii
 cimport libeasel.ssi
 cimport libeasel.vec
 from libeasel cimport ESL_DSQ, esl_pos_t
+from libeasel.buffer cimport ESL_BUFFER
 from libeasel.sq cimport ESL_SQ
 from libeasel.sqio cimport ESL_SQFILE, ESL_SQASCII_DATA
 from libeasel.random cimport ESL_RANDOMNESS
@@ -3329,22 +3331,64 @@ cdef class MSAFile:
 
     _FORMATS = dict(MSA_FILE_FORMATS) # copy dict to prevent editing
 
+    # --- Constructor --------------------------------------------------------
+
+    @staticmethod
+    cdef ESL_MSAFILE* _open_fileobj(object fh, int fmt) except NULL:
+        """_open_fileobj(fh, fmt)\n--
+
+        Get an ``ESL_MSAFILE*`` to read MSA from the file-like object ``fh``.
+
+        Adapted from the ``esl_msafile_Open`` function in ``esl_msafile.c``.
+
+        Raises:
+            `~pyhmmer.errors.AllocationError`: When either the ``ESL_SQFILE``
+                or one of the string allocations fails.
+            `NotImplementedError`: When calling `HMMFile._open_fileobj` with
+                ``eslSQFILE_NCBI`` as the sequence format.
+
+        """
+        cdef int          status
+        cdef ESL_BUFFER*  buffer  = NULL
+        cdef ESL_MSAFILE* msaf    = NULL
+        cdef FILE*        fp      = fopen_obj(fh)
+        cdef bytes        fh_repr = repr(fh).encode("ascii")
+
+        status = libeasel.buffer.esl_buffer_OpenStream(fp, &buffer)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_buffer_OpenStream")
+
+        status = libeasel.msafile.esl_msafile_OpenBuffer(NULL, buffer, fmt, NULL, &msaf)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_msafile_OpenBuffer")
+
+        return msaf
+
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
         self.alphabet = None
         self._msaf = NULL
 
-    def __init__(self, str file, str format = None):
-        cdef int fmt = libeasel.msafile.eslMSAFILE_UNKNOWN
+    def __init__(self, object file, str format = None):
+        cdef int   fmt
+        cdef int   status
+        cdef bytes fspath
+
+        fmt = libeasel.msafile.eslMSAFILE_UNKNOWN
         if format is not None:
             format_ = format.lower()
             if format_ not in MSA_FILE_FORMATS:
                 raise ValueError("Invalid MSA format: {!r}".format(format))
             fmt = MSA_FILE_FORMATS[format_]
 
-        cdef bytes fspath = os.fsencode(file)
-        cdef int status = libeasel.msafile.esl_msafile_Open(NULL, fspath, NULL, fmt, NULL, &self._msaf)
+        try:
+            fspath = os.fsencode(file)
+        except TypeError:
+            self._msaf = MSAFile._open_fileobj(file, fmt)
+            status = libeasel.eslOK
+        else:
+            status = libeasel.msafile.esl_msafile_Open(NULL, fspath, NULL, fmt, NULL, &self._msaf)
         if status == libeasel.eslENOTFOUND:
             raise FileNotFoundError(2, "No such file or directory: {!r}".format(file))
         elif status == libeasel.eslEMEM:
@@ -3356,6 +3400,11 @@ cdef class MSAFile:
                 raise EOFError("Sequence file is empty")
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_msafile_Open")
+
+    def __dealloc__(self):
+        if self._msaf != NULL:
+            warnings.warn("unclosed MSAFile", ResourceWarning)
+            self.close()
 
     def __enter__(self):
         return self

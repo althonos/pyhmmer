@@ -87,7 +87,40 @@ class _TestReadFilename(object):
                 self.assertEqual(f.guess_alphabet(), alphabet)
 
 
-class TestA2MFile(_TestReadFilename, unittest.TestCase):
+class _TestReadFileObject(object):
+
+    def test_read_fileobject_guess_format(self):
+        for filename, start, count, length in zip_longest(self.filenames, self.starts, self.counts, self.lengths):
+            path = os.path.join(self.folder, filename)
+            with open(path, "rb") as f:
+                buffer = io.BytesIO(f.read())
+            with easel.MSAFile(buffer) as f:
+                msa = f.read()
+                self.assertEqual(msa.sequences[0].sequence[:10], start)
+                self.assertEqual(len(msa), length)
+                self.assertEqual(len(msa.sequences), count)
+
+    def test_read_filename_given_format(self):
+        for filename, start, count, length in zip_longest(self.filenames, self.starts, self.counts, self.lengths):
+            path = os.path.join(self.folder, filename)
+            with open(path, "rb") as f:
+                buffer = io.BytesIO(f.read())
+            with easel.MSAFile(buffer, self.format) as f:
+                msa = f.read()
+                self.assertEqual(msa.sequences[0].sequence[:10], start)
+                self.assertEqual(len(msa), length)
+                self.assertEqual(len(msa.sequences), count)
+
+    def test_guess_alphabet(self):
+        for filename, alphabet in zip_longest(self.filenames, self.alphabet):
+            path = os.path.join(self.folder, filename)
+            with open(path, "rb") as f:
+                buffer = io.BytesIO(f.read())
+            with easel.MSAFile(buffer, self.format) as f:
+                self.assertEqual(f.guess_alphabet(), alphabet)
+
+
+class TestA2MFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "a2m")
     filenames = ["a2m.good.1", "a2m.good.2"]
     starts    = ["VLSEGEWQLV", "UCCGAUAUAG"]
@@ -96,11 +129,16 @@ class TestA2MFile(_TestReadFilename, unittest.TestCase):
     counts    = [4, 5]
     alphabet  = [easel.Alphabet.amino(), easel.Alphabet.rna()]
 
+    @unittest.expectedFailure
     def test_read_filename_guess_format(self):
-        unittest.skip("Cannot guess format of A2M files (detected as FASTA)")
+        super().test_read_filename_guess_format()
+
+    @unittest.expectedFailure
+    def test_read_fileobject_guess_format(self):
+        super().test_read_fileobject_guess_format()
 
 
-class TestAlignedFastaFile(_TestReadFilename, unittest.TestCase):
+class TestAlignedFastaFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "afa")
     filenames = ["afa.good.1", "afa.good.2", "afa.good.3"]
     starts    = ["VLSEGEWQLV", "UCCGAUAUAG", "mqifvktltg"]
@@ -110,7 +148,7 @@ class TestAlignedFastaFile(_TestReadFilename, unittest.TestCase):
     alphabet  = [easel.Alphabet.amino(), easel.Alphabet.rna(), easel.Alphabet.amino()]
 
 
-class TestClustalFile(_TestReadFilename, unittest.TestCase):
+class TestClustalFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "clustal")
     filenames = ["clustal.good.2"]
     starts    = ["UCCGAUAUAG"]
@@ -120,7 +158,7 @@ class TestClustalFile(_TestReadFilename, unittest.TestCase):
     alphabet  = [easel.Alphabet.rna()]
 
 
-class TestClustalLikeFile(_TestReadFilename, unittest.TestCase):
+class TestClustalLikeFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "clustal")
     filenames = ["clustal.good.1"]
     starts    = ["VLSEGEWQLV"]
@@ -130,7 +168,7 @@ class TestClustalLikeFile(_TestReadFilename, unittest.TestCase):
     alphabet  = [easel.Alphabet.amino()]
 
 
-class TestPhylipFile(_TestReadFilename, unittest.TestCase):
+class TestPhylipFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "phylip")
     filenames = ["phylip.good.1", "phylip.good.2", "phylip.good.3"]
     starts    = ["AAGCTNGGGC", "ATGGCGAAGG", "MKVILLFVLA"]
@@ -140,7 +178,7 @@ class TestPhylipFile(_TestReadFilename, unittest.TestCase):
     alphabet  = [easel.Alphabet.dna(), easel.Alphabet.dna(), easel.Alphabet.amino()]
 
 
-class TestPhylipsFile(_TestReadFilename, unittest.TestCase):
+class TestPhylipsFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "phylips")
     filenames = ["phylips.good.1", "phylips.good.2"]
     starts    = ["AAGCTNGGGC", "MKVILLFVLA"]
@@ -150,7 +188,7 @@ class TestPhylipsFile(_TestReadFilename, unittest.TestCase):
     alphabet  = [easel.Alphabet.dna(), easel.Alphabet.amino()]
 
 
-class TestPsiblastFile(_TestReadFilename, unittest.TestCase):
+class TestPsiblastFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "psiblast")
     filenames = ["psiblast.good.1", "psiblast.good.2"]
     starts    = ["VLSEGEWQLV", "UCCGAUAUAG"]
@@ -159,8 +197,12 @@ class TestPsiblastFile(_TestReadFilename, unittest.TestCase):
     counts    = [4, 5]
     alphabet  = [easel.Alphabet.amino(), easel.Alphabet.rna()]
 
+    @unittest.expectedFailure
+    def test_read_fileobject_guess_format(self):
+        super().test_read_fileobject_guess_format()
 
-class TestSelexFile(_TestReadFilename, unittest.TestCase):
+
+class TestSelexFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "selex")
     filenames = ["selex.good.1", "selex.good.2", "selex.good.3", "selex.good.4"]
     starts    = ["ACDEFGHIKL", "ACDEFGHIKL", "ACDEFGHIKL", "gGAGUAAGAU"]
@@ -169,8 +211,12 @@ class TestSelexFile(_TestReadFilename, unittest.TestCase):
     counts    = [5, 5, 7, 11]
     alphabet  = [easel.Alphabet.amino(), easel.Alphabet.amino(), easel.Alphabet.amino(), easel.Alphabet.rna()]
 
+    @unittest.expectedFailure
+    def test_read_fileobject_guess_format(self):
+        super().test_read_fileobject_guess_format()
+        
 
-class TestStockholmFile(_TestReadFilename, unittest.TestCase):
+class TestStockholmFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "stockholm")
     filenames = ["stockholm.good.1"]
     starts    = ["ACDEFGHKLM"]
