@@ -153,6 +153,34 @@ class _TestVectorBase(object):
         v2 += self.Vector([])
         self.assertEqual(v2, self.Vector([]))
 
+    def test_sub(self):
+        vec = self.Vector([1, 2, 3])
+        v2 = vec - 1
+        self.assertEqual(v2[0], 0)
+        self.assertEqual(v2[1], 1)
+        self.assertEqual(v2[2], 2)
+
+        v3 = self.Vector([8, 10, 12])
+        v4 = self.Vector([1, 2, 3])
+        v5 = v3 - v4
+        self.assertEqual(v5[0], 7)
+        self.assertEqual(v5[1], 8)
+        self.assertEqual(v5[2], 9)
+
+    def test_isub_scalar(self):
+        vec = self.Vector([4, 5, 6])
+        vec -= 2
+        self.assertEqual(vec[0], 2)
+        self.assertEqual(vec[1], 3)
+        self.assertEqual(vec[2], 4)
+
+    def test_isub_vector(self):
+        vec = self.Vector([4, 5, 6])
+        vec -= self.Vector([2, 3, 2])
+        self.assertEqual(vec[0], 2)
+        self.assertEqual(vec[1], 2)
+        self.assertEqual(vec[2], 4)
+
     def test_mul_scalar(self):
         vec = self.Vector([1, 2, 3])
         v2 = vec * 3
@@ -255,6 +283,7 @@ class _TestVectorBase(object):
         v2 = self.Vector([])
         self.assertRaises(ValueError, v2.argmax)
 
+
 class TestVector(unittest.TestCase):
 
     def test_abstract(self):
@@ -285,6 +314,58 @@ class TestVectorF(_TestVectorBase, unittest.TestCase):
         mem = memoryview(vec)
         self.assertEqual(mem.tolist(), [1.0, 2.0, 3.0])
 
+    def test_neg(self):
+        vec = self.Vector([1, 2, 3])
+        v2 = -vec
+        self.assertEqual(v2[0], -1)
+        self.assertEqual(v2[1], -2)
+        self.assertEqual(v2[2], -3)
+
+    def test_div_scalar(self):
+        vec = self.Vector([1, 2, 3])
+        v2 = vec / 2
+        self.assertEqual(v2[0], 0.5)
+        self.assertEqual(v2[1], 1.0)
+        self.assertEqual(v2[2], 1.5)
+
+        v2 = self.Vector([])
+        v3 = v2 / 3
+        self.assertEqual(v3, self.Vector([]))
+
+    def test_div_vector(self):
+        vec = self.Vector([1, 2, 3])
+        v2 = self.Vector([2, 4, 6])
+        v3 = vec / v2
+        self.assertEqual(v3[0], 0.5)
+        self.assertEqual(v3[1], 0.5)
+        self.assertEqual(v3[2], 0.5)
+
+        v2 = self.Vector([])
+        v3 = v2 / self.Vector([])
+        self.assertEqual(v3, self.Vector([]))
+
+    def test_idiv_scalar(self):
+        vec = self.Vector([1, 2, 3])
+        vec /= 2
+        self.assertEqual(vec[0], 0.5)
+        self.assertEqual(vec[1], 1.0)
+        self.assertEqual(vec[2], 1.5)
+
+        vec = self.Vector([])
+        vec /= 3
+        self.assertEqual(vec, self.Vector([]))
+
+    def test_idiv_vector(self):
+        vec = self.Vector([1, 2, 3])
+        vec /= self.Vector([2, 4, 6])
+        self.assertEqual(vec[0], 0.5)
+        self.assertEqual(vec[1], 0.5)
+        self.assertEqual(vec[2], 0.5)
+
+        vec = self.Vector([])
+        vec /= self.Vector([])
+        self.assertEqual(vec, self.Vector([]))
+
 
 class TestVectorU8(_TestVectorBase, unittest.TestCase):
 
@@ -294,6 +375,13 @@ class TestVectorU8(_TestVectorBase, unittest.TestCase):
         vec = self.Vector([1, 2, 3])
         sizeof_u8 = len(struct.pack('B', 1))
         self.assertEqual(vec.strides, (sizeof_u8,))
+
+    def test_isub_wrapping(self):
+        vec = self.Vector([0, 1, 2])
+        vec -= 1
+        self.assertEqual(vec[0], 255)
+        self.assertEqual(vec[1], 0)
+        self.assertEqual(vec[2], 1)
 
     def test_sum_wrapping(self):
         vec = self.Vector([124, 72, 116])
@@ -317,3 +405,48 @@ class TestVectorU8(_TestVectorBase, unittest.TestCase):
 
         b4 = array.array('L', [1, 2, 3])
         self.assertNotEqual(vec, b4)
+
+    def test_floordiv_scalar(self):
+        vec = self.Vector([1, 2, 3])
+        v2 = vec // 2
+        self.assertEqual(v2[0], 0)
+        self.assertEqual(v2[1], 1)
+        self.assertEqual(v2[2], 1)
+
+        v2 = self.Vector([])
+        v3 = v2 // 3
+        self.assertEqual(v3, self.Vector([]))
+
+    def test_floordiv_vector(self):
+        vec = self.Vector([1, 2, 3])
+        v2 = self.Vector([2, 4, 1])
+        v3 = vec // v2
+        self.assertEqual(v3[0], 0)
+        self.assertEqual(v3[1], 0)
+        self.assertEqual(v3[2], 3)
+
+        v2 = self.Vector([])
+        v3 = v2 // self.Vector([])
+        self.assertEqual(v3, self.Vector([]))
+
+    def test_ifloordiv_scalar(self):
+        vec = self.Vector([1, 2, 3])
+        vec //= 2
+        self.assertEqual(vec[0], 0)
+        self.assertEqual(vec[1], 1)
+        self.assertEqual(vec[2], 1)
+
+        vec = self.Vector([])
+        vec //= 3
+        self.assertEqual(vec, self.Vector([]))
+
+    def test_ifloordiv_vector(self):
+        vec = self.Vector([1, 2, 3])
+        vec //= self.Vector([2, 4, 6])
+        self.assertEqual(vec[0], 0)
+        self.assertEqual(vec[1], 0)
+        self.assertEqual(vec[2], 0)
+
+        vec = self.Vector([])
+        vec //= self.Vector([])
+        self.assertEqual(vec, self.Vector([]))

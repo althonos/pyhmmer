@@ -1016,7 +1016,7 @@ cdef class VectorF(Vector):
         >>> v *= VectorF([1.0])
         Traceback (most recent call last):
           ...
-        ValueError: cannot pairwise multiply vectors of different size
+        ValueError: cannot pairwise multiply vectors of different sizes
 
     Objects of this type support the buffer protocol, and can be viewed
     as a `numpy.ndarray` of one dimension using the `numpy.asarray`
@@ -1147,6 +1147,19 @@ cdef class VectorF(Vector):
                 raise IndexError("vector index out of range")
             data[x] = value
 
+    def __neg__(self):
+        assert self._data != NULL or self._n == 0
+
+        cdef int     i
+        cdef VectorF new  = self.copy()
+        cdef float*  data = <float*> new._data
+
+        with nogil:
+            for i in range(self._n):
+                data[i] = -data[i]
+
+        return new
+
     def __add__(VectorF self, object other):
         assert self._data != NULL or self._n == 0
         cdef VectorF new = self.copy()
@@ -1165,13 +1178,43 @@ cdef class VectorF(Vector):
             other_data = <float*> other_vec._data
             assert other_vec._data != NULL or other_vec._n == 0
             if self._n != other_vec._n:
-                raise ValueError("cannot add vectors of different size")
+                raise ValueError("cannot pairwise add vectors of different sizes")
             with nogil:
                 libeasel.vec.esl_vec_FAdd(data, other_data, self._n)
         else:
             other_f = other
             with nogil:
                 libeasel.vec.esl_vec_FIncrement(data, self._n, other_f)
+        return self
+
+    def __sub__(VectorF self, object other):
+        assert self._data != NULL or self._n == 0
+        cdef VectorF new = self.copy()
+        return new.__isub__(other)
+
+    def __isub__(self, object other):
+        assert self._data != NULL or self._n == 0
+
+        cdef int          i
+        cdef VectorF      other_vec
+        cdef const float* other_data
+        cdef float        other_f
+        cdef float*       data       = <float*> self._data
+
+        if isinstance(other, VectorF):
+            other_vec = other
+            other_data = <float*> other_vec._data
+            assert other_vec._data != NULL or other_vec._n == 0
+            if self._n != other_vec._n:
+                raise ValueError("cannot pairwise subtract vectors of different sizes")
+            with nogil:
+                for i in range(self._n):
+                    data[i] -= other_data[i]
+        else:
+            other_f = other
+            with nogil:
+                for i in range(self._n):
+                    data[i] -= other_f
         return self
 
     def __mul__(VectorF self, object other):
@@ -1193,7 +1236,7 @@ cdef class VectorF(Vector):
             other_data = <float*> other_vec._data
             assert other_vec._data != NULL or other_vec._n == 0
             if self._n != other_vec._n:
-                raise ValueError("cannot pairwise multiply vectors of different size")
+                raise ValueError("cannot pairwise multiply vectors of different sizes")
             # NB(@althonos): There is no function in `vectorops.h` to do this
             # for now...
             with nogil:
@@ -1203,6 +1246,36 @@ cdef class VectorF(Vector):
             other_f = other
             with nogil:
                 libeasel.vec.esl_vec_FScale(data, self._n, other_f)
+        return self
+
+    def __truediv__(VectorF self, object other):
+        assert self._data != NULL or self._n == 0
+        cdef VectorF new = self.copy()
+        return new.__itruediv__(other)
+
+    def __itruediv__(self, object other):
+        assert self._data != NULL or self._n == 0
+
+        cdef int          i
+        cdef VectorF      other_vec
+        cdef const float* other_data
+        cdef float        other_f
+        cdef float*       data       = <float*> self._data
+
+        if isinstance(other, VectorF):
+            other_vec = other
+            other_data = <float*> other_vec._data
+            assert other_vec._data != NULL or other_vec._n == 0
+            if self._n != other_vec._n:
+                raise ValueError("cannot pairwise divide vectors of different sizes")
+            with nogil:
+                for i in range(self._n):
+                    data[i] /= other_data[i]
+        else:
+            other_f = other
+            with nogil:
+                for i in range(self._n):
+                    data[i] /= other_f
         return self
 
     def __matmul__(VectorF self, object other):
@@ -1220,7 +1293,7 @@ cdef class VectorF(Vector):
         other_data = <float*> other_vec._data
         assert other_data != NULL or len(other) == 0
         if self._n != other_vec._n:
-            raise ValueError("cannot multiply vectors of different size")
+            raise ValueError("cannot multiply vectors of different sizes")
         with nogil:
             res = libeasel.vec.esl_vec_FDot(data, other_data, self._n)
         return res
@@ -1320,7 +1393,7 @@ cdef class VectorF(Vector):
 cdef class VectorU8(Vector):
     """A vector storing byte-sized unsigned integers.
 
-    .. versionadded:: v0.4.0
+    .. versionadded:: 0.4.0
 
     """
 
@@ -1450,7 +1523,7 @@ cdef class VectorU8(Vector):
             other_data = <uint8_t*> other_vec._data
             assert other_vec._data != NULL or other_vec._n == 0
             if self._n != other_vec._n:
-                raise ValueError("cannot add vectors of different size")
+                raise ValueError("cannot pairwise add vectors of different sizes")
             with nogil:
                 for i in range(self._n):
                     data[i] += other_data[i]
@@ -1459,6 +1532,36 @@ cdef class VectorU8(Vector):
             with nogil:
                 for i in range(self._n):
                     data[i] += other_u
+        return self
+
+    def __sub__(VectorU8 self, object other):
+        assert self._data != NULL or self._n == 0
+        cdef VectorU8 new = self.copy()
+        return new.__isub__(other)
+
+    def __isub__(self, object other):
+        assert self._data != NULL or self._n == 0
+
+        cdef int            i
+        cdef VectorU8       other_vec
+        cdef uint8_t        other_u
+        cdef const uint8_t* other_data
+        cdef uint8_t*       data       = <uint8_t*> self._data
+
+        if isinstance(other, VectorU8):
+            other_vec = other
+            other_data = <uint8_t*> other_vec._data
+            assert other_vec._data != NULL or other_vec._n == 0
+            if self._n != other_vec._n:
+                raise ValueError("cannot pairwise subtract vectors of different sizes")
+            with nogil:
+                for i in range(self._n):
+                    data[i] -= other_data[i]
+        else:
+            other_u = other
+            with nogil:
+                for i in range(self._n):
+                    data[i] -= other_u
         return self
 
     def __mul__(VectorU8 self, object other):
@@ -1480,7 +1583,7 @@ cdef class VectorU8(Vector):
             other_data = <uint8_t*> other_vec._data
             assert other_vec._data != NULL or other_vec._n == 0
             if self._n != other_vec._n:
-                raise ValueError("cannot pairwise multiply vectors of different size")
+                raise ValueError("cannot pairwise multiply vectors of different sizes")
             with nogil:
                 for i in range(self._n):
                     data[i] *= other_data[i]
@@ -1489,6 +1592,36 @@ cdef class VectorU8(Vector):
             with nogil:
                 for i in range(self._n):
                     data[i] *= other_u
+        return self
+
+    def __floordiv__(VectorU8 self, object other):
+        assert self._data != NULL or self._n == 0
+        cdef VectorU8 new = self.copy()
+        return new.__ifloordiv__(other)
+
+    def __ifloordiv__(self, object other):
+        assert self._data != NULL or self._n == 0
+
+        cdef int            i
+        cdef VectorU8       other_vec
+        cdef uint8_t        other_u
+        cdef const uint8_t* other_data
+        cdef uint8_t*       data       = <uint8_t*> self._data
+
+        if isinstance(other, VectorU8):
+            other_vec = other
+            other_data = <uint8_t*> other_vec._data
+            assert other_vec._data != NULL or other_vec._n == 0
+            if self._n != other_vec._n:
+                raise ValueError("cannot pairwise multiply vectors of different sizes")
+            with nogil:
+                for i in range(self._n):
+                    data[i] //= other_data[i]
+        else:
+            other_u = other
+            with nogil:
+                for i in range(self._n):
+                    data[i] //= other_u
         return self
 
     def __matmul__(VectorU8 self, object other):
@@ -1508,7 +1641,7 @@ cdef class VectorU8(Vector):
         other_data = <uint8_t*> other_vec._data
         assert other_vec._data != NULL or other_vec._n == 0
         if self._n != other_vec._n:
-            raise ValueError("cannot multiply vectors of different size")
+            raise ValueError("cannot get dot-product of vectors of different sizes")
         with nogil:
             for i in range(self._n):
                 res += data[i] * other_data[i]
@@ -2176,7 +2309,7 @@ cdef class MatrixF(Matrix):
 cdef class MatrixU8(Matrix):
     """A matrix storing byte-sized unsigned integers.
 
-    .. versionadded:: v0.4.0
+    .. versionadded:: 0.4.0
 
     """
 
@@ -3384,6 +3517,26 @@ cdef class MSAFile:
         self._msaf = NULL
 
     def __init__(self, object file, str format = None):
+        """__init__(self, file, format=None, ignore_gaps=False)\n--
+
+        Create a new MSA file parser wrapping the given ``file``.
+
+        Arguments:
+            file (`str` or file-like object): Either the path to a file
+                containing the sequences to read, or a file-like object
+                opened in **binary mode**.
+            format (`str`, optional): The format of the file, or `None` to
+                autodetect. Supported values are: ``stockholm``, ``pfam``,
+                ``a2m``, ``psiblast``, ``selex``, ``afa`` (aligned FASTA),
+                ``clustal``, ``clustallike``, ``phylip``, ``phylips``.
+
+        Raises:
+            `ValueError`: When ``format`` is not a valid MSA format.
+
+        .. versionchanged:: 0.4.8
+           Support reading from a file-like object.
+
+        """
         cdef int   fmt
         cdef int   status
         cdef bytes fspath
@@ -4663,7 +4816,8 @@ cdef class SequenceFile:
             format (`str`, optional): The format of the file, or `None` to
                 autodetect. Supported values are: ``fasta``, ``embl``,
                 ``genbank``, ``ddbj``, ``uniprot``, ``ncbi``, ``daemon``,
-                ``hmmpgmd``, ``fmindex``.
+                ``hmmpgmd``, ``fmindex``, plus any format also supported
+                by `~pyhmmer.easel.MSAFile`.
             ignore_gaps (`bool`): When set to `True`, allow ignoring gap
                 characters ('-') when they are present in ungapped formats
                 such as ``fasta``. With `False`, stick to the default Easel
@@ -4672,8 +4826,7 @@ cdef class SequenceFile:
         Raises:
             `ValueError`: When ``format`` is not a valid sequence format.
             `NotImplementedError`: When trying to read sequences from a
-                file-like object in one of the unsupported formats (
-                either NCBI, or any MSA format).
+                file-like object in NCBI format.
 
         .. versionchanged:: 0.4.4
            Added the ``ignore_gaps`` parameter.
