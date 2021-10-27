@@ -6,7 +6,27 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.7...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.8...HEAD
+
+
+## [v0.4.8] - 2021-10-27
+[v0.4.8]: https://github.com/althonos/pyhmmer/compare/v0.4.7...v0.4.8
+
+### Added
+- Constructor arguments and properties to `plan7.Pipeline` to support bit score thresholds instead to filter top hits.
+- Support for creating a `SequenceFile` and an `MSAFile` using a Python file-like object instead of only supporting filenames.
+- Support for reading individual sequences from an MSA file with `SequenceFile`.
+- `TextMSA.alignment` to access the actual alignment as a tuple of strings.
+- Subtraction and division support for `easel.Vector` subclasses
+
+### Changed
+- `plan7.Cutoffs` now support setting the bit score cutoffs, but requires both to be set or cleared at the same time.
+- `easel.Vector` will always allocate some memory when
+created manually to avoid having a special empty case in every vector method.
+- `pyhmmer.easel.AllocationError` now stores the size it failed to allocate, and the number of elements when allocating an array.
+
+### Fixed
+- `TextSequence.digitize` will not raise a `ValueError` when the sequence contains invalid characters for the alphabet (previously was an `UnexpectedError`).
 
 
 ## [v0.4.7] - 2021-09-28
