@@ -423,8 +423,10 @@ cdef class Builder:
         object ere=None,
         object popen=None,
         object pextend=None,
+        object window_length=None,
+        object window_beta=None,
     ):
-        """__init__(self, alphabet, *, architecture="fast", weighting="pb", effective_number="entropy", prior_scheme="alpha", symfrac=0.5, fragthresh=0.5, wid=0.62, esigma=45.0, eid=0.62, EmL=200, EmN=200, EvL=200, EvN=200, EfL=100, EfN=200, Eft=0.04, seed=42, ere=None, popen=None, pextend=None)\n--
+        """__init__(self, alphabet, *, architecture="fast", weighting="pb", effective_number="entropy", prior_scheme="alpha", symfrac=0.5, fragthresh=0.5, wid=0.62, esigma=45.0, eid=0.62, EmL=200, EmN=200, EvL=200, EvN=200, EfL=100, EfN=200, Eft=0.04, seed=42, ere=None, popen=None, pextend=None, window_length=None, window_beta=None)\n--
 
         Create a new sequence builder with the given configuration.
 
@@ -475,6 +477,10 @@ cdef class Builder:
             pextend (`float`): The *gap extend* probability to use with the
                 score system. Default depends on the alphabet: *0.4* for
                 proteins, *0.75* for nucleotides.
+            window_length (`float`, optional): The window length for
+                nucleotide sequences, essentially the max expected hit length.
+            window_beta (`float`, optional): The tail mass at which window
+                length is determined for nucleotide sequences.
 
         """
         # extract alphabet and create raw P7_BUILDER object
@@ -543,28 +549,35 @@ cdef class Builder:
 
         # set the prior scheme
         self.prior_scheme = prior_scheme
-        with nogil:
-            if prior_scheme is None:
-                self._bld.prior = NULL
-            elif prior_scheme == "laplace":
-                self._bld.prior = libhmmer.p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
-            elif prior_scheme == "alphabet":
-                if abcty == libeasel.alphabet.eslAMINO:
-                    self._bld.prior = libhmmer.p7_prior.p7_prior_CreateAmino()
-                elif abcty == libeasel.alphabet.eslDNA or abcty == libeasel.alphabet.eslRNA:
-                    self._bld.prior = libhmmer.p7_prior.p7_prior_CreateNucleic()
-                else:
-                    self._bld.prior = libhmmer.p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
+        if prior_scheme is None:
+            self._bld.prior = NULL
+        elif prior_scheme == "laplace":
+            self._bld.prior = libhmmer.p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
+        elif prior_scheme == "alphabet":
+            if alphabet.is_amino():
+                self._bld.prior = libhmmer.p7_prior.p7_prior_CreateAmino()
+            elif alphabet.is_nucleotide():
+                self._bld.prior = libhmmer.p7_prior.p7_prior_CreateNucleic()
             else:
-                raise ValueError("Invalid value for 'prior_scheme': {prior_scheme}")
+                self._bld.prior = libhmmer.p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
+        else:
+            raise ValueError("Invalid value for 'prior_scheme': {prior_scheme}")
 
         # set the probability using alphabet-specific defaults or given values
-        if abcty == libeasel.alphabet.eslDNA or abcty == libeasel.alphabet.eslRNA:
+        if alphabet.is_nucleotide():
             self.popen = 0.03125 if popen is None else popen
             self.pextend = 0.75 if pextend is None else pextend
         else:
             self.popen = 0.02 if popen is None else popen
             self.pextend = 0.4 if pextend is None else pextend
+
+        # set the nucleotide-specific window options
+        if alphabet.is_nucleotide():
+            self.window_length = window_length
+            if window_beta is None:
+                self.window_beta = libhmmer.p7_builder.p7_DEFAULT_WINDOW_BETA
+            else:
+                self.window_beta = window_beta
 
     def __dealloc__(self):
         libhmmer.p7_builder.p7_builder_Destroy(self._bld)
@@ -592,6 +605,38 @@ cdef class Builder:
         self._seed = seed
         self._bld.do_reseeding = seed != 0
         self.randomness._seed(seed)
+
+    @property
+    def window_length(self):
+        """`int` or `None`: The window length for nucleotide sequences.
+        """
+        assert self._bld != NULL
+        return None if self._bld.w_len == -1 else self._bld.w_len
+
+    @window_length.setter
+    def window_length(self, object window_length):
+        assert self._bld != NULL
+        if window_length is None:
+            self._bld.w_len = -1
+        elif window_length > 3:
+            self._bld.w_len = window_length
+        else:
+            raise ValueError(f"Invalid window length: {window_length!r}")
+
+    @property
+    def window_beta(self):
+        """`float`: The tail mass at which window length is determined.
+        """
+        assert self._bld != NULL
+        return self._bld.w_beta
+
+    @window_beta.setter
+    def window_beta(self, double window_beta):
+        assert self._bld != NULL
+        if window_beta > 1 or window_beta < 0:
+            raise ValueError(f"Invalid window tail mass: {window_beta!r}")
+        self._bld.w_beta = window_beta
+
 
     # --- Methods ------------------------------------------------------------
 
@@ -3052,7 +3097,7 @@ cdef class Pipeline:
         object incdomT=None,
         str bit_cutoffs=None,
     ):
-        """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None, F1=0.02, F2=1e-3, F3=1e-5, E=10.0, domE=10.0, incE=0.01, incdomE=0.01, bit_cutoffs=None)\n--
+        """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None, F1=0.02, F2=1e-3, F3=1e-5, E=10.0, T=None, domE=10.0, domT=None, incE=0.01, incT=None, incdomE=0.01, incdomT=None, bit_cutoffs=None)\n--
 
         Instantiate and configure a new accelerated comparison pipeline.
 
