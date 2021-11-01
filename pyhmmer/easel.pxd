@@ -26,6 +26,11 @@ cdef class Alphabet:
     cdef int _init_default(self, int ty) nogil except 1
     cdef inline bint _eq(self, Alphabet other) nogil
 
+    cpdef bint is_dna(self)
+    cpdef bint is_rna(self)
+    cpdef bint is_amino(self)
+    cpdef bint is_nucleotide(self)
+
 
 # --- Bitfield ---------------------------------------------------------------
 

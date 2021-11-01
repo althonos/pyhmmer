@@ -6,6 +6,26 @@ from pyhmmer import easel
 
 class TestAlphabet(unittest.TestCase):
 
+    def test_is_nucleotide(self):
+        self.assertTrue(easel.Alphabet.dna().is_nucleotide())
+        self.assertTrue(easel.Alphabet.rna().is_nucleotide())
+        self.assertFalse(easel.Alphabet.amino().is_nucleotide())
+
+    def test_is_dna(self):
+        self.assertTrue(easel.Alphabet.dna().is_dna())
+        self.assertFalse(easel.Alphabet.rna().is_dna())
+        self.assertFalse(easel.Alphabet.amino().is_dna())
+
+    def test_is_rna(self):
+        self.assertTrue(easel.Alphabet.rna().is_rna())
+        self.assertFalse(easel.Alphabet.dna().is_rna())
+        self.assertFalse(easel.Alphabet.amino().is_rna())
+
+    def test_is_amino(self):
+        self.assertTrue(easel.Alphabet.amino().is_amino())
+        self.assertFalse(easel.Alphabet.rna().is_amino())
+        self.assertFalse(easel.Alphabet.dna().is_amino())
+
     def test_eq(self):
         self.assertEqual(easel.Alphabet.dna(), easel.Alphabet.dna())
         self.assertEqual(easel.Alphabet.rna(), easel.Alphabet.rna())
