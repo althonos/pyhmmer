@@ -79,8 +79,10 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
     ) -> None:
         super().__init__()
         self.options = options
-        self.pipeline = Pipeline(alphabet=Alphabet.amino(), **options)
-        self.sequences = sequences
+        self.sequences = list(sequences)
+        seq = self.sequences[0]
+        alphabet = seq.alphabet if seq is not None else Alphabet.amino()
+        self.pipeline = Pipeline(alphabet=alphabet, **options)
         self.query_queue = query_queue
         self.query_count = query_count
         self.hits_queue = hits_queue
@@ -777,6 +779,32 @@ if __name__ == "__main__":
 
         return 0
 
+    def _nhmmer(args: argparse.Namespace) -> int:
+        with SequenceFile(args.seqdb) as seqfile:
+            alphabet = seqfile.guess_alphabet() or Alphabet.dna()
+            seqfile.set_digital(alphabet)
+            sequences = list(seqfile)
+
+        with SequenceFile(args.seqfile) as queryfile:
+            queryfile.set_digital(alphabet)
+            queries = list(queryfile)
+            hits_list = nhmmer(queries, sequences, cpus=args.jobs)  # type: ignore
+            for hits in hits_list:
+                for hit in hits:
+                    if hit.is_reported():
+                        print(
+                            hit.name.decode(),
+                            "-",
+                            hit.best_domain.alignment.hmm_accession.decode(),
+                            hit.best_domain.alignment.hmm_name.decode(),
+                            hit.evalue,
+                            hit.score,
+                            hit.bias,
+                            sep="\t",
+                        )
+
+        return 0
+
     def _hmmpress(args: argparse.Namespace) -> int:
         for ext in ["h3m", "h3i", "h3f", "h3p"]:
             path = "{}.{}".format(args.hmmfile, ext)
@@ -834,6 +862,11 @@ if __name__ == "__main__":
     parser_phmmer.add_argument("seqfile")
     parser_phmmer.add_argument("seqdb")
 
+    parser_nhmmer = subparsers.add_parser("nhmmer")
+    parser_nhmmer.set_defaults(call=_nhmmer)
+    parser_nhmmer.add_argument("seqfile")
+    parser_nhmmer.add_argument("seqdb")
+
     parser_hmmpress = subparsers.add_parser("hmmpress")
     parser_hmmpress.set_defaults(call=_hmmpress)
     parser_hmmpress.add_argument("hmmfile")
@@ -867,7 +900,7 @@ if __name__ == "__main__":
         action="store",
         metavar="<s>",
         help="assert <seqfile> is in format <s> (no autodetection)",
-        choices=SequenceFile._formats.keys(),
+        choices=SequenceFile._FORMATS.keys(),
     )
     parser_hmmalign.add_argument(
         "--outformat",
@@ -875,7 +908,7 @@ if __name__ == "__main__":
         metavar="<s>",
         help="output alignment in format <s>",
         default="stockholm",
-        choices=MSAFile._formats.keys(),
+        choices=MSAFile._FORMATS.keys(),
     )
 
     args = parser.parse_args()

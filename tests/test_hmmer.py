@@ -241,13 +241,13 @@ class TestPhmmer(unittest.TestCase):
             hits = next(pyhmmer.phmmer(seqs[-1:], seqs, cpus=1))
             hits.sort()
 
-        with self.table("A0A089QRB9.tbl") as table:
+        with self.table("A0A089QRB9.domtbl") as table:
             lines = iter(filter(lambda line: not line.startswith("#"), table))
             it = ((hit, domain) for hit in hits for domain in hit.domains)
             for line, (hit, domain) in itertools.zip_longest(lines, it):
-                fields = list(filter(None, line.strip().split(" ")))
                 self.assertIsNot(line, None)
                 self.assertIsNot(hit, None)
+                fields = list(filter(None, line.strip().split(" ")))
 
                 self.assertEqual(hit.name.decode(), fields[0])
                 self.assertAlmostEqual(hit.score, float(fields[7]), delta=0.1)
@@ -263,6 +263,53 @@ class TestPhmmer(unittest.TestCase):
                 self.assertEqual(domain.alignment.target_to, int(fields[18]))
                 self.assertEqual(domain.env_from, int(fields[19]))
                 self.assertEqual(domain.env_to, int(fields[20]))
+
+
+class TestNhmmer(unittest.TestCase):
+
+    @staticmethod
+    def table(name):
+        bin_stream = pkg_resources.resource_stream(__name__, "data/tables/{}".format(name))
+        return io.TextIOWrapper(bin_stream)
+
+    def test_no_queries(self):
+        alphabet = Alphabet.amino()
+        path = pkg_resources.resource_filename(__name__, "data/seqs/BGC0001090.gbk")
+        with SequenceFile(path) as seqs_file:
+            seqs_file.set_digital(alphabet)
+            seqs = list(seqs_file)
+            hits = pyhmmer.nhmmer([], seqs, cpus=1)
+            self.assertIs(None, next(hits, None))
+
+    def test_bmyd(self):
+        alphabet = Alphabet.dna()
+
+        path = pkg_resources.resource_filename(__name__, "data/seqs/bmyD.fna")
+        with SequenceFile(path) as seqs_file:
+            seqs_file.set_digital(alphabet)
+            query = next(seqs_file)
+            query.reverse_complement(inplace=True)
+
+        path = pkg_resources.resource_filename(__name__, "data/seqs/BGC0001090.gbk")
+        with SequenceFile(path, "genbank") as seqs_file:
+            seqs_file.set_digital(alphabet)
+            seqs = list(seqs_file)
+
+        hits = next(pyhmmer.nhmmer([query], seqs, cpus=1))
+        hits.sort()
+
+        with self.table("bmyD.tbl") as table:
+            lines = iter(filter(lambda line: not line.startswith("#"), table))
+            for line, hit in itertools.zip_longest(lines, hits):
+                self.assertIsNot(line, None)
+                self.assertIsNot(hit, None)
+                fields = list(filter(None, line.strip().split(" ")))
+
+                self.assertEqual(hit.name.decode(), fields[0])
+                self.assertEqual(hit.accession.decode(), fields[1])
+                self.assertAlmostEqual(hit.bias, float(fields[14]), delta=0.1)
+                self.assertAlmostEqual(hit.score, float(fields[13]), delta=0.1)
+                self.assertAlmostEqual(hit.evalue, float(fields[12]), delta=0.1)
 
 
 class TestHmmalign(unittest.TestCase):

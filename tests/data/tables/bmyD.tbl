@@ -1,0 +1,13 @@
+# target name        accession    query name           accession  hmmfrom hmm to alifrom  ali to envfrom  env to  sq len strand   E-value  score  bias  description of target
+#-------------------   ---------- -------------------- ---------- ------- ------- ------- ------- ------- ------- ------- ------ --------- ------ ----- ---------------------
+BGC0001090           BGC0001090.1 bmyD                 -                1    1202   40452   39251   40452   39250   44660    -           0 1248.4  11.3  Bacillus amyloliquefaciens subsp. plantarum str. FZB42, complete
+#
+# Program:         nhmmer
+# Version:         3.3 (Nov 2019)
+# Pipeline mode:   SEARCH
+# Query file:      bmyD.fna
+# Target file:     BGC0001090.gbk
+# Option settings: nhmmer --tblout ../tables/bmyD.tbl bmyD.fna BGC0001090.gbk 
+# Current dir:     /home/althonos/Code/pyhmmer/tests/data/seqs
+# Date:            Mon Nov  1 19:53:40 2021
+# [ok]

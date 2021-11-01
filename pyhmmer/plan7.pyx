@@ -3173,7 +3173,6 @@ cdef class Pipeline:
         # extract default parameters from the class attributes
         cdef int  m_hint       = self.M_HINT
         cdef int  l_hint       = self.L_HINT
-        cdef bint long_targets = self.LONG_TARGETS
 
         # store a reference to the alphabet to avoid deallocation
         self.alphabet = alphabet
@@ -3190,7 +3189,7 @@ cdef class Pipeline:
                 NULL,
                 m_hint,
                 l_hint,
-                long_targets,
+                False,
                 p7_pipemodes_e.p7_SEARCH_SEQS
             )
         if self._pli == NULL:
