@@ -59,7 +59,7 @@ from libhmmer.p7_hmm cimport p7H_NTRANSITIONS, p7H_TC, p7H_GA, p7H_NC, p7H_MAP
 from libhmmer.p7_hmmfile cimport p7_hmmfile_formats_e
 from libhmmer.p7_tophits cimport p7_hitflags_e
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
-from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e
+from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e, p7_strands_e
 from libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL
 from libhmmer.p7_trace cimport P7_TRACE
 
@@ -480,6 +480,7 @@ cdef class Builder:
                 proteins, *0.75* for nucleotides.
             window_length (`float`, optional): The window length for
                 nucleotide sequences, essentially the max expected hit length.
+                *If given, takes precedence over* ``window_beta``.
             window_beta (`float`, optional): The tail mass at which window
                 length is determined for nucleotide sequences.
 
@@ -3097,8 +3098,9 @@ cdef class Pipeline:
         double incdomE=0.01,
         object incdomT=None,
         str bit_cutoffs=None,
+        str strand=None,
     ):
-        """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None, F1=0.02, F2=1e-3, F3=1e-5, E=10.0, T=None, domE=10.0, domT=None, incE=0.01, incT=None, incdomE=0.01, incdomT=None, bit_cutoffs=None)\n--
+        """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None, F1=0.02, F2=1e-3, F3=1e-5, E=10.0, T=None, domE=10.0, domT=None, incE=0.01, incT=None, incdomE=0.01, incdomT=None, bit_cutoffs=None, str strand=None)\n--
 
         Instantiate and configure a new accelerated comparison pipeline.
 
@@ -3152,6 +3154,10 @@ cdef class Pipeline:
                 use global pipeline options; otherwise pass one of
                 ``"noise"``, ``"gathering"`` or ``"trusted"`` to use the
                 appropriate cutoffs.
+            strand (`str`, optional): The strand to use when processing
+                nucleotide sequences. Use ``"watson"`` to use only the
+                coding strand, ``"crick"`` to use only the reverse strand,
+                or leave as `None` to process both strands.
 
         Hint:
             In order to run the pipeline in slow/max mode, disable the bias
@@ -3216,6 +3222,7 @@ cdef class Pipeline:
         self.incT = incT
         self.incdomE = incdomE
         self.incdomT = incdomT
+        self.strand = strand
 
         # setup the model-specific reporting cutoffs
         self._save_cutoff_parameters()
@@ -3541,7 +3548,7 @@ cdef class Pipeline:
             #
             flag = self._BIT_CUTOFFS.get(bit_cutoffs)
             if flag is None:
-                raise ValueError(f"invalid bit cutoff: {bit_cutoffs}")
+                raise ValueError(f"invalid bit cutoff: {bit_cutoffs!r}")
             self._pli.use_bit_cutoffs = flag
             # save previous values before overwriting
             self._save_cutoff_parameters()
@@ -3555,6 +3562,23 @@ cdef class Pipeline:
             self._pli.use_bit_cutoffs = False
             # restore previous configuration
             self._restore_cutoff_parameters()
+
+    @property
+    def strand(self):
+        assert self._pli != NULL
+        return (None, "watson", "crick")[self._pli.strands]
+
+    @strand.setter
+    def strand(self, str strand):
+        assert self._pli != NULL
+        if strand is None:
+            self._pli.strands = p7_strands_e.p7_STRAND_BOTH
+        elif strand == "watson":
+            self._pli.strands = p7_strands_e.p7_STRAND_TOPONLY
+        elif strand == "crick":
+            self._pli.strands = p7_strands_e.p7_STRAND_BOTTOMONLY
+        else:
+            raise ValueError(f"invalid strand: {strand!r}")
 
     # --- Methods ------------------------------------------------------------
 
@@ -3623,7 +3647,6 @@ cdef class Pipeline:
         self._pli.pos_past_vit    = 0
         self._pli.pos_past_fwd    = 0;
         self._pli.pos_output      = 0
-        self._pli.strands         = 0
         self._pli.W               = 0
         self._pli.hfp             = NULL
         self._pli.errbuf[0]       = b'\0'
@@ -3958,7 +3981,7 @@ cdef class Pipeline:
             libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
 
             # advance to next sequence
-            sq += 1 #&(sq[1])
+            sq += 1
 
         # Return 0 to indicate success
         return 0

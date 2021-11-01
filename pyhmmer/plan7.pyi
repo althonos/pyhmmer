@@ -29,6 +29,7 @@ ARCHITECTURE = Literal["fast", "hand"]
 WEIGHTING = Literal["pb", "gsc", "blosum", "none", "given"]
 EFFECTIVE = Literal["entropy", "exp", "clust", "none"]
 PRIOR_SCHEME = Literal["laplace", "alphabet"]
+STRAND = Literal["watson", "crick"]
 
 
 class Alignment(collections.abc.Sized):
@@ -410,6 +411,7 @@ class Pipeline(object):
         incdomE: float = 0.01,
         incdomT: typing.Optional[float] = None,
         bit_cutoffs: typing.Optional[BIT_CUTOFFS] = None,
+        strand: typing.Optional[str] = None,
     ) -> None: ...
     @property
     def Z(self) -> typing.Optional[float]: ...
@@ -475,6 +477,10 @@ class Pipeline(object):
     def bit_cutoffs(self) -> typing.Optional[BIT_CUTOFFS]: ...
     @bit_cutoffs.setter
     def bit_cutoffs(self, bit_cutoffs: typing.Optional[BIT_CUTOFFS]) -> None: ...
+    @property
+    def strand(self) -> typing.Optional[STRAND]: ...
+    @strand.setter
+    def strand(self, strand: typing.Optional[STRAND]) -> None: ...
     def clear(self) -> None: ...
     def search_hmm(
         self,

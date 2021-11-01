@@ -33,8 +33,13 @@ cdef extern from "hmmer.h" nogil:
         p7_ZSETBY_FILEINFO = 2
 
     cdef enum p7_complementarity_e:
-        p7_NOCOMPLEMENT    = 0
-        p7_COMPLEMENT   = 1
+        p7_NOCOMPLEMENT = 0
+        p7_COMPLEMENT = 1
+
+    cdef enum p7_strands_e:
+        p7_STRAND_TOPONLY = 0
+        p7_STRAND_BOTTOMONLY = 1
+        p7_STRAND_BOTH = 2
 
     # ctypedef p7_pipeline_s P7_PIPELINE
     ctypedef struct P7_PIPELINE:
@@ -95,7 +100,7 @@ cdef extern from "hmmer.h" nogil:
 
         p7_pipemodes_e mode
         bint long_targets
-        int strands
+        p7_strands_e strands
         int W
         int block_length
 
