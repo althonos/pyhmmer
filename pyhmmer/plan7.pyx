@@ -43,6 +43,7 @@ cimport libhmmer.p7_hmmfile
 cimport libhmmer.p7_pipeline
 cimport libhmmer.p7_prior
 cimport libhmmer.p7_profile
+cimport libhmmer.p7_scoredata
 cimport libhmmer.p7_tophits
 cimport libhmmer.p7_trace
 cimport libhmmer.tracealign
@@ -4419,6 +4420,46 @@ cdef class Profile:
             opt._convert(self._gm)
 
         return opt
+
+
+cdef class ScoreData:
+    """A compact representation of substitution scores and maximal extensions.
+
+    .. versionadded:: 0.4.9
+
+    """
+
+    def __cinit__(self):
+        self._sd = NULL
+
+    def __init__(self, Profile gm, OptimizedProfile om):
+        self.Kp = gm.alphabet.Kp
+        with nogil:
+            self._sd = libhmmer.p7_scoredata.p7_hmm_ScoreDataCreate(om._om, gm._gm)
+        if self._sd == NULL:
+            raise AllocationError("P7_SCOREDATA", sizeof(P7_SCOREDATA))
+
+    def __dealloc__(self):
+        libhmmer.p7_scoredata.p7_hmm_ScoreDataDestroy(self._sd)
+        self._sd = NULL
+
+    def __copy__(self):
+        return self.copy()
+
+    cpdef ScoreData copy(self):
+        """copy(self)\n--
+
+        Create a copy of this score data object.
+
+        """
+        assert self._sd != NULL
+        cdef ScoreData new = ScoreData.__new__(ScoreData)
+        new.Kp = self.Kp
+        with nogil:
+            new._sd = libhmmer.p7_scoredata.p7_hmm_ScoreDataClone(self._sd, self.Kp)
+        if new._sd == NULL:
+            raise AllocationError("P7_SCOREDATA", sizeof(P7_SCOREDATA))
+        return new
 
 
 cdef class TopHits:

@@ -15,6 +15,7 @@ from libhmmer.p7_hmm cimport P7_HMM
 from libhmmer.p7_hmmfile cimport P7_HMMFILE
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e
 from libhmmer.p7_profile cimport P7_PROFILE
+from libhmmer.p7_scoredata cimport P7_SCOREDATA
 from libhmmer.p7_tophits cimport P7_TOPHITS, P7_HIT
 from libhmmer.p7_trace cimport P7_TRACE
 
@@ -217,6 +218,13 @@ cdef class Profile:
     cpdef bint is_local(self)
     cpdef bint is_multihit(self)
     cpdef OptimizedProfile optimized(self)
+
+
+cdef class ScoreData:
+    cdef P7_SCOREDATA* _sd
+    cdef readonly int  Kp
+
+    cpdef ScoreData copy(self)
 
 
 cdef class TopHits:
