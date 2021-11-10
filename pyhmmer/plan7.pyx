@@ -19,10 +19,11 @@ from cpython.ref cimport PyObject
 from cpython.exc cimport PyErr_Clear
 from cpython.unicode cimport PyUnicode_DecodeASCII
 from libc.math cimport exp, ceil
+from libc.stdio cimport printf
 from libc.stdlib cimport calloc, malloc, realloc, free
-from libc.stdint cimport uint8_t, uint32_t
+from libc.stdint cimport uint8_t, uint32_t, int64_t
 from libc.stdio cimport fprintf, FILE, stdout, fclose
-from libc.string cimport memset, strdup, strndup, strlen, strncpy
+from libc.string cimport memset, memcpy, memmove, strdup, strndup, strlen, strncpy
 from libc.time cimport ctime, strftime, time, time_t, tm, localtime_r
 from unicode cimport PyUnicode_DATA, PyUnicode_KIND, PyUnicode_READ, PyUnicode_READY, PyUnicode_GET_LENGTH
 
@@ -57,9 +58,9 @@ from libhmmer.logsum cimport p7_FLogsumInit
 from libhmmer.p7_builder cimport P7_BUILDER, p7_archchoice_e, p7_wgtchoice_e, p7_effnchoice_e
 from libhmmer.p7_hmm cimport p7H_NTRANSITIONS, p7H_TC, p7H_GA, p7H_NC, p7H_MAP
 from libhmmer.p7_hmmfile cimport p7_hmmfile_formats_e
-from libhmmer.p7_tophits cimport p7_hitflags_e
+from libhmmer.p7_tophits cimport p7_hitflags_e, P7_HIT
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
-from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e, p7_strands_e
+from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e, p7_strands_e, p7_complementarity_e
 from libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL
 from libhmmer.p7_trace cimport P7_TRACE
 
@@ -3057,7 +3058,6 @@ cdef class Pipeline:
 
     M_HINT = 100         # default model size
     L_HINT = 100         # default sequence size
-    LONG_TARGETS = False # always False for now
 
     _BIT_CUTOFFS = {
         "gathering": libhmmer.p7_hmm.p7H_GA,
@@ -3098,7 +3098,6 @@ cdef class Pipeline:
         double incdomE=0.01,
         object incdomT=None,
         str bit_cutoffs=None,
-        str strand=None,
     ):
         """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None, F1=0.02, F2=1e-3, F3=1e-5, E=10.0, T=None, domE=10.0, domT=None, incE=0.01, incT=None, incdomE=0.01, incdomT=None, bit_cutoffs=None, str strand=None)\n--
 
@@ -3154,10 +3153,6 @@ cdef class Pipeline:
                 use global pipeline options; otherwise pass one of
                 ``"noise"``, ``"gathering"`` or ``"trusted"`` to use the
                 appropriate cutoffs.
-            strand (`str`, optional): The strand to use when processing
-                nucleotide sequences. Use ``"watson"`` to use only the
-                coding strand, ``"crick"`` to use only the reverse strand,
-                or leave as `None` to process both strands.
 
         Hint:
             In order to run the pipeline in slow/max mode, disable the bias
@@ -3189,7 +3184,7 @@ cdef class Pipeline:
                 NULL,
                 m_hint,
                 l_hint,
-                False,
+                False, # long targets
                 p7_pipemodes_e.p7_SEARCH_SEQS
             )
         if self._pli == NULL:
@@ -3221,7 +3216,6 @@ cdef class Pipeline:
         self.incT = incT
         self.incdomE = incdomE
         self.incdomT = incdomT
-        self.strand = strand
 
         # setup the model-specific reporting cutoffs
         self._save_cutoff_parameters()
@@ -3561,23 +3555,6 @@ cdef class Pipeline:
             self._pli.use_bit_cutoffs = False
             # restore previous configuration
             self._restore_cutoff_parameters()
-
-    @property
-    def strand(self):
-        assert self._pli != NULL
-        return (None, "watson", "crick")[self._pli.strands]
-
-    @strand.setter
-    def strand(self, str strand):
-        assert self._pli != NULL
-        if strand is None:
-            self._pli.strands = p7_strands_e.p7_STRAND_BOTH
-        elif strand == "watson":
-            self._pli.strands = p7_strands_e.p7_STRAND_TOPONLY
-        elif strand == "crick":
-            self._pli.strands = p7_strands_e.p7_STRAND_BOTTOMONLY
-        else:
-            raise ValueError(f"invalid strand: {strand!r}")
 
     # --- Methods ------------------------------------------------------------
 
@@ -4146,6 +4123,376 @@ cdef class Pipeline:
                         # verify the alphabet
                         if not self_alphabet._eq(hmm_alphabet):
                             raise AlphabetMismatch(self_alphabet, hmm_alphabet)
+
+        # Return 0 to indicate success
+        return 0
+
+
+cdef class LongTargetsPipeline(Pipeline):
+    """An HMMER3 pipeline tuned for long targets.
+    """
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __init__(
+        self,
+        Alphabet alphabet,
+        Background background = None,
+        *,
+        str strand=None,
+        int B1=100,
+        int B2=240,
+        int B3=1000,
+        int block_length=1024*256,
+        **kwargs,
+    ):
+        """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None, F1=0.02, F2=1e-3, F3=1e-5, E=10.0, T=None, domE=10.0, domT=None, incE=0.01, incT=None, incdomE=0.01, incdomT=None, bit_cutoffs=None, str strand=None)\n--
+
+        Instantiate and configure a new long targets pipeline.
+
+        Arguments:
+            alphabet (`~pyhmmer.easel.Alphabet`): The biological alphabet the
+                of the HMMs and sequences that are going to be compared. Used
+                to build the background model. **A nucleotide alphabet is
+                expected**.
+            background (`~pyhmmer.plan7.Background`, optional): The background
+                model to use with the pipeline, or ``None`` to create and use
+                a default one. *The pipeline needs ownership of the background
+                model, so any background model passed there will be copied.*
+
+        Keyword Arguments:
+            strand (`str`, optional): The strand to use when processing
+                nucleotide sequences. Use ``"watson"`` to use only the
+                coding strand, ``"crick"`` to use only the reverse strand,
+                or leave as `None` to process both strands.
+            B1 (`int`): The window length to use for the biased-composition
+                modifier of the MSV filter.
+            B2 (`int`): The window length to use for the biased-composition
+                modifier of the Viterbi filter.
+            B3 (`int`): The window length to use for the biased-composition
+                modifier of the Forward filter.
+            block_length (`int`): The number of residues to use as the window
+                size when reading blocks from target sequences.
+            **kwargs: Any additional parameter will be passed to the
+                `~pyhmmer.plan7.Pipeline` constructor.
+
+        """
+        # check that a nucleotide alphabet is given
+        if not alphabet.is_nucleotide():
+            raise ValueError(f"Expected nucleotide alphabet, found {alphabet!r}")
+        # create the pipeline
+        super().__init__(alphabet, background, **kwargs)
+        # set the options for long targets
+        self._pli.long_targets = True
+        self._pli.block_length = block_length
+        self.strand = strand
+        self.B1 = B1
+        self.B2 = B2
+        self.B3 = B3
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def B1(self):
+        """`float`: The window length for biased-composition modifier of the MSV.
+        """
+        assert self._pli != NULL
+        return self._pli.B1
+
+    @B1.setter
+    def B1(self, int B1):
+        assert self._pli != NULL
+        self._pli.B1 = B1
+
+    @property
+    def B2(self):
+        """`float`: The window length for biased-composition modifier of the Viterbi.
+        """
+        assert self._pli != NULL
+        return self._pli.B2
+
+    @B2.setter
+    def B2(self, int B2):
+        assert self._pli != NULL
+        self._pli.B2 = B2
+
+    @property
+    def B3(self):
+        """`float`: The window length for biased-composition modifier of the Forward.
+        """
+        assert self._pli != NULL
+        return self._pli.B3
+
+    @B3.setter
+    def B3(self, int B3):
+        assert self._pli != NULL
+        self._pli.B3 = B3
+
+    @property
+    def strand(self):
+        assert self._pli != NULL
+        return (None, "watson", "crick")[self._pli.strands]
+
+    @strand.setter
+    def strand(self, str strand):
+        assert self._pli != NULL
+        if strand is None:
+            self._pli.strands = p7_strands_e.p7_STRAND_BOTH
+        elif strand == "watson":
+            self._pli.strands = p7_strands_e.p7_STRAND_TOPONLY
+        elif strand == "crick":
+            self._pli.strands = p7_strands_e.p7_STRAND_BOTTOMONLY
+        else:
+            raise ValueError(f"invalid strand: {strand!r}")
+
+    # --- Methods ------------------------------------------------------------
+
+    cpdef TopHits scan_seq(
+        self,
+        DigitalSequence query,
+        object hmms,
+    ):
+        raise NotImplementedError("LongTargetsPipeline.scan_seq")
+
+    cpdef TopHits search_msa(
+        self,
+        DigitalMSA query,
+        object sequences,
+        Builder builder = None,
+    ):
+        raise NotImplementedError("LongTargetsPipeline.search_msa")
+
+    cpdef TopHits search_seq(
+        self,
+        DigitalSequence query,
+        object sequences,
+        Builder builder = None,
+    ):
+        raise NotImplementedError("LongTargetsPipeline.search_seq")
+
+    cpdef TopHits search_hmm(self, HMM query, object sequences):
+        assert self._pli != NULL
+
+        cdef uint64_t             j
+        cdef ssize_t              nseqs
+        cdef int                  status
+        cdef int64_t              res_count
+        cdef int                  allocM
+        cdef DigitalSequence      seq
+        cdef ScoreData            scoredata = ScoreData.__new__(ScoreData)
+        cdef TopHits              hits      = TopHits()
+        cdef P7_HIT*              hit       = NULL
+        cdef ESL_SQ*              raw_seq   = NULL
+
+        # check the pipeline was configured with the same alphabet
+        if not self.alphabet._eq(query.alphabet):
+            raise AlphabetMismatch(self.alphabet, query.alphabet)
+        # check we can rewind the sequences
+        if not isinstance(sequences, collections.abc.Sequence):
+            raise TypeError("`sequences` cannot be an iterator, expected an iterable")
+        # allow peeking the sequences
+        nseqs = len(sequences)
+        sequences = peekable(sequences)
+        seq = sequences.peek()
+
+        # collect sequences: we prepare an array of pointer to sequences
+        # so that the C backend can iter through them without having to
+        # acquire the GIL between each iteration.
+        if self._nref <= nseqs:
+            self._nref = nseqs + 1
+            self._refs = <void**> realloc(self._refs, sizeof(void*) * (self._nref))
+            if self._refs == NULL:
+                raise AllocationError("void*", sizeof(void*), self._nref)
+        for i, seq in enumerate(sequences):
+            # check alphabet
+            if not self.alphabet._eq(seq.alphabet):
+                raise AlphabetMismatch(self.alphabet, seq.alphabet)
+            # check length
+            if len(seq) > 100000:
+                raise ValueError("sequence length over comparison pipeline limit (100,000)")
+            # record the pointer to the raw C struct
+            self._refs[i] = <void*> seq._sq
+        self._refs[nseqs] = NULL
+
+        # assign max HMM length
+        if query._hmm.max_length == -1:
+            libhmmer.p7_builder.p7_Builder_MaxLength(query._hmm, libhmmer.p7_builder.p7_DEFAULT_WINDOW_BETA)
+
+        with nogil:
+            # make sure the pipeline is set to search mode and ready for a new HMM
+            self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
+            # reallocate the profile if it is too small, otherwise just clear it
+            if self.profile._gm.allocM < query._hmm.M:
+                libhmmer.p7_profile.p7_profile_Destroy(self.profile._gm)
+                self.profile._gm = libhmmer.p7_profile.p7_profile_Create(query._hmm.M, self.alphabet._abc)
+                if self.profile._gm == NULL:
+                    raise AllocationError("P7_PROFILE", sizeof(P7_OPROFILE))
+            else:
+                self.profile._clear()
+            # configure the profile from the query HMM
+            self.profile._configure(query, self.background, seq._sq.L)
+            # reallocate the optimized profile if it is too small
+            if self.opt._om.allocM < query._hmm.M:
+                p7_oprofile.p7_oprofile_Destroy(self.opt._om)
+                self.opt._om = p7_oprofile.p7_oprofile_Create(query._hmm.M, self.alphabet._abc)
+                if self.opt._om == NULL:
+                    raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
+            # convert the profile to an optimized one
+            self.opt._convert(self.profile._gm)
+            # create a score data object
+            scoredata.Kp = self.profile._gm.abc.Kp
+            scoredata._sd = libhmmer.p7_scoredata.p7_hmm_ScoreDataCreate(self.opt._om, NULL)
+            if scoredata._sd == NULL:
+                raise AllocationError("P7_SCOREDATA", sizeof(P7_SCOREDATA))
+            # run the search loop on all database sequences while recycling memory
+            LongTargetsPipeline._search_loop_longtargets(
+                self._pli,
+                self.opt._om,
+                self.background._bg,
+                <ESL_SQ**> self._refs,
+                hits._th,
+                scoredata._sd
+            )
+            # FIXME: update code to threshold with user-provided Z if any
+            libhmmer.p7_tophits.p7_tophits_ComputeNhmmerEvalues(hits._th, self._pli.nres, self.opt._om.max_length)
+
+            # assign lengths and remove duplicates
+            hits._sort_by_seqidx()
+            for j in range(hits._th.N):
+                hit = hits._th.hit[j]
+                raw_seq = <ESL_SQ*> self._refs[hit.seqidx]
+                hit.dcl[0].ad.L = raw_seq.n
+            libhmmer.p7_tophits.p7_tophits_RemoveDuplicates(hits._th, self._pli.use_bit_cutoffs)
+
+            # sort hits
+            hits._sort_by_key()
+            hits._threshold(self)
+            hits.long_targets = True
+
+            # DEBUG: show results
+            libhmmer.p7_tophits.p7_tophits_TabularTargets(stdout, query._hmm.name, query._hmm.acc, hits._th, self._pli, True)
+            libhmmer.p7_pipeline.p7_pli_Statistics(stdout, self._pli, NULL)
+
+        # return the hits
+        return hits
+
+    @staticmethod
+    cdef int _search_loop_longtargets(
+        P7_PIPELINE*  pli,
+        P7_OPROFILE*  om,
+        P7_BG*        bg,
+        ESL_SQ**      sq,
+        P7_TOPHITS*   th,
+        P7_SCOREDATA* scoredata,
+    ) nogil except 1:
+
+        cdef ESL_SQ* tmpsq
+        cdef ESL_SQ* tmpsq_r = NULL
+        cdef int     status
+        cdef int     nres
+        cdef int64_t index   = 0
+        cdef int64_t i       = 0
+        cdef int64_t j       = 0
+        cdef int64_t C       = om.max_length
+        cdef int64_t W       = pli.block_length
+        cdef int64_t n       = sq[0].n
+
+        if W <= C:
+            raise NotImplementedError("cannot have window size smaller than context")
+
+        # configure the pipeline for the current HMM
+        status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
+        if status == libeasel.eslEINVAL:
+            raise ValueError("model does not have bit score thresholds expected by the pipeline")
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_pli_NewModel")
+
+        # create a temporary sequence in digital mode to store the current window
+        tmpsq = libeasel.sq.esl_sq_CreateDigital(om.abc)
+        if tmpsq == NULL:
+            raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
+        if pli.strands != p7_strands_e.p7_STRAND_TOPONLY:
+            tmpsq_r = libeasel.sq.esl_sq_CreateDigital(om.abc)
+            if tmpsq_r == NULL:
+                raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
+
+        # run the inner loop on all sequences
+        while sq[0] != NULL:
+
+            # initialize the sequence window storage
+            tmpsq.idx = index
+            tmpsq.L = -1 #sq[0].n
+            libeasel.sq.esl_sq_SetAccession(tmpsq, sq[0].acc)
+            libeasel.sq.esl_sq_SetName(tmpsq, sq[0].name)
+            libeasel.sq.esl_sq_SetDesc(tmpsq, sq[0].desc)
+            libeasel.sq.esl_sq_SetSource(tmpsq, sq[0].name)
+            libeasel.sq.esl_sq_GrowTo(tmpsq, min(W+C, sq[0].n))
+
+            # iterate over successive windows of width W, keeping C residues
+            # from the previous iteration as context
+            i = 0
+            while i < n:
+                tmpsq.C     = 0
+                tmpsq.W     = min(W, sq[0].n)
+                tmpsq.start = 1
+                tmpsq.end   = tmpsq.W
+                tmpsq.n     = tmpsq.W
+                memcpy(&tmpsq.dsq[1], &sq[0].dsq[i+1], tmpsq.n)
+                tmpsq.dsq[0] = tmpsq.dsq[tmpsq.n+1] = libeasel.eslDSQ_SENTINEL
+
+                # configure the profile, background and pipeline for the new sequence
+                status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, tmpsq)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_pli_NewSeq")
+
+                # process coding strand
+                if pli.strands != p7_strands_e.p7_STRAND_BOTTOMONLY:
+                    # account for overlapping region of windows
+                    pli.nres -= tmpsq.C
+                    # run the pipeline on the forward strand
+                    status = libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, tmpsq, p7_complementarity_e.p7_NOCOMPLEMENT, NULL, NULL, NULL)
+                    if status == libeasel.eslEINVAL:
+                        raise ValueError("model does not have bit score thresholds expected by the pipeline")
+                    elif status == libeasel.eslERANGE:
+                        raise OverflowError("numerical overflow in the optimized vector implementation")
+                    elif status != libeasel.eslOK:
+                        raise UnexpectedError(status, "p7_Pipeline_LongTarget")
+                    # clear pipeline for reuse for next target
+                    libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
+                else:
+                    pli.nres -= tmpsq.n
+
+                # process reverse strand
+                if pli.strands != p7_strands_e.p7_STRAND_TOPONLY:
+                    # copy and reverse complement sequence
+                    libeasel.sq.esl_sq_Copy(tmpsq, tmpsq_r)
+                    libeasel.sq.esl_sq_ReverseComplement(tmpsq_r)
+                    # run the pipeline on the reverse strand
+                    status = libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, tmpsq_r, p7_complementarity_e.p7_COMPLEMENT, NULL, NULL, NULL)
+                    if status == libeasel.eslEINVAL:
+                        raise ValueError("model does not have bit score thresholds expected by the pipeline")
+                    elif status == libeasel.eslERANGE:
+                        raise OverflowError("numerical overflow in the optimized vector implementation")
+                    elif status != libeasel.eslOK:
+                        raise UnexpectedError(status, "p7_Pipeline_LongTarget")
+                    # clear pipeline for reuse for next target
+                    libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
+                    pli.nres += tmpsq.W
+
+                # advance coordinates
+                i += W - C
+
+            # clear the allocated sequence and advance to next sequence
+            libeasel.sq.esl_sq_Reuse(tmpsq)
+            if tmpsq_r != NULL:
+                libeasel.sq.esl_sq_Reuse(tmpsq_r)
+            pli.nseqs += 1
+            sq += 1
+
+        # free the local sequence copy
+        libeasel.sq.esl_sq_Destroy(tmpsq)
+        if tmpsq_r != NULL:
+            libeasel.sq.esl_sq_Destroy(tmpsq_r)
 
         # Return 0 to indicate success
         return 0

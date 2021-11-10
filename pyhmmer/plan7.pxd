@@ -204,6 +204,18 @@ cdef class Pipeline:
     ) except 1
 
 
+cdef class LongTargetsPipeline(Pipeline):
+    @staticmethod
+    cdef int _search_loop_longtargets(
+        P7_PIPELINE*  pli,
+        P7_OPROFILE*  om,
+        P7_BG*        bg,
+        ESL_SQ**      sq,
+        P7_TOPHITS*   th,
+        P7_SCOREDATA* scoredata,
+    ) nogil except 1
+
+
 cdef class Profile:
     cdef P7_PROFILE* _gm
     cdef readonly Alphabet          alphabet
@@ -228,9 +240,9 @@ cdef class ScoreData:
 
 
 cdef class TopHits:
-    cdef public float Z
-    cdef public float domZ
-    cdef public bint  long_targets
+    cdef readonly float Z
+    cdef readonly float domZ
+    cdef readonly bint  long_targets
 
     cdef P7_TOPHITS* _th
 

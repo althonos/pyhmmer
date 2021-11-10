@@ -411,7 +411,6 @@ class Pipeline(object):
         incdomE: float = 0.01,
         incdomT: typing.Optional[float] = None,
         bit_cutoffs: typing.Optional[BIT_CUTOFFS] = None,
-        strand: typing.Optional[str] = None,
     ) -> None: ...
     @property
     def Z(self) -> typing.Optional[float]: ...
@@ -505,6 +504,52 @@ class Pipeline(object):
         hmms: typing.Iterable[HMM],
     ) -> TopHits: ...
 
+class LongTargetsPipeline(Pipeline):
+    def __init__(
+        self,
+        alphabet: Alphabet,
+        background: typing.Optional[Background] = None,
+        *,
+        B1: int = 100,
+        B2: int = 240,
+        B3: int = 1000,
+        block_length: int = 1024*256,
+        bias_filter: bool = True,
+        report_e: float = 10.0,
+        null2: bool = True,
+        seed: typing.Optional[int] = None,
+        Z: typing.Optional[float] = None,
+        domZ: typing.Optional[float] = None,
+        F1: float = 0.02,
+        F2: float = 1e-3,
+        F3: float = 1e-5,
+        E: float = 10.0,
+        T: typing.Optional[float] = None,
+        domE: float = 10.0,
+        domT: typing.Optional[float] = None,
+        incE: float = 0.01,
+        incT: typing.Optional[float] = None,
+        incdomE: float = 0.01,
+        incdomT: typing.Optional[float] = None,
+        bit_cutoffs: typing.Optional[BIT_CUTOFFS] = None,
+    ) -> None: ...
+    @property
+    def B1(self) -> int: ...
+    @B1.setter
+    def B1(self, B1: int) -> None: ...
+    @property
+    def B2(self) -> int: ...
+    @B2.setter
+    def B2(self, B2: int) -> None: ...
+    @property
+    def B3(self) -> int: ...
+    @B3.setter
+    def B3(self, B3: int) -> None: ...
+    @property
+    def strand(self) -> typing.Optional[STRAND]: ...
+    @strand.setter
+    def strand(self, strand: typing.Optional[STRAND]) -> None: ...
+
 class Profile(object):
     alphabet: Alphabet
     evalue_parameters: EvalueParameters
@@ -540,7 +585,7 @@ class Profile(object):
 
 class ScoreData(object):
     Kp: int
-    def __init__(self, Profile gm, OptimizedProfile om) -> None: ...
+    def __init__(self, gm: Profile, om: OptimizedProfile) -> None: ...
     def __copy__(self) -> ScoreData: ...
     def copy(self) -> ScoreData: ...
 
