@@ -1,12 +1,15 @@
-from libc.stdint cimport uint64_t
+from libc.stdint cimport uint64_t, int64_t
+from libc.stdio cimport FILE
 
 from libeasel.sq cimport ESL_SQ
 from libeasel.getopts cimport ESL_GETOPTS
 from libeasel.random cimport ESL_RANDOMNESS
+from libhmmer.fm cimport FM_DATA, FM_CFG
 from libhmmer.p7_bg cimport P7_BG
 from libhmmer.p7_domaindef cimport P7_DOMAINDEF
 from libhmmer.p7_tophits cimport P7_TOPHITS
 from libhmmer.p7_hmmfile cimport P7_HMMFILE
+from libhmmer.p7_scoredata cimport P7_SCOREDATA
 
 IF HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx.p7_omx cimport P7_OMX
@@ -126,7 +129,18 @@ cdef extern from "hmmer.h" nogil:
     int p7_pli_NewModelThresholds(P7_PIPELINE *pli, const P7_OPROFILE *om)
     int p7_pli_NewSeq            (P7_PIPELINE *pli, const ESL_SQ *sq)
     int p7_Pipeline              (P7_PIPELINE *pli, P7_OPROFILE *om, P7_BG *bg, const ESL_SQ *sq, const ESL_SQ *ntsq, P7_TOPHITS *th)
-    # int p7_Pipeline_LongTarget   (P7_PIPELINE *pli, P7_OPROFILE *om, P7_SCOREDATA *data,
-    #                                      P7_BG *bg, P7_TOPHITS *hitlist, int64_t seqidx,
-    #                                      const ESL_SQ *sq, int complementarity,
-    #                                      const FM_DATA *fmf, const FM_DATA *fmb, FM_CFG *fm_cfg)
+    int p7_Pipeline_LongTarget   (
+        P7_PIPELINE* pli,
+        P7_OPROFILE* om,
+        P7_SCOREDATA* data,
+        P7_BG* bg,
+        P7_TOPHITS* hitlist,
+        int64_t seqidx,
+        const ESL_SQ* sq,
+        p7_complementarity_e complementarity,
+        const FM_DATA* fmf,
+        const FM_DATA* fmb,
+        FM_CFG* fm_cfg
+    )
+
+    int p7_pli_Statistics(FILE* ofp, P7_PIPELINE* pli, void* w)
