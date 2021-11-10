@@ -109,6 +109,10 @@ class _TestSearch(metaclass=abc.ABCMeta):
                 self.assertIsNot(line, None)
                 self.assertIsNot(hit, None)
                 self.assertEqual(hit.name.decode(), fields[0])
+                if fields[1] == "-":
+                    self.assertIs(hit.accession, None)
+                else:
+                    self.assertEqual(hit.accession.decode(), fields[1])
                 self.assertAlmostEqual(hit.score, float(fields[5]), delta=0.1)
                 self.assertAlmostEqual(hit.bias, float(fields[6]), delta=0.1)
                 self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
@@ -128,7 +132,11 @@ class _TestSearch(metaclass=abc.ABCMeta):
                 fields = list(filter(None, line.strip().split(" ")))
                 self.assertIsNot(line, None)
                 self.assertIsNot(hit, None)
-                self.assertEqual(hit.accession.decode(), fields[0])
+                self.assertEqual(hit.name.decode(), fields[0])
+                if fields[1] == "-":
+                    self.assertIs(hit.accession, None)
+                else:
+                    self.assertEqual(hit.accession.decode(), fields[1])
                 self.assertAlmostEqual(hit.score, float(fields[5]), delta=0.1)
                 self.assertAlmostEqual(hit.bias, float(fields[6]), delta=0.1)
                 self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
@@ -335,7 +343,10 @@ class TestNhmmer(unittest.TestCase):
                 self.assertIsNot(hit, None)
                 fields = list(filter(None, line.strip().split(" ")))
                 self.assertEqual(hit.name.decode(), fields[0])
-                self.assertEqual(hit.accession.decode(), fields[1])
+                if fields[1] == "-":
+                    self.assertIs(hit.accession, None)
+                else:
+                    self.assertEqual(hit.accession.decode(), fields[1])
                 self.assertAlmostEqual(hit.best_domain.bias, float(fields[14]), delta=0.1)
                 self.assertAlmostEqual(hit.best_domain.score, float(fields[13]), delta=0.1)
                 self.assertAlmostEqual(hit.best_domain.i_evalue, float(fields[12]), delta=0.1)
@@ -350,10 +361,6 @@ class TestNhmmer(unittest.TestCase):
 
         hits = next(pyhmmer.nhmmer([self.bmyD], seqs, cpus=1))
         hits.sort()
-
-        for hit in hits:
-            self.assertEqual(hit.best_domain.score, max(domain.score for domain in hit.domains))
-
 
         with self.table("bmyD2.tbl") as table:
             lines = iter(filter(lambda line: not line.startswith("#"), table))
