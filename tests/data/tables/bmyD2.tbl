@@ -1,0 +1,18 @@
+# target name        accession  query name           accession  hmmfrom hmm to alifrom  ali to envfrom  env to  sq len strand   E-value  score  bias  description of target
+#------------------- ---------- -------------------- ---------- ------- ------- ------- ------- ------- ------- ------- ------ --------- ------ ----- ---------------------
+CP000560.2           -          bmyD                 -                1    1203 1907227 1908429 1907227 1908429 3918596    +           0 1399.3  11.4  Bacillus amyloliquefaciens subsp. plantarum str. FZB42, complete genome
+CP000560.2           -          bmyD                 -              107    1195 1908421 1907333 1908441 1907313 3918596    -    2.4e-249  828.5   7.1  Bacillus amyloliquefaciens subsp. plantarum str. FZB42, complete genome
+CP000560.2           -          bmyD                 -              800    1193 1579042 1578652 1579062 1578642 3918596    -     5.3e-06   22.4   3.3  Bacillus amyloliquefaciens subsp. plantarum str. FZB42, complete genome
+CP000560.2           -          bmyD                 -             1126    1185 1701415 1701356 1701435 1701342 3918596    -       0.063    8.9   1.2  Bacillus amyloliquefaciens subsp. plantarum str. FZB42, complete genome
+CP000560.2           -          bmyD                 -              827    1194 2345909 2346267 2345889 2346281 3918596    +        0.37    6.4   6.0  Bacillus amyloliquefaciens subsp. plantarum str. FZB42, complete genome
+CP000560.2           -          bmyD                 -              519     581 1703109 1703044 1703128 1703024 3918596    -         7.4    2.1   0.3  Bacillus amyloliquefaciens subsp. plantarum str. FZB42, complete genome
+#
+# Program:         nhmmer
+# Version:         3.3 (Nov 2019)
+# Pipeline mode:   SEARCH
+# Query file:      tests/data/hmms/txt/bmyD.hmm
+# Target file:     tests/data/seqs/CP000560.2.fasta
+# Option settings: nhmmer --tblout tests/data/tables/bmyD2.tbl tests/data/hmms/txt/bmyD.hmm tests/data/seqs/CP000560.2.fasta 
+# Current dir:     /home/althonos/Code/pyhmmer
+# Date:            Wed Nov 10 17:24:22 2021
+# [ok]

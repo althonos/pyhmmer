@@ -4307,9 +4307,6 @@ cdef class LongTargetsPipeline(Pipeline):
             # check alphabet
             if not self.alphabet._eq(seq.alphabet):
                 raise AlphabetMismatch(self.alphabet, seq.alphabet)
-            # check length
-            if len(seq) > 100000:
-                raise ValueError("sequence length over comparison pipeline limit (100,000)")
             # record the pointer to the raw C struct
             self._refs[i] = <void*> seq._sq
         self._refs[nseqs] = NULL
@@ -4353,8 +4350,15 @@ cdef class LongTargetsPipeline(Pipeline):
                 hits._th,
                 scoredata._sd
             )
-            # FIXME: update code to threshold with user-provided Z if any
-            libhmmer.p7_tophits.p7_tophits_ComputeNhmmerEvalues(hits._th, self._pli.nres, self.opt._om.max_length)
+
+            # threshold with user-provided Z if any
+            if self._Z is None:
+                res_count = self._pli.nres
+            else:
+                res_count = <int64_t> (1000000 * self._pli.Z)
+                if self._pli.strands == p7_strands_e.p7_STRAND_BOTH:
+                    res_count *= 2
+            libhmmer.p7_tophits.p7_tophits_ComputeNhmmerEvalues(hits._th, res_count, self.opt._om.max_length)
 
             # assign lengths and remove duplicates
             hits._sort_by_seqidx()
@@ -4370,8 +4374,9 @@ cdef class LongTargetsPipeline(Pipeline):
             hits.long_targets = True
 
             # DEBUG: show results
-            libhmmer.p7_tophits.p7_tophits_TabularTargets(stdout, query._hmm.name, query._hmm.acc, hits._th, self._pli, True)
-            libhmmer.p7_pipeline.p7_pli_Statistics(stdout, self._pli, NULL)
+            # printf("\n")
+            # libhmmer.p7_tophits.p7_tophits_TabularTargets(stdout, query._hmm.name, query._hmm.acc, hits._th, self._pli, True)
+            # libhmmer.p7_pipeline.p7_pli_Statistics(stdout, self._pli, NULL)
 
         # return the hits
         return hits
@@ -4387,15 +4392,14 @@ cdef class LongTargetsPipeline(Pipeline):
     ) nogil except 1:
 
         cdef ESL_SQ* tmpsq
-        cdef ESL_SQ* tmpsq_r = NULL
         cdef int     status
         cdef int     nres
         cdef int64_t index   = 0
         cdef int64_t i       = 0
         cdef int64_t j       = 0
+        cdef int64_t rem     = 0
         cdef int64_t C       = om.max_length
         cdef int64_t W       = pli.block_length
-        cdef int64_t n       = sq[0].n
 
         if W <= C:
             raise NotImplementedError("cannot have window size smaller than context")
@@ -4411,14 +4415,9 @@ cdef class LongTargetsPipeline(Pipeline):
         tmpsq = libeasel.sq.esl_sq_CreateDigital(om.abc)
         if tmpsq == NULL:
             raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
-        if pli.strands != p7_strands_e.p7_STRAND_TOPONLY:
-            tmpsq_r = libeasel.sq.esl_sq_CreateDigital(om.abc)
-            if tmpsq_r == NULL:
-                raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
 
         # run the inner loop on all sequences
         while sq[0] != NULL:
-
             # initialize the sequence window storage
             tmpsq.idx = index
             tmpsq.L = -1 #sq[0].n
@@ -4431,12 +4430,17 @@ cdef class LongTargetsPipeline(Pipeline):
             # iterate over successive windows of width W, keeping C residues
             # from the previous iteration as context
             i = 0
-            while i < n:
-                tmpsq.C     = 0
-                tmpsq.W     = min(W, sq[0].n)
-                tmpsq.start = 1
-                tmpsq.end   = tmpsq.W
-                tmpsq.n     = tmpsq.W
+            while i < sq[0].n:
+                # update window coordinates in the temporary sequence
+                tmpsq.C     = 0 if i == 0 else min(C, sq[0].n - i)
+                tmpsq.W     = min(W, sq[0].n - i - C)
+                tmpsq.n     = tmpsq.C + tmpsq.W
+                tmpsq.start = i + 1
+                tmpsq.end   = i + tmpsq.n
+                # DEBUG: show loop state
+                # printf("C=%li W=%li n=%li start=%li end=%li\n", tmpsq.C, tmpsq.W, tmpsq.n, tmpsq.start, tmpsq.end);
+
+                # copy sequence digits from the target sequence to the temporary sequence
                 memcpy(&tmpsq.dsq[1], &sq[0].dsq[i+1], tmpsq.n)
                 tmpsq.dsq[0] = tmpsq.dsq[tmpsq.n+1] = libeasel.eslDSQ_SENTINEL
 
@@ -4464,11 +4468,10 @@ cdef class LongTargetsPipeline(Pipeline):
 
                 # process reverse strand
                 if pli.strands != p7_strands_e.p7_STRAND_TOPONLY:
-                    # copy and reverse complement sequence
-                    libeasel.sq.esl_sq_Copy(tmpsq, tmpsq_r)
-                    libeasel.sq.esl_sq_ReverseComplement(tmpsq_r)
+                    # reverse complement sequence
+                    libeasel.sq.esl_sq_ReverseComplement(tmpsq)
                     # run the pipeline on the reverse strand
-                    status = libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, tmpsq_r, p7_complementarity_e.p7_COMPLEMENT, NULL, NULL, NULL)
+                    status = libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, tmpsq, p7_complementarity_e.p7_COMPLEMENT, NULL, NULL, NULL)
                     if status == libeasel.eslEINVAL:
                         raise ValueError("model does not have bit score thresholds expected by the pipeline")
                     elif status == libeasel.eslERANGE:
@@ -4484,15 +4487,15 @@ cdef class LongTargetsPipeline(Pipeline):
 
             # clear the allocated sequence and advance to next sequence
             libeasel.sq.esl_sq_Reuse(tmpsq)
-            if tmpsq_r != NULL:
-                libeasel.sq.esl_sq_Reuse(tmpsq_r)
+            # if tmpsq_r != NULL:
+            #     libeasel.sq.esl_sq_Reuse(tmpsq_r)
             pli.nseqs += 1
             sq += 1
 
         # free the local sequence copy
         libeasel.sq.esl_sq_Destroy(tmpsq)
-        if tmpsq_r != NULL:
-            libeasel.sq.esl_sq_Destroy(tmpsq_r)
+        # if tmpsq_r != NULL:
+        #     libeasel.sq.esl_sq_Destroy(tmpsq_r)
 
         # Return 0 to indicate success
         return 0
