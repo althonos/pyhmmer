@@ -116,8 +116,6 @@ cdef class HMM:
     # a reference to the Alphabet Python object to avoid deallocation of the
     # inner ESL_ALPHABET; the Python object provides reference counting for free
     cdef readonly Alphabet          alphabet
-    cdef readonly EvalueParameters evalue_parameters
-    cdef readonly Cutoffs          cutoffs
 
     cpdef dict __getstate__(self)
     cpdef object __setstate__(self, dict state)
@@ -143,7 +141,6 @@ cdef class HMMFile:
 cdef class OptimizedProfile:
     cdef P7_OPROFILE* _om
     cdef readonly Alphabet alphabet
-    cdef readonly Offsets offsets
 
     cpdef OptimizedProfile copy(self)
     cpdef bint is_local(self)
@@ -223,9 +220,6 @@ cdef class LongTargetsPipeline(Pipeline):
 cdef class Profile:
     cdef P7_PROFILE* _gm
     cdef readonly Alphabet          alphabet
-    cdef readonly Offsets          offsets
-    cdef readonly Cutoffs          cutoffs
-    cdef readonly EvalueParameters evalue_parameters
 
     cdef int _clear(self) nogil except 1
     cdef int _configure(self, HMM hmm, Background background, int L, bint multihit=*, bint local=*) nogil except 1
