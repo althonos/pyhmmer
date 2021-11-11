@@ -2960,6 +2960,7 @@ cdef class OptimizedProfile:
             raise NotImplementedError("p7_SSVFilter is not available on VMX platforms")
 
 
+@cython.freelist(8)
 cdef class Offsets:
     """A mutable view over the disk offsets of a profile.
     """
