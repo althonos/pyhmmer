@@ -4077,6 +4077,9 @@ cdef class LongTargetsPipeline(Pipeline):
         Alphabet alphabet,
         Background background = None,
         *,
+        double F1=0.02,
+        double F2=3e-3,
+        double F3=3e-5,
         str strand=None,
         int B1=100,
         int B2=240,
@@ -4284,11 +4287,38 @@ cdef class LongTargetsPipeline(Pipeline):
 
             # DEBUG: show results
             # printf("\n")
-            # libhmmer.p7_tophits.p7_tophits_TabularTargets(stdout, query._hmm.name, query._hmm.acc, hits._th, self._pli, True)
+            # libhmmer.p7_tophits.p7_tophits_TabularTargets(stdout, b"name", b"acc", hits._th, self._pli, True)
             # libhmmer.p7_pipeline.p7_pli_Statistics(stdout, self._pli, NULL)
 
         # return the hits
         return hits
+
+    cpdef TopHits search_seq(
+        self,
+        DigitalSequence query,
+        object sequences,
+        Builder builder = None,
+    ):
+        assert self._pli != NULL
+
+        cdef Profile              profile
+        cdef HMM                  hmm
+        cdef OptimizedProfile     opt
+
+        # check the pipeline was configure with the same alphabet
+        if not self.alphabet._eq(query.alphabet):
+            raise AlphabetMismatch(self.alphabet, query.alphabet)
+        # make sure the pipeline is set to search mode and ready for a new HMM
+        self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
+        # use a default HMM builder if none was given
+        builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
+        # build the HMM from the query sequence
+        hmm, _, _ = builder.build(query, self.background)
+        # we need to pass an HMM for the profile / opt profile to be
+        # configured correctly, otherwise there may be issues with the
+        # lack of a maximum length
+        assert hmm._hmm.max_length != -1
+        return self.search_hmm(hmm, sequences)
 
     @staticmethod
     cdef int _search_loop_longtargets(
@@ -4341,12 +4371,12 @@ cdef class LongTargetsPipeline(Pipeline):
             while i < sq[0].n:
                 # update window coordinates in the temporary sequence
                 tmpsq.C     = 0 if i == 0 else min(C, sq[0].n - i)
-                tmpsq.W     = min(W, sq[0].n - i - C)
+                tmpsq.W     = min(W, sq[0].n - i - tmpsq.C)
                 tmpsq.n     = tmpsq.C + tmpsq.W
                 tmpsq.start = i + 1
                 tmpsq.end   = i + tmpsq.n
                 # DEBUG: show loop state
-                # printf("C=%li W=%li n=%li start=%li end=%li\n", tmpsq.C, tmpsq.W, tmpsq.n, tmpsq.start, tmpsq.end);
+                # printf("[i=%li] C=%li W=%li n=%li start=%li end=%li\n", i, tmpsq.C, tmpsq.W, tmpsq.n, tmpsq.start, tmpsq.end);
 
                 # copy sequence digits from the target sequence to the temporary sequence
                 memcpy(&tmpsq.dsq[1], &sq[0].dsq[i+1], tmpsq.n)
