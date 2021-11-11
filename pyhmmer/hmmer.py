@@ -59,6 +59,9 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
             number of queries read until now.
         options (`dict`): A dictionary of options to be passed to the
             `pyhmmer.plan7.Pipeline` object wrapped by the worker thread.
+        pipeline_class (`type`): The pipeline class to use to search for
+            hits. Use `~plan7.LongTargetsPipeline` for `nhmmer`, and
+            `~plan7.Pipeline` everywhere else.
 
     """
 
@@ -597,8 +600,19 @@ def nhmmer(
 ) -> typing.Iterator[TopHits]:
     ...
 
+@typing.overload
 def nhmmer(
-    queries: typing.Union[typing.Iterable[DigitalSequence], typing.Iterable[DigitalMSA]],
+    queries: typing.Iterable[HMM],
+    sequences: typing.Collection[DigitalSequence],
+    cpus: int = 0,
+    callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
+    builder: typing.Optional[Builder] = None,
+    **options: typing.Any,
+) -> typing.Iterator[TopHits]:
+    ...
+
+def nhmmer(
+    queries: typing.Union[typing.Iterable[DigitalSequence], typing.Iterable[DigitalMSA], typing.Iterable[HMM]],
     sequences: typing.Collection[DigitalSequence],
     cpus: int = 0,
     callback: typing.Union[typing.Optional[typing.Callable[[DigitalSequence, int], None]], typing.Optional[typing.Callable[[DigitalMSA, int], None]]] = None,
@@ -606,6 +620,12 @@ def nhmmer(
     **options: typing.Any,
 ) -> typing.Iterator[TopHits]:
     """Search nucleotide sequences against a sequence database.
+
+    Note:
+        Any additional keyword arguments passed to the `phmmer` function
+        will be passed to the `~pyhmmer.plan7.LongTargetsPipeline` created
+        in each worker thread. The ``strand`` argument can be used to
+        restrict the search on the direct or reverse strand.
 
     See Also:
         The equivalent function for proteins, `~pyhmmer.hmmer.phmmer`.
