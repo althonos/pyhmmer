@@ -120,6 +120,26 @@ from .utils import peekable
 
 # --- Constants --------------------------------------------------------------
 
+cdef dict BUILDER_ARCHITECTURE_STRATEGY = {
+    "fast": p7_archchoice_e.p7_ARCH_FAST,
+    "hand": p7_archchoice_e.p7_ARCH_HAND,
+}
+
+cdef dict BUILDER_WEIGHTING_STRATEGY = {
+    "pb": p7_wgtchoice_e.p7_WGT_PB,
+    "gsc": p7_wgtchoice_e.p7_WGT_GSC,
+    "blosum": p7_wgtchoice_e.p7_WGT_BLOSUM,
+    "none": p7_wgtchoice_e.p7_WGT_NONE,
+    "given": p7_wgtchoice_e.p7_WGT_GIVEN,
+}
+
+cdef dict BUILDER_EFFECTIVE_STRATEGY = {
+    "entropy": p7_effnchoice_e.p7_EFFN_ENTROPY,
+    "exp": p7_effnchoice_e.p7_EFFN_ENTROPY_EXP,
+    "clust": p7_effnchoice_e.p7_EFFN_CLUST,
+    "none": p7_effnchoice_e.p7_EFFN_NONE,
+}
+
 cdef dict HMM_FILE_FORMATS = {
     "2.0": p7_hmmfile_formats_e.p7_HMMFILE_20,
     "3/a": p7_hmmfile_formats_e.p7_HMMFILE_3a,
@@ -139,6 +159,11 @@ cdef dict HMM_FILE_MAGIC = {
     v3f_magic: p7_hmmfile_formats_e.p7_HMMFILE_3f,
 }
 
+cdef dict PIPELINE_BIT_CUTOFFS = {
+    "gathering": libhmmer.p7_hmm.p7H_GA,
+    "noise": libhmmer.p7_hmm.p7H_NC,
+    "trusted": libhmmer.p7_hmm.p7H_TC,
+}
 
 # --- Cython classes ---------------------------------------------------------
 
@@ -375,25 +400,9 @@ cdef class Builder:
 
     """
 
-    _ARCHITECTURE_STRATEGY = {
-        "fast": p7_archchoice_e.p7_ARCH_FAST,
-        "hand": p7_archchoice_e.p7_ARCH_HAND,
-    }
-
-    _WEIGHTING_STRATEGY = {
-        "pb": p7_wgtchoice_e.p7_WGT_PB,
-        "gsc": p7_wgtchoice_e.p7_WGT_GSC,
-        "blosum": p7_wgtchoice_e.p7_WGT_BLOSUM,
-        "none": p7_wgtchoice_e.p7_WGT_NONE,
-        "given": p7_wgtchoice_e.p7_WGT_GIVEN,
-    }
-
-    _EFFECTIVE_STRATEGY = {
-        "entropy": p7_effnchoice_e.p7_EFFN_ENTROPY,
-        "exp": p7_effnchoice_e.p7_EFFN_ENTROPY_EXP,
-        "clust": p7_effnchoice_e.p7_EFFN_CLUST,
-        "none": p7_effnchoice_e.p7_EFFN_NONE,
-    }
+    _ARCHITECTURE_STRATEGY = dict(BUILDER_ARCHITECTURE_STRATEGY)
+    _WEIGHTING_STRATEGY = dict(BUILDER_WEIGHTING_STRATEGY)
+    _EFFECTIVE_STRATEGY = dict(BUILDER_EFFECTIVE_STRATEGY)
 
     # --- Magic methods ------------------------------------------------------
 
@@ -518,7 +527,7 @@ cdef class Builder:
 
         # set the architecture strategy
         self.architecture = architecture
-        _arch = self._ARCHITECTURE_STRATEGY.get(architecture)
+        _arch = BUILDER_ARCHITECTURE_STRATEGY.get(architecture)
         if _arch is not None:
             self._bld.arch_strategy = _arch
         else:
@@ -526,7 +535,7 @@ cdef class Builder:
 
         # set the weighting strategy
         self.weighting = weighting
-        _weighting = self._WEIGHTING_STRATEGY.get(weighting)
+        _weighting = BUILDER_WEIGHTING_STRATEGY.get(weighting)
         if _weighting is not None:
             self._bld.wgt_strategy = _weighting
         else:
@@ -538,7 +547,7 @@ cdef class Builder:
             self._bld.effn_strategy = p7_effnchoice_e.p7_EFFN_SET
             self._bld.eset = effective_number
         elif isinstance(effective_number, str):
-            _effn = self._EFFECTIVE_STRATEGY.get(effective_number)
+            _effn = BUILDER_EFFECTIVE_STRATEGY.get(effective_number)
             if _effn is not None:
                 self._bld.effn_strategy = _effn
             else:
@@ -2444,8 +2453,8 @@ cdef class HMMFile:
     """A wrapper around a file (or database), storing serialized HMMs.
     """
 
-    _FORMATS = HMM_FILE_FORMATS
-    _MAGIC = HMM_FILE_MAGIC
+    _FORMATS = dict(HMM_FILE_FORMATS)
+    _MAGIC = dict(HMM_FILE_MAGIC)
 
     # --- Constructor --------------------------------------------------------
 
@@ -3052,12 +3061,7 @@ cdef class Pipeline:
 
     M_HINT = 100         # default model size
     L_HINT = 100         # default sequence size
-
-    _BIT_CUTOFFS = {
-        "gathering": libhmmer.p7_hmm.p7H_GA,
-        "noise": libhmmer.p7_hmm.p7H_NC,
-        "trusted": libhmmer.p7_hmm.p7H_TC,
-    }
+    _BIT_CUTOFFS = dict(PIPELINE_BIT_CUTOFFS)
 
     # --- Magic methods ------------------------------------------------------
 
@@ -3524,7 +3528,7 @@ cdef class Pipeline:
         """
         assert self._pli != NULL
         return next(
-            (k for k,v in self._BIT_CUTOFFS.items() if v == self._pli.use_bit_cutoffs),
+            (k for k,v in PIPELINE_BIT_CUTOFFS.items() if v == self._pli.use_bit_cutoffs),
             None
         )
 
@@ -3533,7 +3537,7 @@ cdef class Pipeline:
         assert self._pli != NULL
         if bit_cutoffs is not None:
             #
-            flag = self._BIT_CUTOFFS.get(bit_cutoffs)
+            flag = PIPELINE_BIT_CUTOFFS.get(bit_cutoffs)
             if flag is None:
                 raise ValueError(f"invalid bit cutoff: {bit_cutoffs!r}")
             self._pli.use_bit_cutoffs = flag

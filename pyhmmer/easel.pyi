@@ -397,6 +397,7 @@ class DigitalMSA(MSA):
 # --- MSA File ---------------------------------------------------------------
 
 class MSAFile(typing.ContextManager[MSAFile], typing.Iterator[MSA]):
+    _FORMATS: typing.ClassVar[typing.Dict[str, int]]
     alphabet: typing.Optional[Alphabet]
     def __init__(
         self,
@@ -540,6 +541,8 @@ class DigitalSequence(Sequence):
 # --- Sequence File ----------------------------------------------------------
 
 class SequenceFile(typing.ContextManager[SequenceFile], typing.Iterator[Sequence]):
+    _FORMATS: typing.ClassVar[typing.Dict[str, int]]
+    alphabet: typing.Optional[Alphabet]
     @classmethod
     def parse(cls, buffer: bytes, format: str) -> Sequence: ...
     @classmethod
@@ -572,6 +575,17 @@ class SequenceFile(typing.ContextManager[SequenceFile], typing.Iterator[Sequence
 # --- Sequence/Subsequence Index ---------------------------------------------
 
 class SSIReader(object):
+
+    class Entry(typing.NamedTuple):
+        fd: int
+        record_offset: int
+        data_offset: int
+        record_length: int
+
+    class FileInfo(typing.NamedTuple):
+        name: str
+        format: int
+
     def __init__(
         self, file: typing.Union[typing.AnyStr, os.PathLike[typing.AnyStr]]
     ) -> None: ...

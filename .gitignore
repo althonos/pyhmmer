@@ -58,6 +58,9 @@ dkms.conf
 # Valgrind files
 callgrind.out.*
 
+# Mprof files
+mprofile_*
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/

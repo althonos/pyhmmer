@@ -74,6 +74,9 @@ class Background(object):
     def copy(self) -> Background: ...
 
 class Builder(object):
+    _ARCHITECTURE_STRATEGY: typing.ClassVar[typing.Dict[str, int]]
+    _WEIGHTING_STRATEGY: typing.ClassVar[typing.Dict[str, int]]
+    _EFFECTIVE_STRATEGY: typing.ClassVar[typing.Dict[str, int]]
     alphabet: Alphabet
     randomness: Randomness
     architecture: ARCHITECTURE
@@ -321,6 +324,8 @@ class HMM(object):
     def set_composition(self) -> None: ...
 
 class HMMFile(typing.ContextManager[HMMFile], typing.Iterator[HMM]):
+    _FORMATS: typing.ClassVar[typing.Dict[str, int]]
+    _MAGIC: typing.ClassVar[typing.Dict[int, int]]
     def __init__(
         self,
         file: typing.Union[typing.AnyStr, os.PathLike[typing.AnyStr], typing.BinaryIO],
@@ -369,7 +374,7 @@ class OptimizedProfile(object):
 
 class Offsets(object):
     def __init__(self, owner: typing.Union[Profile, OptimizedProfile]) -> None: ...
-    def __copy__(self) -> _Offsets: ...
+    def __copy__(self) -> Offsets: ...
     @property
     def model(self) -> typing.Optional[int]: ...
     @model.setter
@@ -386,7 +391,7 @@ class Offsets(object):
 class Pipeline(object):
     M_HINT: typing.ClassVar[int] = 100
     L_HINT: typing.ClassVar[int] = 100
-    LONG_TARGETS: typing.ClassVar[bool] = False
+    _BIT_CUTOFFS: typing.ClassVar[typing.Dict[str, int]]
     alphabet: Alphabet
     background: Background
     profile: typing.Optional[Profile]
