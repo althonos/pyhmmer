@@ -3583,6 +3583,42 @@ cdef class Pipeline:
         self._pli.inc_by_E = self._cutoff_save['inc_by_E']
         self._pli.incdom_by_E = self._cutoff_save['incdom_by_E']
 
+    cdef P7_OPROFILE* _get_om_from_query(self, object query, int L = 100) except NULL:
+        assert self._pli != NULL
+
+        if isinstance(query, OptimizedProfile):
+            return (<OptimizedProfile> query)._om
+
+        if isinstance(query, HMM):
+            # reallocate the profile if it is too small, otherwise just clear it
+            if self.profile._gm.allocM < query.M:
+                libhmmer.p7_profile.p7_profile_Destroy(self.profile._gm)
+                self.profile._gm = libhmmer.p7_profile.p7_profile_Create(query.M, self.alphabet._abc)
+                if self.profile._gm == NULL:
+                    raise AllocationError("P7_PROFILE", sizeof(P7_OPROFILE))
+            else:
+                self.profile._clear()
+            # configure the profile from the query HMM
+            self.profile._configure(<HMM> query, self.background, L)
+            # use the local profile as a query
+            query = self.profile
+
+        if isinstance(query, Profile):
+            # reallocate the optimized profile if it is too small
+            if self.opt._om.allocM < query.M:
+                p7_oprofile.p7_oprofile_Destroy(self.opt._om)
+                self.opt._om = p7_oprofile.p7_oprofile_Create(query.M, self.alphabet._abc)
+                if self.opt._om == NULL:
+                    raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
+            # convert the profile to an optimized one
+            self.opt._convert(self.profile._gm)
+            # use the temporary optimized profile
+            return self.opt._om
+
+        else:
+            ty = type(query).__name__
+            raise TypeError(f"Expected HMM, Profile or OptimizedProfile, found {ty}")
+
     cpdef void clear(self):
         """clear(self)\n--
 
@@ -3627,14 +3663,18 @@ cdef class Pipeline:
         self._pli.hfp             = NULL
         self._pli.errbuf[0]       = b'\0'
 
-    cpdef TopHits search_hmm(self, HMM query, object sequences):
+    cpdef TopHits search_hmm(
+        self,
+        object query,
+        object sequences
+    ):
         """search_hmm(self, query, sequences)\n--
 
         Run the pipeline using a query HMM against a sequence database.
 
         Arguments:
-            query (`~pyhmmer.plan7.HMM`): The HMM object to use to query the
-                sequence database.
+            query (`HMM`, `Profile` or `OptimizedProfile`): The object to use
+                to query the sequence database.
             sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
                 sequences to query with the HMM.
 
@@ -3651,14 +3691,19 @@ cdef class Pipeline:
 
         .. versionadded:: 0.2.0
 
+        .. versionchanged:: 0.5.0
+           Query can now be a `Profile` or an `OptimizedProfile`.
+
         """
         assert self._pli != NULL
 
-        cdef ssize_t              nseqs
-        cdef int                  status
-        cdef int                  allocM
-        cdef DigitalSequence      seq
-        cdef TopHits              hits = TopHits()
+        cdef str             ty
+        cdef ssize_t         nseqs
+        cdef int             status
+        cdef int             allocM
+        cdef DigitalSequence seq
+        cdef P7_OPROFILE*    om
+        cdef TopHits         hits         = TopHits()
 
         # check the pipeline was configured with the same alphabet
         if not self.alphabet._eq(query.alphabet):
@@ -3666,10 +3711,13 @@ cdef class Pipeline:
         # check we can rewind the sequences
         if not isinstance(sequences, collections.abc.Sequence):
             raise TypeError("`sequences` cannot be an iterator, expected an iterable")
-        # allow peeking the sequences
+        # allow peeking the sequences to use the first sequence length as a hint
         nseqs = len(sequences)
         sequences = peekable(sequences)
         seq = sequences.peek()
+
+        # convert the query to an optimized profile
+        om = self._get_om_from_query(query, L=seq._sq.L)
 
         # collect sequences: we prepare an array of pointer to sequences
         # so that the C backend can iter through them without having to
@@ -3693,28 +3741,10 @@ cdef class Pipeline:
         with nogil:
             # make sure the pipeline is set to search mode and ready for a new HMM
             self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
-            # reallocate the profile if it is too small, otherwise just clear it
-            if self.profile._gm.allocM < query._hmm.M:
-                libhmmer.p7_profile.p7_profile_Destroy(self.profile._gm)
-                self.profile._gm = libhmmer.p7_profile.p7_profile_Create(query._hmm.M, self.alphabet._abc)
-                if self.profile._gm == NULL:
-                    raise AllocationError("P7_PROFILE", sizeof(P7_OPROFILE))
-            else:
-                self.profile._clear()
-            # configure the profile from the query HMM
-            self.profile._configure(query, self.background, seq._sq.L)
-            # reallocate the optimized profile if it is too small
-            if self.opt._om.allocM < query._hmm.M:
-                p7_oprofile.p7_oprofile_Destroy(self.opt._om)
-                self.opt._om = p7_oprofile.p7_oprofile_Create(query._hmm.M, self.alphabet._abc)
-                if self.opt._om == NULL:
-                    raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
-            # convert the profile to an optimized one
-            self.opt._convert(self.profile._gm)
             # run the search loop on all database sequences while recycling memory
             Pipeline._search_loop(
                 self._pli,
-                self.opt._om,
+                om,
                 self.background._bg,
                 <ESL_SQ**> self._refs,
                 hits._th,
@@ -3758,66 +3788,18 @@ cdef class Pipeline:
         """
         assert self._pli != NULL
 
-        cdef int                  status
-        cdef int                  allocM
-        cdef DigitalSequence      seq
         cdef Profile              profile
         cdef HMM                  hmm
         cdef OptimizedProfile     opt
-        cdef TopHits              hits    = TopHits()
 
         # check the pipeline was configured with the same alphabet
         if not self.alphabet._eq(query.alphabet):
             raise AlphabetMismatch(self.alphabet, query.alphabet)
-        # check we can rewind the sequences
-        if not isinstance(sequences, collections.abc.Sequence):
-            raise TypeError("`sequences` cannot be an iterator, expected an iterable")
-
-        # make sure the pipeline is set to search mode and ready for a new HMM
-        self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
-
         # use a default HMM builder if none was given
         builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
-
         # build the HMM and the profile from the query MSA
         hmm, profile, opt = builder.build_msa(query, self.background)
-
-        # prepare an array to pass the sequences to the C function
-        if self._nref < len(sequences) + 1:
-            self._nref = len(sequences) + 1
-            self._refs = <void**> realloc(self._refs, sizeof(void*) * (len(sequences)+1))
-            if self._refs == NULL:
-                raise AllocationError("void*", sizeof(void*), len(sequences)+1)
-
-        # collect sequences: we prepare an array of pointer to sequences
-        # so that the C backend can iter through them without having to
-        # acquire the GIL between each iteration.
-
-        for i, seq in enumerate(sequences):
-            # check alphabet
-            if not self.alphabet._eq(seq.alphabet):
-                raise AlphabetMismatch(self.alphabet, seq.alphabet)
-            # check length
-            if len(seq) > 100000:
-                raise ValueError("sequence length over comparison pipeline limit (100,000)")
-            # record the pointer to the raw C struct
-            self._refs[i] = <void*> seq._sq
-        self._refs[len(sequences)] = NULL
-
-        with nogil:
-            # run the search loop on all database sequences while recycling memory
-            Pipeline._search_loop(
-                self._pli,
-                opt._om,
-                self.background._bg,
-                <ESL_SQ**> self._refs,
-                hits._th,
-            )
-            # threshold hits
-            hits._sort_by_key()
-            hits._threshold(self)
-        # return the hits
-        return hits
+        return self.search_hmm(opt, sequences)
 
     cpdef TopHits search_seq(
         self,
@@ -3851,67 +3833,20 @@ cdef class Pipeline:
         """
         assert self._pli != NULL
 
-        cdef int                  allocM
-        cdef DigitalSequence      seq
         cdef Profile              profile
         cdef HMM                  hmm
         cdef OptimizedProfile     opt
-        cdef TopHits              hits    = TopHits()
-        cdef ESL_SQ**             seqs
 
         # check the pipeline was configure with the same alphabet
         if not self.alphabet._eq(query.alphabet):
             raise AlphabetMismatch(self.alphabet, query.alphabet)
-        # check we can rewind the sequences
-        if not isinstance(sequences, collections.abc.Sequence):
-            raise TypeError("`sequences` cannot be an iterator, expected an iterable")
-
         # make sure the pipeline is set to search mode and ready for a new HMM
         self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
-
         # use a default HMM builder if none was given
         builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
-
-        # build the HMM and the profile from the query sequence, using the first
-        # as a hint for the model configuration, or reuse the profile we
-        # cached if it is large enough to hold the new HMM
+        # build the HMM and the profile from the query sequence
         hmm, profile, opt = builder.build(query, self.background)
-
-        # prepare an array to pass the sequences to the C function
-        if self._nref <= len(sequences):
-            self._nref = len(sequences) + 1
-            self._refs = <void**> realloc(self._refs, sizeof(void*) * (len(sequences)+1))
-            if self._refs == NULL:
-                raise AllocationError("void*", sizeof(void*), len(sequences) + 1)
-
-        # collect sequences: we prepare an array of pointer to sequences
-        # so that the C backend can iter through them without having to
-        # acquire the GIL between each iteration.
-        for i, seq in enumerate(sequences):
-            # check alphabet
-            if not self.alphabet._eq(seq.alphabet):
-                raise AlphabetMismatch(self.alphabet, seq.alphabet)
-            # check length
-            if len(seq) > 100000:
-                raise ValueError("sequence length over comparison pipeline limit (100,000)")
-            # record the pointer to the raw C struct
-            self._refs[i] = <void*> seq._sq
-        self._refs[len(sequences)] = NULL
-
-        with nogil:
-            # run the search loop on all database sequences while recycling memory
-            Pipeline._search_loop(
-                self._pli,
-                opt._om,
-                self.background._bg,
-                <ESL_SQ**> self._refs,
-                hits._th,
-            )
-            # threshold hits
-            hits._sort_by_key()
-            hits._threshold(self)
-        # return the hits
-        return hits
+        return self.search_hmm(opt, sequences)
 
     @staticmethod
     cdef int _search_loop(
@@ -4130,6 +4065,9 @@ cdef class Pipeline:
 
 cdef class LongTargetsPipeline(Pipeline):
     """An HMMER3 pipeline tuned for long targets.
+
+    .. versionadded:: 0.5.0
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -4194,7 +4132,7 @@ cdef class LongTargetsPipeline(Pipeline):
 
     @property
     def B1(self):
-        """`float`: The window length for biased-composition modifier of the MSV.
+        """`int`: The window length for biased-composition modifier of the MSV.
         """
         assert self._pli != NULL
         return self._pli.B1
@@ -4206,7 +4144,7 @@ cdef class LongTargetsPipeline(Pipeline):
 
     @property
     def B2(self):
-        """`float`: The window length for biased-composition modifier of the Viterbi.
+        """`int`: The window length for biased-composition modifier of the Viterbi.
         """
         assert self._pli != NULL
         return self._pli.B2
@@ -4218,7 +4156,7 @@ cdef class LongTargetsPipeline(Pipeline):
 
     @property
     def B3(self):
-        """`float`: The window length for biased-composition modifier of the Forward.
+        """`int`: The window length for biased-composition modifier of the Forward.
         """
         assert self._pli != NULL
         return self._pli.B3
@@ -4230,6 +4168,8 @@ cdef class LongTargetsPipeline(Pipeline):
 
     @property
     def strand(self):
+        """`str` or `None`: The strand to process, or `None` for both.
+        """
         assert self._pli != NULL
         return (None, "watson", "crick")[self._pli.strands]
 
@@ -4252,25 +4192,13 @@ cdef class LongTargetsPipeline(Pipeline):
         DigitalSequence query,
         object hmms,
     ):
-        raise NotImplementedError("LongTargetsPipeline.scan_seq")
+        raise NotImplementedError("Cannot run a database scan with the long target pipeline")
 
-    cpdef TopHits search_msa(
+    cpdef TopHits search_hmm(
         self,
-        DigitalMSA query,
-        object sequences,
-        Builder builder = None,
+        object query,
+        object sequences
     ):
-        raise NotImplementedError("LongTargetsPipeline.search_msa")
-
-    cpdef TopHits search_seq(
-        self,
-        DigitalSequence query,
-        object sequences,
-        Builder builder = None,
-    ):
-        raise NotImplementedError("LongTargetsPipeline.search_seq")
-
-    cpdef TopHits search_hmm(self, HMM query, object sequences):
         assert self._pli != NULL
 
         cdef uint64_t             j
@@ -4282,7 +4210,7 @@ cdef class LongTargetsPipeline(Pipeline):
         cdef ScoreData            scoredata = ScoreData.__new__(ScoreData)
         cdef TopHits              hits      = TopHits()
         cdef P7_HIT*              hit       = NULL
-        cdef ESL_SQ*              raw_seq   = NULL
+        cdef P7_OPROFILE*         om        = NULL
 
         # check the pipeline was configured with the same alphabet
         if not self.alphabet._eq(query.alphabet):
@@ -4290,10 +4218,13 @@ cdef class LongTargetsPipeline(Pipeline):
         # check we can rewind the sequences
         if not isinstance(sequences, collections.abc.Sequence):
             raise TypeError("`sequences` cannot be an iterator, expected an iterable")
-        # allow peeking the sequences
+        # allow peeking the sequences to use the first sequence length as a hint
         nseqs = len(sequences)
         sequences = peekable(sequences)
         seq = sequences.peek()
+
+        # convert the query to an optimized profile
+        om = self._get_om_from_query(query, L=seq._sq.L)
 
         # collect sequences: we prepare an array of pointer to sequences
         # so that the C backend can iter through them without having to
@@ -4311,32 +4242,10 @@ cdef class LongTargetsPipeline(Pipeline):
             self._refs[i] = <void*> seq._sq
         self._refs[nseqs] = NULL
 
-        # assign max HMM length
-        if query._hmm.max_length == -1:
-            libhmmer.p7_builder.p7_Builder_MaxLength(query._hmm, libhmmer.p7_builder.p7_DEFAULT_WINDOW_BETA)
-
         with nogil:
             # make sure the pipeline is set to search mode and ready for a new HMM
             self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
-            # reallocate the profile if it is too small, otherwise just clear it
-            if self.profile._gm.allocM < query._hmm.M:
-                libhmmer.p7_profile.p7_profile_Destroy(self.profile._gm)
-                self.profile._gm = libhmmer.p7_profile.p7_profile_Create(query._hmm.M, self.alphabet._abc)
-                if self.profile._gm == NULL:
-                    raise AllocationError("P7_PROFILE", sizeof(P7_OPROFILE))
-            else:
-                self.profile._clear()
-            # configure the profile from the query HMM
-            self.profile._configure(query, self.background, seq._sq.L)
-            # reallocate the optimized profile if it is too small
-            if self.opt._om.allocM < query._hmm.M:
-                p7_oprofile.p7_oprofile_Destroy(self.opt._om)
-                self.opt._om = p7_oprofile.p7_oprofile_Create(query._hmm.M, self.alphabet._abc)
-                if self.opt._om == NULL:
-                    raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
-            # convert the profile to an optimized one
-            self.opt._convert(self.profile._gm)
-            # create a score data object
+            # create the score data struct
             scoredata.Kp = self.profile._gm.abc.Kp
             scoredata._sd = libhmmer.p7_scoredata.p7_hmm_ScoreDataCreate(self.opt._om, NULL)
             if scoredata._sd == NULL:
@@ -4359,15 +4268,12 @@ cdef class LongTargetsPipeline(Pipeline):
                 if self._pli.strands == p7_strands_e.p7_STRAND_BOTH:
                     res_count *= 2
             libhmmer.p7_tophits.p7_tophits_ComputeNhmmerEvalues(hits._th, res_count, self.opt._om.max_length)
-
             # assign lengths and remove duplicates
             hits._sort_by_seqidx()
             for j in range(hits._th.N):
                 hit = hits._th.hit[j]
-                raw_seq = <ESL_SQ*> self._refs[hit.seqidx]
-                hit.dcl[0].ad.L = raw_seq.n
+                hit.dcl[0].ad.L = (<ESL_SQ*> self._refs[hit.seqidx]).n
             libhmmer.p7_tophits.p7_tophits_RemoveDuplicates(hits._th, self._pli.use_bit_cutoffs)
-
             # sort hits
             hits._sort_by_key()
             hits._threshold(self)
@@ -4390,7 +4296,6 @@ cdef class LongTargetsPipeline(Pipeline):
         P7_TOPHITS*   th,
         P7_SCOREDATA* scoredata,
     ) nogil except 1:
-
         cdef ESL_SQ* tmpsq
         cdef int     status
         cdef int     nres

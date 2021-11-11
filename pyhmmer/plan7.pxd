@@ -179,8 +179,9 @@ cdef class Pipeline:
 
     cdef int _save_cutoff_parameters(self) except 1
     cdef int _restore_cutoff_parameters(self) except 1
+    cdef P7_OPROFILE* _get_om_from_query(self, object query, int L = *) except NULL
     cpdef void    clear(self)
-    cpdef TopHits search_hmm(self, HMM query, object seqs)
+    cpdef TopHits search_hmm(self, object query, object seqs)
     cpdef TopHits search_msa(self, DigitalMSA query, object seqs, Builder builder = ?)
     cpdef TopHits search_seq(self, DigitalSequence query, object seqs, Builder builder = ?)
     @staticmethod

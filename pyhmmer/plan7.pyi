@@ -483,7 +483,7 @@ class Pipeline(object):
     def clear(self) -> None: ...
     def search_hmm(
         self,
-        query: HMM,
+        query: typing.Union[HMM, Profile, OptimizedProfile],
         sequences: typing.Iterable[DigitalSequence],
     ) -> TopHits: ...
     def search_msa(
