@@ -124,6 +124,7 @@ API Reference
         :nosignatures:
 
         pyhmmer.plan7.Pipeline
+        pyhmmer.plan7.LongTargetsPipeline
         pyhmmer.plan7.Builder
 
 

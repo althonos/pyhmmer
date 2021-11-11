@@ -60,6 +60,13 @@ Pipeline
    :special-members: __init__
    :members:
 
+LongTargetsPipeline
+^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: pyhmmer.plan7.LongTargetsPipeline(Pipeline)
+  :special-members: __init__
+  :members:
+
 Builder
 ^^^^^^^
 
