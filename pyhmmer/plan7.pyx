@@ -3097,7 +3097,7 @@ cdef class Pipeline:
         object incdomT=None,
         str bit_cutoffs=None,
     ):
-        """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None, F1=0.02, F2=1e-3, F3=1e-5, E=10.0, T=None, domE=10.0, domT=None, incE=0.01, incT=None, incdomE=0.01, incdomT=None, bit_cutoffs=None, str strand=None)\n--
+        """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None, F1=0.02, F2=1e-3, F3=1e-5, E=10.0, T=None, domE=10.0, domT=None, incE=0.01, incT=None, incdomE=0.01, incdomT=None, bit_cutoffs=None)\n--
 
         Instantiate and configure a new accelerated comparison pipeline.
 
@@ -3689,7 +3689,7 @@ cdef class Pipeline:
 
         .. versionadded:: 0.2.0
 
-        .. versionchanged:: 0.5.0
+        .. versionchanged:: 0.4.9
            Query can now be a `Profile` or an `OptimizedProfile`.
 
         """
@@ -4064,7 +4064,7 @@ cdef class Pipeline:
 cdef class LongTargetsPipeline(Pipeline):
     """An HMMER3 pipeline tuned for long targets.
 
-    .. versionadded:: 0.5.0
+    .. versionadded:: 0.4.9
 
     """
 
@@ -4082,10 +4082,10 @@ cdef class LongTargetsPipeline(Pipeline):
         int B1=100,
         int B2=240,
         int B3=1000,
-        int block_length=1024*256,
+        int block_length=0x40000,
         **kwargs,
     ):
-        """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None, F1=0.02, F2=1e-3, F3=1e-5, E=10.0, T=None, domE=10.0, domT=None, incE=0.01, incT=None, incdomE=0.01, incdomT=None, bit_cutoffs=None, str strand=None)\n--
+        """__init__(self, alphabet, background=None, *, F1=0.02, F2=3e-3, F3=3e-5, strand=None, B1=100, B2=240, B3=1000, block_length=0x40000, **kwargs)\n--
 
         Instantiate and configure a new long targets pipeline.
 
@@ -4120,7 +4120,7 @@ cdef class LongTargetsPipeline(Pipeline):
         if not alphabet.is_nucleotide():
             raise ValueError(f"Expected nucleotide alphabet, found {alphabet!r}")
         # create the pipeline
-        super().__init__(alphabet, background, **kwargs)
+        super().__init__(alphabet, background, F1=F1, F2=F2, F3=F3, **kwargs)
         # set the options for long targets
         self._pli.long_targets = True
         self._pli.block_length = block_length

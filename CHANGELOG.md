@@ -6,7 +6,26 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.8...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.9...HEAD
+
+
+## [v0.4.9] - 2021-11-11
+[v0.4.9]: https://github.com/althonos/pyhmmer/compare/v0.4.8...v0.4.9
+
+### Added
+- `plan7.ScoreData` class to store the substitution scores and maximal extensions for a long target search.
+- `plan7.LongTargetsPipeline` to run searches on targets longer than 100,000 residues.
+- `Alphabet` methods to check whether an `Alphabet` object is a DNA, RNA, nucleotide or protein alphabet.
+- `window_length` and `window_beta` arguments to `plan7.Builder` to set the max length of nucleotide `HMM` created by builder objects.
+
+### Changed
+- `pyhmmer.hmmer.nhmmer` now uses a `LongTargetsPipeline` instead of a `Pipeline` to search the target sequences.
+- `pyhmmer.hmmer.nhmmer` now supports `HMM` queries in addition to `DigitalSequence` and `DigitalMSA` queries.
+- `pyhmmer.hmmer.phmmer` now always assumes protein queries.
+- `Z` and `domZ` attributes of `plan7.TopHits` objects is now read-only.
+
+### Fixed
+- `nhmmer` now uses DNA as the default alphabet instead of amino acid alphabet like it did before ([#12](https://github.com/althonos/pyhmmer/issues/12)).
 
 
 ## [v0.4.8] - 2021-10-27
