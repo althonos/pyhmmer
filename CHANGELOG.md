@@ -21,8 +21,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 - `plan7.Cutoffs` now support setting the bit score cutoffs, but requires both to be set or cleared at the same time.
-- `easel.Vector` will always allocate some memory when
-created manually to avoid having a special empty case in every vector method.
+- `easel.Vector` will always allocate some memory when created manually to avoid having a special empty case in every vector method.
 - `pyhmmer.easel.AllocationError` now stores the size it failed to allocate, and the number of elements when allocating an array.
 
 ### Fixed

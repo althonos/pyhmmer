@@ -291,6 +291,47 @@ cdef class Alphabet:
     cdef inline bint _eq(self, Alphabet other) nogil:
         return self._abc.type == other._abc.type
 
+    # --- Methods ------------------------------------------------------------
+
+    cpdef bint is_dna(self):
+        """is_dna(self)\n--
+
+        Check whether the `Alphabet` object is a DNA alphabet.
+
+        """
+        assert self._abc != NULL
+        return self._abc.type == libeasel.alphabet.eslDNA
+
+    cpdef bint is_rna(self):
+        """is_rna(self)\n--
+
+        Check whether the `Alphabet` object is a RNA alphabet.
+
+        """
+        assert self._abc != NULL
+        return self._abc.type == libeasel.alphabet.eslRNA
+
+    cpdef bint is_amino(self):
+        """is_amino(self)\n--
+
+        Check whether the `Alphabet` object is a protein alphabet.
+
+        """
+        assert self._abc != NULL
+        return self._abc.type == libeasel.alphabet.eslAMINO
+
+    cpdef bint is_nucleotide(self):
+        """is_nucleotide(self)\n--
+
+        Check whether the `Alphabet` object is a nucleotide alphabet.
+
+        """
+        assert self._abc != NULL
+        return (
+             self._abc.type == libeasel.alphabet.eslDNA
+          or self._abc.type == libeasel.alphabet.eslRNA
+        )
+
 
 # --- Bitfield ---------------------------------------------------------------
 

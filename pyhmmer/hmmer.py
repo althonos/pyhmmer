@@ -18,7 +18,7 @@ import multiprocessing
 import psutil
 
 from .easel import Alphabet, DigitalSequence, DigitalMSA, MSA, MSAFile, TextSequence, SequenceFile, SSIWriter
-from .plan7 import Builder, Background, Pipeline, TopHits, HMM, HMMFile, Profile, TraceAligner
+from .plan7 import Builder, Background, Pipeline, LongTargetsPipeline, TopHits, HMM, HMMFile, Profile, TraceAligner
 from .utils import peekable
 
 # the query type for the pipeline
@@ -76,11 +76,13 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
         hits_found: typing.List[threading.Event],
         callback: typing.Optional[typing.Callable[[_Q, int], None]],
         options: typing.Dict[str, typing.Any],
+        pipeline_class: typing.Type[Pipeline],
+        alphabet: Alphabet,
     ) -> None:
         super().__init__()
         self.options = options
-        self.pipeline = Pipeline(alphabet=Alphabet.amino(), **options)
-        self.sequences = sequences
+        self.sequences = list(sequences)
+        self.pipeline = pipeline_class(alphabet=alphabet, **options)
         self.query_queue = query_queue
         self.query_count = query_count
         self.hits_queue = hits_queue
@@ -148,6 +150,8 @@ class _SequencePipelineThread(_PipelineThread[DigitalSequence]):
         hits_found: typing.List[threading.Event],
         callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]],
         options: typing.Dict[str, typing.Any],
+        pipeline_class: typing.Type[Pipeline],
+        alphabet: Alphabet,
         builder: Builder,
     ) -> None:
         super().__init__(
@@ -159,6 +163,8 @@ class _SequencePipelineThread(_PipelineThread[DigitalSequence]):
             hits_found,
             callback,
             options,
+            pipeline_class,
+            alphabet,
         )
         self.builder = builder
 
@@ -177,6 +183,8 @@ class _MSAPipelineThread(_PipelineThread[DigitalMSA]):
         hits_found: typing.List[threading.Event],
         callback: typing.Optional[typing.Callable[[DigitalMSA, int], None]],
         options: typing.Dict[str, typing.Any],
+        pipeline_class: typing.Type[Pipeline],
+        alphabet: Alphabet,
         builder: Builder,
     ) -> None:
         super().__init__(
@@ -188,6 +196,8 @@ class _MSAPipelineThread(_PipelineThread[DigitalMSA]):
             hits_found,
             callback,
             options,
+            pipeline_class,
+            alphabet,
         )
         self.builder = builder
 
@@ -206,6 +216,8 @@ class _Search(typing.Generic[_Q], abc.ABC):
         sequences: typing.Collection[DigitalSequence],
         cpus: int = 0,
         callback: typing.Optional[typing.Callable[[_Q, int], None]] = None,
+        pipeline_class: typing.Type[Pipeline] = Pipeline,
+        alphabet: Alphabet = Alphabet.amino(),
         **options,
     ) -> None:
         self.queries = queries
@@ -213,6 +225,8 @@ class _Search(typing.Generic[_Q], abc.ABC):
         self.cpus = cpus
         self.callback = callback
         self.options = options
+        self.pipeline_class = pipeline_class
+        self.alphabet = alphabet
 
     @abc.abstractmethod
     def _new_thread(
@@ -342,6 +356,8 @@ class _HMMSearch(_Search[HMM]):
             hits_found,
             self.callback,
             self.options,
+            self.pipeline_class,
+            self.alphabet,
         )
 
 
@@ -354,9 +370,11 @@ class _SequenceSearch(_Search[DigitalSequence]):
         sequences: typing.Collection[DigitalSequence],
         cpus: int = 0,
         callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
+        pipeline_class: typing.Type[Pipeline] = Pipeline,
+        alphabet: Alphabet = Alphabet.amino(),
         **options,
     ) -> None:
-        super().__init__(queries, sequences, cpus, callback, **options)
+        super().__init__(queries, sequences, cpus, callback, pipeline_class, alphabet, **options)
         self.builder = builder
 
     def _new_thread(
@@ -376,6 +394,8 @@ class _SequenceSearch(_Search[DigitalSequence]):
             hits_found,
             self.callback,
             self.options,
+            self.pipeline_class,
+            self.alphabet,
             self.builder.copy(),
         )
 
@@ -389,9 +409,11 @@ class _MSASearch(_Search[DigitalMSA]):
         sequences: typing.Collection[DigitalSequence],
         cpus: int = 0,
         callback: typing.Optional[typing.Callable[[DigitalMSA, int], None]] = None,
+        pipeline_class: typing.Type[Pipeline] = Pipeline,
+        alphabet: Alphabet = Alphabet.amino(),
         **options,
     ) -> None:
-        super().__init__(queries, sequences, cpus, callback, **options)
+        super().__init__(queries, sequences, cpus, callback, pipeline_class, alphabet, **options)
         self.builder = builder
 
     def _new_thread(
@@ -411,6 +433,8 @@ class _MSASearch(_Search[DigitalMSA]):
             hits_found,
             self.callback,
             self.options,
+            self.pipeline_class,
+            self.alphabet,
             self.builder.copy(),
         )
 
@@ -485,7 +509,7 @@ def phmmer(
     ...
 
 def phmmer(
-    queries: typing.Union[typing.Iterable[DigitalSequence], typing.Iterable[DigitalMSA]],
+    queries: typing.Union[typing.Iterable[DigitalSequence], typing.Iterable[DigitalMSA], typing.Iterable[HMM]],
     sequences: typing.Collection[DigitalSequence],
     cpus: int = 0,
     callback: typing.Union[typing.Optional[typing.Callable[[DigitalMSA, int], None]], typing.Optional[typing.Callable[[DigitalSequence, int], None]]] = None,
@@ -495,8 +519,8 @@ def phmmer(
     """Search protein sequences against a sequence database.
 
     Arguments:
-        queries (iterable of `DigitalSequence` or `DigitalMSA`): The query
-            sequences to search in the database.
+        queries (iterable of `DigitalSequence`, `DigitalMSA` or `HMM`): The
+            query sequences or profiles to search in the database.
         sequences (collection of `~pyhmmer.easel.DigitalSequence`): A
             database of sequences to query.
         cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
@@ -534,14 +558,18 @@ def phmmer(
     except StopIteration:
         _item = None  # type: ignore
 
-    if isinstance(_item, DigitalSequence):
+    if _item is None or isinstance(_item, DigitalSequence):
         runner = _SequenceSearch(
-            _builder, _queries, sequences, _cpus, callback, **options   # type: ignore
+            _builder, _queries, sequences, _cpus, callback, pipeline_class=Pipeline, alphabet=Alphabet.amino(), **options   # type: ignore
+        )
+    elif isinstance(_item, DigitalMSA):
+        runner = _MSASearch(
+            _builder, _queries, sequences, _cpus, callback, pipeline_class=Pipeline, alphabet=Alphabet.amino(), **options   # type: ignore
         )
     else:
-        runner = _MSASearch(
-            _builder, _queries, sequences, _cpus, callback, **options   # type: ignore
-        )
+        name = type(_item).__name__
+        raise TypeError(f"Expected iterable of DigitalSequence or DigitalMSA, found {name}")
+
     return runner.run()
 
 
@@ -594,14 +622,41 @@ def nhmmer(
     except StopIteration:
         _item = None  # type: ignore
 
-    if isinstance(_item, DigitalSequence):
+    if _item is None or isinstance(_item, DigitalSequence):
         runner = _SequenceSearch(
-            _builder, _queries, sequences, _cpus, callback, **options   # type: ignore
+            _builder,
+            _queries,
+            sequences,
+            _cpus,
+            callback,
+            pipeline_class=LongTargetsPipeline,
+            alphabet=_item.alphabet if _item is not None else Alphabet.dna(),
+            **options   # type: ignore
+        )
+    elif isinstance(_item, DigitalMSA):
+        runner = _MSASearch(
+            _builder,
+            _queries,
+            sequences,
+            _cpus,
+            callback,
+            pipeline_class=LongTargetsPipeline,
+            alphabet=_item.alphabet,
+            **options   # type: ignore
+        )
+    elif isinstance(_item, HMM):
+        runner = _HMMSearch(
+            _queries,
+            sequences,
+            _cpus,
+            callback,
+            pipeline_class=LongTargetsPipeline,
+            alphabet=_item.alphabet,
+            **options,
         )
     else:
-        runner = _MSASearch(
-            _builder, _queries, sequences, _cpus, callback, **options   # type: ignore
-        )
+        name = type(_item).__name__
+        raise TypeError(f"Expected iterable of DigitalSequence, DigitalMSA or HMM, found {name}")
     return runner.run()
 
 
@@ -777,6 +832,32 @@ if __name__ == "__main__":
 
         return 0
 
+    def _nhmmer(args: argparse.Namespace) -> int:
+        with SequenceFile(args.seqdb) as seqfile:
+            alphabet = seqfile.guess_alphabet() or Alphabet.dna()
+            seqfile.set_digital(alphabet)
+            sequences = list(seqfile)
+
+        with SequenceFile(args.seqfile) as queryfile:
+            queryfile.set_digital(alphabet)
+            queries = list(queryfile)
+            hits_list = nhmmer(queries, sequences, cpus=args.jobs)  # type: ignore
+            for hits in hits_list:
+                for hit in hits:
+                    if hit.is_reported():
+                        print(
+                            hit.name.decode(),
+                            "-",
+                            hit.best_domain.alignment.hmm_accession.decode(),
+                            hit.best_domain.alignment.hmm_name.decode(),
+                            hit.evalue,
+                            hit.score,
+                            hit.bias,
+                            sep="\t",
+                        )
+
+        return 0
+
     def _hmmpress(args: argparse.Namespace) -> int:
         for ext in ["h3m", "h3i", "h3f", "h3p"]:
             path = "{}.{}".format(args.hmmfile, ext)
@@ -834,6 +915,11 @@ if __name__ == "__main__":
     parser_phmmer.add_argument("seqfile")
     parser_phmmer.add_argument("seqdb")
 
+    parser_nhmmer = subparsers.add_parser("nhmmer")
+    parser_nhmmer.set_defaults(call=_nhmmer)
+    parser_nhmmer.add_argument("seqfile")
+    parser_nhmmer.add_argument("seqdb")
+
     parser_hmmpress = subparsers.add_parser("hmmpress")
     parser_hmmpress.set_defaults(call=_hmmpress)
     parser_hmmpress.add_argument("hmmfile")
@@ -867,7 +953,7 @@ if __name__ == "__main__":
         action="store",
         metavar="<s>",
         help="assert <seqfile> is in format <s> (no autodetection)",
-        choices=SequenceFile._formats.keys(),
+        choices=SequenceFile._FORMATS.keys(),
     )
     parser_hmmalign.add_argument(
         "--outformat",
@@ -875,7 +961,7 @@ if __name__ == "__main__":
         metavar="<s>",
         help="output alignment in format <s>",
         default="stockholm",
-        choices=MSAFile._formats.keys(),
+        choices=MSAFile._FORMATS.keys(),
     )
 
     args = parser.parse_args()

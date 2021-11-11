@@ -15,6 +15,7 @@ from libhmmer.p7_hmm cimport P7_HMM
 from libhmmer.p7_hmmfile cimport P7_HMMFILE
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e
 from libhmmer.p7_profile cimport P7_PROFILE
+from libhmmer.p7_scoredata cimport P7_SCOREDATA
 from libhmmer.p7_tophits cimport P7_TOPHITS, P7_HIT
 from libhmmer.p7_trace cimport P7_TRACE
 
@@ -178,8 +179,9 @@ cdef class Pipeline:
 
     cdef int _save_cutoff_parameters(self) except 1
     cdef int _restore_cutoff_parameters(self) except 1
+    cdef P7_OPROFILE* _get_om_from_query(self, object query, int L = *) except NULL
     cpdef void    clear(self)
-    cpdef TopHits search_hmm(self, HMM query, object seqs)
+    cpdef TopHits search_hmm(self, object query, object seqs)
     cpdef TopHits search_msa(self, DigitalMSA query, object seqs, Builder builder = ?)
     cpdef TopHits search_seq(self, DigitalSequence query, object seqs, Builder builder = ?)
     @staticmethod
@@ -203,6 +205,21 @@ cdef class Pipeline:
     ) except 1
 
 
+cdef class LongTargetsPipeline(Pipeline):
+    cdef DigitalSequence _tmpsq
+
+    @staticmethod
+    cdef int _search_loop_longtargets(
+        P7_PIPELINE*  pli,
+        P7_OPROFILE*  om,
+        P7_BG*        bg,
+        ESL_SQ**      sq,
+        P7_TOPHITS*   th,
+        P7_SCOREDATA* scoredata,
+        ESL_SQ*       tmpsq,
+    ) nogil except 1
+
+
 cdef class Profile:
     cdef P7_PROFILE* _gm
     cdef readonly Alphabet          alphabet
@@ -219,10 +236,17 @@ cdef class Profile:
     cpdef OptimizedProfile optimized(self)
 
 
+cdef class ScoreData:
+    cdef P7_SCOREDATA* _sd
+    cdef readonly int  Kp
+
+    cpdef ScoreData copy(self)
+
+
 cdef class TopHits:
-    cdef public float Z
-    cdef public float domZ
-    cdef public bint  long_targets
+    cdef readonly float Z
+    cdef readonly float domZ
+    cdef readonly bint  long_targets
 
     cdef P7_TOPHITS* _th
 

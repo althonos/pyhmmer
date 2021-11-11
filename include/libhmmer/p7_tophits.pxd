@@ -10,14 +10,10 @@ from libeasel.sq cimport ESL_SQ
 from libhmmer.p7_domain cimport P7_DOMAIN
 from libhmmer.p7_pipeline cimport p7_pipemodes_e, P7_PIPELINE
 from libhmmer.p7_trace cimport P7_TRACE
+from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 
 
 cdef extern from "hmmer.h" nogil:
-
-    # forward declaration of P7_ALIDISPLAY to avoid circular imports
-    ctypedef p7_alidisplay_s P7_ALIDISPLAY
-    cdef struct p7_alidisplay_s:
-        pass
 
     # P7_HIT flags
     cdef enum p7_hitflags_e:
@@ -28,7 +24,6 @@ cdef extern from "hmmer.h" nogil:
         p7_IS_DROPPED       = 0b01000
         p7_IS_DUPLICATE     = 0b10000
 
-    ctypedef p7_hit_s P7_HIT
     cdef struct p7_hit_s:
         char* name
         char* acc
@@ -61,8 +56,9 @@ cdef extern from "hmmer.h" nogil:
 
         P7_DOMAIN *dcl
         esl_pos_t offset
+    ctypedef p7_hit_s P7_HIT
 
-    ctypedef p7_tophits_s P7_TOPHITS
+
     cdef struct p7_tophits_s:
         P7_HIT** hit
         P7_HIT* unsrt
@@ -72,6 +68,7 @@ cdef extern from "hmmer.h" nogil:
         uint64_t nincluded
         bint is_sorted_by_sortkey
         bint is_sorted_by_seqidx
+    ctypedef p7_tophits_s P7_TOPHITS
 
     P7_TOPHITS *p7_tophits_Create()
     int         p7_tophits_Grow(P7_TOPHITS *h)

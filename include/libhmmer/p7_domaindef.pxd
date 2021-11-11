@@ -5,6 +5,7 @@ from libeasel.sq cimport ESL_SQ
 from libhmmer.p7_domain cimport P7_DOMAIN
 from libhmmer.p7_spensemble cimport P7_SPENSEMBLE
 from libhmmer.p7_trace cimport P7_TRACE
+from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 
 IF HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx.p7_omx cimport P7_OMX
@@ -16,7 +17,6 @@ ELIF HMMER_IMPL == "SSE":
 
 cdef extern from "hmmer.h" nogil:
 
-    ctypedef p7_domaindef_s P7_DOMAINDEF
     cdef struct p7_domaindef_s:
 
         float* mocc
@@ -53,13 +53,14 @@ cdef extern from "hmmer.h" nogil:
         int nclustered
         int noverlaps
         int nenvelopes
+    ctypedef p7_domaindef_s P7_DOMAINDEF
 
 
     P7_DOMAINDEF *p7_domaindef_Create (ESL_RANDOMNESS *r)
-    # int           p7_domaindef_Fetch  (P7_DOMAINDEF *ddef, int which, int *opt_i, int *opt_j, float *opt_sc, P7_ALIDISPLAY **opt_ad)
-    # int           p7_domaindef_GrowTo (P7_DOMAINDEF *ddef, int L)
+    int           p7_domaindef_Fetch  (P7_DOMAINDEF *ddef, int which, int *opt_i, int *opt_j, float *opt_sc, P7_ALIDISPLAY **opt_ad)
+    int           p7_domaindef_GrowTo (P7_DOMAINDEF *ddef, int L)
     int           p7_domaindef_Reuse  (P7_DOMAINDEF *ddef)
-    # int           p7_domaindef_DumpPosteriors(FILE *ofp, P7_DOMAINDEF *ddef)
+    int           p7_domaindef_DumpPosteriors(FILE *ofp, P7_DOMAINDEF *ddef)
     void          p7_domaindef_Destroy(P7_DOMAINDEF *ddef)
 
     # int p7_domaindef_ByViterbi            (P7_PROFILE *gm, const ESL_SQ *sq, const ESL_SQ *ntsq, P7_GMX *gx1, P7_GMX *gx2, P7_DOMAINDEF *ddef)

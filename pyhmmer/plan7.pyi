@@ -29,6 +29,7 @@ ARCHITECTURE = Literal["fast", "hand"]
 WEIGHTING = Literal["pb", "gsc", "blosum", "none", "given"]
 EFFECTIVE = Literal["entropy", "exp", "clust", "none"]
 PRIOR_SCHEME = Literal["laplace", "alphabet"]
+STRAND = Literal["watson", "crick"]
 
 
 class Alignment(collections.abc.Sized):
@@ -105,12 +106,22 @@ class Builder(object):
         ere: typing.Optional[float] = None,
         popen: typing.Optional[float] = None,
         pextend: typing.Optional[float] = None,
+        window_length: typing.Optional[int] = None,
+        window_beta: typing.Optional[float] = None,
     ) -> None: ...
     def __copy__(self) -> Builder: ...
     @property
     def seed(self) -> int: ...
     @seed.setter
     def seed(self, seed: int) -> None: ...
+    @property
+    def window_length(self) -> typing.Optional[int]: ...
+    @window_length.setter
+    def window_length(self, window_length: typing.Optional[int]) -> None: ...
+    @property
+    def window_beta(self) -> typing.Optional[float]: ...
+    @window_beta.setter
+    def window_beta(self, window_beta: typing.Optional[float]) -> None: ...
     def build(
         self,
         sequence: DigitalSequence,
@@ -465,10 +476,14 @@ class Pipeline(object):
     def bit_cutoffs(self) -> typing.Optional[BIT_CUTOFFS]: ...
     @bit_cutoffs.setter
     def bit_cutoffs(self, bit_cutoffs: typing.Optional[BIT_CUTOFFS]) -> None: ...
+    @property
+    def strand(self) -> typing.Optional[STRAND]: ...
+    @strand.setter
+    def strand(self, strand: typing.Optional[STRAND]) -> None: ...
     def clear(self) -> None: ...
     def search_hmm(
         self,
-        query: HMM,
+        query: typing.Union[HMM, Profile, OptimizedProfile],
         sequences: typing.Iterable[DigitalSequence],
     ) -> TopHits: ...
     def search_msa(
@@ -488,6 +503,52 @@ class Pipeline(object):
         query: DigitalSequence,
         hmms: typing.Iterable[HMM],
     ) -> TopHits: ...
+
+class LongTargetsPipeline(Pipeline):
+    def __init__(
+        self,
+        alphabet: Alphabet,
+        background: typing.Optional[Background] = None,
+        *,
+        B1: int = 100,
+        B2: int = 240,
+        B3: int = 1000,
+        block_length: int = 1024*256,
+        bias_filter: bool = True,
+        report_e: float = 10.0,
+        null2: bool = True,
+        seed: typing.Optional[int] = None,
+        Z: typing.Optional[float] = None,
+        domZ: typing.Optional[float] = None,
+        F1: float = 0.02,
+        F2: float = 1e-3,
+        F3: float = 1e-5,
+        E: float = 10.0,
+        T: typing.Optional[float] = None,
+        domE: float = 10.0,
+        domT: typing.Optional[float] = None,
+        incE: float = 0.01,
+        incT: typing.Optional[float] = None,
+        incdomE: float = 0.01,
+        incdomT: typing.Optional[float] = None,
+        bit_cutoffs: typing.Optional[BIT_CUTOFFS] = None,
+    ) -> None: ...
+    @property
+    def B1(self) -> int: ...
+    @B1.setter
+    def B1(self, B1: int) -> None: ...
+    @property
+    def B2(self) -> int: ...
+    @B2.setter
+    def B2(self, B2: int) -> None: ...
+    @property
+    def B3(self) -> int: ...
+    @B3.setter
+    def B3(self, B3: int) -> None: ...
+    @property
+    def strand(self) -> typing.Optional[STRAND]: ...
+    @strand.setter
+    def strand(self, strand: typing.Optional[STRAND]) -> None: ...
 
 class Profile(object):
     alphabet: Alphabet
@@ -521,6 +582,12 @@ class Profile(object):
     def is_local(self) -> bool: ...
     def is_multihit(self) -> bool: ...
     def optimized(self) -> OptimizedProfile: ...
+
+class ScoreData(object):
+    Kp: int
+    def __init__(self, gm: Profile, om: OptimizedProfile) -> None: ...
+    def __copy__(self) -> ScoreData: ...
+    def copy(self) -> ScoreData: ...
 
 class TopHits(typing.Sequence[Hit]):
     Z: float

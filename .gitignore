@@ -55,6 +55,9 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+# Valgrind files
+callgrind.out.*
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -62,8 +65,8 @@ __pycache__/
 *$py.class
 
 # C extensions
-*.c
-*.html
+pyhmmer/*.c
+pyhmmer/*.html
 
 # Cython
 cython_debug/

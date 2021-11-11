@@ -5,7 +5,6 @@ from libeasel.alphabet cimport ESL_ALPHABET
 from libeasel.random cimport ESL_RANDOMNESS
 from libeasel.sq cimport ESL_SQ
 from libhmmer.p7_trace cimport P7_TRACE
-from libhmmer.p7_pipeline cimport P7_PIPELINE
 
 IF HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
@@ -15,7 +14,6 @@ ELIF HMMER_IMPL == "SSE":
 
 cdef extern from "hmmer.h" nogil:
 
-    ctypedef p7_alidisplay_s P7_ALIDISPLAY
     cdef struct p7_alidisplay_s:
         char* rfline
         char* mmline
@@ -43,6 +41,7 @@ cdef extern from "hmmer.h" nogil:
 
         int memsize
         char* mem
+    ctypedef p7_alidisplay_s P7_ALIDISPLAY
 
     P7_ALIDISPLAY *p7_alidisplay_Create(const P7_TRACE *tr, int which, const P7_OPROFILE *om, const ESL_SQ *sq, const ESL_SQ *ntsq);
     P7_ALIDISPLAY *p7_alidisplay_Create_empty();
@@ -57,8 +56,8 @@ cdef extern from "hmmer.h" nogil:
     float          p7_alidisplay_DecodePostProb(char pc);
     char           p7_alidisplay_EncodeAliPostProb(float p, float hi, float med, float lo);
 
-    int            p7_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, P7_PIPELINE *pli);
-    int            p7_translated_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, P7_PIPELINE *pli);
+    # int            p7_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, P7_PIPELINE *pli);
+    # int            p7_translated_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, P7_PIPELINE *pli);
     int            p7_nontranslated_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, int show_accessions);
 
     int            p7_alidisplay_Backconvert(const P7_ALIDISPLAY *ad, const ESL_ALPHABET *abc, ESL_SQ **ret_sq, P7_TRACE **ret_tr);
