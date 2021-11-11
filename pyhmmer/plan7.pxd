@@ -206,6 +206,8 @@ cdef class Pipeline:
 
 
 cdef class LongTargetsPipeline(Pipeline):
+    cdef DigitalSequence _tmpsq
+
     @staticmethod
     cdef int _search_loop_longtargets(
         P7_PIPELINE*  pli,
@@ -214,6 +216,7 @@ cdef class LongTargetsPipeline(Pipeline):
         ESL_SQ**      sq,
         P7_TOPHITS*   th,
         P7_SCOREDATA* scoredata,
+        ESL_SQ*       tmpsq,
     ) nogil except 1
 
 

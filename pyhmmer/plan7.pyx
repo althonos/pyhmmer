@@ -4127,6 +4127,8 @@ cdef class LongTargetsPipeline(Pipeline):
         self.B1 = B1
         self.B2 = B2
         self.B3 = B3
+        # create a temporary sequence to use to store the current window
+        self._tmpsq = DigitalSequence(alphabet)
 
     # --- Properties ---------------------------------------------------------
 
@@ -4247,17 +4249,18 @@ cdef class LongTargetsPipeline(Pipeline):
             self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
             # create the score data struct
             scoredata.Kp = self.profile._gm.abc.Kp
-            scoredata._sd = libhmmer.p7_scoredata.p7_hmm_ScoreDataCreate(self.opt._om, NULL)
+            scoredata._sd = libhmmer.p7_scoredata.p7_hmm_ScoreDataCreate(om, NULL)
             if scoredata._sd == NULL:
                 raise AllocationError("P7_SCOREDATA", sizeof(P7_SCOREDATA))
             # run the search loop on all database sequences while recycling memory
             LongTargetsPipeline._search_loop_longtargets(
                 self._pli,
-                self.opt._om,
+                om,
                 self.background._bg,
                 <ESL_SQ**> self._refs,
                 hits._th,
-                scoredata._sd
+                scoredata._sd,
+                self._tmpsq._sq
             )
 
             # threshold with user-provided Z if any
@@ -4295,8 +4298,8 @@ cdef class LongTargetsPipeline(Pipeline):
         ESL_SQ**      sq,
         P7_TOPHITS*   th,
         P7_SCOREDATA* scoredata,
+        ESL_SQ*       tmpsq,
     ) nogil except 1:
-        cdef ESL_SQ* tmpsq
         cdef int     status
         cdef int     nres
         cdef int64_t index   = 0
@@ -4392,15 +4395,8 @@ cdef class LongTargetsPipeline(Pipeline):
 
             # clear the allocated sequence and advance to next sequence
             libeasel.sq.esl_sq_Reuse(tmpsq)
-            # if tmpsq_r != NULL:
-            #     libeasel.sq.esl_sq_Reuse(tmpsq_r)
             pli.nseqs += 1
             sq += 1
-
-        # free the local sequence copy
-        libeasel.sq.esl_sq_Destroy(tmpsq)
-        # if tmpsq_r != NULL:
-        #     libeasel.sq.esl_sq_Destroy(tmpsq_r)
 
         # Return 0 to indicate success
         return 0
@@ -4709,10 +4705,14 @@ cdef class ScoreData:
     def __cinit__(self):
         self._sd = NULL
 
-    def __init__(self, Profile gm, OptimizedProfile om):
+    def __init__(self, OptimizedProfile om, Profile gm = None):
+
+        cdef P7_PROFILE*  _gm = NULL if gm is None else gm._gm
+        cdef P7_OPROFILE* _om = om._om
+
         self.Kp = gm.alphabet.Kp
         with nogil:
-            self._sd = libhmmer.p7_scoredata.p7_hmm_ScoreDataCreate(om._om, gm._gm)
+            self._sd = libhmmer.p7_scoredata.p7_hmm_ScoreDataCreate(_om, _gm)
         if self._sd == NULL:
             raise AllocationError("P7_SCOREDATA", sizeof(P7_SCOREDATA))
 
