@@ -4330,17 +4330,22 @@ cdef class LongTargetsPipeline(Pipeline):
         P7_SCOREDATA* scoredata,
         ESL_SQ*       tmpsq,
     ) nogil except 1:
-        cdef int     status
-        cdef int     nres
-        cdef int64_t index   = 0
+        cdef int      status
+        cdef int      nres
+        cdef int64_t  index  = 0
+        cdef int64_t  j      = 0
+        cdef int64_t  rem    = 0
         cdef int64_t i       = 0
-        cdef int64_t j       = 0
-        cdef int64_t rem     = 0
         cdef int64_t C       = om.max_length
         cdef int64_t W       = pli.block_length
 
+        if om.max_length <= 0:
+            raise ValueError(f"invalid context size: {om.max_length!r}")
+        if pli.block_length <= 0:
+            raise ValueError(f"invalid window size: {pli.block_length!r}")
         if W <= C:
-            raise NotImplementedError("cannot have window size smaller than context")
+            # TODO: see if this is handled in nhmmer, and how to emulate it
+            raise ValueError("cannot have window size smaller than context")
 
         # configure the pipeline for the current HMM
         status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
@@ -4367,8 +4372,12 @@ cdef class LongTargetsPipeline(Pipeline):
 
             # iterate over successive windows of width W, keeping C residues
             # from the previous iteration as context
-            i = 0
-            while i < sq[0].n:
+            # NB: this is basically the PyRex equivalent for this:
+            #     ```
+            #     for i in range(0, sq[0].n, W-C)
+            #     ```
+            #     but Cython refuses to optimize that
+            for i from 0 <= i < sq[0].n by W - C:
                 # update window coordinates in the temporary sequence
                 tmpsq.C     = 0 if i == 0 else min(C, sq[0].n - i)
                 tmpsq.W     = min(W, sq[0].n - i - tmpsq.C)
@@ -4419,9 +4428,6 @@ cdef class LongTargetsPipeline(Pipeline):
                     # clear pipeline for reuse for next target
                     libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
                     pli.nres += tmpsq.W
-
-                # advance coordinates
-                i += W - C
 
             # clear the allocated sequence and advance to next sequence
             libeasel.sq.esl_sq_Reuse(tmpsq)
