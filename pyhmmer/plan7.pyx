@@ -392,6 +392,8 @@ cdef class Builder:
             configured to use to convert sequences to HMMs.
         randomness (`~pyhmmer.easel.Randomness`): The random number generator
             being used by the builder.
+        mx (`str`): The name of the substitution matrix used to build HMMs
+            for single sequences.
 
     .. versionadded:: 0.2.0
 
@@ -458,8 +460,8 @@ cdef class Builder:
                 A number can also be given directly to set the effective
                 sequence number manually.
             prior_scheme (`str`): The choice of mixture Dirichlet prior when
-                parameterizing  from counts, either ``"laplace"`` (the default)
-                or ``"alphabet"``.
+                parameterizing  from counts, either ``"laplace"``
+                or ``"alphabet"`` (the default).
             symfrac (`float`): The residue occurrence threshold for fast
                 architecture determination.
             fragthresh (`float`): A threshold such that a sequence is called
@@ -556,8 +558,16 @@ cdef class Builder:
             ty = type(effective_number).__name__
             raise TypeError(f"Invalid type for 'effective_number': {ty}")
 
-        # set the RE target if given one
-        self._bld.re_target = -1 if ere is None else ere
+        # set the RE target if given one, otherwise the default
+        # is alphabet dependent
+        if ere is not None:
+            self._bld.re_target = ere
+        elif alphabet.is_nucleotide():
+            self._bld.re_target = libhmmer.p7_ETARGET_DNA
+        elif alphabet.is_amino():
+            self._bld.re_target = libhmmer.p7_ETARGET_AMINO
+        else:
+            self._bld.re_target = libhmmer.p7_ETARGET_OTHER
 
         # set the prior scheme
         self.prior_scheme = prior_scheme
@@ -575,21 +585,23 @@ cdef class Builder:
         else:
             raise ValueError("Invalid value for 'prior_scheme': {prior_scheme}")
 
-        # set the probability using alphabet-specific defaults or given values
+        # set the gap-open and gap-extend probabilities using alphabet-specific
+        # defaults (this is only used when building a HMM for a single sequence)
         if alphabet.is_nucleotide():
             self.popen = 0.03125 if popen is None else popen
             self.pextend = 0.75 if pextend is None else pextend
         else:
             self.popen = 0.02 if popen is None else popen
             self.pextend = 0.4 if pextend is None else pextend
+        # set the default substitution matrix depending on the alphabet
+        self.mx = "DNA1" if alphabet.is_nucleotide() else "BLOSUM62"
 
-        # set the nucleotide-specific window options
-        if alphabet.is_nucleotide():
-            self.window_length = window_length
-            if window_beta is None:
-                self.window_beta = libhmmer.p7_builder.p7_DEFAULT_WINDOW_BETA
-            else:
-                self.window_beta = window_beta
+        # set the window options
+        self.window_length = window_length
+        if window_beta is None:
+            self.window_beta = libhmmer.p7_builder.p7_DEFAULT_WINDOW_BETA
+        else:
+            self.window_beta = window_beta
 
     def __dealloc__(self):
         libhmmer.p7_builder.p7_builder_Destroy(self._bld)
@@ -681,11 +693,13 @@ cdef class Builder:
         cdef HMM              hmm     = HMM.__new__(HMM)
         cdef Profile          profile = Profile.__new__(Profile)
         cdef OptimizedProfile opti    = OptimizedProfile.__new__(OptimizedProfile)
+        cdef bytes            mx      = self.mx.encode('utf-8')
+        cdef char*            mx_ptr  = <char*> mx
         cdef str              msg
 
-        # use given probabilities
-        self._bld.popen = self.popen
-        self._bld.pextend = self.pextend
+        # unset builder probabilities if they were set previously
+        # by a (potentially different) score system
+        self._bld.popen = self._bld.pextend = -1
 
         # reseed RNG used by the builder if needed
         if self._bld.do_reseeding:
@@ -703,21 +717,21 @@ cdef class Builder:
         # TODO: allow caching the parameter values to avoid resetting
         #       everytime `build` is called.
         with nogil:
-            status = libhmmer.p7_builder.p7_builder_SetScoreSystem(
+            status = libhmmer.p7_builder.p7_builder_LoadScoreSystem(
                 self._bld,
-                NULL, # --mxfile
-                NULL, # env
-                self.popen, # popen
-                self.pextend,  # pextend
+                mx_ptr,
+                self.popen,
+                self.pextend,
                 background._bg
             )
-            if status == libeasel.eslENOTFOUND:
-                raise FileNotFoundError("could not open substitution score matrix file")
-            elif status == libeasel.eslEINVAL:
-                raise ValueError("cannot convert matrix to conditional probabilities")
-            elif status != libeasel.eslOK:
-                raise UnexpectedError(status, "p7_builder_SetScoreSystem")
-            # build HMM and profiles
+        if status == libeasel.eslEINVAL:
+            msg = self._bld.errbuf.decode('utf-8', 'ignore')
+            raise RuntimeError(f"failed to set single sequence score system: {msg}")
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_builder_LoadScoreSystem")
+
+        # build HMM and profiles
+        with nogil:
             status = libhmmer.p7_builder.p7_SingleBuilder(
                 self._bld,
                 sequence._sq,
@@ -770,10 +784,10 @@ cdef class Builder:
         cdef Profile          profile = Profile.__new__(Profile)
         cdef OptimizedProfile opti    = OptimizedProfile.__new__(OptimizedProfile)
         cdef str              msg
+        cdef size_t           k
 
-        # use given probabilities
-        self._bld.popen = self.popen
-        self._bld.pextend = self.pextend
+        # unset builder probabilities if they were set previously
+        self._bld.popen = self._bld.pextend = -1
 
         # reseed RNG used by the builder if needed
         if self._bld.do_reseeding:
@@ -786,22 +800,22 @@ cdef class Builder:
         if not self.alphabet._eq(msa.alphabet):
             raise AlphabetMismatch(self.alphabet, msa.alphabet)
 
-        # load score matrix and build HMM
+        # build HMM
         with nogil:
-            status = libhmmer.p7_builder.p7_builder_SetScoreSystem(
-                self._bld,
-                NULL, # --mxfile
-                NULL, # env
-                self.popen, # popen
-                self.pextend,  # pextend
-                background._bg
-            )
-            if status == libeasel.eslENOTFOUND:
-                raise FileNotFoundError("could not open substitution score matrix file")
-            elif status == libeasel.eslEINVAL:
-                raise ValueError("cannot convert matrix to conditional probabilities")
-            elif status != libeasel.eslOK:
-                raise UnexpectedError(status, "p7_builder_SetScoreSystem")
+            # status = libhmmer.p7_builder.p7_builder_SetScoreSystem(
+            #     self._bld,
+            #     NULL, # --mxfile
+            #     NULL, # env
+            #     self.popen, # popen
+            #     self.pextend,  # pextend
+            #     background._bg
+            # )
+            # if status == libeasel.eslENOTFOUND:
+            #     raise FileNotFoundError("could not open substitution score matrix file")
+            # elif status == libeasel.eslEINVAL:
+            #     raise ValueError("cannot convert matrix to conditional probabilities")
+            # elif status != libeasel.eslOK:
+            #     raise UnexpectedError(status, "p7_builder_SetScoreSystem")
             # build HMM and profiles
             status = libhmmer.p7_builder.p7_Builder(
                 self._bld,
@@ -852,7 +866,9 @@ cdef class Builder:
             seed=self.seed,
             ere=self._bld.re_target,
             popen=self.popen,
-            pextend=self.pextend
+            pextend=self.pextend,
+            window_length=self.window_length,
+            window_beta=self.window_beta,
         )
 
 
