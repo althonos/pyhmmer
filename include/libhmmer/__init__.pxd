@@ -1,6 +1,13 @@
 from libc.stdint cimport uint8_t
 
 
+cdef extern from "p7_config.h" nogil:
+
+    const double p7_ETARGET_AMINO
+    const double p7_ETARGET_DNA
+    const double p7_ETARGET_OTHER
+
+
 cdef extern from "hmmer.h" nogil:
 
     # Search modes
