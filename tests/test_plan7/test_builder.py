@@ -16,7 +16,7 @@ from pyhmmer.easel import Alphabet, SequenceFile, MSAFile
 from pyhmmer.plan7 import HMMFile, Pipeline, Builder, Background
 
 
-class TestBuilder(unittest.TestCase):
+class test_build_msa_laccase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -170,3 +170,38 @@ class TestBuilder(unittest.TestCase):
         builder = Builder(alphabet=amino)
         bg = Background(alphabet=amino)
         self.assertRaises(AlphabetMismatch, builder.build_msa, self.msa, bg)
+
+    def test_build_msa_laccase(self):
+        # create a new protein builder
+        abc = Alphabet.amino()
+        builder = Builder(alphabet=abc)
+        # open the MSA
+        msa_path = pkg_resources.resource_filename("tests", "data/msa/laccase.clw")
+        with MSAFile(msa_path) as msa_file:
+            msa_file.set_digital(abc)
+            msa = msa_file.read()
+            msa.name = b"laccase"
+        # read the expected HMM
+        hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/laccase.hmm")
+        with HMMFile(hmm_path) as hmm_file:
+            hmm_hmmbuild = next(hmm_file)
+            hmm_hmmbuild.creation_time = None
+        # build the HMM from the MSA
+        hmm_pyhmmer, _, _ = builder.build_msa(msa, Background(abc))
+        hmm_pyhmmer.command_line = hmm_pyhmmer.creation_time = None
+        # NOTE: since saving a HMM loses some numerical precision, it would
+        #       be hard to compare for exact equality between the serialized
+        #       HMM obtained from `hmmbuild`, and the one just obtained with
+        #       the builder. To avoid this, we perform the comparison after
+        #       having serialized the two HMMs
+        # write pyHMMER HMM
+        buffer = io.BytesIO()
+        hmm_pyhmmer.write(buffer)
+        # write HMMER HMM
+        expected = io.BytesIO()
+        hmm_hmmbuild.write(expected)
+        # compare serialized HMMs
+        self.assertMultiLineEqual(
+            buffer.getvalue().decode('utf-8'),
+            expected.getvalue().decode('utf-8'),
+        )
