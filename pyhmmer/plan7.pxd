@@ -52,12 +52,13 @@ cdef class Background:
 
 
 cdef class Builder:
+    cdef readonly object mx
     cdef readonly object prior_scheme
     cdef readonly object effective_number
     cdef readonly object architecture
     cdef readonly object weighting
-    cdef readonly float  popen
-    cdef readonly float  pextend
+    cdef readonly double popen
+    cdef readonly double pextend
     cdef readonly Alphabet alphabet
     cdef readonly Randomness randomness
 

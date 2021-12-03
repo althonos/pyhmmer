@@ -79,6 +79,7 @@ class Builder(object):
     _EFFECTIVE_STRATEGY: typing.ClassVar[typing.Dict[str, int]]
     alphabet: Alphabet
     randomness: Randomness
+    mx: str
     architecture: ARCHITECTURE
     weighting: WEIGHTING
     effective_number: typing.Union[EFFECTIVE, int, float]
