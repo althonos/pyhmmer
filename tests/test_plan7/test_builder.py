@@ -16,7 +16,7 @@ from pyhmmer.easel import Alphabet, SequenceFile, MSAFile
 from pyhmmer.plan7 import HMMFile, Pipeline, Builder, Background
 
 
-class test_build_msa_laccase(unittest.TestCase):
+class TestBuilder(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -189,19 +189,10 @@ class test_build_msa_laccase(unittest.TestCase):
         # build the HMM from the MSA
         hmm_pyhmmer, _, _ = builder.build_msa(msa, Background(abc))
         hmm_pyhmmer.command_line = hmm_pyhmmer.creation_time = None
-        # NOTE: since saving a HMM loses some numerical precision, it would
-        #       be hard to compare for exact equality between the serialized
-        #       HMM obtained from `hmmbuild`, and the one just obtained with
-        #       the builder. To avoid this, we perform the comparison after
-        #       having serialized the two HMMs
-        # write pyHMMER HMM
-        buffer = io.BytesIO()
-        hmm_pyhmmer.write(buffer)
-        # write HMMER HMM
-        expected = io.BytesIO()
-        hmm_hmmbuild.write(expected)
-        # compare serialized HMMs
-        self.assertMultiLineEqual(
-            buffer.getvalue().decode('utf-8'),
-            expected.getvalue().decode('utf-8'),
-        )
+        # check M and the transition probabilities (which were the issue in v0.4.9)
+        # NOTE: exact equality cannot be checked because the `hmmbuild` HMM was
+        #       serialized, which drops a bit of numerical accuracy.
+        self.assertEqual(hmm_pyhmmer.M, hmm_hmmbuild.M)
+        for i in range(hmm_pyhmmer.M):
+            for t1, t2 in zip(hmm_pyhmmer.transition_probabilities[i], hmm_hmmbuild.transition_probabilities[i]):
+                self.assertAlmostEqual(t1, t2, places=5)
