@@ -23,15 +23,17 @@ from libc.stdio cimport printf
 from libc.stdlib cimport calloc, malloc, realloc, free
 from libc.stdint cimport uint8_t, uint32_t, int64_t
 from libc.stdio cimport fprintf, FILE, stdout, fclose
-from libc.string cimport memset, memcpy, memmove, strdup, strndup, strlen, strncpy
+from libc.string cimport memset, memcpy, memmove, strdup, strndup, strlen, strcmp, strncpy
 from libc.time cimport ctime, strftime, time, time_t, tm, localtime_r
 from unicode cimport PyUnicode_DATA, PyUnicode_KIND, PyUnicode_READ, PyUnicode_READY, PyUnicode_GET_LENGTH
 
 cimport libeasel
 cimport libeasel.sq
 cimport libeasel.alphabet
+cimport libeasel.dmatrix
 cimport libeasel.fileparser
 cimport libeasel.random
+cimport libeasel.scorematrix
 cimport libeasel.getopts
 cimport libeasel.vec
 cimport libhmmer
@@ -393,8 +395,12 @@ cdef class Builder:
             configured to use to convert sequences to HMMs.
         randomness (`~pyhmmer.easel.Randomness`): The random number generator
             being used by the builder.
-        mx (`str`): The name of the substitution matrix used to build HMMs
-            for single sequences.
+        score_matrix (`str`): The name of the substitution matrix used to
+            build HMMs for single sequences.
+        popen (`float`): The *gap open* probability to use when building
+            HMMs from single sequences.
+        pextend (`float`): The *gap extend* probability to use when building
+            HMMs from single sequences.
 
     .. versionadded:: 0.2.0
 
@@ -437,6 +443,7 @@ cdef class Builder:
         object ere=None,
         object popen=None,
         object pextend=None,
+        object score_matrix=None,
         object window_length=None,
         object window_beta=None,
     ):
@@ -485,12 +492,19 @@ cdef class Builder:
                 be chosen based on the current time.
             ere (`double`, optional): The relative entropy target for effective
                 number weighting, or `None`.
-            popen (`float`): The *gap open* probability to use with the score
-                system. Default depends on the alphabet: *0.02* for proteins,
+            popen (`float`, optional): The *gap open* probability to use
+                when building HMMs from single sequences. The default value
+                depends on the alphabet: *0.02* for proteins,
                 *0.03125* for nucleotides.
-            pextend (`float`): The *gap extend* probability to use with the
-                score system. Default depends on the alphabet: *0.4* for
-                proteins, *0.75* for nucleotides.
+            pextend (`float`, optional): The *gap extend* probability to use
+                when building HMMs from single sequences. Default depends on
+                the alphabet: *0.4* for proteins, *0.75* for nucleotides.
+            score_matrix (`str`, optional): The name of the score matrix to
+                use when building HMMs from single sequences. The only
+                allowed value for nucleotide alphabets is *DNA1*. For
+                proteins, *PAM30*, *PAM70*, *PAM120*, *PAM240*, *BLOSUM45*,
+                *BLOSUM50*, *BLOSUM62* (the default), *BLOSUM80* or
+                *BLOSUM90* can be used.
             window_length (`float`, optional): The window length for
                 nucleotide sequences, essentially the max expected hit length.
                 *If given, takes precedence over* ``window_beta``.
@@ -586,16 +600,16 @@ cdef class Builder:
         else:
             raise ValueError("Invalid value for 'prior_scheme': {prior_scheme}")
 
-        # set the gap-open and gap-extend probabilities using alphabet-specific
+        # set the gap probabilities and score matrix using alphabet-specific
         # defaults (this is only used when building a HMM for a single sequence)
         if alphabet.is_nucleotide():
+            self.score_matrix = "DNA1" if score_matrix is None else score_matrix
             self.popen = 0.03125 if popen is None else popen
             self.pextend = 0.75 if pextend is None else pextend
         else:
+            self.score_matrix = "BLOSUM62" if score_matrix is None else score_matrix
             self.popen = 0.02 if popen is None else popen
             self.pextend = 0.4 if pextend is None else pextend
-        # set the default substitution matrix depending on the alphabet
-        self.mx = "DNA1" if alphabet.is_nucleotide() else "BLOSUM62"
 
         # set the window options
         self.window_length = window_length
@@ -662,7 +676,6 @@ cdef class Builder:
             raise ValueError(f"Invalid window tail mass: {window_beta!r}")
         self._bld.w_beta = window_beta
 
-
     # --- Methods ------------------------------------------------------------
 
     cpdef tuple build(
@@ -680,12 +693,30 @@ cdef class Builder:
             background (`pyhmmer.plan7.background`): The background model
                 to use to create the HMM.
 
+        Returns:
+            (`HMM`, `Profile`, `OptimizedProfile`): A tuple containing the
+            new HMM as well as profiles to be used directly in a `Pipeline`.
+
         Raises:
             `~pyhmmer.errors.AlphabetMismatch`: When either ``sequence`` or
                 ``background`` have the wrong alphabet for this builder.
 
+        Hint:
+            The score matrix and the gap probabilities used here can be set
+            when initializing the builder, or changed by setting a new value
+            to the right attribute::
+
+                >>> alphabet = easel.Alphabet.amino()
+                >>> background = plan7.Background(alphabet)
+                >>> builder = plan7.Builder(alphabet, popen=0.05)
+                >>> builder.score_matrix = "BLOSUM90"
+                >>> hmm, _, _ = builder.build(proteins[0], background)
+
         .. versionchanged:: 0.4.6
            Sets the `HMM.creation_time` attribute with the current time.
+
+        .. versionchanged:: 0.4.10
+           The score system is now cached between calls to `Builder.build`.
 
         """
         assert self._bld != NULL
@@ -694,13 +725,9 @@ cdef class Builder:
         cdef HMM              hmm     = HMM.__new__(HMM)
         cdef Profile          profile = Profile.__new__(Profile)
         cdef OptimizedProfile opti    = OptimizedProfile.__new__(OptimizedProfile)
-        cdef bytes            mx      = self.mx.encode('utf-8')
+        cdef bytes            mx      = self.score_matrix.encode('utf-8')
         cdef char*            mx_ptr  = <char*> mx
         cdef str              msg
-
-        # unset builder probabilities if they were set previously
-        # by a (potentially different) score system
-        self._bld.popen = self._bld.pextend = -1
 
         # reseed RNG used by the builder if needed
         if self._bld.do_reseeding:
@@ -713,23 +740,25 @@ cdef class Builder:
         if not self.alphabet._eq(sequence.alphabet):
             raise AlphabetMismatch(self.alphabet, sequence.alphabet)
 
-        # load score matrix and build HMM
-        # TODO: allow changing from the default scoring matrix
-        # TODO: allow caching the parameter values to avoid resetting
-        #       everytime `build` is called.
-        with nogil:
-            status = libhmmer.p7_builder.p7_builder_LoadScoreSystem(
-                self._bld,
-                mx_ptr,
-                self.popen,
-                self.pextend,
-                background._bg
-            )
-        if status == libeasel.eslEINVAL:
-            msg = self._bld.errbuf.decode('utf-8', 'ignore')
-            raise RuntimeError(f"failed to set single sequence score system: {msg}")
-        elif status != libeasel.eslOK:
-            raise UnexpectedError(status, "p7_builder_LoadScoreSystem")
+        # only load the score system if it hasn't been loaded already,
+        # or if a different score system is in use
+        if self._bld.S == NULL or strcmp(self._bld.S.name, mx_ptr) != 0:
+            with nogil:
+                status = libhmmer.p7_builder.p7_builder_LoadScoreSystem(
+                    self._bld,
+                    mx_ptr,
+                    self.popen,
+                    self.pextend,
+                    background._bg
+                )
+            if status == libeasel.eslEINVAL:
+                msg = self._bld.errbuf.decode('utf-8', 'ignore')
+                raise RuntimeError(f"failed to set single sequence score system: {msg}")
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_builder_LoadScoreSystem")
+        else:
+            self._bld.popen = self.popen
+            self._bld.pextend = self.pextend
 
         # build HMM and profiles
         with nogil:
@@ -768,6 +797,10 @@ cdef class Builder:
             background (`pyhmmer.plan7.background`): The background model
                 to use to create the HMM.
 
+        Returns:
+            (`HMM`, `Profile`, `OptimizedProfile`): A tuple containing the
+            new HMM as well as profiles to be used directly in a `Pipeline`.
+
         Raises:
             `~pyhmmer.errors.AlphabetMismatch`: When either ``msa`` or
                 ``background`` have the wrong alphabet for this builder.
@@ -787,8 +820,15 @@ cdef class Builder:
         cdef str              msg
         cdef size_t           k
 
-        # unset builder probabilities if they were set previously
+        # unset builder probabilities and score system if they were set
+        # by a call to `build`, since we won't be needing them here
         self._bld.popen = self._bld.pextend = -1
+        if self._bld.S != NULL:
+            libeasel.scorematrix.esl_scorematrix_Destroy(self._bld.S)
+            self._bld.S = NULL
+        if self._bld.Q != NULL:
+            libeasel.dmatrix.esl_dmatrix_Destroy(self._bld.Q)
+            self._bld.Q = NULL
 
         # reseed RNG used by the builder if needed
         if self._bld.do_reseeding:
@@ -803,20 +843,6 @@ cdef class Builder:
 
         # build HMM
         with nogil:
-            # status = libhmmer.p7_builder.p7_builder_SetScoreSystem(
-            #     self._bld,
-            #     NULL, # --mxfile
-            #     NULL, # env
-            #     self.popen, # popen
-            #     self.pextend,  # pextend
-            #     background._bg
-            # )
-            # if status == libeasel.eslENOTFOUND:
-            #     raise FileNotFoundError("could not open substitution score matrix file")
-            # elif status == libeasel.eslEINVAL:
-            #     raise ValueError("cannot convert matrix to conditional probabilities")
-            # elif status != libeasel.eslOK:
-            #     raise UnexpectedError(status, "p7_builder_SetScoreSystem")
             # build HMM and profiles
             status = libhmmer.p7_builder.p7_Builder(
                 self._bld,

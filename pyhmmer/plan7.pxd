@@ -52,13 +52,13 @@ cdef class Background:
 
 
 cdef class Builder:
-    cdef readonly object mx
     cdef readonly object prior_scheme
     cdef readonly object effective_number
     cdef readonly object architecture
     cdef readonly object weighting
-    cdef readonly double popen
-    cdef readonly double pextend
+    cdef public   str    score_matrix
+    cdef public   double popen
+    cdef public   double pextend
     cdef readonly Alphabet alphabet
     cdef readonly Randomness randomness
 
