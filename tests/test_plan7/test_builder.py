@@ -16,7 +16,7 @@ from pyhmmer.easel import Alphabet, SequenceFile, MSAFile
 from pyhmmer.plan7 import HMMFile, Pipeline, Builder, Background
 
 
-class TestBuilder(unittest.TestCase):
+class _TestBuilderBase(object):
 
     @classmethod
     def setUpClass(cls):
@@ -48,6 +48,9 @@ class TestBuilder(unittest.TestCase):
             cls.msa = next(msa_file)
             cls.msa.name = b"3box"
 
+
+class TestBuilder(_TestBuilderBase, unittest.TestCase):
+
     def test_init_error(self):
         abc = Alphabet.amino()
         self.assertRaises(ValueError, Builder, alphabet=abc, architecture="nonsense")
@@ -71,7 +74,10 @@ class TestBuilder(unittest.TestCase):
         self.assertEqual(builder.alphabet, bc2.alphabet)
         self.assertEqual(builder.seed, bc2.seed)
 
-    def test_build_alphabet_mismatch(self):
+
+class TestBuilderSingle(_TestBuilderBase, unittest.TestCase):
+
+    def test_alphabet_mismatch(self):
         abc = Alphabet.dna()
         amino = Alphabet.amino()
 
@@ -81,7 +87,7 @@ class TestBuilder(unittest.TestCase):
         seq = self.proteins[0].digitize(amino)
         self.assertRaises(AlphabetMismatch, builder.build, seq, bg)
 
-    def test_build_command_line(self):
+    def test_command_line(self):
         abc = Alphabet.amino()
         builder = Builder(alphabet=abc)
         seq = self.proteins[1].digitize(abc)
@@ -91,7 +97,7 @@ class TestBuilder(unittest.TestCase):
             hmm, profile, opt = builder.build(seq, Background(abc))
         self.assertEqual(hmm.command_line, " ".join(argv))
 
-    def test_build_creation_time(self):
+    def test_creation_time(self):
         abc = Alphabet.amino()
         builder = Builder(alphabet=abc)
         seq = self.proteins[1].digitize(abc)
@@ -99,7 +105,7 @@ class TestBuilder(unittest.TestCase):
         hmm, profile, opt = builder.build(seq, Background(abc))
         self.assertIsInstance(hmm.creation_time, datetime.datetime)
 
-    def test_build_protein(self):
+    def test_protein(self):
         abc = Alphabet.amino()
         builder = Builder(alphabet=abc)
         seq = self.proteins[1].digitize(abc)
@@ -109,7 +115,7 @@ class TestBuilder(unittest.TestCase):
         self.assertEqual(profile.alphabet, abc)
         self.assertEqual(opt.alphabet, abc)
 
-    def test_build_dna(self):
+    def test_dna(self):
         abc = Alphabet.dna()
         builder = Builder(alphabet=abc)
         hmm, profile, opt = builder.build(self.dna.digitize(abc), Background(abc))
@@ -119,7 +125,36 @@ class TestBuilder(unittest.TestCase):
         self.assertEqual(opt.alphabet, abc)
         self.assertEqual(hmm.M, self.ecori.M)
 
-    def test_build_msa_command_line(self):
+    def test_score_system_change(self):
+        abc = Alphabet.amino()
+        bg = Background(abc)
+        builder = Builder(alphabet=abc)
+        seq = self.proteins[1].digitize(abc)
+        # build first HMM with mx=BLOSUM62, popen=0.02, pextend=0.4
+        self.assertEqual(builder.score_matrix, "BLOSUM62")
+        hmm1, _, _ = builder.build(seq, bg)
+        hmm1.command_line = hmm1.creation_time = None
+        # build second HMM with mx=BLOSUM90, popen=0.02, pextend=0.4
+        # --> the transition probabilities won't change, match emissions will
+        builder.score_matrix = "BLOSUM90"
+        self.assertEqual(builder.score_matrix, "BLOSUM90")
+        hmm2, _, _ = builder.build(seq, bg)
+        hmm2.command_line = hmm1.creation_time = None
+        self.assertEqual(hmm1.transition_probabilities, hmm2.transition_probabilities)
+        self.assertNotEqual(hmm1.match_emissions, hmm2.match_emissions)
+        # build third HMM with mx=BLOSUM90, popen=0.04, pextend=0.2
+        # --> the transition probabilities will change, match emissions won't
+        builder.popen = 0.04
+        builder.pextend = 0.2
+        hmm3, _, _ = builder.build(seq, bg)
+        hmm3.command_line = hmm1.creation_time = None
+        self.assertNotEqual(hmm2.transition_probabilities, hmm3.transition_probabilities)
+        self.assertEqual(hmm2.match_emissions, hmm3.match_emissions)
+
+
+class TestBuilderMSA(_TestBuilderBase, unittest.TestCase):
+
+    def test_command_line(self):
         abc = Alphabet.dna()
         builder = Builder(alphabet=abc)
 
@@ -136,7 +171,7 @@ class TestBuilder(unittest.TestCase):
             hmm, profile, opt = builder.build_msa(msa, Background(abc))
         self.assertEqual(hmm.command_line, " ".join(argv))
 
-    def test_build_msa_creation_time(self):
+    def test_creation_time(self):
         abc = Alphabet.dna()
         builder = Builder(alphabet=abc)
 
@@ -147,7 +182,7 @@ class TestBuilder(unittest.TestCase):
 
         self.assertIsInstance(hmm.creation_time, datetime.datetime)
 
-    def test_build_msa_dna(self):
+    def test_dna(self):
         abc = Alphabet.dna()
         builder = Builder(alphabet=abc)
 
@@ -159,7 +194,7 @@ class TestBuilder(unittest.TestCase):
         self.assertEqual(hmm.name, b"3box")
         self.assertEqual(hmm.M, hmm_exp.M)
 
-    def test_build_msa_alphabet_mismatch(self):
+    def test_alphabet_mismatch(self):
         dna = Alphabet.dna()
         amino = Alphabet.amino()
 
@@ -171,7 +206,7 @@ class TestBuilder(unittest.TestCase):
         bg = Background(alphabet=amino)
         self.assertRaises(AlphabetMismatch, builder.build_msa, self.msa, bg)
 
-    def test_build_msa_laccase(self):
+    def test_laccase(self):
         # create a new protein builder
         abc = Alphabet.amino()
         builder = Builder(alphabet=abc)
