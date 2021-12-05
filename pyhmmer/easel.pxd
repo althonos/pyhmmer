@@ -68,6 +68,7 @@ cdef class VectorF(Vector):
     cpdef float max(self) except *
     cpdef float min(self) except *
     cpdef object normalize(self)
+    cpdef float relative_entropy(self, VectorF other) except *
     cpdef object reverse(self)
     cpdef float sum(self)
 

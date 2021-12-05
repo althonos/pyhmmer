@@ -1340,7 +1340,7 @@ cdef class VectorF(Vector):
 
         other_vec = other
         other_data = <float*> other_vec._data
-        assert other_data != NULL or len(other) == 0
+        assert other_data != NULL
         if self._n != other_vec._n:
             raise ValueError("cannot multiply vectors of different sizes")
         with nogil:
@@ -1393,8 +1393,19 @@ cdef class VectorF(Vector):
     cpdef float entropy(self) except *:
         """entropy(self)\n--
 
-        Compute the Shannon entropy of a probability vector, in bits,
-        defined as :math:`H = \\sum_{i=0}^{N}{\\log_2 p_i}`.
+        Compute the Shannon entropy of the vector.
+
+        The Shannon entropy of a probability vector is defined as:
+
+        .. math::
+
+            H = \\sum_{i=0}^{N}{\\log_2 p_i}`.
+
+        Example:
+            >>> easel.VectorF([0.1, 0.1, 0.3, 0.5]).entropy()
+            1.6854...
+            >>> easel.VectorF([0.25, 0.25, 0.25, 0.25]).entropy()
+            2.0
 
         References:
             - 'Entropy, Relative Entropy, and Mutual Information'. In
@@ -1437,6 +1448,49 @@ cdef class VectorF(Vector):
             libeasel.vec.esl_vec_FNorm(<float*> self._data, self._n)
         return None
 
+    cpdef float relative_entropy(self, VectorF other) except *:
+        """relative_entropy(self, other)\n--
+
+        Compute the relative entropy between two probability vectors.
+
+        The Shannon relative entropy of two probability vectors :math:`p`
+        and :math:`q`, also known as the Kullback-Leibler divergence, is
+        defined as:
+
+        .. math::
+
+            D(p \\parallel q) = \\sum_i  p_i \\log_2 \\frac{p_i}{q_i}.
+
+        with :math:`D(p \\parallel q) = \\infty` per definition if
+        :math:`q_i = 0` and :math:`p_i > 0` for any :math:`i`.
+
+        Example:
+            >>> v1 = easel.VectorF([0.1, 0.1, 0.3, 0.5])
+            >>> v2 = easel.VectorF([0.25, 0.25, 0.25, 0.25])
+            >>> v1.relative_entropy(v2)
+            0.3145...
+            >>> v2.relative_entropy(v1)   # this is no symmetric relation
+            0.3452...
+
+        References:
+            - 'Entropy, Relative Entropy, and Mutual Information'. In
+              Elements of Information Theory, 13–55. John Wiley & Sons, Ltd,
+              2005. :doi:`10.1002/047174882X.ch2`.
+
+        .. versionadded:: 0.4.10
+
+        """
+        assert self._data != NULL
+        assert other._data != NULL
+        if self._n != other._n:
+            raise ValueError("cannot compute relative entropy of vectors of different sizes")
+        with nogil:
+            return libeasel.vec.esl_vec_FRelEntropy(
+                <float*> self._data,
+                <float*> other._data,
+                self._n
+            )
+
     cpdef object reverse(self):
         assert self._data != NULL
         with nogil:
@@ -1452,6 +1506,12 @@ cdef class VectorF(Vector):
         to minimize roundoff error accumulation. Additionally, they are most
         accurate if the vector is sorted in increasing order, from small to
         large, so you may consider sorting the vector before summing it.
+
+        References:
+            - Kahan, W.
+              "Pracniques: Further Remarks on Reducing Truncation Errors".
+              Communications of the ACM 8, no. 1 (1 January 1965): 40.
+              :doi:`10.1145/363707.363723`.
 
         """
         assert self._data != NULL
