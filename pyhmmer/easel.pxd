@@ -64,6 +64,7 @@ cdef class VectorF(Vector):
     cpdef int argmax(self) except -1
     cpdef int argmin(self) except -1
     cpdef VectorF copy(self)
+    cpdef float entropy(self) except *
     cpdef float max(self) except *
     cpdef float min(self) except *
     cpdef object normalize(self)

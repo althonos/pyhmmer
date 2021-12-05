@@ -1390,6 +1390,24 @@ cdef class VectorF(Vector):
 
         return new
 
+    cpdef float entropy(self) except *:
+        """entropy(self)\n--
+
+        Compute the Shannon entropy of a probability vector, in bits,
+        defined as :math:`H = \\sum_{i=0}^{N}{\\log_2 p_i}`.
+
+        References:
+            - 'Entropy, Relative Entropy, and Mutual Information'. In
+              Elements of Information Theory, 13–55. John Wiley & Sons, Ltd,
+              2005. :doi:`10.1002/047174882X.ch2`.
+
+        .. versionadded:: 0.4.10
+
+        """
+        assert self._data != NULL
+        with nogil:
+            return libeasel.vec.esl_vec_FEntropy(<float*> self._data, self._n)
+
     cpdef float max(self) except *:
         assert self._data != NULL
         if self._n == 0:
