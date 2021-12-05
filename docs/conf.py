@@ -76,11 +76,11 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
-    # "sphinx.ext.imgconverter",
     "sphinx.ext.napoleon",
     "sphinx.ext.coverage",
     "sphinx.ext.mathjax",
     "sphinx.ext.todo",
+    "sphinx.ext.extlinks",
     "sphinx_bootstrap_theme",
     "nbsphinx",
     "recommonmark",
@@ -174,6 +174,13 @@ htmlhelp_basename = pyhmmer.__name__
 
 
 # -- Extension configuration -------------------------------------------------
+
+# -- Options for extlinks extension ------------------------------------------
+
+extlinks = {
+    'doi': ('https://doi.org/%s', 'doi:'),
+    'pmid': ('https://pubmed.ncbi.nlm.nih.gov/%s', 'PMID:'),
+}
 
 # -- Options for imgmath extension -------------------------------------------
 
