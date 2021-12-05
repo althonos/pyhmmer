@@ -36,6 +36,7 @@ cimport libeasel.getopts
 cimport libeasel.vec
 cimport libhmmer
 cimport libhmmer.modelconfig
+cimport libhmmer.modelstats
 cimport libhmmer.p7_hmm
 cimport libhmmer.p7_builder
 cimport libhmmer.p7_bg
@@ -2358,10 +2359,133 @@ cdef class HMM:
             raise AllocationError("P7_HMM", sizeof(P7_HMM))
         return new
 
+    cpdef double mean_match_entropy(self) except *:
+        """mean_match_entropy(self)\n--
+
+        Compute the mean entropy per HMM match state.
+
+        The mean entropy per match state emission distribution is defined
+        as:
+
+        .. math::
+
+             - \\frac{1}{M} \\sum_{k=1}^{M} \\sum_x p_k(x) \\log_2 p_k(x)
+
+        where :math:`p_k(x)` is the emission probability for symbol
+        :math:`x` from match state :math:`k`.
+
+        Returns:
+            `float`: The mean entropy, in bits.
+
+        Example:
+            >>> thioesterase.mean_match_entropy()
+            3.0425...
+
+        .. versionadded:: 0.4.10
+
+        """
+        assert self._hmm != NULL
+        with nogil:
+            return libhmmer.modelstats.p7_MeanMatchEntropy(self._hmm)
+
+    cpdef double mean_match_information(self, Background background) except *:
+        """mean_match_information(self, background)\n--
+
+        Compute the mean information content of the HMM match states.
+
+        The mean information content per match state emission distribution
+        is defined as:
+
+        .. math::
+
+            \\frac{1}{M} \sum_{k=1}^{M}
+                \\left[
+                    \\sum_x f(x)   \\log_2 f(x)
+                  - \\sum_x p_k(x) \log_2 p_k(x)
+                \\right]
+
+        in bits, where :math:`p_k(x)` is the emission probability for symbol
+        :math:`x` from match state :math:`k`, and :math:`f(x)` is the
+        background emission probability for :math:`x` from the null model.
+
+        Arguments:
+            background (`~plan7.Background`): The null model from which to
+                get the background emission probabilities.
+
+        Returns:
+            `float`: The mean information content, in bits.
+
+        Example:
+            >>> background = plan7.Background(easel.Alphabet.amino())
+            >>> thioesterase.mean_match_information(background)
+            1.1330...
+
+        .. versionadded:: 0.4.10
+
+        """
+        assert self._hmm != NULL
+        assert background._bg != NULL
+        with nogil:
+            return libhmmer.modelstats.p7_MeanMatchInfo(self._hmm, background._bg)
+
+    cpdef double mean_match_relative_entropy(self, Background background) except *:
+        """mean_match_relative_entropy(self, background)\n--
+
+        Compute the mean relative entropy per HMM match state.
+
+        The mean relative entropy per match state emission distribution
+        is defined as:
+
+        .. math::
+
+            \\frac{1}{M} \\sum_{k=1}^{M} \\sum_x {
+                p_k(x) \\log_2 \\frac{p_k(x)}{f(x)}
+            }
+
+        in bits, where :math:`p_k(x)` is the emission probability for symbol
+        :math:`x` from match state :math:`k`, and :math:`f(x)` is the
+        background emission probability for :math:`x` from the null model.
+
+        Arguments:
+            background (`~plan7.Background`): The null model from which to
+                get the background emission probabilities.
+
+        Returns:
+            `float`: The mean relative entropy, in bits.
+
+        Example:
+            >>> background = plan7.Background(easel.Alphabet.amino())
+            >>> thioesterase.mean_match_relative_entropy(background)
+            1.1201...
+
+        .. versionadded:: 0.4.10
+
+        """
+        assert self._hmm != NULL
+        assert background._bg != NULL
+        with nogil:
+            return libhmmer.modelstats.p7_MeanMatchRelativeEntropy(self._hmm, background._bg)
+
+    cpdef void renormalize(self):
+        """renormalize(self)\n--
+
+        Renormalize all parameter vectors (emissions and transitions).
+
+        .. versionadded:: 0.4.0
+
+        """
+        assert self._hmm != NULL
+
+        cdef int status
+        with nogil:
+            status = libhmmer.p7_hmm.p7_hmm_Renormalize(self._hmm)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_hmm_Renormalize")
+
     cpdef void scale(self, double scale, bint exponential=False):
         """scale(self, scale, exponential=False)\n--
 
-        In a model containing counts, rescale counts by a factor.
+        Rescale counts by a factor in a model containing counts.
 
         This method only affects core probability model emissions and
         transitions.
@@ -2407,22 +2531,6 @@ cdef class HMM:
             status = libhmmer.p7_hmm.p7_hmm_SetComposition(self._hmm)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_hmm_SetComposition")
-
-    cpdef void renormalize(self):
-        """renormalize(self)\n--
-
-        Renormalize all parameter vectors (emissions and transitions).
-
-        .. versionadded:: 0.4.0
-
-        """
-        assert self._hmm != NULL
-
-        cdef int status
-        with nogil:
-            status = libhmmer.p7_hmm.p7_hmm_Renormalize(self._hmm)
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "p7_hmm_Renormalize")
 
     cpdef void write(self, object fh, bint binary=False) except *:
         """write(self, fh, binary=False)\n--

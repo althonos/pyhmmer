@@ -122,11 +122,14 @@ cdef class HMM:
     cpdef object __setstate__(self, dict state)
 
     cpdef HMM copy(self)
-    cpdef void write(self, object fh, bint binary=*) except *
-    cpdef void zero(self)
+    cpdef double mean_match_entropy(self) except *
+    cpdef double mean_match_information(self, Background background) except *
+    cpdef double mean_match_relative_entropy(self, Background background) except *
     cpdef void renormalize(self)
     cpdef void scale(self, double scale, bint exponential=?)
     cpdef void set_composition(self)
+    cpdef void write(self, object fh, bint binary=*) except *
+    cpdef void zero(self)
 
 
 cdef class HMMFile:
