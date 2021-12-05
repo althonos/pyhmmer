@@ -2339,46 +2339,6 @@ cdef class HMM:
 
     # --- Methods ------------------------------------------------------------
 
-    cpdef void write(self, object fh, bint binary=False) except *:
-        """write(self, fh, binary=False)\n--
-
-        Write the HMM to a file handle.
-
-        Arguments:
-            fh (`io.IOBase`): A Python file handle, opened in binary mode
-                (this must be the case even with ``binary=False``, since
-                the C code will emit bytes in either case).
-            binary (`bool`): Pass ``False`` to emit the file in ASCII mode
-                using the latest supported HMMER format, or ``True`` to use
-                the binary HMMER3 format.
-
-        """
-        cdef int     status
-        cdef FILE*   file
-        cdef P7_HMM* hm     = self._hmm
-
-        file = fopen_obj(fh, mode="w")
-
-        if binary:
-            status = libhmmer.p7_hmmfile.p7_hmmfile_WriteBinary(file, -1, hm)
-        else:
-            status = libhmmer.p7_hmmfile.p7_hmmfile_WriteASCII(file, -1, hm)
-
-        if status == libeasel.eslOK:
-            fclose(file)
-        else:
-            raise UnexpectedError(status, "p7_hmmfile_WriteASCII")
-
-    cpdef void zero(self):
-        """zero(self)\n--
-
-        Set all parameters to zero, including model composition.
-
-        """
-        assert self._hmm != NULL
-        with nogil:
-            libhmmer.p7_hmm.p7_hmm_Zero(self._hmm)
-
     cpdef HMM copy(self):
         """copy(self)\n--
 
@@ -2397,22 +2357,6 @@ cdef class HMM:
         if new._hmm == NULL:
             raise AllocationError("P7_HMM", sizeof(P7_HMM))
         return new
-
-    cpdef void renormalize(self):
-        """renormalize(self)\n--
-
-        Renormalize all parameter vectors (emissions and transitions).
-
-        .. versionadded:: 0.4.0
-
-        """
-        assert self._hmm != NULL
-
-        cdef int status
-        with nogil:
-            status = libhmmer.p7_hmm.p7_hmm_Renormalize(self._hmm)
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "p7_hmm_Renormalize")
 
     cpdef void scale(self, double scale, bint exponential=False):
         """scale(self, scale, exponential=False)\n--
@@ -2463,6 +2407,62 @@ cdef class HMM:
             status = libhmmer.p7_hmm.p7_hmm_SetComposition(self._hmm)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_hmm_SetComposition")
+
+    cpdef void renormalize(self):
+        """renormalize(self)\n--
+
+        Renormalize all parameter vectors (emissions and transitions).
+
+        .. versionadded:: 0.4.0
+
+        """
+        assert self._hmm != NULL
+
+        cdef int status
+        with nogil:
+            status = libhmmer.p7_hmm.p7_hmm_Renormalize(self._hmm)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_hmm_Renormalize")
+
+    cpdef void write(self, object fh, bint binary=False) except *:
+        """write(self, fh, binary=False)\n--
+
+        Write the HMM to a file handle.
+
+        Arguments:
+            fh (`io.IOBase`): A Python file handle, opened in binary mode
+                (this must be the case even with ``binary=False``, since
+                the C code will emit bytes in either case).
+            binary (`bool`): Pass ``False`` to emit the file in ASCII mode
+                using the latest supported HMMER format, or ``True`` to use
+                the binary HMMER3 format.
+
+        """
+        cdef int     status
+        cdef FILE*   file
+        cdef P7_HMM* hm     = self._hmm
+
+        file = fopen_obj(fh, mode="w")
+
+        if binary:
+            status = libhmmer.p7_hmmfile.p7_hmmfile_WriteBinary(file, -1, hm)
+        else:
+            status = libhmmer.p7_hmmfile.p7_hmmfile_WriteASCII(file, -1, hm)
+
+        if status == libeasel.eslOK:
+            fclose(file)
+        else:
+            raise UnexpectedError(status, "p7_hmmfile_WriteASCII")
+
+    cpdef void zero(self):
+        """zero(self)\n--
+
+        Set all parameters to zero, including model composition.
+
+        """
+        assert self._hmm != NULL
+        with nogil:
+            libhmmer.p7_hmm.p7_hmm_Zero(self._hmm)
 
 
 cdef class HMMFile:
