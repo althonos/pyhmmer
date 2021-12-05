@@ -2385,6 +2385,31 @@ cdef class HMM:
             raise AllocationError("P7_HMM", sizeof(P7_HMM))
         return new
 
+    cpdef VectorF match_occupancy(self):
+        """match_occupancy(self)\n--
+
+        Calculate the match occupancy for each match state.
+
+        Returns:
+            `~easel.VectorF`: A vector of size :math:`M+1` containing the
+            probability that each match state is used in a sample glocal
+            path through the model.
+
+        .. versionadded:: 0.4.10
+
+        """
+        assert self._hmm != NULL
+        cdef VectorF mocc = VectorF.zeros(self._hmm.M)
+        with nogil:
+            status = libhmmer.p7_hmm.p7_hmm_CalculateOccupancy(
+                self._hmm,
+                <float*> mocc._data,
+                NULL
+            )
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_hmm_CalculateOccupancy")
+        return mocc
+
     cpdef double mean_match_entropy(self) except *:
         """mean_match_entropy(self)\n--
 
