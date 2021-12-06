@@ -38,8 +38,8 @@ for result in data["results"]:
         raise ValueError("could not find format")
     result["cpu"] = int(CPU_RX.search(result["command"]).group(1))
 
-plt.figure(1, figsize=(12, 6))
-plt.subplot(1, 2, 1)
+plt.figure(1, figsize=(18, 6))
+plt.subplot(1, 3, 1)
 
 data["results"].sort(key=lambda r: (r["tool"], r["format"], r["cpu"]))
 for color, (tool, group) in zip(
@@ -60,7 +60,7 @@ for color, (tool, group) in zip(
         X = numpy.array([r["cpu"] for r in group_pressed])
         Y = numpy.array([r["mean"] for r in group_pressed])
         ci = [1.96 * r["stddev"] / math.sqrt(len(r["times"])) for r in group_pressed]
-        plt.plot(X, Y, label=f"{tool}", color=color, marker="o")
+        plt.plot(X, Y, label=tool, color=color, marker="o")
         plt.fill_between(X, Y - ci, Y + ci, color=color, alpha=0.1)
 
 
@@ -83,7 +83,7 @@ for result in data["results"]:
     result["cpu"] = int(CPU_RX.search(result["command"]).group(1))
 
 # plt.figure(2, figsize=(6,6))
-plt.subplot(1, 2, 2)
+plt.subplot(1, 3, 2)
 data["results"].sort(key=lambda r: (r["tool"], r["cpu"]))
 for color, (tool, group) in zip(
     Bold_3.hex_colors[1:], itertools.groupby(data["results"], key=lambda r: r["tool"])
@@ -92,11 +92,43 @@ for color, (tool, group) in zip(
     X = numpy.array([r["cpu"] for r in group])
     Y = numpy.array([r["mean"] for r in group])
     ci = [1.96 * r["stddev"] / math.sqrt(len(r["times"])) for r in group]
-    plt.plot(X, Y, label=f"{tool}", color=color, marker="o")
+    plt.plot(X, Y, label=tool, color=color, marker="o")
     plt.fill_between(X, Y - ci, Y + ci, color=color, alpha=0.1)
 
 plt.legend()
 plt.xlabel("CPUs")
 plt.ylabel("Time (s)")
+
+
+
+with open(os.path.join(args.folder, "nhmmer.json")) as f:
+    data = json.load(f)
+
+CPU_RX = re.compile(r"(?:--cpu|--jobs) (\d+)")
+for result in data["results"]:
+    if result["command"].startswith("nhmmer"):
+        result["tool"] = result["command"].split(" ")[0]
+    else:
+        result["tool"] = "pyhmmer"
+    result["cpu"] = int(CPU_RX.search(result["command"]).group(1))
+
+# plt.figure(2, figsize=(6,6))
+plt.subplot(1, 3, 3)
+data["results"].sort(key=lambda r: (r["tool"], r["cpu"]))
+for color, (tool, group) in zip(
+    Bold_3.hex_colors[1:], itertools.groupby(data["results"], key=lambda r: r["tool"])
+):
+    group = list(group)
+    X = numpy.array([r["cpu"] for r in group])
+    Y = numpy.array([r["mean"] for r in group])
+    ci = [1.96 * r["stddev"] / math.sqrt(len(r["times"])) for r in group]
+    plt.plot(X, Y, label=tool, color=color, marker="o")
+    plt.fill_between(X, Y - ci, Y + ci, color=color, alpha=0.1)
+
+plt.legend()
+plt.xlabel("CPUs")
+plt.ylabel("Time (s)")
+
+
 plt.savefig(os.path.join(args.folder, "plot.svg"), transparent=True)
 plt.show()

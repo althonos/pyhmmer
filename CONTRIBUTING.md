@@ -7,7 +7,7 @@ feedback.
 ## Setting up a local repository
 
 Make sure you clone the repository in recursive mode, so you also get the
-wrapped code of Easel and HMMER, which are exposed as ``git`` submodules:
+wrapped code of Easel and HMMER, which are exposed as `git` submodules:
 
 ```console
 $ git clone --recursive https://github.com/althonos/pyhmmer
@@ -22,6 +22,22 @@ locally:
 ```console
 $ python setup.py build_ext --debug --inplace
 $ python -m unittest discover -vv
+```
+
+## Running benchmarks
+
+Benchmarks require the HMMER binaries to be available in the `$PATH`,
+as well as the [`hyperfine`](https://github.com/sharkdp/hyperfine) 
+binary. Then make sure to have the extensions compiled in release mode:
+
+```console
+$ python setup.py build_ext --inplace --force
+```
+
+Then run the benchmarks using the UNIX shell script:
+
+```console
+$ ./benches/run.sh
 ```
 
 ## Coding guidelines
