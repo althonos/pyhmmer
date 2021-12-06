@@ -6,7 +6,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.9...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.10...HEAD
+
+
+## [v0.4.10] - 2021-12-06
+[v0.4.10]: https://github.com/althonos/pyhmmer/compare/v0.4.9...v0.4.10
+
+### Added
+- `entropy` and `relative_entropy` methods to `easel.VectorF` to compute the Shannon entropy of a vector and the Kullback-Leibler divergence of two vectors.
+- `mean_match_entropy`, `mean_match_information` and `mean_match_relative_entropy` methods to `plan7.HMM` to get information statistics of an HMM model.
+- `match_occupancy` method to `plan7.HMM` to compute the occupancy for each match state as an `easel.VectorF`.
+
+### Fixed
+- `plan7.Builder.build_msa` using the gap-open and gap-extend probabilities instead of the MSA itself to compute the transition probabilities for the new HMM.
+
+### Changed
+- `plan7.Builder.build` will now only load the score system once and reuse it unless a different score system is requested between calls.
 
 
 ## [v0.4.9] - 2021-11-11
