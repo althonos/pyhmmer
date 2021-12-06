@@ -1399,7 +1399,7 @@ cdef class VectorF(Vector):
 
         .. math::
 
-            H = \\sum_{i=0}^{N}{\\log_2 p_i}`.
+            H = \\sum_{i=0}^{N}{\\log_2 p_i}
 
         Example:
             >>> easel.VectorF([0.1, 0.1, 0.3, 0.5]).entropy()
@@ -1408,9 +1408,10 @@ cdef class VectorF(Vector):
             2.0
 
         References:
-            - 'Entropy, Relative Entropy, and Mutual Information'. In
-              Elements of Information Theory, 13–55. John Wiley & Sons, Ltd,
-              2005. :doi:`10.1002/047174882X.ch2`.
+            - Cover, Thomas M., and Thomas, Joy A.
+              *Entropy, Relative Entropy, and Mutual Information*. In
+              Elements of Information Theory, 13–55. Wiley (2005): 2.
+              :doi:`10.1002/047174882X.ch2` :isbn:`9780471241959`.
 
         .. versionadded:: 0.4.10
 
@@ -1473,9 +1474,10 @@ cdef class VectorF(Vector):
             0.3452...
 
         References:
-            - 'Entropy, Relative Entropy, and Mutual Information'. In
-              Elements of Information Theory, 13–55. John Wiley & Sons, Ltd,
-              2005. :doi:`10.1002/047174882X.ch2`.
+            - Cover, Thomas M., and Thomas, Joy A.
+              *Entropy, Relative Entropy, and Mutual Information*. In
+              Elements of Information Theory, 13–55. Wiley (2005): 2.
+              :doi:`10.1002/047174882X.ch2` :isbn:`9780471241959`.
 
         .. versionadded:: 0.4.10
 
@@ -1502,14 +1504,15 @@ cdef class VectorF(Vector):
 
         Returns the scalar sum of all elements in the vector.
 
-        Floating point summations use Kahan compensated summation, in order
-        to minimize roundoff error accumulation. Additionally, they are most
-        accurate if the vector is sorted in increasing order, from small to
-        large, so you may consider sorting the vector before summing it.
+        Float summations use `Kahan's algorithm <https://w.wiki/4Wa5>`_, in
+        order to minimize roundoff error accumulation. Additionally, they
+        are most accurate if the vector is sorted in increasing order, from
+        small to large, so you may consider sorting the vector before
+        summing it.
 
         References:
             - Kahan, W.
-              "Pracniques: Further Remarks on Reducing Truncation Errors".
+              *Pracniques: Further Remarks on Reducing Truncation Errors*.
               Communications of the ACM 8, no. 1 (1 January 1965): 40.
               :doi:`10.1145/363707.363723`.
 
