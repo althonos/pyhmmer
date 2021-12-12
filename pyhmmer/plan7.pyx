@@ -900,6 +900,7 @@ cdef class Builder:
 
 
 @cython.freelist(8)
+@cython.no_gc_clear
 cdef class Cutoffs:
     """A mutable view over the score cutoffs of a `HMM` or a `Profile`.
 
@@ -1313,6 +1314,7 @@ cdef class Domains:
 
 
 @cython.freelist(8)
+@cython.no_gc_clear
 cdef class EvalueParameters:
     """A mutable view over the e-value parameters of a `HMM` or a `Profile`.
 
@@ -3145,6 +3147,7 @@ cdef class OptimizedProfile:
 
 
 @cython.freelist(8)
+@cython.no_gc_clear
 cdef class Offsets:
     """A mutable view over the disk offsets of a profile.
     """

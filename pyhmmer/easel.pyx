@@ -782,6 +782,7 @@ cdef class KeyHash:
 
 # --- Matrix & Vector --------------------------------------------------------
 
+@cython.no_gc_clear
 cdef class Vector:
     """An abstract 1D array of fixed size.
 
@@ -1899,6 +1900,7 @@ cdef class VectorU8(Vector):
         return sum
 
 
+@cython.no_gc_clear
 cdef class Matrix:
     """An abstract 2D array of fixed size.
 
@@ -3836,6 +3838,7 @@ cdef class MSAFile:
 
 # --- Randomness -------------------------------------------------------------
 
+@cython.no_gc_clear
 cdef class Randomness:
     """A portable, thread-safe random number generator.
 
