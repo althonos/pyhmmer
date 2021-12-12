@@ -40,9 +40,11 @@ HMMER internals, which has the following advantages over CLI wrappers
   in memory, via instances of the
   [`pyhmmer.plan7.TopHits`](https://pyhmmer.readthedocs.io/en/stable/api/plan7.html#pyhmmer.plan7.TopHits)
   class.
-- **no input formatting**: The Easel object model is exposed in the `pyhmmer.easel`
-  module, and you have the possibility to build a `Sequence` object yourself
-  to pass to the HMMER pipeline. This is useful if your sequences are already
+- **no input formatting**: The Easel object model is exposed in the
+  [`pyhmmer.easel`](https://pyhmmer.readthedocs.io/en/stable/api/easel.html)
+  module, and you have the possibility to build a
+  [`DigitalSequence`](https://pyhmmer.readthedocs.io/en/stable/api/easel.html#pyhmmer.easel.DigitalSequence)
+  object yourself to pass to the HMMER pipeline. This is useful if your sequences are already
   loaded in memory, for instance because you obtained them from another
   Python library (such as [Pyrodigal](https://github.com/althonos/pyrodigal)
   or [Biopython](https://biopython.org/)).
@@ -53,14 +55,15 @@ HMMER internals, which has the following advantages over CLI wrappers
 - **efficient**: Using `pyhmmer` to launch `hmmsearch` on sequences
   and HMMs in disk storage is typically faster than directly using the
   `hmmsearch` binary (see the [Benchmarks section](#%EF%B8%8F-benchmarks)).
-  `pyhmmer.hmmer.hmmsearch` uses a different parallelisation strategy compared to
+  [`pyhmmer.hmmer.hmmsearch`](https://pyhmmer.readthedocs.io/en/stable/api/hmmer.html#hmmsearch)
+  uses a different parallelisation strategy compared to
   the `hmmsearch` binary from HMMER, which helps getting the most of
-  multiple CPUs.
+  multiple CPUs when annotating smaller sequence databases.
 
 *This library is still a work-in-progress, and in an experimental stage,
 but it should already pack enough features to run biological analyses or
-workflows involving `hmmsearch`, `nhmmer`, `phmmer`, `hmmbuild` and
-`hmmalign`.*
+workflows involving `hmmsearch`, `hmmscan`, `nhmmer`, `phmmer`, `hmmbuild`
+and `hmmalign`.*
 
 
 ## 🔧 Installing
@@ -97,22 +100,29 @@ $ pydoc pyhmmer.plan7
 ## 💡 Example
 
 Use `pyhmmer` to run `hmmsearch`, and obtain an iterable over
-[`TopHits`](https://pyhmmer.readthedocs.io/en/stable/api/plan7.html#pyhmmer.plan7.TopHits)
-that can be used for further sorting/querying in Python:
+[`TopHits`] that can be used for further sorting/querying in Python.
+Processing happens in parallel using Python threads, and a [`TopHits`]
+object is yielded for every [`HMM`] passed in the input iterable.
+
+[`HMM`]: https://pyhmmer.readthedocs.io/en/stable/api/plan7.html#pyhmmer.plan7.HMM
+[`TopHits`]: https://pyhmmer.readthedocs.io/en/stable/api/plan7.html#pyhmmer.plan7.TopHits
 
 ```python
 import pyhmmer
 
-with pyhmmer.easel.SequenceFile("938293.PRJEB85.HG003687.faa") as file:
-    alphabet = file.guess_alphabet()
-    sequences = [seq.digitize(alphabet) for seq in file]
+with pyhmmer.easel.SequenceFile("tests/data/seqs/938293.PRJEB85.HG003687.faa") as seq_file:
+    file.set_digital(file.guess_alphabet())
+    sequences = list(seq_file)
 
-with pyhmmer.plan7.HMMFile("Pfam.hmm") as hmms:
-    all_hits = list(pyhmmer.hmmsearch(hmms, sequences_file, cpus=4))
+with pyhmmer.plan7.HMMFile("tests/data/hmms/txt/t2pks.hmm") as hmm_file:
+    all_hits = list(pyhmmer.hmmsearch(hmm_file, sequences_file, cpus=4))
 ```
 
-Processing happens in parallel using Python threads, and a ``TopHits``
-object is yielded for every ``HMM`` passed in the input iterable.
+Have a look at more in-depth examples such as [building a HMM from an alignment](https://pyhmmer.readthedocs.io/en/stable/examples/msa_to_hmm.html),
+[analysing the active site of a hit](https://pyhmmer.readthedocs.io/en/stable/examples/active_site.html),
+or [fetching marker genes from a genome](https://pyhmmer.readthedocs.io/en/stable/examples/fetchmgs.html)
+in the [Examples](https://pyhmmer.readthedocs.io/en/stable/examples/index.html)
+page of the [online documentation](https://pyhmmer.readthedocs.io/).
 
 
 ## 💭 Feedback
