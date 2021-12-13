@@ -156,6 +156,43 @@ class _TestSearch(metaclass=abc.ABCMeta):
                 # self.assertEqual(f"{domain.c_evalue:9.2g}", f"{float(fields[11]):9.2g}")
                 self.assertEqual(f"{domain.i_evalue:9.2g}", f"{float(fields[12]):9.2g}")
 
+    def test_hmm_vs_optimized_profile(self):
+        with self.hmm_file("PF02826") as hmm_file:
+            hmm = next(hmm_file)
+            bg = pyhmmer.plan7.Background(hmm.alphabet)
+            profile = pyhmmer.plan7.Profile(hmm.M, hmm.alphabet)
+            profile.configure(hmm, bg, 100)
+        with self.seqs_file("938293.PRJEB85.HG003687") as seqs_file:
+            seqs_file.set_digital(hmm.alphabet)
+            seqs = list(seqs_file)
+
+        hits_hmm = self.get_hits(hmm, seqs)
+        self.assertEqual(len(hits_hmm), 22)
+
+        hits_oprofile = self.get_hits(profile.optimized(), seqs)
+        self.assertEqual(len(hits_oprofile), 22)
+
+        for hit_hmm, hit_oprofile in itertools.zip_longest(hits_hmm, hits_oprofile):
+            self.assertEqual(hit_hmm.name, hit_oprofile.name)
+            self.assertEqual(hit_hmm.accession, hit_oprofile.accession)
+            self.assertEqual(hit_hmm.description, hit_oprofile.description)
+            self.assertEqual(hit_hmm.score, hit_oprofile.score)
+            self.assertEqual(hit_hmm.pre_score, hit_oprofile.pre_score)
+            self.assertEqual(hit_hmm.sum_score, hit_oprofile.sum_score)
+            self.assertEqual(hit_hmm.bias, hit_oprofile.bias)
+            self.assertEqual(hit_hmm.evalue, hit_oprofile.evalue)
+            self.assertEqual(hit_hmm.pvalue, hit_oprofile.pvalue)
+            for dom_hmm, dom_oprofile in itertools.zip_longest(hit_hmm.domains, hit_oprofile.domains):
+                self.assertEqual(dom_hmm.env_from, dom_oprofile.env_from)
+                self.assertEqual(dom_hmm.env_to, dom_oprofile.env_to)
+                self.assertEqual(dom_hmm.score, dom_oprofile.score)
+                self.assertEqual(dom_hmm.bias, dom_oprofile.bias)
+                self.assertEqual(dom_hmm.correction, dom_oprofile.correction)
+                self.assertEqual(dom_hmm.envelope_score, dom_oprofile.envelope_score)
+                self.assertEqual(dom_hmm.c_evalue, dom_oprofile.c_evalue)
+                self.assertEqual(dom_hmm.i_evalue, dom_oprofile.i_evalue)
+                self.assertEqual(dom_hmm.pvalue, dom_oprofile.pvalue)
+
 
 class TestHmmsearch(_TestSearch, unittest.TestCase):
 
