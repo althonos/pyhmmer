@@ -214,7 +214,6 @@ class _MSAPipelineThread(_PipelineThread[DigitalMSA]):
 
 # --- Search runners ---------------------------------------------------------
 
-@abc.abstractmethod
 class _Search(typing.Generic[_Q], abc.ABC):
 
     def __init__(
@@ -499,28 +498,6 @@ def hmmsearch(
 
 # --- phmmer -----------------------------------------------------------------
 
-@typing.overload
-def phmmer(
-    queries: typing.Iterable[DigitalMSA],
-    sequences: typing.Collection[DigitalSequence],
-    cpus: int = 0,
-    callback: typing.Optional[typing.Callable[[DigitalMSA, int], None]] = None,
-    builder: typing.Optional[Builder] = None,
-    **options: typing.Any,
-) -> typing.Iterator[TopHits]:
-    ...
-
-@typing.overload
-def phmmer(
-    queries: typing.Iterable[DigitalSequence],
-    sequences: typing.Collection[DigitalSequence],
-    cpus: int = 0,
-    callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
-    builder: typing.Optional[Builder] = None,
-    **options: typing.Any,
-) -> typing.Iterator[TopHits]:
-    ...
-
 def phmmer(
     queries: typing.Iterable[_S],
     sequences: typing.Collection[DigitalSequence],
@@ -595,39 +572,6 @@ def phmmer(
 
 
 # --- nhmmer -----------------------------------------------------------------
-
-@typing.overload
-def nhmmer(
-    queries: typing.Iterable[DigitalMSA],
-    sequences: typing.Collection[DigitalSequence],
-    cpus: int = 0,
-    callback: typing.Optional[typing.Callable[[DigitalMSA, int], None]] = None,
-    builder: typing.Optional[Builder] = None,
-    **options: typing.Any,
-) -> typing.Iterator[TopHits]:
-    ...
-
-@typing.overload
-def nhmmer(
-    queries: typing.Iterable[DigitalSequence],
-    sequences: typing.Collection[DigitalSequence],
-    cpus: int = 0,
-    callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
-    builder: typing.Optional[Builder] = None,
-    **options: typing.Any,
-) -> typing.Iterator[TopHits]:
-    ...
-
-@typing.overload
-def nhmmer(
-    queries: typing.Iterable[HMM],
-    sequences: typing.Collection[DigitalSequence],
-    cpus: int = 0,
-    callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
-    builder: typing.Optional[Builder] = None,
-    **options: typing.Any,
-) -> typing.Iterator[TopHits]:
-    ...
 
 def nhmmer(
     queries: typing.Iterable[_Q],
