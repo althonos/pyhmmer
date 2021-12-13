@@ -1517,7 +1517,7 @@ cdef class Hit:
         assert self._hit != NULL
         if self._hit.desc == NULL:
             return None
-        return <bytes> self._hit.acc
+        return <bytes> self._hit.desc
 
     @property
     def score(self):
@@ -3759,7 +3759,7 @@ cdef class Pipeline:
         self._pli.inc_by_E = self._cutoff_save['inc_by_E']
         self._pli.incdom_by_E = self._cutoff_save['incdom_by_E']
 
-    cdef P7_OPROFILE* _get_om_from_query(self, object query, int L = 100) except NULL:
+    cdef P7_OPROFILE* _get_om_from_query(self, object query, int L = L_HINT) except NULL:
         assert self._pli != NULL
 
         if isinstance(query, OptimizedProfile):
