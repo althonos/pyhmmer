@@ -90,6 +90,11 @@ test:python3.9:
     python: /opt/python/cp39-cp39/bin/python
   <<: *test-cpython
 
+test:python3.10:
+  variables:
+    python: /opt/python/cp310-cp310/bin/python
+  <<: *test-cpython
+
 test:pypy3.6:
   variables:
     python: /opt/pypy/pypy3.6-7.3.3/bin/python

@@ -25,6 +25,9 @@ jobs:
         - python-version: 3.9
           pyo3-python: /opt/python/cp39-cp39/bin/python
           manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
+        - python-version: '3.10'
+          pyo3-python: /opt/python/cp310-cp310/bin/python
+          manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
         - python-version: pypy-3.6
           pyo3-python: /opt/pypy/pypy3.6-7.3.3/bin/python
           manylinux-img: pypywheels/manylinux2010-pypy_x86_64
@@ -62,6 +65,7 @@ jobs:
         - 3.7
         - 3.8
         - 3.9
+        - '3.10'
         # - pypy-3.6
         - pypy-3.7
     steps:
