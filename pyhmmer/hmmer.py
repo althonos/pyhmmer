@@ -382,7 +382,7 @@ class _SequenceSearch(_Search[DigitalSequence]):
         callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
         pipeline_class: typing.Type[Pipeline] = Pipeline,
         alphabet: Alphabet = Alphabet.amino(),
-        **options: typing.Dict[str, object],
+        **options, # type: typing.Dict[str, object],
     ) -> None:
         super().__init__(queries, sequences, cpus, callback, pipeline_class, alphabet, **options)
         self.builder = builder
@@ -421,7 +421,7 @@ class _MSASearch(_Search[DigitalMSA]):
         callback: typing.Optional[typing.Callable[[DigitalMSA, int], None]] = None,
         pipeline_class: typing.Type[Pipeline] = Pipeline,
         alphabet: Alphabet = Alphabet.amino(),
-        **options: typing.Dict[str, object],
+        **options, # type: typing.Dict[str, object],
     ) -> None:
         super().__init__(queries, sequences, cpus, callback, pipeline_class, alphabet, **options)
         self.builder = builder
@@ -456,13 +456,13 @@ def hmmsearch(
     sequences: typing.Collection[DigitalSequence],
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_M, int], None]] = None,
-    **options,  # type: typing.Any
+    **options,  # type: typing.Dict[str, object]
 ) -> typing.Iterator[TopHits]:
     """Search HMM profiles against a sequence database.
 
     Arguments:
-        queries (iterable of `~pyhmmer.plan7.HMM`): The query HMMs to
-            search in the database.
+        queries (iterable of `HMM`, `Profile` or `OptimizedProfile`): The
+            query HMMs or profiles to search for in the database.
         sequences (collection of `~pyhmmer.easel.DigitalSequence`): A
             database of sequences to query.
         cpus (`int`): The number of threads to run in parallel. Pass ``1``
@@ -487,10 +487,13 @@ def hmmsearch(
 
     .. versionadded:: 0.1.0
 
+    .. versionchanged:: 0.4.9
+       Allow using `Profile` and `OptimizedProfile` queries.
+
     """
     # count the number of CPUs to use
     _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or multiprocessing.cpu_count()
-    runner: _ModelSearch[_M] = _ModelSearch(queries, sequences, _cpus, callback, **options)
+    runner: _ModelSearch[_M] = _ModelSearch(queries, sequences, _cpus, callback, **options) # type: ignore
     return runner.run()
 
 
@@ -524,13 +527,13 @@ def phmmer(
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_S, int], None]] = None,
     builder: typing.Optional[Builder] = None,
-    **options: typing.Dict[str, object],
+    **options, # type: typing.Dict[str, object]
 ) -> typing.Iterator[TopHits]:
     """Search protein sequences against a sequence database.
 
     Arguments:
-        queries (iterable of `DigitalSequence`, `DigitalMSA` or `HMM`): The
-            query sequences or profiles to search in the database.
+        queries (iterable of `DigitalSequence` or `DigitalMSA`): The
+            query sequences to search for in the sequence database.
         sequences (collection of `~pyhmmer.easel.DigitalSequence`): A
             database of sequences to query.
         cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
@@ -632,20 +635,49 @@ def nhmmer(
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_Q, int], None]] = None,
     builder: typing.Optional[Builder] = None,
-    **options: typing.Any,
+    **options, # type: typing.Dict[str, object]
 ) -> typing.Iterator[TopHits]:
     """Search nucleotide sequences against a sequence database.
 
+    Arguments:
+        queries (iterable of `DigitalSequence`, `DigitalMSA`, `HMM`): The
+            query sequences or profiles to search for in the sequence
+            database.
+        sequences (collection of `~pyhmmer.easel.DigitalSequence`): A
+            database of sequences to query.
+        cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
+            run everything in the main thread, ``0`` to automatically
+            select a suitable number (using `psutil.cpu_count`), or any
+            positive number otherwise.
+        callback (callable): A callback that is called everytime a query is
+            processed with two arguments: the query, and the total number
+            of queries. This can be used to display progress in UI.
+        builder (`~pyhmmer.plan7.Builder`, optional): A builder to configure
+            how the queries are converted to HMMs. Passing `None` will create
+            a default instance.
+
+    Yields:
+        `~pyhmmer.plan7.TopHits`: A *top hits* instance for each query,
+        in the same order the queries were passed in the input.
+
     Note:
-        Any additional keyword arguments passed to the `phmmer` function
+        Any additional keyword arguments passed to the `nhmmer` function
         will be passed to the `~pyhmmer.plan7.LongTargetsPipeline` created
         in each worker thread. The ``strand`` argument can be used to
         restrict the search on the direct or reverse strand.
 
-    See Also:
-        The equivalent function for proteins, `~pyhmmer.hmmer.phmmer`.
+    Hint:
+        This function is not just `phmmer` for nucleotide sequences; it
+        actually uses a `~pyhmmer.plan7.LongTargetsPipeline` internally
+        instead of processing each target sequence in its entirety when
+        searching for hits. This avoids hitting the maximum target size
+        that can be used (100,000 residues), which may be a problem for
+        some larger genomes.
 
     .. versionadded:: 0.3.0
+
+    .. versionchanged:: 0.4.9
+       Allow using `Profile` and `OptimizedProfile` queries.
 
     """
     _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or multiprocessing.cpu_count()
