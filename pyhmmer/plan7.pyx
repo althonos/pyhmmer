@@ -3085,6 +3085,60 @@ cdef class OptimizedProfile:
             raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
 
     @property
+    def name(self):
+        """`bytes` or `None`: The name of the profile, if any.
+
+        .. versionadded:: 0.4.11
+
+        """
+        assert self._om != NULL
+        return None if self._om.name == NULL else <bytes> self._om.name
+
+    @property
+    def accession(self):
+        """`bytes` or `None`: The accession of the profile, if any.
+
+        .. versionadded:: 0.4.11
+
+        """
+        assert self._om != NULL
+        return None if self._om.acc == NULL else <bytes> self._om.acc
+
+    @property
+    def description(self):
+        """`bytes` or `None`: The description of the profile, if any.
+
+        .. versionadded:: 0.4.11
+
+        """
+        assert self._om != NULL
+        return None if self._om.desc == NULL else <bytes> self._om.desc
+
+    @property
+    def consensus(self):
+        """`str` or `None`: The consensus residue line of the profile, if any.
+
+        .. versionadded:: 0.4.11
+
+        """
+        assert self._om != NULL
+        if self._om.consensus[0] == b'\0':
+            return None
+        return (&self._om.consensus[1]).decode("ascii")
+
+    @property
+    def consensus_structure(self):
+        """`str` or `None`: The consensus structure of the profile, if any.
+
+        .. versionadded:: 0.4.11
+
+        """
+        assert self._om != NULL
+        if self._om.cs[0] == b'\0':
+            return None
+        return (&self._om.cs[1]).decode("ascii")
+
+    @property
     def tbm(self):
         r"""`int`: The constant cost for a :math:`B \to M_k` transition.
 
@@ -3171,6 +3225,27 @@ cdef class OptimizedProfile:
         offsets._offs = &self._om.offs
         offsets._owner = self
         return offsets
+
+    @property
+    def evalue_parameters(self):
+        """`~plan7.EvalueParameters`: The e-value parameters for this profile.
+        """
+        assert self._om != NULL
+        cdef EvalueParameters ep = EvalueParameters.__new__(EvalueParameters)
+        ep._evparams = &self._om.evparam
+        ep._owner = self
+        return ep
+
+    @property
+    def cutoffs(self):
+        """`~plan7.Cutoffs`: The bitscore cutoffs for this profile, if any.
+        """
+        assert self._om != NULL
+        cdef Cutoffs cutoffs = Cutoffs.__new__(Cutoffs)
+        cutoffs._cutoffs = &self._om.cutoff
+        cutoffs._flags = NULL
+        cutoffs._is_profile = True
+        return cutoffs
 
     # --- Methods ------------------------------------------------------------
 

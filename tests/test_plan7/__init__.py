@@ -3,6 +3,7 @@ from . import (
     test_builder,
     test_hmm,
     test_hmmfile,
+    test_optimized_profile,
     test_pipeline,
     test_profile,
     test_tophits,
@@ -15,6 +16,7 @@ def load_tests(loader, suite, pattern):
     suite.addTests(loader.loadTestsFromModule(test_builder))
     suite.addTests(loader.loadTestsFromModule(test_hmm))
     suite.addTests(loader.loadTestsFromModule(test_hmmfile))
+    suite.addTests(loader.loadTestsFromModule(test_optimized_profile))
     suite.addTests(loader.loadTestsFromModule(test_pipeline))
     suite.addTests(loader.loadTestsFromModule(test_profile))
     suite.addTests(loader.loadTestsFromModule(test_tophits))
