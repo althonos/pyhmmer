@@ -5225,6 +5225,8 @@ cdef class TopHits:
             raise UnexpectedError(status, "p7_tophits_Alignment")
 
 
+@cython.freelist(8)
+@cython.no_gc_clear
 cdef class Trace:
     """A traceback for the alignment of a model to a sequence.
 
