@@ -75,6 +75,11 @@ class _TestHMMPath:
     def test_filenotfound(self):
         self.assertRaises(FileNotFoundError, HMMFile, "path/to/missing/file")
 
+    def test_read_optimized_profiles(self):
+        path = os.path.join(self.hmms_folder, "db", "{}.hmm".format(self.ID))
+        with self.open_hmm(path) as f:
+            self.check_hmmfile(f.optimized_profiles())
+
 
 class _TestThioesterase(_TestHMMFile):
     ID = "Thioesterase"
