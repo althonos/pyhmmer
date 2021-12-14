@@ -3268,7 +3268,7 @@ cdef class OptimizedProfile:
         cdef OptimizedProfile new = OptimizedProfile.__new__(OptimizedProfile)
         new.alphabet = self.alphabet
         with nogil:
-            new._om = p7_oprofile.p7_oprofile_Clone(self._om)
+            new._om = p7_oprofile.p7_oprofile_Copy(self._om)
         if new._om == NULL:
             raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
         return new
