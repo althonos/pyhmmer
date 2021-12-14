@@ -140,9 +140,18 @@ cdef class HMMFile:
     cpdef HMM read(self)
     cpdef void close(self)
     cpdef bint is_pressed(self)
+    cpdef HMMPressedFile optimized_profiles(self)
 
     @staticmethod
     cdef P7_HMMFILE* _open_fileobj(object fh) except *
+
+
+cdef class HMMPressedFile:
+    cdef P7_HMMFILE* _hfp
+    cdef Alphabet _alphabet
+    cdef HMMFile _hmmfile
+
+    cpdef OptimizedProfile read(self)
 
 
 cdef class OptimizedProfile:

@@ -85,6 +85,7 @@ def load_tests(loader, tests, ignore):
                 thioesterase=thioesterase,
                 proteins=proteins,
                 luxc=luxc,
+                pyhmmer=pyhmmer,
                 **module.__dict__
             )
             tests.addTests(

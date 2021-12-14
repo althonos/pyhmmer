@@ -2898,6 +2898,115 @@ cdef class HMMFile:
             raise ValueError("I/O operation on closed file.")
         return self._hfp.is_pressed
 
+    cpdef HMMPressedFile optimized_profiles(self):
+        """optimized_profiles(self)\n--
+
+        Get an iterator over the `OptimizedProfile`s in the HMM database.
+
+        .. versionadded:: 0.4.11
+
+        """
+        if self._hfp == NULL:
+            raise ValueError("I/O operation on closed file.")
+        if not self._hfp.is_pressed:
+            raise ValueError("HMM file does not contain optimized profiles.")
+        cdef HMMPressedFile optimized = HMMPressedFile.__new__(HMMPressedFile)
+        optimized._alphabet = self._alphabet
+        optimized._hmmfile = self
+        optimized._hfp = self._hfp
+        return optimized
+
+
+cdef class HMMPressedFile:
+    """An iterator over the `OptimizedProfile`s in a pressed HMM database.
+
+    This class cannot be instantiated: use the `HMMFile.optimized_profiles`
+    to obtain an instance from an `HMMFile` that wraps a pressed HMM database.
+
+    Example:
+        Use a pressed HMM database to run a search pipeline using optimized
+        profiles directly, instead of converting them from the text HMMs::
+
+            >>> with HMMFile("tests/data/hmms/db/Thioesterase.hmm") as hfile:
+            ...     models = hfile.optimized_profiles()
+            ...     hits = next(pyhmmer.hmmsearch(models, proteins))
+
+        In this example, `~pyhmmer.hmmer.hmmsearch` will receive an iterator
+        of `OptimizedProfile` instead of an iterator of `HMM` is ``hfile`` was
+        passed directly; this lets `~pyhmmer.hmmer.hmmsearch` skip the
+        conversion step and run the search pipeline directly.
+
+    .. versionadded:: 0.4.11
+
+    """
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __cinit__(self):
+        self._alphabet = None
+        self._hmmfile = None
+        self._hfp = NULL
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        cdef OptimizedProfile om = self.read()
+        if om is None:
+            raise StopIteration()
+        return om
+
+    # --- Methods ------------------------------------------------------------
+
+    cpdef OptimizedProfile read(self):
+        """"read(self)\n--
+
+        Read the next optimized profile from the file.
+
+        Returns:
+            `OptimizedProfile`: The next optimized profile in the file, or
+            `None` if all profiles were read from the file already.
+
+        Raises:
+            `ValueError`: When attempting to read an optimized profile from a
+                closed file, or when the file could not be parsed.
+            `~pyhmmer.errors.AllocationError`: When memory for the
+                `OptimizedProfile` could not be allocated successfully.
+
+        .. versionadded:: 0.4.11
+
+        """
+        cdef int              status
+        cdef OptimizedProfile py_om
+        cdef P7_OPROFILE*     om     = NULL
+
+        if self._hfp == NULL:
+            raise ValueError("I/O operation on closed file.")
+
+        with nogil:
+            status = p7_oprofile_ReadMSV(self._hfp, &self._alphabet._abc, &om)
+            if status == libeasel.eslOK:
+                status = p7_oprofile_ReadRest(self._hfp, om)
+
+        if status == libeasel.eslOK:
+            py_om = OptimizedProfile.__new__(OptimizedProfile)
+            py_om.alphabet = self._alphabet # keep a reference to the alphabet
+            py_om._om = om
+            return py_om
+        elif status == libeasel.eslEOF:
+            return None
+        elif status == libeasel.eslEMEM:
+            raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
+        elif status == libeasel.eslESYS:
+            raise OSError(self._hfp.errbuf.decode("utf-8", "replace"))
+        elif status == libeasel.eslEFORMAT:
+            raise ValueError("Invalid format in file: {}".format(self._hfp.errbuf.decode("utf-8", "replace")))
+        elif status == libeasel.eslEINCOMPAT:
+            alphabet = libeasel.alphabet.esl_abc_DecodeType(self._alphabet.type)
+            raise ValueError("HMM is not in the expected {} alphabet".format(alphabet))
+        else:
+            raise UnexpectedError(status, "p7_oprofile_ReadMSV")
+
 
 cdef class OptimizedProfile:
     """An optimized profile that uses platform-specific instructions.
