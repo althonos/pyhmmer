@@ -2793,6 +2793,31 @@ cdef class HMMFile:
         return self
 
     def __next__(self):
+        cdef HMM hmm = self.read()
+        if hmm is None:
+            raise StopIteration()
+        return hmm
+
+    # --- Methods ------------------------------------------------------------
+
+    cpdef HMM read(self):
+        """read(self)\n--
+
+        Read the next HMM from the file.
+
+        Returns:
+            `HMM`: The next HMM in the file, or `None` if all HMMs were read
+            from the file already.
+
+        Raises:
+            `ValueError`: When attempting to read a HMM from a closed
+                file, or when the file could not be parsed.
+            `~pyhmmer.errors.AllocationError`: When memory for the HMM could
+                not be allocated successfully.
+
+        .. versionadded:: 0.4.11
+
+        """
         cdef int status
         cdef HMM py_hmm
         cdef P7_HMM* hmm = NULL
@@ -2809,7 +2834,7 @@ cdef class HMMFile:
             py_hmm._hmm = hmm
             return py_hmm
         elif status == libeasel.eslEOF:
-            raise StopIteration()
+            return None
         elif status == libeasel.eslEMEM:
             raise AllocationError("P7_HMM", sizeof(P7_HMM))
         elif status == libeasel.eslESYS:
@@ -2822,7 +2847,7 @@ cdef class HMMFile:
         else:
             raise UnexpectedError(status, "p7_hmmfile_Read")
 
-    # --- Methods ------------------------------------------------------------
+    # --- Utils --------------------------------------------------------------
 
     cpdef void close(self):
         """close(self)\n--
@@ -2839,7 +2864,6 @@ cdef class HMMFile:
             libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
             self._hfp = NULL
 
-    # --- Utils --------------------------------------------------------------
 
 
 cdef class OptimizedProfile:

@@ -138,6 +138,7 @@ cdef class HMMFile:
     cdef Alphabet _alphabet
 
     cpdef void close(self)
+    cpdef HMM read(self)
 
     @staticmethod
     cdef P7_HMMFILE* _open_fileobj(object fh) except *

@@ -5028,8 +5028,7 @@ cdef class SequenceFile:
             raise StopIteration()
         return seq
 
-
-    # --- Read methods -------------------------------------------------------
+    # --- Methods ----------------------------------------------------------
 
     cpdef Sequence read(self, bint skip_info=False, bint skip_sequence=False):
         """read(self, skip_info=False, skip_sequence=False)\n--
@@ -5137,17 +5136,6 @@ cdef class SequenceFile:
             raise ValueError("Could not parse file: {}".format(msg))
         else:
             raise UnexpectedError(status, funcname)
-
-
-    # --- Fetch methods ------------------------------------------------------
-
-    # cpdef Sequence fetch(self, bytes key, bint skip_info=False, bint skip_sequence=False):
-    #     cdef Sequence seq = TextSequence()
-    #     return self.fetchinto(seq, key, skip_info=skip_info, skip_sequence=skip_sequence)
-    #
-    # cpdef Sequence fetchinto(self, Sequence seq, bytes key, bint skip_info=False, bint skip_sequence=False):
-    #     raise NotImplementedError("TODO SequenceFile.fetchinto")
-
 
     # --- Utils --------------------------------------------------------------
 
