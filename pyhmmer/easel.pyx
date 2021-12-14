@@ -4761,7 +4761,6 @@ cdef class SequenceFile:
         else:
             raise UnexpectedError(status, "esl_sqio_Parse")
 
-
     # --- Constructor --------------------------------------------------------
 
     @staticmethod
@@ -5028,7 +5027,15 @@ cdef class SequenceFile:
             raise StopIteration()
         return seq
 
-    # --- Methods ----------------------------------------------------------
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def closed(self):
+        """`bool`: Whether the `SequenceFile` is closed or not.
+        """
+        return self._sqfp == NULL
+
+    # --- Methods ------------------------------------------------------------
 
     cpdef Sequence read(self, bint skip_info=False, bint skip_sequence=False):
         """read(self, skip_info=False, skip_sequence=False)\n--
