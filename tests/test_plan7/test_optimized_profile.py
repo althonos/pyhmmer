@@ -26,38 +26,14 @@ class TestOptimizedProfile(unittest.TestCase):
         cls.profile.configure(cls.hmm, cls.background, 200)
         cls.optimized_profile = cls.profile.optimized()
 
-    # def test_configure(self):
-    #     profile = Profile(self.hmm.M, Alphabet.dna())
-    #     bg = Background(profile.alphabet)
-    #     self.assertNotEqual(profile.alphabet, self.hmm.alphabet)
-    #     self.assertRaises(AlphabetMismatch, profile.configure, self.hmm, bg, 200)
-    #     hmm = HMM(100, profile.alphabet)
-    #     self.assertNotEqual(profile.alphabet, self.background.alphabet)
-    #     self.assertRaises(AlphabetMismatch, profile.configure, hmm, self.background, 200)
-    #
-    # def test_eq(self):
-    #     profile2 = Profile(self.hmm.M, self.alphabet)
-    #     profile2.configure(self.hmm, self.background, 200)
-    #     self.assertEqual(self.profile, profile2)
-    #     self.assertNotEqual(self.profile, 1)
+    def test_eq(self):
+        optimized_profile2 = self.profile.optimized()
+        self.assertEqual(self.optimized_profile, optimized_profile2)
+        self.assertNotEqual(self.optimized_profile, 1)
 
-    # def test_copy(self):
-    #     profile2 = copy.copy(self.profile)
-    #     self.assertEqual(self.profile, profile2)
-    #
-    # def test_profile_modes(self):
-    #     profile = self.profile.copy()
-    #     for multihit in (False, True):
-    #         for local in (False, True):
-    #             profile.configure(
-    #                 self.hmm,
-    #                 self.background,
-    #                 200,
-    #                 multihit=multihit,
-    #                 local=local
-    #             )
-    #             self.assertEqual(profile.is_multihit(), multihit)
-    #             self.assertEqual(profile.is_local(), local)
+    def test_copy(self):
+        optimized_profile2 = copy.copy(self.optimized_profile)
+        self.assertEqual(self.optimized_profile, optimized_profile2)
 
     def test_M(self):
         self.assertEqual(self.optimized_profile.M, self.hmm.M)

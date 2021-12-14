@@ -69,11 +69,11 @@ from libhmmer.p7_trace cimport P7_TRACE
 
 IF HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init
-    from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE, p7_oprofile_Dump, p7O_NQB
+    from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE, p7_oprofile_Dump, p7O_NQB, p7_oprofile_Compare
     from libhmmer.impl_vmx.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
 ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7O_EXTRA_SB
-    from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE, p7_oprofile_Dump, p7O_NQB
+    from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE, p7_oprofile_Dump, p7O_NQB, p7_oprofile_Compare
     from libhmmer.impl_sse.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
 
 from .easel cimport (
@@ -3052,6 +3052,23 @@ cdef class OptimizedProfile:
 
     def __copy__(self):
         return self.copy()
+
+    def __eq__(self, object other):
+        assert self._om != NULL
+
+        if not isinstance(other, OptimizedProfile):
+            return NotImplemented
+
+        cdef OptimizedProfile op     = <Profile> other
+        cdef bytearray        errbuf = bytearray(eslERRBUFSIZE)
+        cdef int              status = p7_oprofile_Compare(self._om, op._om, 0.0, errbuf)
+
+        if status == libeasel.eslOK:
+            return True
+        elif status == libeasel.eslFAIL:
+            return False
+        else:
+            raise UnexpectedError(status, "p7_oprofile_Compare")
 
     # --- Properties ---------------------------------------------------------
 
