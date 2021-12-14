@@ -70,11 +70,11 @@ from libhmmer.p7_trace cimport P7_TRACE
 IF HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init
     from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE, p7_oprofile_Dump, p7O_NQB
-    from libhmmer.impl_vmx.io cimport p7_oprofile_Write
+    from libhmmer.impl_vmx.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
 ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7O_EXTRA_SB
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE, p7_oprofile_Dump, p7O_NQB
-    from libhmmer.impl_sse.io cimport p7_oprofile_Write
+    from libhmmer.impl_sse.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
 
 from .easel cimport (
     Alphabet,
@@ -2798,6 +2798,14 @@ cdef class HMMFile:
             raise StopIteration()
         return hmm
 
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def closed(self):
+        """`bool`: Whether the `HMMFile` is closed or not.
+        """
+        return self._hfp == NULL
+
     # --- Methods ------------------------------------------------------------
 
     cpdef HMM read(self):
@@ -2858,12 +2866,37 @@ cdef class HMMFile:
         automatically if the `HMMFile` was used in a context::
 
             >>> with HMMFile("tests/data/hmms/bin/PKSI-AT.h3m") as hmm_file:
-            ...     hmm = next(hmm_file)
+            ...     hmm = hmm_file.read()
+
         """
         if self._hfp:
             libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
             self._hfp = NULL
 
+    cpdef bint is_pressed(self):
+        """is_pressed(self)\n--
+
+        Check whether the HMM file is a pressed HMM database.
+
+        A pressed database is an HMMER format to store optimized profiles
+        in several files on the disk. It can be used to reduce the time
+        needed to process sequences by cutting down the time needed to
+        convert from an `HMM` to an `OptimizedProfile`.
+
+        Example:
+            >>> HMMFile("tests/data/hmms/txt/PKSI-AT.hmm").is_pressed()
+            False
+            >>> HMMFile("tests/data/hmms/bin/PKSI-AT.h3m").is_pressed()
+            False
+            >>> HMMFile("tests/data/hmms/db/PKSI-AT.hmm").is_pressed()
+            True
+
+        .. versionadded:: 0.4.11
+
+        """
+        if self._hfp == NULL:
+            raise ValueError("I/O operation on closed file.")
+        return self._hfp.is_pressed
 
 
 cdef class OptimizedProfile:

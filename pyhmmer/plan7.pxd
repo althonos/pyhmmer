@@ -137,8 +137,9 @@ cdef class HMMFile:
     cdef P7_HMMFILE* _hfp
     cdef Alphabet _alphabet
 
-    cpdef void close(self)
     cpdef HMM read(self)
+    cpdef void close(self)
+    cpdef bint is_pressed(self)
 
     @staticmethod
     cdef P7_HMMFILE* _open_fileobj(object fh) except *
