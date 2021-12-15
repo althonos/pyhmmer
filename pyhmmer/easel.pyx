@@ -3721,7 +3721,15 @@ cdef class MSAFile:
             raise StopIteration()
         return msa
 
-    # --- Read methods -------------------------------------------------------
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def closed(self):
+        """`bool`: Whether the `MSAFile` is closed or not.
+        """
+        return self._msaf == NULL
+
+    # --- Methods ------------------------------------------------------------
 
     cpdef MSA read(self):
         """read(self)\n--
