@@ -6,7 +6,28 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.10...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.11...HEAD
+
+
+## [v0.4.11] - 2021-12-15
+[v0.4.11]: https://github.com/althonos/pyhmmer/compare/v0.4.10...v0.4.11
+
+### Added
+- `plan7.HMMFile.read` method to read a single `plan7.HMM` from an `plan7.HMMFile` (instead of using `next`).
+- `closed` property on `easel.SequenceFile`, `easel.MSAFile` and `plan7.HMMFile` to mark whether a file object is closed.
+- `plan7.HMMFile.is_pressed` method to check whether a HMM file has associated pressed data.
+- `plan7.HMMFile.optimized_profiles` methods to read the `plan7.OptimizedProfile` entries in an `plan7.HMMFile` is there are associated pressed data available.
+- Getters for the `name`, `accession`, `description`, `consensus`, `consensus_structure`, `evalue_parameters` and `cutoffs` properties of a `plan7.OptimizedProfile`.
+- `plan7.OptimizedProfile.__eq__` implementation to compare two optimized profiles.
+- `__sizeof__` implementations for `plan7.OptimizedProfile` and `plan7.Profile` to get the allocated size of a profile.
+
+### Fixed
+- Double-free caused by the Cython cycle breaking feature on several view types (`easel.Randomness`, `easel.Vector`, `easel.Matrix`, `plan7.Cutoffs`, `plan7.EvalueParameters`, `plan7.Offsets`, `plan7.Trace`)
+- `plan7.Hit.description` using the pointer to the accession string erroneously, causing occasional NULL dereference.
+- `plan7.OptimizedProfile.copy` performing a shallow copy instead of a deep copy as expected.
+
+### Changed
+- `pyhmmer.hmmer` type annotations now explicit support for `plan7.Profile` or `plan7.OptimizedProfile` inputs where applicable.
 
 
 ## [v0.4.10] - 2021-12-06
