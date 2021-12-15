@@ -803,8 +803,8 @@ if __name__ == "__main__":
             sequences: typing.List[DigitalSequence] = list(seqfile)  # type: ignore
 
         with HMMFile(args.hmmfile) as hmms:
-            hits_list = hmmsearch(hmms, sequences, cpus=args.jobs)
-
+            queries = hmms.optimized_profiles() if hmms.is_pressed() else hmms
+            hits_list = hmmsearch(queries, sequences, cpus=args.jobs)
             for hits in hits_list:
                 for hit in hits:
                     if hit.is_reported():
