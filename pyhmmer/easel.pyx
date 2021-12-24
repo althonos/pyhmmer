@@ -3533,13 +3533,15 @@ cdef class DigitalMSA(MSA):
     # --- Methods ------------------------------------------------------------
 
     cpdef DigitalMSA copy(self):
-        """Duplicate the digital sequence alignment, and return the copy.
+        """copy(self)\n--
+
+        Duplicate the digital sequence alignment, and return the copy.
+
         """
         assert self._msa != NULL
         assert self._msa.flags & libeasel.msa.eslMSA_DIGITAL
 
         cdef int           status
-        cdef ESL_ALPHABET* abc    = self.alphabet._abc
         cdef DigitalMSA    new    = DigitalMSA.__new__(DigitalMSA, self.alphabet)
 
         with nogil:
@@ -3651,7 +3653,7 @@ cdef class MSAFile:
         self._msaf = NULL
 
     def __init__(self, object file, str format = None):
-        """__init__(self, file, format=None, ignore_gaps=False)\n--
+        """__init__(self, file, format=None)\n--
 
         Create a new MSA file parser wrapping the given ``file``.
 
@@ -3950,7 +3952,7 @@ cdef class Randomness:
             raise UnexpectedError(status, "esl_randomness_Init")
 
     cpdef void seed(self, object n=None) except *:
-        """seed([n])\n--
+        """seed(n=None)\n--
 
         Reinitialize the random number generator with the given seed.
 
@@ -4336,7 +4338,7 @@ cdef class TextSequence(Sequence):
         bytes source=None,
         object taxonomy_id=None,
     ):
-        """__init__(self, name=None, description=None, accession=None, sequence=None, source=None)\n--
+        """__init__(self, name=None, description=None, accession=None, sequence=None, source=None, taxonomy_id=None)\n--
 
         Create a new text-mode sequence with the given attributes.
 
@@ -4411,7 +4413,6 @@ cdef class TextSequence(Sequence):
         else:
             raise UnexpectedError(status, "esl_sq_Copy")
 
-
     cpdef TextSequence copy(self):
         """copy(self)\n--
 
@@ -4438,7 +4439,9 @@ cdef class TextSequence(Sequence):
         return new
 
     cpdef TextSequence reverse_complement(self, bint inplace=False):
-        """Build the reverse complement of the sequence.
+        """reverse_complement(self, inplace=False)\n--
+
+        Build the reverse complement of the sequence.
 
         This method assumes that the sequence alphabet is IUPAC/DNA. If the
         sequence contains any unknown letters, they will be replaced by
@@ -4654,7 +4657,9 @@ cdef class DigitalSequence(Sequence):
         return new
 
     cpdef DigitalSequence reverse_complement(self, bint inplace=False):
-        """Build the reverse complement of the sequence.
+        """reverse_complement(self, inplace=False)\n--
+
+        Build the reverse complement of the sequence.
 
         Arguments:
             inplace (`bool`): Whether or not to copy the sequence before

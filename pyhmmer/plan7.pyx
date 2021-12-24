@@ -2971,7 +2971,7 @@ cdef class HMMPressedFile:
     # --- Methods ------------------------------------------------------------
 
     cpdef OptimizedProfile read(self):
-        """"read(self)\n--
+        """read(self)\n--
 
         Read the next optimized profile from the file.
 
@@ -4250,7 +4250,7 @@ cdef class Pipeline:
 
         # convert the query to an optimized profile, using the
         # length of the first sequence as a hint
-        L = 200 if search_targets._nref == 0 else search_targets._refs[0].L
+        L = self.L_HINT if search_targets._nref == 0 else search_targets._refs[0].L
         om = self._get_om_from_query(query, L=L)
 
         with nogil:
@@ -4748,7 +4748,7 @@ cdef class LongTargetsPipeline(Pipeline):
             raise AlphabetMismatch(self.alphabet, search_targets.alphabet)
 
         # convert the query to an optimized profile
-        L = 200 if search_targets._nref == 0 else search_targets._refs[0].L
+        L = self.L_HINT if search_targets._nref == 0 else search_targets._refs[0].L
         om = self._get_om_from_query(query, L=L)
 
         with nogil:
