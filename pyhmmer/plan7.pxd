@@ -173,12 +173,19 @@ cdef class Offsets:
     cdef off_t[p7_NOFFSETS]* _offs
 
 
+cdef class PipelineSearchTargets:
+    cdef const    ESL_SQ**   _refs         # the array to pass the sequence references to the C code
+    cdef          size_t     _nref         # the total size of `self._refs`
+    cdef          list       _storage      # the actual Python list where `Sequence` objects are stored
+    cdef          ssize_t    _max_len      # the length of the largest sequence in the array
+    cdef          object     _owner        # the owner, if the object is just a shallow copy
+    cdef readonly Alphabet   alphabet      # the target alphabets
+
+
 cdef class Pipeline:
     cdef          object     _Z            # either `Z` as an int, or `None`
     cdef          object     _domZ         # either `domZ` as an int, or `None`
     cdef          uint32_t   _seed         # the seed passed at pipeline initialization
-    cdef          void**     _refs         # the array to pass the references to the C code
-    cdef          ssize_t    _nref         # the total size of `self._refs`
     cdef          dict       _cutoff_save  # a local save of the reporting parameters
 
     cdef readonly Alphabet         alphabet
@@ -198,23 +205,23 @@ cdef class Pipeline:
     cpdef TopHits search_msa(self, DigitalMSA query, object seqs, Builder builder = ?)
     cpdef TopHits search_seq(self, DigitalSequence query, object seqs, Builder builder = ?)
     @staticmethod
-    cdef  int    _search_loop(
-        P7_PIPELINE* pli,
-        P7_OPROFILE* om,
-        P7_BG*       bg,
-        ESL_SQ**     seqs,
-        P7_TOPHITS*  th,
+    cdef  int  _search_loop(
+              P7_PIPELINE* pli,
+              P7_OPROFILE* om,
+              P7_BG*       bg,
+        const ESL_SQ**     seqs,
+              P7_TOPHITS*  th,
     ) nogil except 1
     cpdef TopHits scan_seq(self, DigitalSequence query, object hmms)
     cdef int _scan_loop(
-        self,
-        P7_PIPELINE* pli,
-        ESL_SQ*      sq,
-        P7_BG*       bg,
-        P7_HMM*      hm,
-        P7_TOPHITS*  th,
-        object       hmm_iter,
-        Alphabet     hmm_alphabet
+                           self,
+              P7_PIPELINE* pli,
+        const ESL_SQ*      sq,
+              P7_BG*       bg,
+              P7_HMM*      hm,
+              P7_TOPHITS*  th,
+              object       hmm_iter,
+              Alphabet     hmm_alphabet
     ) except 1
 
 
