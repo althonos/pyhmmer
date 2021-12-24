@@ -806,7 +806,7 @@ if __name__ == "__main__":
 
         with HMMFile(args.hmmfile) as hmms:
             queries = hmms.optimized_profiles() if hmms.is_pressed() else hmms
-            hits_list = hmmsearch(queries, sequences, cpus=args.jobs)
+            hits_list = hmmsearch(queries, sequences, cpus=args.jobs)  # type: ignore
             for hits in hits_list:
                 for hit in hits:
                     if hit.is_reported():

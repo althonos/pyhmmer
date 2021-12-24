@@ -3567,8 +3567,11 @@ cdef class PipelineSearchTargets:
     def __len__(self):
         return self._nref
 
-    def __getitem__(self, ssize_t index):
-        return self._storage[index]
+    def __getitem__(self, object index):
+        if isinstance(index, slice):
+            return PipelineSearchTargets(self._storage[index])
+        else:
+            return self._storage[index]
 
 
 cdef class Pipeline:
