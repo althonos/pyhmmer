@@ -3538,7 +3538,7 @@ cdef class PipelineSearchTargets:
 
         # allocate an array to store pointers to the raw sequences
         self._nref = len(self._storage)
-        self._refs = <ESL_SQ**> malloc(sizeof(ESL_SQ*) * (self._nref+1))
+        self._refs = <const ESL_SQ**> malloc(sizeof(ESL_SQ*) * (self._nref+1))
         if self._refs == NULL:
             raise AllocationError("ESL_SQ**", sizeof(ESL_SQ*), (self._nref+1))
 
@@ -3555,7 +3555,7 @@ cdef class PipelineSearchTargets:
             if len(seq) > self._max_len:
                 self._max_len = len(seq)
             # record the pointer to the raw C struct
-            self._refs[i] = seq._sq
+            self._refs[i] = <const ESL_SQ*> seq._sq
         self._refs[self._nref] = NULL
 
     def __dealloc__(self):
@@ -4828,13 +4828,13 @@ cdef class LongTargetsPipeline(Pipeline):
 
     @staticmethod
     cdef int _search_loop_longtargets(
-        P7_PIPELINE*  pli,
-        P7_OPROFILE*  om,
-        P7_BG*        bg,
-        ESL_SQ**      sq,
-        P7_TOPHITS*   th,
-        P7_SCOREDATA* scoredata,
-        ESL_SQ*       tmpsq,
+              P7_PIPELINE*  pli,
+              P7_OPROFILE*  om,
+              P7_BG*        bg,
+        const ESL_SQ**      sq,
+              P7_TOPHITS*   th,
+              P7_SCOREDATA* scoredata,
+              ESL_SQ*       tmpsq,
     ) nogil except 1:
         cdef int      status
         cdef int      nres

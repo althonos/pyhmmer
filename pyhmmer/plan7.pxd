@@ -209,14 +209,14 @@ cdef class Pipeline:
               P7_PIPELINE* pli,
               P7_OPROFILE* om,
               P7_BG*       bg,
-        const ESL_SQ**     seqs,
+        const ESL_SQ**     sq,
               P7_TOPHITS*  th,
     ) nogil except 1
     cpdef TopHits scan_seq(self, DigitalSequence query, object hmms)
     cdef int _scan_loop(
                            self,
               P7_PIPELINE* pli,
-        const ESL_SQ*      sq,
+              ESL_SQ*      sq,
               P7_BG*       bg,
               P7_HMM*      hm,
               P7_TOPHITS*  th,
@@ -230,13 +230,13 @@ cdef class LongTargetsPipeline(Pipeline):
 
     @staticmethod
     cdef int _search_loop_longtargets(
-        P7_PIPELINE*  pli,
-        P7_OPROFILE*  om,
-        P7_BG*        bg,
-        ESL_SQ**      sq,
-        P7_TOPHITS*   th,
-        P7_SCOREDATA* scoredata,
-        ESL_SQ*       tmpsq,
+              P7_PIPELINE*  pli,
+              P7_OPROFILE*  om,
+              P7_BG*        bg,
+        const ESL_SQ**      sq,
+              P7_TOPHITS*   th,
+              P7_SCOREDATA* scoredata,
+              ESL_SQ*       tmpsq,
     ) nogil except 1
 
 
