@@ -18,7 +18,7 @@ import multiprocessing
 import psutil
 
 from .easel import Alphabet, DigitalSequence, DigitalMSA, MSA, MSAFile, TextSequence, SequenceFile, SSIWriter
-from .plan7 import Builder, Background, Pipeline, LongTargetsPipeline, TopHits, HMM, HMMFile, Profile, TraceAligner, OptimizedProfile
+from .plan7 import Builder, Background, Pipeline, PipelineSearchTargets, LongTargetsPipeline, TopHits, HMM, HMMFile, Profile, TraceAligner, OptimizedProfile
 from .utils import peekable
 
 # the query type for the pipeline
@@ -34,9 +34,8 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
     """A generic worker thread to parallelize a pipelined search.
 
     Attributes:
-        sequence (iterable of `DigitalSequence`): The target sequences to
-            search for hits. **Must be able to be iterated upon more than
-            once.**
+        sequence (`pyhmmer.plan7.PipelineSearchTargets`): The target
+            sequences to search for hits.
         query_queue (`queue.Queue`): The queue used to pass queries between
             threads. It contains both the query and its index, so that the
             results can be returned in the same order.
@@ -75,7 +74,7 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
 
     def __init__(
         self,
-        sequences: typing.Iterable[DigitalSequence],
+        sequences: PipelineSearchTargets,
         query_queue: "queue.Queue[typing.Optional[typing.Tuple[int, _Q]]]",
         query_count: multiprocessing.Value,  # type: ignore
         hits_queue: "queue.PriorityQueue[typing.Tuple[int, TopHits]]",
@@ -88,7 +87,7 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
     ) -> None:
         super().__init__()
         self.options = options
-        self.sequences = list(sequences)
+        self.sequences = sequences
         self.pipeline = pipeline_class(alphabet=alphabet, **options)
         self.query_queue: "queue.Queue[typing.Optional[typing.Tuple[int, _Q]]]" = query_queue
         self.query_count = query_count
@@ -149,7 +148,7 @@ class _ModelPipelineThread(typing.Generic[_M], _PipelineThread[_M]):
 class _SequencePipelineThread(_PipelineThread[DigitalSequence]):
     def __init__(
         self,
-        sequences: typing.Iterable[DigitalSequence],
+        sequences: PipelineSearchTargets,
         query_queue: "queue.Queue[typing.Optional[typing.Tuple[int, DigitalSequence]]]",
         query_count: multiprocessing.Value,  # type: ignore
         hits_queue: "queue.PriorityQueue[typing.Tuple[int, TopHits]]",
@@ -182,7 +181,7 @@ class _SequencePipelineThread(_PipelineThread[DigitalSequence]):
 class _MSAPipelineThread(_PipelineThread[DigitalMSA]):
     def __init__(
         self,
-        sequences: typing.Iterable[DigitalSequence],
+        sequences: PipelineSearchTargets,
         query_queue: "queue.Queue[typing.Optional[typing.Tuple[int, DigitalMSA]]]",
         query_count: multiprocessing.Value,  # type: ignore
         hits_queue: "queue.PriorityQueue[typing.Tuple[int, TopHits]]",
@@ -219,20 +218,23 @@ class _Search(typing.Generic[_Q], abc.ABC):
     def __init__(
         self,
         queries: typing.Iterable[_Q],
-        sequences: typing.Collection[DigitalSequence],
+        sequences: typing.Iterable[DigitalSequence],
         cpus: int = 0,
         callback: typing.Optional[typing.Callable[[_Q, int], None]] = None,
         pipeline_class: typing.Type[Pipeline] = Pipeline,
         alphabet: Alphabet = Alphabet.amino(),
-        **options: typing.Dict[str, object],
+        **options # type: typing.Dict[str, object]
     ) -> None:
         self.queries: typing.Iterable[_Q] = queries
-        self.sequences = sequences
         self.cpus = cpus
         self.callback: typing.Optional[typing.Callable[[_Q, int], None]] = callback
         self.options = options
         self.pipeline_class = pipeline_class
         self.alphabet = alphabet
+        if isinstance(sequences, PipelineSearchTargets):
+            self.sequences = sequences
+        else:
+            self.sequences = PipelineSearchTargets(sequences)
 
     @abc.abstractmethod
     def _new_thread(
@@ -376,12 +378,12 @@ class _SequenceSearch(_Search[DigitalSequence]):
         self,
         builder: Builder,
         queries: typing.Iterable[DigitalSequence],
-        sequences: typing.Collection[DigitalSequence],
+        sequences: typing.Iterable[DigitalSequence],
         cpus: int = 0,
         callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
         pipeline_class: typing.Type[Pipeline] = Pipeline,
         alphabet: Alphabet = Alphabet.amino(),
-        **options, # type: typing.Dict[str, object],
+        **options, # type: typing.Dict[str, object]
     ) -> None:
         super().__init__(queries, sequences, cpus, callback, pipeline_class, alphabet, **options)
         self.builder = builder
@@ -415,12 +417,12 @@ class _MSASearch(_Search[DigitalMSA]):
         self,
         builder: Builder,
         queries: typing.Iterable[DigitalMSA],
-        sequences: typing.Collection[DigitalSequence],
+        sequences: typing.Iterable[DigitalSequence],
         cpus: int = 0,
         callback: typing.Optional[typing.Callable[[DigitalMSA, int], None]] = None,
         pipeline_class: typing.Type[Pipeline] = Pipeline,
         alphabet: Alphabet = Alphabet.amino(),
-        **options, # type: typing.Dict[str, object],
+        **options, # type: typing.Dict[str, object]
     ) -> None:
         super().__init__(queries, sequences, cpus, callback, pipeline_class, alphabet, **options)
         self.builder = builder
@@ -452,7 +454,7 @@ class _MSASearch(_Search[DigitalMSA]):
 
 def hmmsearch(
     queries: typing.Iterable[_M],
-    sequences: typing.Collection[DigitalSequence],
+    sequences: typing.Iterable[DigitalSequence],
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_M, int], None]] = None,
     **options,  # type: typing.Dict[str, object]
@@ -500,7 +502,7 @@ def hmmsearch(
 
 def phmmer(
     queries: typing.Iterable[_S],
-    sequences: typing.Collection[DigitalSequence],
+    sequences: typing.Iterable[DigitalSequence],
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_S, int], None]] = None,
     builder: typing.Optional[Builder] = None,
@@ -575,7 +577,7 @@ def phmmer(
 
 def nhmmer(
     queries: typing.Iterable[_Q],
-    sequences: typing.Collection[DigitalSequence],
+    sequences: typing.Iterable[DigitalSequence],
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_Q, int], None]] = None,
     builder: typing.Optional[Builder] = None,
