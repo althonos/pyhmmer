@@ -2913,7 +2913,7 @@ cdef class HMMFile:
     cpdef HMMPressedFile optimized_profiles(self):
         """optimized_profiles(self)\n--
 
-        Get an iterator over the `OptimizedProfile`s in the HMM database.
+        Get an iterator over the `OptimizedProfile` in the HMM database.
 
         .. versionadded:: 0.4.11
 
@@ -2933,7 +2933,8 @@ cdef class HMMPressedFile:
     """An iterator over the `OptimizedProfile`s in a pressed HMM database.
 
     This class cannot be instantiated: use the `HMMFile.optimized_profiles`
-    to obtain an instance from an `HMMFile` that wraps a pressed HMM database.
+    to obtain an instance from an `HMMFile` that wraps a pressed HMM
+    database.
 
     Example:
         Use a pressed HMM database to run a search pipeline using optimized
@@ -2944,9 +2945,9 @@ cdef class HMMPressedFile:
             ...     hits = next(pyhmmer.hmmsearch(models, proteins))
 
         In this example, `~pyhmmer.hmmer.hmmsearch` will receive an iterator
-        of `OptimizedProfile` instead of an iterator of `HMM` is ``hfile`` was
-        passed directly; this lets `~pyhmmer.hmmer.hmmsearch` skip the
-        conversion step and run the search pipeline directly.
+        of `OptimizedProfile` instead of an iterator of `HMM` is ``hfile``
+        was passed directly; this lets `~pyhmmer.hmmer.hmmsearch` skip the
+        conversion step before running the search pipeline.
 
     .. versionadded:: 0.4.11
 
@@ -3023,9 +3024,21 @@ cdef class HMMPressedFile:
 cdef class OptimizedProfile:
     """An optimized profile that uses platform-specific instructions.
 
+    Optimized profiles store the match emissions and transition
+    probabilities for a profile HMM so that they can be loaded in the
+    SIMD code. Typically, matrices use aligned storage so that they can
+    loaded efficiently, and are striped *à la* Farrar to compute
+    pairwise scores for each sequence residue and profile node.
+
     Attributes:
         alphabet (`~pyhmmer.easel.Alphabet`): The alphabet for which this
             optimized profile is configured.
+
+    References:
+        - Farrar, Michael.
+          *Striped Smith–Waterman Speeds Database Searches Six Times over
+          Other SIMD Implementations*. Bioinformatics 23, no. 2
+          (15 January 2007): 156–61. :doi:`10.1093/bioinformatics/btl582`.
 
     """
 
@@ -3040,11 +3053,11 @@ cdef class OptimizedProfile:
 
         Create a new optimized profile from scratch.
 
-        Optimized profiles use platform-specific code to accelerate the
-        various algorithms. Although you can allocate an optimized profile
-        yourself, the only way to obtain a fully configured profile is to
-        create it with the `Profile.optimized` method, after having
-        configured the profile for a given HMM with `Profile.configure`.
+        Once allocated, you must call the `~OptimizedProfile.convert`
+        method with a `~plan7.Profile` object. It's actually easier to
+        use `Profile.optimized` method to obtained a configured
+        `OptimizedProfile` directly, unless you're explicitly trying
+        to recycle memory.
 
         Arguments:
             M (`int`): The length of the model (i.e. the number of nodes).
@@ -3373,7 +3386,8 @@ cdef class OptimizedProfile:
         Compute the SSV filter score for the given sequence.
 
         Arguments:
-            seq (`~pyhmmer.easel.DigitalSequence`):
+            seq (`~pyhmmer.easel.DigitalSequence`): The sequence in digital
+                format for which to compute the SSV filter score.
 
         Returns:
             `float` or `None`: The SSV filter score for the sequence.
@@ -3387,7 +3401,7 @@ cdef class OptimizedProfile:
               filter did).
 
         Raises:
-            `~pyhmmer.errors.AlphabetMismatch`: when the alphabet of the
+            `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
                 sequence does not correspond to the profile alphabet.
 
         Caution:
@@ -3400,12 +3414,11 @@ cdef class OptimizedProfile:
         IF HMMER_IMPL == "SSE":
             assert self._om != NULL
 
-            if self.alphabet != seq.alphabet:
-                raise AlphabetMismatch(self.alphabet, seq.alphabet)
-
             cdef float score
             cdef int status
 
+            if self.alphabet != seq.alphabet:
+                raise AlphabetMismatch(self.alphabet, seq.alphabet)
             with nogil:
                 status = p7_SSVFilter(seq._sq.dsq, seq._sq.L, self._om, &score)
             if status == libeasel.eslOK:
@@ -3417,7 +3430,7 @@ cdef class OptimizedProfile:
             else:
                 raise UnexpectedError(status, "p7_SSVFilter")
         ELSE:
-            raise NotImplementedError("p7_SSVFilter is not available on VMX platforms")
+            raise NotImplementedError(f"p7_SSVFilter is not available on {HMMER_IMPL} platforms")
 
 
 @cython.freelist(8)
@@ -3501,9 +3514,10 @@ cdef class PipelineSearchTargets:
     To pass the target sequences efficiently in `Pipeline.search_hmm`,
     an array is allocated so that the inner loop can iterate over the
     target sequences without having to acquire the GIL for each new
-    sequence (this gave a huge boost of v0.4.5). However, there was no
-    was to reuse this between different queries; some memory recycling was
-    done, but the target sequences had to be indexed for every query.
+    sequence (this gave a huge performance boost in v0.4.5). However,
+    there was no way to reuse this between different queries; some memory
+    recycling was done, but the target sequences had to be indexed for
+    every query.
 
     This class allows the reference array to be maintained between
     several queries. Internally, `Pipeline.search_hmm` will build one
@@ -3576,6 +3590,22 @@ cdef class PipelineSearchTargets:
 
 cdef class Pipeline:
     """An HMMER3 accelerated sequence/profile comparison pipeline.
+
+    The Plan7 pipeline handles the platform-accelerated comparison of
+    sequences to profile HMMs. It performs either a *search* (comparing
+    a single query profile to a target sequence database) or a *scan*
+    (comparing a single query sequence to a target profile database). The
+    two methods are yielding equivalent results: if you have a collection
+    of :math:`M` sequences and :math:`N` HMMs to compare, doing a search
+    or a scan should give the same hits.
+
+    The main reason for which you should choose *search* or *scan* is the
+    relative size of the sequences and HMMs databases. In the original
+    HMMER3 code, the memory was managed in a way that you never had to
+    load the entirety of the target sequences in memory. In PyHMMER, the
+    *search* methods will **require** that you have the entirety of target
+    sequences loaded in memory, which may not be feasible if you have too
+    many sequences.
 
     Attributes:
         alphabet (`~pyhmmer.easel.Alphabet`): The alphabet for which the
@@ -4581,6 +4611,22 @@ cdef class Pipeline:
 cdef class LongTargetsPipeline(Pipeline):
     """An HMMER3 pipeline tuned for long targets.
 
+    The default HMMER3 pipeline is configured not to accept target sequences
+    longer than 100,000 residues. Although there is no strong limitation for
+    this threshold, comparing a sequence of :math:`L` residues to a profile
+    with :math:`M` nodes requires the allocation of a :math:`L \times M`
+    dynamic programming matrix.
+
+    For sequences too long, it's actually more efficient memory-wise to use
+    a sliding window to match the profile to the sequence. The usual
+    comparison pipeline is then used to perform the comparison on each
+    window, and results are merged once the entire sequence is done being
+    processed. The context size :math:`C` is large enough to accommodate
+    for the entire profile, so that there is no risk of missing a hit in
+    the overlaps between windows. The window size :math:`W` can be
+    changed with the ``block_length`` argument when instantiating a new
+    `~pyhmmer.plan7.LongTargetsPipeline` object.
+
     .. versionadded:: 0.4.9
 
     """
@@ -4627,8 +4673,9 @@ cdef class LongTargetsPipeline(Pipeline):
                 modifier of the Viterbi filter.
             B3 (`int`): The window length to use for the biased-composition
                 modifier of the Forward filter.
-            block_length (`int`): The number of residues to use as the window
-                size when reading blocks from target sequences.
+            block_length (`int`): The number of residues to use as the
+                window size :math:`W` when reading blocks from the long
+                target sequences.
             **kwargs: Any additional parameter will be passed to the
                 `~pyhmmer.plan7.Pipeline` constructor.
 
@@ -4882,7 +4929,9 @@ cdef class LongTargetsPipeline(Pipeline):
             #     ```
             #     for i in range(0, sq[0].n, W-C)
             #     ```
-            #     but Cython refuses to optimize that
+            #     but Cython refuses to optimize that because it cannot be
+            #     sure that W-C is strictly positive, even though we do check
+            #     that it is.
             for i from 0 <= i < sq[0].n by W - C:
                 # update window coordinates in the temporary sequence
                 tmpsq.C     = 0 if i == 0 else min(C, sq[0].n - i)
@@ -5231,8 +5280,8 @@ cdef class Profile:
         Convert the profile to a platform-specific optimized profile.
 
         Returns:
-            `OptimizedProfile`: The platform-specific optimized profile built
-            using the configuration of this profile.
+            `OptimizedProfile`: The platform-specific optimized profile
+            built using the configuration of this profile.
 
         """
         assert self._gm != NULL
