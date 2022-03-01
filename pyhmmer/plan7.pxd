@@ -13,7 +13,7 @@ from libhmmer.p7_builder cimport P7_BUILDER
 from libhmmer.p7_domain cimport P7_DOMAIN
 from libhmmer.p7_hmm cimport P7_HMM
 from libhmmer.p7_hmmfile cimport P7_HMMFILE
-from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e
+from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e
 from libhmmer.p7_profile cimport P7_PROFILE
 from libhmmer.p7_scoredata cimport P7_SCOREDATA
 from libhmmer.p7_tophits cimport P7_TOPHITS, P7_HIT
@@ -261,9 +261,11 @@ cdef class ScoreData:
 
 
 cdef class TopHits:
-    cdef readonly float Z
-    cdef readonly float domZ
-    cdef readonly bint  long_targets
+    cdef readonly float       Z
+    cdef readonly float       domZ
+    cdef readonly bint        long_targets
+    cdef          p7_zsetby_e Z_setby
+    cdef          p7_zsetby_e domZ_setby
 
     cdef P7_TOPHITS* _th
 

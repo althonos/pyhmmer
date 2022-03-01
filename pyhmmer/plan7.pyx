@@ -4309,9 +4309,11 @@ cdef class Pipeline:
                 search_targets._refs,
                 hits._th,
             )
-            # sort hits
+            # sort hits and set bookkeeping attributes
             hits._sort_by_key()
             hits._threshold(self)
+            hits.Z_setby = self._pli.Z_setby
+            hits.domZ_setby = self._pli.domZ_setby
 
         # return the hits
         return hits
@@ -4530,6 +4532,8 @@ cdef class Pipeline:
         # threshold hits
         hits._sort_by_key()
         hits._threshold(self)
+        hits.Z_setby = self._pli.Z_setby
+        hits.domZ_setby = self._pli.domZ_setby
 
         # return the hits
         return hits
@@ -4850,6 +4854,8 @@ cdef class LongTargetsPipeline(Pipeline):
             hits._sort_by_key()
             hits._threshold(self)
             hits.long_targets = True
+            hits.Z_setby = self._pli.Z_setby
+            hits.domZ_setby = self._pli.domZ_setby
 
             # DEBUG: show results
             # printf("\n")
@@ -5454,6 +5460,8 @@ cdef class TopHits:
         copy.Z = self.Z
         copy.domZ = self.domZ
         copy.long_targets = self.long_targets
+        copy.Z_setby = self.Z_setby
+        copy.domZ_setby = self.domZ_setby
 
         # WARN(@althonos): there is no way to do this in the HMMER codebase
         #                  so this is a manual implementation; make sure
