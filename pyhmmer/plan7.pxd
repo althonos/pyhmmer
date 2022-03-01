@@ -261,18 +261,19 @@ cdef class ScoreData:
 
 
 cdef class TopHits:
-    cdef readonly float       Z
-    cdef readonly float       domZ
-    cdef readonly bint        long_targets
-    cdef          p7_zsetby_e Z_setby
-    cdef          p7_zsetby_e domZ_setby
 
+    # NOTE(@althonos): this is not a full pipeline, but a local copy of the
+    #                  accounting parameters so that the e-value can be
+    #                  computed and thresholding can be done correctly.
+    cdef P7_PIPELINE _pli
     cdef P7_TOPHITS* _th
 
     cdef int _threshold(self, Pipeline pipeline) nogil except 1
     cdef int _sort_by_key(self) nogil except 1
     cdef int _sort_by_seqidx(self) nogil except 1
 
+    cpdef void sort(self, str by=*) except *
+    cpdef bint is_sorted(self, str by=*) except *
     cpdef TopHits copy(self)
     cpdef TopHits merge(self, TopHits other)
     cpdef MSA to_msa(self, Alphabet alphabet, bint trim=*, bint digitize=?, bint all_consensus_cols=?)

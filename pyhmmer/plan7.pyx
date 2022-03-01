@@ -1296,7 +1296,7 @@ cdef class Domain:
         if self.hit.hits.long_targets:
             return exp(self._dom.lnP)
         else:
-            return exp(self._dom.lnP) * self.hit.hits.domZ
+            return exp(self._dom.lnP) * self.hit.hits._pli.domZ
 
     @property
     def i_evalue(self):
@@ -1306,7 +1306,7 @@ cdef class Domain:
         if self.hit.hits.long_targets:
             return exp(self._dom.lnP)
         else:
-            return exp(self._dom.lnP) * self.hit.hits.Z
+            return exp(self._dom.lnP) * self.hit.hits._pli.Z
 
     @property
     def pvalue(self):
@@ -1599,10 +1599,10 @@ cdef class Hit:
         """`float`: The e-value of the hit.
         """
         assert self._hit != NULL
-        if self.hits.long_targets:
+        if self.hits._pli.long_targets:
             return exp(self._hit.lnP)
         else:
-            return exp(self._hit.lnP) * self.hits.Z
+            return exp(self._hit.lnP) * self.hits._pli.Z
 
     @property
     def pvalue(self):
@@ -4313,8 +4313,6 @@ cdef class Pipeline:
             # sort hits and set bookkeeping attributes
             hits._sort_by_key()
             hits._threshold(self)
-            hits.Z_setby = self._pli.Z_setby
-            hits.domZ_setby = self._pli.domZ_setby
 
         # return the hits
         return hits
@@ -4534,8 +4532,6 @@ cdef class Pipeline:
         # threshold hits
         hits._sort_by_key()
         hits._threshold(self)
-        hits.Z_setby = self._pli.Z_setby
-        hits.domZ_setby = self._pli.domZ_setby
 
         # return the hits
         return hits
@@ -4855,9 +4851,6 @@ cdef class LongTargetsPipeline(Pipeline):
             # sort hits
             hits._sort_by_key()
             hits._threshold(self)
-            hits.long_targets = True
-            hits.Z_setby = self._pli.Z_setby
-            hits.domZ_setby = self._pli.domZ_setby
 
             # DEBUG: show results
             # printf("\n")
@@ -5364,7 +5357,7 @@ cdef class ScoreData:
 
 
 cdef class TopHits:
-    """A ranked list of top-scoring hits.
+    """An immutable ranked list of top-scoring hits.
 
     `TopHits` are thresholded using the parameters from the pipeline, and are
     sorted by key when you obtain them from a `Pipeline` instance::
@@ -5388,6 +5381,7 @@ cdef class TopHits:
 
     def __cinit__(self):
         self._th = NULL
+        memset(&self._pli, 0, sizeof(P7_PIPELINE))
 
     def __init__(self):
         """__init__(self)\n--
@@ -5395,12 +5389,15 @@ cdef class TopHits:
         Create an empty `TopHits` instance.
 
         """
-        if self._th != NULL:
-            libhmmer.p7_tophits.p7_tophits_Destroy(self._th)
         with nogil:
+            # free allocated memory (in case __init__ is called more than once)
+            libhmmer.p7_tophits.p7_tophits_Destroy(self._th)
+            # allocate top hits
             self._th = libhmmer.p7_tophits.p7_tophits_Create()
-        if self._th == NULL:
-            raise AllocationError("P7_TOPHITS", sizeof(P7_TOPHITS))
+            if self._th == NULL:
+                raise AllocationError("P7_TOPHITS", sizeof(P7_TOPHITS))
+            # clear pipeline configuration
+            memset(&self._pli, 0, sizeof(P7_PIPELINE))
 
     def __dealloc__(self):
         libhmmer.p7_tophits.p7_tophits_Destroy(self._th)
@@ -5427,16 +5424,191 @@ cdef class TopHits:
     # --- Properties ---------------------------------------------------------
 
     @property
-    def reported(self):
+    def Z(self):
+        """`float`: The effective number of targets searched.
+        """
+        return self._pli.Z
+
+    @property
+    def domZ(self):
+        """`float`: The effective number of significant targets searched.
+        """
+        return self._pli.domZ
+
+    @property
+    def E(self):
+        """`float`: The per-target E-value threshold for reporting a hit.
+
+        .. versionadded:: 0.4.12
+
+        """
+        return self._pli.E
+
+    @property
+    def T(self):
+        """`float` or `None`: The per-target score threshold for reporting a hit.
+
+        .. versionadded:: 0.4.12
+
+        """
+        return None if self._pli.by_E else self._pli.T
+
+    @property
+    def domE(self):
+        """`float`: The per-domain E-value threshold for reporting a hit.
+
+        .. versionadded:: 0.4.12
+
+        """
+        return self._pli.domE
+
+    @property
+    def domT(self):
+        """`float` or `None`: The per-domain score threshold for reporting a hit.
+
+        .. versionadded:: 0.4.12
+
+        """
+        return None if self._pli.dom_by_E else self._pli.domT
+
+    @property
+    def incE(self):
+        """`float`: The per-target E-value threshold for including a hit.
+
+        .. versionadded:: 0.4.12
+
+        """
+        return self._pli.incE
+
+    @property
+    def incT(self):
+        """`float` or `None`: The per-target score threshold for including a hit.
+
+        .. versionadded:: 0.4.8
+
+        """
+        return None if self._pli.inc_by_E else self._pli.incT
+
+    @property
+    def incdomE(self):
+        """`float`: The per-domain E-value threshold for including a hit.
+
+        .. versionadded:: 0.4.12
+
+        """
+        return self._pli.incdomE
+
+    @property
+    def incdomT(self):
+        """`float` or `None`: The per-domain score threshold for including a hit.
+
+        .. versionadded:: 0.4.12
+
+        """
+        return None if self._pli.incdom_by_E else self._pli.incdomT
+
+    @property
+    def bit_cutoffs(self):
+        """`str` or `None`: The model-specific thresholding option, if any.
+
+        .. versionadded:: 0.4.12
+
+        """
+        return next(
+            (k for k,v in PIPELINE_BIT_CUTOFFS.items() if v == self._pli.use_bit_cutoffs),
+            None
+        )
+
+    @property
+    def searched_models(self):
+        """`int`: The number of models searched.
+        """
+        return self._pli.nmodels
+
+    @property
+    def searched_nodes(self):
+        """`int`: The number of model nodes searched.
+        """
+        return self._pli.nres
+
+    @property
+    def searched_sequences(self):
+        """`int`: The number of sequences searched.
+        """
+        return self._pli.nseqs
+
+    @property
+    def searched_residues(self):
+        """`int`: The number of residues searched.
+        """
+        return self._pli.nres
+
+    @property
+    def long_targets(self):
+        """`bool`: Whether these hits were produced by a long targets pipeline.
+        """
+        return self._pli.long_targets
+
+    @property
+    def hits_reported(self):
         """`int`: The number of hits that are above the reporting threshold.
         """
         return self._th.nreported
 
     @property
-    def included(self):
+    def hits_included(self):
         """`int`: The number of hits that are above the inclusion threshold.
         """
         return self._th.nincluded
+
+    @property
+    def strand(self):
+        """`str` or `None`: The strand these hits were obtained from.
+
+        Returns `None` when the hits were not obtained from a long targets
+        pipeline, or when the long targets pipeline was configured to
+        search both strands.
+
+        """
+        if self._pli.long_targets:
+            if self._pli.strands == p7_strands_e.p7_STRAND_TOPONLY:
+                return "watson"
+            elif self._pli.strands == p7_strands_e.p7_STRAND_BOTTOMONLY:
+                return "crick"
+        return None
+
+    @property
+    def block_length(self):
+        """`int` or `None`: The block length with which these hits were obtained.
+
+        Returns `None` when the hits were not obtained from a long targets
+        pipeline.
+
+        """
+        return self._pli.block_length if self._pli.long_targets else None
+
+    # --- Utils --------------------------------------------------------------
+
+    cdef int _threshold(self, Pipeline pipeline) nogil except 1:
+        # threshold the top hits with the given pipeline numbers
+        cdef int status = libhmmer.p7_tophits.p7_tophits_Threshold(self._th, pipeline._pli)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_tophits_Threshold")
+        # record pipeline configuration
+        memcpy(&self._pli, pipeline._pli, sizeof(P7_PIPELINE))
+        return 0
+
+    cdef int _sort_by_key(self) nogil except 1:
+        cdef int status = libhmmer.p7_tophits.p7_tophits_SortBySortkey(self._th)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_tophits_SortBySortkey")
+        return 0
+
+    cdef int _sort_by_seqidx(self) nogil except 1:
+        cdef int status = libhmmer.p7_tophits.p7_tophits_SortBySeqidxAndAlipos(self._th)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_tophits_SortBySeqidxAndAlipos")
+        return 0
 
     # --- Methods ------------------------------------------------------------
 
@@ -5456,19 +5628,15 @@ cdef class TopHits:
         cdef ptrdiff_t  diff
         cdef P7_DOMAIN* dom_orig
         cdef P7_DOMAIN* dom_copy
-
-        # create a copy and copy attributes extracted from the Pipeline
         cdef TopHits    copy     = TopHits.__new__(TopHits)
-        copy.Z = self.Z
-        copy.domZ = self.domZ
-        copy.long_targets = self.long_targets
-        copy.Z_setby = self.Z_setby
-        copy.domZ_setby = self.domZ_setby
 
         # WARN(@althonos): there is no way to do this in the HMMER codebase
         #                  so this is a manual implementation; make sure
         #                  that it stays consistent if P7_TOPHITS changes!
         with nogil:
+            # copy pipeline configuration
+            memcpy(&copy._pli, &self._pli, sizeof(P7_PIPELINE))
+
             # don't use `p7_tophits_Create` here otherwise it will allocate
             # using a default size, while we already know how large we want
             # our buffers to be.
@@ -5541,43 +5709,7 @@ cdef class TopHits:
 
         return copy
 
-    cdef int _threshold(self, Pipeline pipeline) nogil except 1:
-        cdef int status = libhmmer.p7_tophits.p7_tophits_Threshold(self._th, pipeline._pli)
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "p7_tophits_Threshold")
-        self.Z = pipeline._pli.Z
-        self.domZ = pipeline._pli.domZ
-        self.long_targets = pipeline._pli.long_targets
-        return 0
-
-    def threshold(self, Pipeline pipeline):
-        """threshold(self, pipeline)\n--
-
-        Apply score and e-value thresholds using pipeline parameters.
-
-        This function is automatically called in `Pipeline.search_hmm` or
-        `Pipeline.search_seq`, so it should have limited usefulness at the
-        Python level.
-
-        """
-        assert self._th != NULL
-        assert pipeline._pli != NULL
-        with nogil:
-            self._threshold(pipeline)
-
-    cdef int _sort_by_key(self) nogil except 1:
-        cdef int status = libhmmer.p7_tophits.p7_tophits_SortBySortkey(self._th)
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "p7_tophits_SortBySortkey")
-        return 0
-
-    cdef int _sort_by_seqidx(self) nogil except 1:
-        cdef int status = libhmmer.p7_tophits.p7_tophits_SortBySeqidxAndAlipos(self._th)
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "p7_tophits_SortBySeqidxAndAlipos")
-        return 0
-
-    def sort(self, str by="key"):
+    cpdef void sort(self, str by="key") except *:
         """sort(self, by="key")\n--
 
         Sort hits in the current instance using the given method.
@@ -5598,7 +5730,7 @@ cdef class TopHits:
         else:
             raise ValueError("Invalid value for `by` argument: {!r}".format(by))
 
-    def is_sorted(self, str by="key"):
+    cpdef bint is_sorted(self, str by="key") except *:
         """is_sorted(self, by="key")\n--
 
         Check whether or not the hits are sorted with the given method.
@@ -5708,40 +5840,42 @@ cdef class TopHits:
         assert self._th != NULL
         assert other._th != NULL
 
-        cdef int     status
         cdef TopHits self_copy
         cdef TopHits other_copy
+        cdef int     status     = libeasel.eslOK
 
         # check that the hits can be merged together
-        if self.long_targets != other.long_targets:
-            raise RuntimeError("Trying to a `TopHits` from a long targets pipeline to a `TopHits` from a regular pipeline.")
-        if self.Z_setby != other.Z_setby:
+        if self._pli.long_targets and not other._pli.long_targets:
+            raise RuntimeError("Trying to merge a `TopHits` from a long targets pipeline to a `TopHits` from a regular pipeline.")
+        if self._pli.Z_setby != other._pli.Z_setby:
             raise RuntimeError("Trying to merge `TopHits` with `Z` values obtained with different methods.")
-        elif self.Z_setby != p7_zsetby_e.p7_ZSETBY_NTARGETS and self.Z != other.Z:
+        elif self._pli.Z_setby != p7_zsetby_e.p7_ZSETBY_NTARGETS and self._pli.Z != other._pli.Z:
             raise RuntimeError("Trying to merge `TopHits` obtained from pipelines manually configured to different `Z` values.")
-        if self.Z_setby != other.domZ_setby:
-          raise RuntimeError("Trying to merge `TopHits` with `domZ` values obtained with different methods.")
-        elif self.domZ_setby != p7_zsetby_e.p7_ZSETBY_NTARGETS and self.domZ != other.domZ:
+        if self._pli.domZ_setby != other._pli.domZ_setby:
+            raise RuntimeError("Trying to merge `TopHits` with `domZ` values obtained with different methods.")
+        elif self._pli.domZ_setby != p7_zsetby_e.p7_ZSETBY_NTARGETS and self._pli.domZ != other._pli.domZ:
             raise RuntimeError("Trying to merge `TopHits` obtained from pipelines manually configured to different `domZ` values.")
 
-        # copy hits (because `p7_tophits_Merge` effectively destroys the
-        # old storage, but because of Python references we cannot be sure
-        # the data is not referenced anywhere)
+        # copy hits (`p7_tophits_Merge` effectively destroys the old storage
+        # but because of Python references we cannot be sure that the data is
+        # not referenced anywhere else)
         self_copy = self.copy()
         other_copy = other.copy()
 
-        # merge the top hits
+        # merge everything
         with nogil:
+            # merge the top hits
             status = libhmmer.p7_tophits.p7_tophits_Merge(self_copy._th, other_copy._th)
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "p7_tophits_Merge")
-
-        # update Z and domZ values if they were obtained set from the number
-        # of targets given to the pipeline
-        if self.Z_setby == p7_zsetby_e.p7_ZSETBY_NTARGETS:
-            self_copy.Z = self.Z + other.Z
-        if self.domZ_setby == p7_zsetby_e.p7_ZSETBY_NTARGETS:
-            self_copy.domZ = self.domZ + other.domZ
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_tophits_Merge")
+            # merge the pipelines
+            status = libhmmer.p7_pipeline.p7_pipeline_Merge(&self_copy._pli, &other_copy._pli)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_pipeline_Merge")
+            # threshold the merged hits with new values
+            status = libhmmer.p7_tophits.p7_tophits_Threshold(self_copy._th, &self_copy._pli)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_tophits_Threshold")
 
         # return the merged hits
         return self_copy

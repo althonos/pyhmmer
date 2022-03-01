@@ -90,6 +90,7 @@ class TestTopHits(unittest.TestCase):
 
         self.pipeline = Pipeline(alphabet=self.hmm.alphabet)
         self.hits = self.pipeline.search_hmm(self.hmm, self.seqs)
+        self.pipeline.clear()
 
     def test_bool(self):
         self.assertFalse(pyhmmer.plan7.TopHits())
@@ -108,12 +109,46 @@ class TestTopHits(unittest.TestCase):
         dom_last = self.hits[-1]
         self.assertEqual(dom.name, dom_last.name)
 
+    def test_Z(self):
+        empty = TopHits()
+        self.assertEqual(empty.Z, 0)
+        self.assertEqual(self.hits.Z, len(self.seqs))
+
+    def test_searched_sequences(self):
+        empty = TopHits()
+        self.assertEqual(empty.searched_sequences, 0)
+        self.assertEqual(self.hits.searched_sequences, len(self.seqs))
+
+    def test_searched_residues(self):
+        empty = TopHits()
+        self.assertEqual(empty.searched_residues, 0)
+        self.assertEqual(self.hits.searched_residues, sum(map(len, self.seqs)))
+
+    def test_searched_models(self):
+        empty = TopHits()
+        self.assertEqual(empty.searched_sequences, 0)
+        self.assertEqual(self.hits.searched_models, 1)
+
     def test_merge_empty(self):
-        hits = TopHits()
-        merged = hits.merge(self.hits)
+        empty = TopHits()
+        self.assertFalse(empty.long_targets)
+        self.assertFalse(self.hits.long_targets)
+        self.assertEqual(empty.Z, 0.0)
+        self.assertEqual(empty.domZ, 0.0)
+
+        merged_empty = empty.merge(TopHits())
+        self.assertHitsEqual(merged_empty, empty)
+        self.assertEqual(merged_empty.searched_residues, 0)
+        self.assertEqual(merged_empty.searched_sequences, 0)
+        self.assertFalse(merged_empty.long_targets)
+        self.assertFalse(self.hits.long_targets)
+        self.assertEqual(merged_empty.Z, 0.0)
+        self.assertEqual(merged_empty.domZ, 0.0)
+
+        merged = empty.merge(self.hits)
         self.assertHitsEqual(merged, self.hits)
 
-    def test_merge_pipeline_results(self):
+    def test_merge_pipeline(self):
         hits1 = self.pipeline.search_hmm(self.hmm, self.seqs[:1000])
         hits2 = self.pipeline.search_hmm(self.hmm, self.seqs[1000:])
 
@@ -122,7 +157,23 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(len(hits1) + len(hits2), len(self.hits))
 
         merged = hits1.merge(hits2)
+        self.assertEqual(merged.searched_sequences, self.hits.searched_sequences)
+        self.assertEqual(merged.searched_models, self.hits.searched_models)
+        self.assertEqual(merged.Z, self.hits.Z)
+        self.assertEqual(merged.domZ, self.hits.domZ)
         self.assertHitsEqual(merged, self.hits)
+
+    def test_merged_pipeline_fixed_Z(self):
+        pipeline = Pipeline(alphabet=self.hmm.alphabet, Z=200.0)
+        hits1 = pipeline.search_hmm(self.hmm, self.seqs[:1000])
+        hits2 = pipeline.search_hmm(self.hmm, self.seqs[1000:])
+
+        self.assertEqual(hits1.Z, 200.0)
+        self.assertEqual(hits2.Z, 200.0)
+
+        merged = hits1.merge(hits2)
+        self.assertEqual(merged.Z, 200.0)
+
 
     def test_copy(self):
         copy = self.hits.copy()
@@ -157,14 +208,14 @@ class TestTopHits(unittest.TestCase):
 
     def test_threshold(self):
         # after thresholding, one of the hits will not be included.
-        self.assertEqual(self.hits.included, 15)
-        self.assertEqual(self.hits.reported, 22)
+        self.assertEqual(self.hits.hits_included, 15)
+        self.assertEqual(self.hits.hits_reported, 22)
 
     def test_to_msa(self):
         msa = self.hits.to_msa(self.hmm.alphabet)
         self.assertIsInstance(msa, TextMSA)
         unique_names = { seq.name.split(b"/")[0] for seq in msa.sequences }
-        self.assertEqual(len(unique_names), self.hits.included)
+        self.assertEqual(len(unique_names), self.hits.hits_included)
 
         msa_d = self.hits.to_msa(self.hmm.alphabet, True, True, True)
         self.assertIsInstance(msa_d, DigitalMSA)
