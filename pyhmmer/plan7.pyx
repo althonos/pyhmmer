@@ -5449,7 +5449,7 @@ cdef class TopHits:
 
         """
         assert self._th != NULL
-        assert self._th.N > 0
+        assert self._th.N >= 0
 
         cdef size_t     i
         cdef size_t     j
