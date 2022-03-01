@@ -3120,7 +3120,7 @@ cdef class OptimizedProfile:
     def M(self):
         """`int`: The number of nodes in the model.
 
-        .. versionadded:: v0.4.0
+        .. versionadded:: 0.4.0
 
         """
         assert self._om != NULL
@@ -3130,7 +3130,7 @@ cdef class OptimizedProfile:
     def L(self):
         """`int`: The currently configured target sequence length.
 
-        .. versionadded:: v0.4.0
+        .. versionadded:: 0.4.0
 
         """
         assert self._om != NULL
@@ -3203,7 +3203,7 @@ cdef class OptimizedProfile:
     def tbm(self):
         r"""`int`: The constant cost for a :math:`B \to M_k` transition.
 
-        .. versionadded:: v0.4.0
+        .. versionadded:: 0.4.0
 
         """
         assert self._om != NULL
@@ -3213,7 +3213,7 @@ cdef class OptimizedProfile:
     def tec(self):
         r"""`int`: The constant cost for a :math:`E \to C` transition.
 
-        .. versionadded:: v0.4.0
+        .. versionadded:: 0.4.0
 
         """
         assert self._om != NULL
@@ -3223,7 +3223,7 @@ cdef class OptimizedProfile:
     def tjb(self):
         """`int`: The constant cost for a :math:`NJC` move.
 
-        .. versionadded:: v0.4.0
+        .. versionadded:: 0.4.0
 
         """
         assert self._om != NULL
@@ -3238,7 +3238,7 @@ cdef class OptimizedProfile:
     def bias(self):
         """`int`: The positive bias to emission scores.
 
-        .. versionadded:: v0.4.0
+        .. versionadded:: 0.4.0
 
         """
         assert self._om != NULL
@@ -3248,7 +3248,7 @@ cdef class OptimizedProfile:
     def sbv(self):
         """`~pyhmmer.easel.MatrixU8`: The match scores for the SSV filter.
 
-        .. versionadded:: v0.4.0
+        .. versionadded:: 0.4.0
 
         """
         assert self._om != NULL
@@ -3423,7 +3423,7 @@ cdef class OptimizedProfile:
             This method is not available on the PowerPC platform (calling
             it will raise a `NotImplementedError`).
 
-        .. versionadded:: v0.4.0
+        .. versionadded:: 0.4.0
 
         """
         IF HMMER_IMPL == "SSE":
@@ -3539,7 +3539,7 @@ cdef class PipelineSearchTargets:
     from any other argument type; but if a `PipelineSearchTargets` is
     passed it will be used as-is in the search loop.
 
-    .. versionadded:: 0.4.12
+    .. versionadded:: 0.5.0
 
     """
 
@@ -4489,7 +4489,7 @@ cdef class Pipeline:
             be slow. Consider at least pre-fetching the HMM database if
             calling this method several times in a row.
 
-        .. versionadded:: v0.4.0
+        .. versionadded:: 0.4.0
 
         """
         cdef int                  allocM
@@ -5439,7 +5439,7 @@ cdef class TopHits:
     def E(self):
         """`float`: The per-target E-value threshold for reporting a hit.
 
-        .. versionadded:: 0.4.12
+        .. versionadded:: 0.5.0
 
         """
         return self._pli.E
@@ -5448,7 +5448,7 @@ cdef class TopHits:
     def T(self):
         """`float` or `None`: The per-target score threshold for reporting a hit.
 
-        .. versionadded:: 0.4.12
+        .. versionadded:: 0.5.0
 
         """
         return None if self._pli.by_E else self._pli.T
@@ -5457,7 +5457,7 @@ cdef class TopHits:
     def domE(self):
         """`float`: The per-domain E-value threshold for reporting a hit.
 
-        .. versionadded:: 0.4.12
+        .. versionadded:: 0.5.0
 
         """
         return self._pli.domE
@@ -5466,7 +5466,7 @@ cdef class TopHits:
     def domT(self):
         """`float` or `None`: The per-domain score threshold for reporting a hit.
 
-        .. versionadded:: 0.4.12
+        .. versionadded:: 0.5.0
 
         """
         return None if self._pli.dom_by_E else self._pli.domT
@@ -5475,7 +5475,7 @@ cdef class TopHits:
     def incE(self):
         """`float`: The per-target E-value threshold for including a hit.
 
-        .. versionadded:: 0.4.12
+        .. versionadded:: 0.5.0
 
         """
         return self._pli.incE
@@ -5493,7 +5493,7 @@ cdef class TopHits:
     def incdomE(self):
         """`float`: The per-domain E-value threshold for including a hit.
 
-        .. versionadded:: 0.4.12
+        .. versionadded:: 0.5.0
 
         """
         return self._pli.incdomE
@@ -5502,7 +5502,7 @@ cdef class TopHits:
     def incdomT(self):
         """`float` or `None`: The per-domain score threshold for including a hit.
 
-        .. versionadded:: 0.4.12
+        .. versionadded:: 0.5.0
 
         """
         return None if self._pli.incdom_by_E else self._pli.incdomT
@@ -5511,7 +5511,7 @@ cdef class TopHits:
     def bit_cutoffs(self):
         """`str` or `None`: The model-specific thresholding option, if any.
 
-        .. versionadded:: 0.4.12
+        .. versionadded:: 0.5.0
 
         """
         return next(
@@ -5617,7 +5617,7 @@ cdef class TopHits:
 
         Create a copy of this `TopHits` instance.
 
-        .. versionadded:: 0.4.12
+        .. versionadded:: 0.5.0
 
         """
         assert self._th != NULL
@@ -5834,7 +5834,7 @@ cdef class TopHits:
             a copy of all the hits from ``self`` and ``other``, sorted
             by key.
 
-        .. versionadded:: 0.4.12
+        .. versionadded:: 0.5.0
 
         """
         assert self._th != NULL
