@@ -5807,8 +5807,8 @@ cdef class TopHits:
         else:
             raise UnexpectedError(status, "p7_tophits_Alignment")
 
-    cpdef TopHits merge(self, TopHits other):
-        """merge(self, other)\n--
+    def merge(self,  *others):
+        """merge(self, *other)\n--
 
         Concatenate the hits from this instance and ``other``.
 
@@ -5818,67 +5818,72 @@ cdef class TopHits:
         they were set manually, the manual value will be kept, provided
         both values are equal.
 
+        Returns:
+            `~pyhmmer.plan7.TopHits`: A new collection of hits containing
+            a copy of all the hits from ``self`` and ``other``, sorted
+            by key.
+
         Caution:
             This should only be done for hits obtained for the same domain
             on similarly configured pipelines. Some internal checks will be
             done to ensure this is not the case, but the results may not be
             consistent at all.
 
-        Danger:
-            This method is currently *unstable*, because the returned object
-            has not an accurate thresholding. **Don't use it in production
-            code**.
-
-        Returns:
-            `~pyhmmer.plan7.TopHits`: A new collection of hits containing
-            a copy of all the hits from ``self`` and ``other``, sorted
-            by key.
+        Example:
+            >>> pli = Pipeline(thioesterase.alphabet)
+            >>> hits1 = pli.search_hmm(thioesterase, proteins[:1000])
+            >>> hits2 = pli.search_hmm(thioesterase, proteins[1000:2000])
+            >>> hits3 = pli.search_hmm(thioesterase, proteins[2000:])
+            >>> merged = hits1.merge(hits2, hits3)
 
         .. versionadded:: 0.5.0
 
         """
         assert self._th != NULL
-        assert other._th != NULL
 
-        cdef TopHits self_copy
+        cdef TopHits other
         cdef TopHits other_copy
+        cdef TopHits merged     = self.copy()
         cdef int     status     = libeasel.eslOK
 
-        # check that the hits can be merged together
-        if self._pli.long_targets and not other._pli.long_targets:
-            raise RuntimeError("Trying to merge a `TopHits` from a long targets pipeline to a `TopHits` from a regular pipeline.")
-        if self._pli.Z_setby != other._pli.Z_setby:
-            raise RuntimeError("Trying to merge `TopHits` with `Z` values obtained with different methods.")
-        elif self._pli.Z_setby != p7_zsetby_e.p7_ZSETBY_NTARGETS and self._pli.Z != other._pli.Z:
-            raise RuntimeError("Trying to merge `TopHits` obtained from pipelines manually configured to different `Z` values.")
-        if self._pli.domZ_setby != other._pli.domZ_setby:
-            raise RuntimeError("Trying to merge `TopHits` with `domZ` values obtained with different methods.")
-        elif self._pli.domZ_setby != p7_zsetby_e.p7_ZSETBY_NTARGETS and self._pli.domZ != other._pli.domZ:
-            raise RuntimeError("Trying to merge `TopHits` obtained from pipelines manually configured to different `domZ` values.")
+        for other in others:
+            assert other._th != NULL
 
-        # copy hits (`p7_tophits_Merge` effectively destroys the old storage
-        # but because of Python references we cannot be sure that the data is
-        # not referenced anywhere else)
-        self_copy = self.copy()
-        other_copy = other.copy()
+            # check that the hits can be merged together
+            if self._pli.long_targets and not other._pli.long_targets:
+                raise RuntimeError("Trying to merge a `TopHits` from a long targets pipeline to a `TopHits` from a regular pipeline.")
+            if self._pli.Z_setby != other._pli.Z_setby:
+                raise RuntimeError("Trying to merge `TopHits` with `Z` values obtained with different methods.")
+            elif self._pli.Z_setby != p7_zsetby_e.p7_ZSETBY_NTARGETS and self._pli.Z != other._pli.Z:
+                raise RuntimeError("Trying to merge `TopHits` obtained from pipelines manually configured to different `Z` values.")
+            if self._pli.domZ_setby != other._pli.domZ_setby:
+                raise RuntimeError("Trying to merge `TopHits` with `domZ` values obtained with different methods.")
+            elif self._pli.domZ_setby != p7_zsetby_e.p7_ZSETBY_NTARGETS and self._pli.domZ != other._pli.domZ:
+                raise RuntimeError("Trying to merge `TopHits` obtained from pipelines manually configured to different `domZ` values.")
 
-        # merge everything
-        with nogil:
-            # merge the top hits
-            status = libhmmer.p7_tophits.p7_tophits_Merge(self_copy._th, other_copy._th)
-            if status != libeasel.eslOK:
-                raise UnexpectedError(status, "p7_tophits_Merge")
-            # merge the pipelines
-            status = libhmmer.p7_pipeline.p7_pipeline_Merge(&self_copy._pli, &other_copy._pli)
-            if status != libeasel.eslOK:
-                raise UnexpectedError(status, "p7_pipeline_Merge")
-            # threshold the merged hits with new values
-            status = libhmmer.p7_tophits.p7_tophits_Threshold(self_copy._th, &self_copy._pli)
-            if status != libeasel.eslOK:
-                raise UnexpectedError(status, "p7_tophits_Threshold")
+            # copy hits (`p7_tophits_Merge` effectively destroys the old storage
+            # but because of Python references we cannot be sure that the data is
+            # not referenced anywhere else)
+            other_copy = other.copy()
+
+            # merge everything
+            with nogil:
+                # merge the top hits
+                status = libhmmer.p7_tophits.p7_tophits_Merge(merged._th, other_copy._th)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_tophits_Merge")
+                # merge the pipelines
+                status = libhmmer.p7_pipeline.p7_pipeline_Merge(&merged._pli, &other_copy._pli)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_pipeline_Merge")
+
+        # threshold the merged hits with new values
+        status = libhmmer.p7_tophits.p7_tophits_Threshold(merged._th, &merged._pli)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_tophits_Threshold")
 
         # return the merged hits
-        return self_copy
+        return merged
 
 
 @cython.freelist(8)

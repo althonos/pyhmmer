@@ -132,9 +132,13 @@ class TestTopHits(unittest.TestCase):
     def test_merge_empty(self):
         empty = TopHits()
         self.assertFalse(empty.long_targets)
-        self.assertFalse(self.hits.long_targets)
         self.assertEqual(empty.Z, 0.0)
         self.assertEqual(empty.domZ, 0.0)
+
+        empty2 = empty.merge()
+        self.assertFalse(empty2.long_targets)
+        self.assertEqual(empty2.Z, 0.0)
+        self.assertEqual(empty2.domZ, 0.0)
 
         merged_empty = empty.merge(TopHits())
         self.assertHitsEqual(merged_empty, empty)
@@ -150,13 +154,15 @@ class TestTopHits(unittest.TestCase):
 
     def test_merge_pipeline(self):
         hits1 = self.pipeline.search_hmm(self.hmm, self.seqs[:1000])
-        hits2 = self.pipeline.search_hmm(self.hmm, self.seqs[1000:])
+        hits2 = self.pipeline.search_hmm(self.hmm, self.seqs[1000:2000])
+        hits3 = self.pipeline.search_hmm(self.hmm, self.seqs[2000:])
 
-        self.assertEqual(hits1.Z, 1000.0)
-        self.assertEqual(hits2.Z, len(self.seqs) - 1000)
-        self.assertEqual(len(hits1) + len(hits2), len(self.hits))
+        self.assertEqual(hits1.Z, 1000)
+        self.assertEqual(hits2.Z, 1000)
+        self.assertEqual(hits3.Z, len(self.seqs) - 2000)
+        self.assertEqual(len(hits1) + len(hits2) + len(hits3), len(self.hits))
 
-        merged = hits1.merge(hits2)
+        merged = hits1.merge(hits2, hits3)
         self.assertEqual(merged.searched_sequences, self.hits.searched_sequences)
         self.assertEqual(merged.searched_models, self.hits.searched_models)
         self.assertEqual(merged.Z, self.hits.Z)
@@ -166,14 +172,18 @@ class TestTopHits(unittest.TestCase):
     def test_merged_pipeline_fixed_Z(self):
         pipeline = Pipeline(alphabet=self.hmm.alphabet, Z=200.0)
         hits1 = pipeline.search_hmm(self.hmm, self.seqs[:1000])
-        hits2 = pipeline.search_hmm(self.hmm, self.seqs[1000:])
+        hits2 = pipeline.search_hmm(self.hmm, self.seqs[1000:2000])
+        hits3 = pipeline.search_hmm(self.hmm, self.seqs[2000:])
 
         self.assertEqual(hits1.Z, 200.0)
         self.assertEqual(hits2.Z, 200.0)
+        self.assertEqual(hits3.Z, 200.0)
 
-        merged = hits1.merge(hits2)
+        merged = hits1.merge(hits2, hits3)
         self.assertEqual(merged.Z, 200.0)
 
+        hits = pipeline.search_hmm(self.hmm, self.seqs)
+        self.assertHitsEqual(merged, hits)
 
     def test_copy(self):
         copy = self.hits.copy()

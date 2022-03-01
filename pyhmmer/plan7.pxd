@@ -275,7 +275,6 @@ cdef class TopHits:
     cpdef void sort(self, str by=*) except *
     cpdef bint is_sorted(self, str by=*) except *
     cpdef TopHits copy(self)
-    cpdef TopHits merge(self, TopHits other)
     cpdef MSA to_msa(self, Alphabet alphabet, bint trim=*, bint digitize=?, bint all_consensus_cols=?)
 
 
