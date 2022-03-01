@@ -5421,6 +5421,9 @@ cdef class TopHits:
     def __copy__(self):
         return self.copy()
 
+    def __add__(TopHits self, TopHits other):
+        return self.merge(other)
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -5851,15 +5854,15 @@ cdef class TopHits:
 
             # check that the hits can be merged together
             if self._pli.long_targets and not other._pli.long_targets:
-                raise RuntimeError("Trying to merge a `TopHits` from a long targets pipeline to a `TopHits` from a regular pipeline.")
+                raise ValueError("Trying to merge a `TopHits` from a long targets pipeline to a `TopHits` from a regular pipeline.")
             if self._pli.Z_setby != other._pli.Z_setby:
-                raise RuntimeError("Trying to merge `TopHits` with `Z` values obtained with different methods.")
+                raise ValueError("Trying to merge `TopHits` with `Z` values obtained with different methods.")
             elif self._pli.Z_setby != p7_zsetby_e.p7_ZSETBY_NTARGETS and self._pli.Z != other._pli.Z:
-                raise RuntimeError("Trying to merge `TopHits` obtained from pipelines manually configured to different `Z` values.")
+                raise ValueError("Trying to merge `TopHits` obtained from pipelines manually configured to different `Z` values.")
             if self._pli.domZ_setby != other._pli.domZ_setby:
-                raise RuntimeError("Trying to merge `TopHits` with `domZ` values obtained with different methods.")
+                raise ValueError("Trying to merge `TopHits` with `domZ` values obtained with different methods.")
             elif self._pli.domZ_setby != p7_zsetby_e.p7_ZSETBY_NTARGETS and self._pli.domZ != other._pli.domZ:
-                raise RuntimeError("Trying to merge `TopHits` obtained from pipelines manually configured to different `domZ` values.")
+                raise ValueError("Trying to merge `TopHits` obtained from pipelines manually configured to different `domZ` values.")
 
             # copy hits (`p7_tophits_Merge` effectively destroys the old storage
             # but because of Python references we cannot be sure that the data is
