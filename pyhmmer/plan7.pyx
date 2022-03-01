@@ -19,6 +19,7 @@ from cpython.ref cimport PyObject
 from cpython.exc cimport PyErr_Clear
 from cpython.unicode cimport PyUnicode_DecodeASCII
 from libc.math cimport exp, ceil
+from libc.stddef cimport ptrdiff_t
 from libc.stdio cimport printf
 from libc.stdlib cimport calloc, malloc, realloc, free
 from libc.stdint cimport uint8_t, uint32_t, int64_t
@@ -39,6 +40,7 @@ cimport libeasel.vec
 cimport libhmmer
 cimport libhmmer.modelconfig
 cimport libhmmer.modelstats
+cimport libhmmer.p7_alidisplay
 cimport libhmmer.p7_hmm
 cimport libhmmer.p7_builder
 cimport libhmmer.p7_bg
@@ -206,18 +208,22 @@ cdef class Alignment:
     def hmm_from(self):
         """`int`: The start coordinate of the alignment in the query HMM.
         """
+        assert self._ad != NULL
         return self._ad.hmmfrom
 
     @property
     def hmm_to(self):
         """`int`: The end coordinate of the alignment in the query HMM.
         """
+        assert self._ad != NULL
         return self._ad.hmmto
 
     @property
     def hmm_name(self):
         """`bytes`: The name of the query HMM.
         """
+        assert self._ad != NULL
+        assert self._ad.hmmname != NULL
         return <bytes> self._ad.hmmname
 
     @property
@@ -227,42 +233,51 @@ cdef class Alignment:
         .. versionadded:: 0.1.4
 
         """
+        assert self._ad != NULL
+        assert self._ad.hmmacc != NULL
         return <bytes> self._ad.hmmacc
 
     @property
     def hmm_sequence(self):
         """`str`: The sequence of the query HMM in the alignment.
         """
+        assert self._ad != NULL
         return self._ad.model.decode('ascii')
 
     @property
     def target_from(self):
         """`int`: The start coordinate of the alignment in the target sequence.
         """
+        assert self._ad != NULL
         return self._ad.sqfrom
 
     @property
     def target_name(self):
         """`bytes`: The name of the target sequence.
         """
+        assert self._ad != NULL
+        assert self._ad.sqname != NULL
         return <bytes> self._ad.sqname
 
     @property
     def target_sequence(self):
         """`str`: The sequence of the target sequence in the alignment.
         """
+        assert self._ad != NULL
         return self._ad.aseq.decode('ascii')
 
     @property
     def target_to(self):
         """`int`: The end coordinate of the alignment in the target sequence.
         """
+        assert self._ad != NULL
         return self._ad.sqto
 
     @property
     def identity_sequence(self):
         """`str`: The identity sequence between the query and the target.
         """
+        assert self._ad != NULL
         return self._ad.mline.decode('ascii')
 
 
@@ -5348,7 +5363,7 @@ cdef class TopHits:
 
         >>> abc = thioesterase.alphabet
         >>> hits = Pipeline(abc).search_hmm(thioesterase, proteins)
-        >>> hits.is_sorted()
+        >>> hits.is_sorted(by="key")
         True
 
     Use `len` to query the number of top hits, and the usual indexing notation
@@ -5398,6 +5413,9 @@ cdef class TopHits:
             raise IndexError("list index out of range")
         return Hit(self, index)
 
+    def __copy__(self):
+        return self.copy()
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -5413,6 +5431,105 @@ cdef class TopHits:
         return self._th.nincluded
 
     # --- Methods ------------------------------------------------------------
+
+    cpdef TopHits copy(self):
+        """copy(self, pipeline)\n--
+
+        Create a copy of this `TopHits` instance.
+
+        .. versionadded:: 0.4.12
+
+        """
+        assert self._th != NULL
+        assert self._th.N > 0
+
+        cdef size_t     i
+        cdef size_t     j
+        cdef ptrdiff_t  diff
+        cdef P7_DOMAIN* dom_orig
+        cdef P7_DOMAIN* dom_copy
+
+        # create a copy and copy attributes extracted from the Pipeline
+        cdef TopHits    copy     = TopHits.__new__(TopHits)
+        copy.Z = self.Z
+        copy.domZ = self.domZ
+        copy.long_targets = self.long_targets
+
+        # WARN(@althonos): there is no way to do this in the HMMER codebase
+        #                  so this is a manual implementation; make sure
+        #                  that it stays consistent if P7_TOPHITS changes!
+        with nogil:
+            # don't use `p7_tophits_Create` here otherwise it will allocate
+            # using a default size, while we already know how large we want
+            # our buffers to be.
+            copy._th = <P7_TOPHITS*> malloc(sizeof(P7_TOPHITS))
+            if copy._th == NULL:
+                raise AllocationError("P7_TOPHITS", sizeof(P7_TOPHITS))
+
+            # copy attributes that don't need any allocation
+            copy._th.nreported = self._th.nreported
+            copy._th.nincluded = self._th.nincluded
+            copy._th.is_sorted_by_sortkey = self._th.is_sorted_by_sortkey
+            copy._th.is_sorted_by_seqidx = self._th.is_sorted_by_seqidx
+
+            # we allocate an exact size array here since we don't expect new
+            # data to be added to the copy; this means we can use the real `N`
+            # as the `Nalloc`
+            copy._th.Nalloc = copy._th.N = self._th.N
+            copy._th.unsrt = <P7_HIT*> calloc(self._th.N, sizeof(P7_HIT))
+            if copy._th.unsrt == NULL:
+                raise AllocationError("P7_HIT", sizeof(P7_HIT), self._th.N)
+
+            # here we have to copy the sorted array, which is basically an
+            # array of pointers to `unsrt`; for each sorted hit we retrieve
+            # its position in the old array and use it to set the position
+            # in the new array
+            copy._th.hit = <P7_HIT**> calloc(self._th.N, sizeof(P7_HIT*))
+            if copy._th.hit == NULL:
+                raise AllocationError("P7_HIT*", sizeof(P7_HIT*), self._th.N)
+            for i in range(<size_t> self._th.N):
+                diff = self._th.hit[i] - self._th.unsrt
+                copy._th.hit[i] = copy._th.unsrt + diff
+
+            # now copy the hits themselves, making sure to duplicate any
+            # memory owned by them get's duplicated in the process (this
+            # is a deepcopy to avoid any double free)
+            memcpy(copy._th.unsrt, self._th.unsrt, sizeof(P7_HIT) * self._th.N)
+            for i in range(<size_t> self._th.N):
+                # reallocate an owned string for the hit name, accession and description
+                if self._th.unsrt[i].name != NULL:
+                    copy._th.unsrt[i].name = strdup(self._th.unsrt[i].name)
+                    if copy._th.unsrt[i].name == NULL:
+                        raise AllocationError("char*", sizeof(char*), strlen(self._th.unsrt[i].name))
+                if self._th.unsrt[i].acc != NULL:
+                    copy._th.unsrt[i].acc = strdup(self._th.unsrt[i].acc)
+                    if copy._th.unsrt[i].acc == NULL:
+                        raise AllocationError("char*", sizeof(char*), strlen(self._th.unsrt[i].acc))
+                if self._th.unsrt[i].desc != NULL:
+                    copy._th.unsrt[i].desc = strdup(self._th.unsrt[i].desc)
+                    if copy._th.unsrt[i].desc == NULL:
+                        raise AllocationError("char*", sizeof(char*), strlen(self._th.unsrt[i].desc))
+                # copy the domain list
+                copy._th.unsrt[i].dcl = <P7_DOMAIN*> calloc(sizeof(P7_DOMAIN), copy._th.unsrt[i].ndom)
+                if copy._th.unsrt[i].dcl == NULL:
+                    raise AllocationError("P7_DOMAIN", sizeof(P7_DOMAIN), self._th.unsrt[i].ndom)
+                memcpy(copy._th.unsrt[i].dcl, self._th.unsrt[i].dcl, sizeof(P7_DOMAIN) * self._th.unsrt[i].ndom)
+                # copy domain memory
+                for j in range(<size_t> self._th.unsrt[i].ndom):
+                    dom_orig = &self._th.unsrt[i].dcl[j]
+                    dom_copy = &copy._th.unsrt[i].dcl[j]
+                    # copy scores per position
+                    if dom_orig.scores_per_pos != NULL:
+                        dom_copy.scores_per_pos = <float*> calloc(sizeof(float), dom_orig.ad.N)
+                        if dom_copy.scores_per_pos == NULL:
+                            raise AllocationError("float", sizeof(float), dom_orig.ad.N)
+                        memcpy(dom_copy.scores_per_pos, dom_orig.scores_per_pos, sizeof(float) * dom_orig.ad.N)
+                    # copy alidisplay
+                    dom_copy.ad = libhmmer.p7_alidisplay.p7_alidisplay_Clone(dom_orig.ad)
+                    if dom_copy.ad == NULL:
+                        raise AllocationError("P7_ALIDISPLAY", sizeof(P7_ALIDISPLAY))
+
+        return copy
 
     cdef int _threshold(self, Pipeline pipeline) nogil except 1:
         cdef int status = libhmmer.p7_tophits.p7_tophits_Threshold(self._th, pipeline._pli)

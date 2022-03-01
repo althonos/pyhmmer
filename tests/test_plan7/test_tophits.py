@@ -44,6 +44,64 @@ class TestTopHits(unittest.TestCase):
         dom_last = self.hits[-1]
         self.assertEqual(dom.name, dom_last.name)
 
+    def test_copy(self):
+        copy = self.hits.copy()
+        self.assertEqual(len(self.hits), len(copy))
+        for h1, h2 in zip(copy, self.hits):
+            for attr in (
+                "name",
+                "accession",
+                "description",
+                "score",
+                "pre_score",
+                "sum_score",
+                "bias",
+                "evalue",
+                "pvalue",
+            ):
+                self.assertEqual(
+                    getattr(h1, attr),
+                    getattr(h2, attr),
+                    "attribute {!r} differs".format(attr)
+                )
+
+            self.assertEqual(len(h1.domains), len(h2.domains))
+            for d1, d2 in zip(h1.domains, h2.domains):
+                for attr in (
+                    "env_from",
+                    "env_to",
+                    "score",
+                    "bias",
+                    "correction",
+                    "envelope_score",
+                    "c_evalue",
+                    "i_evalue",
+                    "pvalue"
+                ):
+                    self.assertEqual(
+                        getattr(d1, attr),
+                        getattr(d2, attr),
+                        "attribute {!r} differs".format(attr)
+                    )
+                for attr in (
+                    "hmm_from",
+                    "hmm_to",
+                    "hmm_name",
+                    "hmm_accession",
+                    "hmm_sequence",
+                    "target_from",
+                    "target_to",
+                    "target_name",
+                    "target_sequence",
+                    "identity_sequence",
+                ):
+                    self.assertEqual(
+                        getattr(d1.alignment, attr),
+                        getattr(d2.alignment, attr),
+                        "attribute {!r} differs".format(attr)
+                    )
+
+
     def test_sort(self):
         # check the hits are sorted by default
         self.assertTrue(self.hits.is_sorted())
