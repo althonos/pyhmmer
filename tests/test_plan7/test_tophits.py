@@ -9,10 +9,74 @@ import pkg_resources
 import pyhmmer
 from pyhmmer.errors import EaselError
 from pyhmmer.easel import SequenceFile, TextMSA, DigitalMSA
-from pyhmmer.plan7 import HMMFile, Pipeline
+from pyhmmer.plan7 import HMMFile, Pipeline, TopHits
 
 
 class TestTopHits(unittest.TestCase):
+
+    def assertAlignmentEqual(self, a1, a2):
+        for attr in (
+            "hmm_from",
+            "hmm_to",
+            "hmm_name",
+            "hmm_accession",
+            "hmm_sequence",
+            "target_from",
+            "target_to",
+            "target_name",
+            "target_sequence",
+            "identity_sequence",
+        ):
+            self.assertEqual(
+                getattr(a1, attr),
+                getattr(a2, attr),
+                "attribute {!r} differs".format(attr)
+            )
+
+    def assertDomainEqual(self, d1, d2):
+        for attr in (
+            "env_from",
+            "env_to",
+            "score",
+            "bias",
+            "correction",
+            "envelope_score",
+            "c_evalue",
+            "i_evalue",
+            "pvalue"
+        ):
+            self.assertEqual(
+                getattr(d1, attr),
+                getattr(d2, attr),
+                "attribute {!r} differs".format(attr)
+            )
+        self.assertAlignmentEqual(d1.alignment, d2.alignment)
+
+    def assertHitEqual(self, h1, h2):
+        for attr in (
+            "name",
+            "accession",
+            "description",
+            "score",
+            "pre_score",
+            "sum_score",
+            "bias",
+            "evalue",
+            "pvalue",
+        ):
+            self.assertEqual(
+                getattr(h1, attr),
+                getattr(h2, attr),
+                "attribute {!r} differs".format(attr)
+            )
+        self.assertEqual(len(h1.domains), len(h2.domains))
+        for d1, d2 in zip(h1.domains, h2.domains):
+            self.assertDomainEqual(d1, d2)
+
+    def assertHitsEqual(self, hits1, hits2):
+        self.assertEqual(len(hits1), len(hits2))
+        for h1, h2 in zip(hits1, hits2):
+            self.assertHitEqual(h1, h2)
 
     def setUp(self):
         hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/PF02826.hmm")
@@ -44,63 +108,25 @@ class TestTopHits(unittest.TestCase):
         dom_last = self.hits[-1]
         self.assertEqual(dom.name, dom_last.name)
 
+    def test_merge_empty(self):
+        hits = TopHits()
+        merged = hits.merge(self.hits)
+        self.assertHitsEqual(merged, self.hits)
+
+    def test_merge_pipeline_results(self):
+        hits1 = self.pipeline.search_hmm(self.hmm, self.seqs[:1000])
+        hits2 = self.pipeline.search_hmm(self.hmm, self.seqs[1000:])
+
+        self.assertEqual(hits1.Z, 1000.0)
+        self.assertEqual(hits2.Z, len(self.seqs) - 1000)
+        self.assertEqual(len(hits1) + len(hits2), len(self.hits))
+
+        merged = hits1.merge(hits2)
+        self.assertHitsEqual(merged, self.hits)
+
     def test_copy(self):
         copy = self.hits.copy()
-        self.assertEqual(len(self.hits), len(copy))
-        for h1, h2 in zip(copy, self.hits):
-            for attr in (
-                "name",
-                "accession",
-                "description",
-                "score",
-                "pre_score",
-                "sum_score",
-                "bias",
-                "evalue",
-                "pvalue",
-            ):
-                self.assertEqual(
-                    getattr(h1, attr),
-                    getattr(h2, attr),
-                    "attribute {!r} differs".format(attr)
-                )
-
-            self.assertEqual(len(h1.domains), len(h2.domains))
-            for d1, d2 in zip(h1.domains, h2.domains):
-                for attr in (
-                    "env_from",
-                    "env_to",
-                    "score",
-                    "bias",
-                    "correction",
-                    "envelope_score",
-                    "c_evalue",
-                    "i_evalue",
-                    "pvalue"
-                ):
-                    self.assertEqual(
-                        getattr(d1, attr),
-                        getattr(d2, attr),
-                        "attribute {!r} differs".format(attr)
-                    )
-                for attr in (
-                    "hmm_from",
-                    "hmm_to",
-                    "hmm_name",
-                    "hmm_accession",
-                    "hmm_sequence",
-                    "target_from",
-                    "target_to",
-                    "target_name",
-                    "target_sequence",
-                    "identity_sequence",
-                ):
-                    self.assertEqual(
-                        getattr(d1.alignment, attr),
-                        getattr(d2.alignment, attr),
-                        "attribute {!r} differs".format(attr)
-                    )
-
+        self.assertHitsEqual(copy, self.hits)
 
     def test_sort(self):
         # check the hits are sorted by default

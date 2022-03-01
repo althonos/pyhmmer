@@ -274,6 +274,7 @@ cdef class TopHits:
     cdef int _sort_by_seqidx(self) nogil except 1
 
     cpdef TopHits copy(self)
+    cpdef TopHits merge(self, TopHits other)
     cpdef MSA to_msa(self, Alphabet alphabet, bint trim=*, bint digitize=?, bint all_consensus_cols=?)
 
 

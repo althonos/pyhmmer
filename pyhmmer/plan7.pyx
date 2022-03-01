@@ -4301,6 +4301,7 @@ cdef class Pipeline:
         with nogil:
             # make sure the pipeline is set to search mode and ready for a new HMM
             self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
+            self._pli.nseqs = 0
             # run the search loop on all database sequences while recycling memory
             Pipeline._search_loop(
                 self._pli,
@@ -4505,8 +4506,9 @@ cdef class Pipeline:
         if not self.alphabet._eq(query.alphabet):
             raise AlphabetMismatch(self.alphabet, query.alphabet)
 
-        # make sure the pipeline is set to scan mode
+        # make sure the pipeline is set to scan mode and ready for a new sequence
         self._pli.mode = p7_pipemodes_e.p7_SCAN_MODELS
+        self._pli.nmodels = 0
 
         # get an iterator over the input hmms, with an early return if
         # no sequences were given, and extract the raw pointer to the
@@ -5672,6 +5674,77 @@ cdef class TopHits:
             raise ValueError("No included domains found")
         else:
             raise UnexpectedError(status, "p7_tophits_Alignment")
+
+    cpdef TopHits merge(self, TopHits other):
+        """merge(self, other)\n--
+
+        Concatenate the hits from this instance and ``other``.
+
+        If the ``Z`` and ``domZ`` values used to compute E-values were
+        computed by the `Pipeline` from the number of targets, the returned
+        object will update them by summing ``self.Z`` and ``other.Z``. If
+        they were set manually, the manual value will be kept, provided
+        both values are equal.
+
+        Caution:
+            This should only be done for hits obtained for the same domain
+            on similarly configured pipelines. Some internal checks will be
+            done to ensure this is not the case, but the results may not be
+            consistent at all.
+
+        Danger:
+            This method is currently *unstable*, because the returned object
+            has not an accurate thresholding. **Don't use it in production
+            code**.
+
+        Returns:
+            `~pyhmmer.plan7.TopHits`: A new collection of hits containing
+            a copy of all the hits from ``self`` and ``other``, sorted
+            by key.
+
+        .. versionadded:: 0.4.12
+
+        """
+        assert self._th != NULL
+        assert other._th != NULL
+
+        cdef int     status
+        cdef TopHits self_copy
+        cdef TopHits other_copy
+
+        # check that the hits can be merged together
+        if self.long_targets != other.long_targets:
+            raise RuntimeError("Trying to a `TopHits` from a long targets pipeline to a `TopHits` from a regular pipeline.")
+        if self.Z_setby != other.Z_setby:
+            raise RuntimeError("Trying to merge `TopHits` with `Z` values obtained with different methods.")
+        elif self.Z_setby != p7_zsetby_e.p7_ZSETBY_NTARGETS and self.Z != other.Z:
+            raise RuntimeError("Trying to merge `TopHits` obtained from pipelines manually configured to different `Z` values.")
+        if self.Z_setby != other.domZ_setby:
+          raise RuntimeError("Trying to merge `TopHits` with `domZ` values obtained with different methods.")
+        elif self.domZ_setby != p7_zsetby_e.p7_ZSETBY_NTARGETS and self.domZ != other.domZ:
+            raise RuntimeError("Trying to merge `TopHits` obtained from pipelines manually configured to different `domZ` values.")
+
+        # copy hits (because `p7_tophits_Merge` effectively destroys the
+        # old storage, but because of Python references we cannot be sure
+        # the data is not referenced anywhere)
+        self_copy = self.copy()
+        other_copy = other.copy()
+
+        # merge the top hits
+        with nogil:
+            status = libhmmer.p7_tophits.p7_tophits_Merge(self_copy._th, other_copy._th)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_tophits_Merge")
+
+        # update Z and domZ values if they were obtained set from the number
+        # of targets given to the pipeline
+        if self.Z_setby == p7_zsetby_e.p7_ZSETBY_NTARGETS:
+            self_copy.Z = self.Z + other.Z
+        if self.domZ_setby == p7_zsetby_e.p7_ZSETBY_NTARGETS:
+            self_copy.domZ = self.domZ + other.domZ
+
+        # return the merged hits
+        return self_copy
 
 
 @cython.freelist(8)
