@@ -28,13 +28,14 @@ for result in data["results"]:
         result["tool"] = result["command"].split(" ")[0]
     else:
         result["tool"] = "pyhmmer"
-    if " Pfam.v33-1.hmm " in result["command"]:
+    if "Pfam.v33-1.hmm " in result["command"]:
         result["format"] = "text"
-    elif " Pfam.v33-1.pressed.hmm.h3m " in result["command"]:
+    elif "Pfam.v33-1.pressed.hmm.h3m " in result["command"]:
         result["format"] = "binary"
-    elif " Pfam.v33-1.pressed.hmm " in result["command"]:
+    elif "Pfam.v33-1.pressed.hmm " in result["command"]:
         result["format"] = "pressed"
     else:
+        print(result["command"])
         raise ValueError("could not find format")
     result["cpu"] = int(CPU_RX.search(result["command"]).group(1))
 
