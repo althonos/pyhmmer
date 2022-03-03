@@ -1185,6 +1185,8 @@ cdef class VectorF(Vector):
             return NotImplemented
         if buffer.shape[0] != self._n:
             return False
+        elif self._n == 0:
+            return True
 
         # check values
         with nogil:
