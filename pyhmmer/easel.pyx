@@ -4739,24 +4739,84 @@ cdef class SequenceFile:
     # --- Class methods ------------------------------------------------------
 
     @classmethod
-    def parse(cls, bytes buffer, str format):
+    def parse(
+        cls,
+        const unsigned char[::1] buffer,
+        str format,
+        *,
+        Alphabet alphabet=None
+    ):
         """parse(cls, buffer, format)\n--
 
         Parse a sequence from a binary ``buffer`` using the given ``format``.
 
+        Argument:
+            buffer (`bytes` or byte-like buffer): A buffer containing the
+                sequence data to parse. Any type implementing the buffer
+                protocol (such as `bytes`, `bytearray`, or `memoryview`)
+                is supported.
+            format (`str`): The format of the sequence data. See the
+                `SequenceFile.__init__` documentation for allowed values.
+
+        Keyword Arguments:
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet to use to
+                digitize the returned sequence, if desired.
+
+        Returns:
+            `~pyhmmer.easel.Sequence`: The sequenced parsed from the buffer,
+            either as a `DigitalSequence` if an alphabet was provided, or as
+            a `TextSequence` if `None` was given.
+
+        Raises:
+            `ValueError`: When ``format`` is not a valid sequence format.
+            `OSError`: If an internal parser error occurred while guessing
+                the alphabet or the format.
+
         """
-        cdef Sequence seq = TextSequence.__new__(TextSequence)
-        seq._sq = libeasel.sq.esl_sq_Create()
+        cdef Sequence seq
+
+        if alphabet is None:
+            seq = TextSequence.__new__(TextSequence)
+            seq._sq = libeasel.sq.esl_sq_Create()
+            seq._sq.abc = NULL
+        else:
+            seq = DigitalSequence.__new__(DigitalSequence)
+            seq.alphabet = alphabet
+            seq._sq = libeasel.sq.esl_sq_CreateDigital(alphabet._abc)
         if not seq._sq:
             raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
-        seq._sq.abc = NULL
+
         return cls.parseinto(seq, buffer, format)
 
     @classmethod
-    def parseinto(cls, Sequence seq, bytes buffer, str format):
+    def parseinto(
+        cls,
+        Sequence seq,
+        const unsigned char[::1] buffer,
+        str format
+    ):
         """parseinto(cls, seq, buffer, format)\n--
 
         Parse a sequence from a binary ``buffer`` into ``seq``.
+
+        Argument:
+            seq (`~pyhmmer.easel.Sequence`): The sequence object into which
+                the deseriazlied sequence data will be written.
+            buffer (`bytes` or byte-like buffer): A buffer containing the
+                sequence data to parse. Any type implementing the buffer
+                protocol (such as `bytes`, `bytearray`, or `memoryview`)
+                is supported.
+            format (`str`): The format of the sequence data. See the
+                `SequenceFile.__init__` documentation for allowed values.
+
+        Raises:
+            `ValueError`: When ``format`` is not a valid sequence format.
+            `OSError`: If an internal parser error occurred while guessing
+                the alphabet or the format.
+
+        Returns:
+            `~pyhmmer.easel.Sequence`: The sequence given as argument, or
+            `None` if the end of the file was reached.
 
         """
         assert seq._sq != NULL
@@ -4768,7 +4828,11 @@ cdef class SequenceFile:
                 raise ValueError("Invalid sequence format: {!r}".format(format))
             fmt = cls._FORMATS[format_]
 
-        cdef int status = libeasel.sqio.esl_sqio_Parse(buffer, len(buffer), seq._sq, fmt)
+        cdef int status = libeasel.sqio.esl_sqio_Parse(
+            <char*> &buffer[0],
+            buffer.shape[0],
+            seq._sq, fmt
+        )
         if status == libeasel.eslEFORMAT:
             raise AllocationError("ESL_SQFILE", sizeof(ESL_SQFILE))
         elif status == libeasel.eslOK:
@@ -5046,7 +5110,6 @@ cdef class SequenceFile:
             #                  Easel for ungapped formats (althonos/pyhmmer#7).
             if ignore_gaps:
                 libeasel.sqio.esl_sqio_Ignore(self._sqfp, b"-")
-
             # set digital mode if requested
             if digital:
                 self.alphabet = self.guess_alphabet() if alphabet is None else alphabet
