@@ -689,10 +689,10 @@ cdef class KeyHash:
 
         # copy data
         with nogil:
-            memcpy(<void*> self._kh.smem,       &smem[0],       self._kh.salloc   * sizeof(char))
-            memcpy(<void*> self._kh.hashtable,  &hashtable[0],  self._kh.hashsize * sizeof(int))
-            memcpy(<void*> self._kh.key_offset, &key_offset[0], self._kh.nkeys    * sizeof(int))
-            memcpy(<void*> self._kh.nxt,        &nxt[0],        self._kh.nkeys    * sizeof(int))
+            memcpy(self._kh.smem,       &smem[0],       self._kh.salloc   * sizeof(char))
+            memcpy(self._kh.hashtable,  &hashtable[0],  self._kh.hashsize * sizeof(int))
+            memcpy(self._kh.key_offset, &key_offset[0], self._kh.nkeys    * sizeof(int))
+            memcpy(self._kh.nxt,        &nxt[0],        self._kh.nkeys    * sizeof(int))
 
     def __sizeof__(self):
         assert self._kh != NULL
@@ -1146,7 +1146,7 @@ cdef class VectorF(Vector):
 
         cdef const float[:] buffer
         cdef int            i
-        cdef bint           cmp    = True
+        cdef int            status
         cdef const float*   data   = <const float*> self._data
 
         # check matrix type and dimensions
@@ -1161,12 +1161,9 @@ cdef class VectorF(Vector):
 
         # check values
         with nogil:
-            for i in range(self._n):
-                if data[i] != buffer[i]:
-                    cmp = False
-                    break
+            status = libeasel.vec.esl_vec_FCompare(&data[0], &buffer[0], self._n, 0)
 
-        return cmp
+        return status == libeasel.eslOK
 
     def __getitem__(self, object index):
         assert self._data != NULL
@@ -3527,7 +3524,7 @@ cdef class DigitalMSA(MSA):
                 raise UnexpectedError(status, "esl_msa_SetSeqDescription")
 
         # assert self._msa.ax[idx] != NULL
-        memcpy(self._msa.ax[idx], seq.dsq, self._msa.alen+2)
+        memcpy(self._msa.ax[idx], seq.dsq, (self._msa.alen+2) * sizeof(libeasel.ESL_DSQ))
         return 0
 
     # --- Methods ------------------------------------------------------------
@@ -3978,7 +3975,7 @@ cdef class Randomness:
         if new._rng == NULL:
             raise AllocationError("ESL_RANDOMNESS", sizeof(ESL_RANDOMNESS))
 
-        memcpy(<void*> new._rng, <void*> self._rng, sizeof(ESL_RANDOMNESS))
+        memcpy(new._rng, self._rng, sizeof(ESL_RANDOMNESS))
         return new
 
     cpdef double random(self):
@@ -4195,7 +4192,7 @@ cdef class Sequence:
                 >>> seq.residue_markups = {b"quality": b"efcfffffcfee"}
                 Traceback (most recent call last):
                   ...
-                ValueError: Residue markup annotation has an invalid length (expected 9)
+                ValueError: Residue markup annotation has an invalid length (expected 9, got 12)
 
         .. versionadded:: 0.4.6
 
@@ -4219,17 +4216,17 @@ cdef class Sequence:
     def residue_markups(self, dict xr):
         assert self._sq != NULL
 
-        cdef bytes   tag
-        cdef bytes   val
-        cdef int     i
-        cdef ssize_t xrlen = len(xr)
-        cdef size_t  off   = 0 if libeasel.sq.esl_sq_IsText(self._sq) else 1
+        cdef const unsigned char[::1] tag
+        cdef const unsigned char[::1] val
+        cdef       int                i
+        cdef       ssize_t            xrlen = len(xr)
+        cdef      size_t  off   = 0 if libeasel.sq.esl_sq_IsText(self._sq) else 1
         cdef size_t  xrdim = self._sq.n + 2 * libeasel.sq.esl_sq_IsDigital(self._sq)
 
         # check the values have the right length before doing anything
         for tag, val in xr.items():
-            if len(val) != self._sq.n:
-                raise ValueError(f"Residue markup annotation has an invalid length (expected {self._sq.n})")
+            if val.shape[0] != self._sq.n:
+                raise ValueError(f"Residue markup annotation has an invalid length (expected {self._sq.n}, got {val.shape[0]})")
         # clear old values
         for i in range(self._sq.nxr):
             free(self._sq.xr_tag[i])
@@ -4245,11 +4242,11 @@ cdef class Sequence:
                 raise AllocationError("char*", sizeof(char*), xrlen)
         # assign the new values
         for i, (tag, val) in enumerate(xr.items()):
-            self._sq.xr_tag[i] = strdup(<const char*> tag)
+            self._sq.xr_tag[i] = strdup(<const char*> &tag[0])
             self._sq.xr[i] = <char*> calloc(xrdim, sizeof(char))
             if self._sq.xr_tag[i] == NULL or self._sq.xr[i] == NULL:
                 raise AllocationError("char", sizeof(char), xrdim)
-            memcpy(&self._sq.xr[i][off], <const void*> (<const char*> val), len(val))
+            memcpy(&self._sq.xr[i][off], &val[0], val.shape[0] * sizeof(unsigned char))
 
     # --- Abstract methods ---------------------------------------------------
 
@@ -4514,13 +4511,13 @@ cdef class DigitalSequence(Sequence):
         self.alphabet = alphabet
 
     def __init__(self,
-        Alphabet alphabet,
-        bytes    name=None,
-        bytes    description=None,
-        bytes    accession=None,
-        char[:]  sequence=None,
-        bytes    source=None,
-        object   taxonomy_id=None,
+              Alphabet              alphabet           not None,
+              bytes                 name        = None,
+              bytes                 description = None,
+              bytes                 accession   = None,
+        const libeasel.ESL_DSQ[::1] sequence    = None,
+              bytes                 source      = None,
+              object                taxonomy_id = None,
     ):
         """__init__(self, alphabet, name=None, description=None, accession=None, sequence=None, source=None)\n--
 
@@ -4552,7 +4549,7 @@ cdef class DigitalSequence(Sequence):
                     raise UnexpectedError(status, "esl_sq_GrowTo")
                 # update the digital sequence buffer
                 self._sq.dsq[0] = self._sq.dsq[n+1] = libeasel.eslDSQ_SENTINEL
-                memcpy(<void*> &self._sq.dsq[1], <const void*> &sequence[0], n)
+                memcpy(&self._sq.dsq[1], &sequence[0], n * sizeof(char))
             # set the coor bookkeeping like it would happen
             self._sq.start = 1
             self._sq.C = 0
@@ -4587,7 +4584,7 @@ cdef class DigitalSequence(Sequence):
             being sentinel values. This vector does not expose the sentinel
             values, only the :math:`n` elements of the buffer in between.
 
-        .. versionchanged:: v0.4.0
+        .. versionchanged:: 0.4.0
            Property is now a `VectorU8` instead of a memoryview.
 
         """

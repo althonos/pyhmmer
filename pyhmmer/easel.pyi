@@ -525,7 +525,7 @@ class DigitalSequence(Sequence):
         name: bytes = None,
         description: bytes = None,
         accession: bytes = None,
-        sequence: str = None,
+        sequence: typing.Union[BUFFER, VectorU8, None] = None,
         source: bytes = None,
     ) -> None: ...
     def copy(self) -> DigitalSequence: ...

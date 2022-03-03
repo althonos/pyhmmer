@@ -1827,6 +1827,7 @@ cdef class HMM:
     cpdef object __setstate__(self, dict state):
         assert self._hmm != NULL
 
+        cdef int                 i
         cdef int                 M         = self._hmm.M
         cdef int                 K         = self._hmm.abc.K
         cdef const float[:, ::1] t         = state["t"]
@@ -1851,38 +1852,31 @@ cdef class HMM:
         self.command_line = state["comlog"]
         self.creation_time = state["ctime"]
 
+        # free old storage
+        free(self._hmm.rf)
+        free(self._hmm.mm)
+        free(self._hmm.consensus)
+        free(self._hmm.cs)
+        free(self._hmm.ca)
+        self._hmm.rf = self._hmm.mm = self._hmm.consensus = self._hmm.cs = self._hmm.ca = NULL
+
         # strings that must be set manually
-        if self._hmm.rf != NULL:
-            free(self._hmm.rf)
-            self._hmm.rf = NULL
         if self._hmm.flags & libhmmer.p7_hmm.p7H_RF:
             self._hmm.rf = strndup(<const char*> state["rf"], M+2)
             if self._hmm.rf == NULL:
                 raise AllocationError("char", sizeof(char), M+2)
-        if self._hmm.mm != NULL:
-            free(self._hmm.mm)
-            self._hmm.mm = NULL
         if self._hmm.flags & libhmmer.p7_hmm.p7H_MM:
             self._hmm.mm = strndup(<const char*> state["mm"], M+2)
             if self._hmm.mm == NULL:
                 raise AllocationError("char", sizeof(char), M+2)
-        if self._hmm.consensus != NULL:
-            free(self._hmm.consensus)
-            self._hmm.consensus = NULL
         if self._hmm.flags & libhmmer.p7_hmm.p7H_CONS:
             self._hmm.consensus = strndup(<const char*> state["consensus"], M+2)
             if self._hmm.consensus == NULL:
                 raise AllocationError("char", sizeof(char), M+2)
-        if self._hmm.cs != NULL:
-            free(self._hmm.cs)
-            self._hmm.cs = NULL
         if self._hmm.flags & libhmmer.p7_hmm.p7H_CS:
             self._hmm.cs = strndup(<const char*> state["cs"], M+2)
             if self._hmm.cs == NULL:
                 raise AllocationError("char", sizeof(char), M+2)
-        if self._hmm.ca != NULL:
-            free(self._hmm.ca)
-            self._hmm.ca = NULL
         if self._hmm.flags & libhmmer.p7_hmm.p7H_CA:
             self._hmm.ca = strndup(<const char*> state["ca"], M+2)
             if self._hmm.ca == NULL:
@@ -1896,24 +1890,37 @@ cdef class HMM:
         self._hmm.offset = state["offset"]
 
         # vector data that must be copied
-        assert self._hmm.ins != NULL and self._hmm.ins[0] != NULL
-        assert self._hmm.mat != NULL and self._hmm.mat[0] != NULL
-        assert self._hmm.t != NULL and self._hmm.t[0] != NULL
-        assert ins.ndim == 2 and ins.shape[0] == M+1 and ins.shape[1] == K
-        assert mat.ndim == 2 and mat.shape[0] == M+1 and mat.shape[1] == K
-        assert t.ndim == 2 and t.shape[0] == M+1 and t.shape[1] == p7H_NTRANSITIONS
-        memcpy(self._hmm.ins[0],  &ins[0][0], (M+1) * K                * sizeof(float))
-        memcpy(self._hmm.mat[0],  &mat[0][0], (M+1) * K                * sizeof(float))
-        memcpy(self._hmm.t[0],    &t[0][0],   (M+1) * p7H_NTRANSITIONS * sizeof(float))
+        assert self._hmm.t != NULL
+        assert self._hmm.t[0] != NULL
+        assert self._hmm.ins != NULL
+        assert self._hmm.ins[0] != NULL
+        assert self._hmm.mat != NULL
+        assert self._hmm.mat[0] != NULL
+        assert t.ndim == 2
+        assert t.shape[0] == M+1
+        assert t.shape[1] == p7H_NTRANSITIONS
+        assert ins.ndim == 2
+        assert ins.shape[0] == M+1
+        assert ins.shape[1] == K
+        assert mat.ndim == 2
+        assert mat.shape[0] == M+1
+        assert mat.shape[1] == K
+        for i in range(M+1):
+            memcpy(self._hmm.ins[i],  &ins[i][0], K                * sizeof(float))
+            memcpy(self._hmm.mat[i],  &mat[i][0], K                * sizeof(float))
+            memcpy(self._hmm.t[i],    &t[i][0],   p7H_NTRANSITIONS * sizeof(float))
 
         # arrays that must be copied (compo may be None in the stat dictionary)
-        assert evparam.ndim == 1 and evparam.shape[0] == p7_NEVPARAM
-        assert cutoff.ndim == 1 and cutoff.shape[0] == p7_NCUTOFFS
+        assert evparam.ndim == 1
+        assert evparam.shape[0] == p7_NEVPARAM
+        assert cutoff.ndim == 1
+        assert cutoff.shape[0] == p7_NCUTOFFS
         memcpy(&self._hmm.evparam[0], &evparam[0], p7_NEVPARAM * sizeof(float))
         memcpy(&self._hmm.cutoff[0], &cutoff[0], p7_NCUTOFFS * sizeof(float))
         if self._hmm.flags & libhmmer.p7_hmm.p7H_COMPO:
             compo = state["compo"]
-            assert compo.ndim == 1 and compo.shape[0] == K
+            assert compo.ndim == 1
+            assert compo.shape[0] == K
             memcpy(&self._hmm.cutoff[0], &compo[0], K * sizeof(float))
 
         # copy alignment map only if it is available
@@ -1929,7 +1936,8 @@ cdef class HMM:
                 self._hmm.map = <int*> calloc(M + 1, sizeof(int))
             if self._hmm.map == NULL:
                 raise AllocationError("int", sizeof(int), M+1)
-            assert map_.ndim == 1 and map_.shape[0] == M + 1
+            assert map_.ndim == 1
+            assert map_.shape[0] == M + 1
             memcpy(&self._hmm.map[0], &map_[0], (M + 1) * sizeof(int))
 
     # --- Properties ---------------------------------------------------------
