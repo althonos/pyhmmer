@@ -95,6 +95,27 @@ class TestSearchPipeline(unittest.TestCase):
         pipeline.clear()
         self.assertEqual(pipeline.Z, 25)
 
+    def test_bit_cutoffs(self):
+        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT")
+        bg = Background(self.alphabet)
+        hmm, _, _ = Builder(self.alphabet).build(seq.digitize(self.alphabet), bg)
+        pipeline = Pipeline(alphabet=self.alphabet, bit_cutoffs="trusted")
+
+        # without cutoffs, the pipeline is not going to be able to process the hmm
+        with self.assertRaises(ValueError):
+            hits = pipeline.search_hmm(hmm, self.references)
+
+        # with low cutoffs, the domain is found
+        hmm.cutoffs.trusted = (10.0, 10.0)
+        hits = pipeline.search_hmm(hmm, self.references)
+        self.assertEqual(len(hits), 1)
+        self.assertLessEqual(hits[0].score, 75.0)
+
+        # with higher cutoff, no domain is found
+        hmm.cutoffs.trusted = (75.0, 75.0)
+        hits = pipeline.search_hmm(hmm, self.references)
+        self.assertEqual(len(hits), 0)
+
 
 class TestScanPipeline(unittest.TestCase):
 

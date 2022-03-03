@@ -9,6 +9,11 @@ class _TestMatrixBase(object):
 
     Matrix = NotImplemented
 
+    def test_sizeof(self):
+        m1 = self.Matrix([[1, 2], [3, 4]])
+        m2 = self.Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        self.assertGreater(sys.getsizeof(m2), sys.getsizeof(m1))
+
     def test_pickle(self):
         m1 = self.Matrix([[1, 2], [3, 4]])
         m2 = pickle.loads(pickle.dumps(m1))

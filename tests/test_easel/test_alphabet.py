@@ -1,10 +1,15 @@
 import pickle
 import unittest
+import sys
 
 from pyhmmer import easel
 
 
 class TestAlphabet(unittest.TestCase):
+
+    def test_sizeof(self):
+        alphabet = easel.Alphabet.dna()
+        self.assertGreater(sys.getsizeof(alphabet), 0)
 
     def test_is_nucleotide(self):
         self.assertTrue(easel.Alphabet.dna().is_nucleotide())

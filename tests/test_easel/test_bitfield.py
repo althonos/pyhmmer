@@ -1,10 +1,15 @@
 import pickle
 import unittest
+import sys
 
 from pyhmmer import easel
 
 
 class TestBitfield(unittest.TestCase):
+
+    def test_sizeof(self):
+        bitfield = easel.Bitfield(8)
+        self.assertGreater(sys.getsizeof(bitfield), 0)
 
     def test_buffer_protocol(self):
         bitfield = easel.Bitfield(8)

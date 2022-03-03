@@ -1,11 +1,16 @@
 import copy
 import pickle
 import unittest
+import sys
 
 from pyhmmer import easel
 
 
 class TestKeyHash(unittest.TestCase):
+
+    def test_keyhash(self):
+        kh = easel.KeyHash()
+        self.assertGreater(sys.getsizeof(kh), 0)
 
     def test_len(self):
         kh = easel.KeyHash()

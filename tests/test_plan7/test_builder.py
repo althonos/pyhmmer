@@ -51,6 +51,12 @@ class _TestBuilderBase(object):
 
 class TestBuilder(_TestBuilderBase, unittest.TestCase):
 
+    def test_invalid_window_length(self):
+        abc = Alphabet.amino()
+        builder = Builder(alphabet=abc)
+        with self.assertRaises(ValueError):
+            builder.window_length = 2
+
     def test_init_error(self):
         abc = Alphabet.amino()
         self.assertRaises(ValueError, Builder, alphabet=abc, architecture="nonsense")

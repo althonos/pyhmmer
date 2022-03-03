@@ -1,11 +1,16 @@
 import copy
 import pickle
 import unittest
+import sys
 
 from pyhmmer.easel import Randomness
 
 
 class TestRandomness(unittest.TestCase):
+
+    def test_sizeof(self):
+        rng = Randomness(42, fast=True)
+        self.assertGreater(sys.getsizeof(rng), 0)
 
     def test_init_fast(self):
         rng = Randomness(42, fast=True)

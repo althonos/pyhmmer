@@ -113,10 +113,19 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(empty.Z, 0)
         self.assertEqual(self.hits.Z, len(self.seqs))
 
+    def test_strand(self):
+        empty = TopHits()
+        self.assertIs(empty.strand, None)
+
     def test_searched_sequences(self):
         empty = TopHits()
         self.assertEqual(empty.searched_sequences, 0)
         self.assertEqual(self.hits.searched_sequences, len(self.seqs))
+
+    def test_searched_nodes(self):
+        empty = TopHits()
+        self.assertEqual(empty.searched_nodes, 0)
+        self.assertEqual(self.hits.searched_nodes, self.hmm.M)
 
     def test_searched_residues(self):
         empty = TopHits()
