@@ -43,8 +43,7 @@ class _TestBuilderBase(object):
             cls.proteins = list(seqf)
 
         cls.msa_path = os.path.join(cls.testdata, "3box.sto")
-        with MSAFile(cls.msa_path) as msa_file:
-            msa_file.set_digital(msa_file.guess_alphabet())
+        with MSAFile(cls.msa_path, digital=True) as msa_file:
             cls.msa = next(msa_file)
             cls.msa.name = b"3box"
 
@@ -164,8 +163,7 @@ class TestBuilderMSA(_TestBuilderBase, unittest.TestCase):
         abc = Alphabet.dna()
         builder = Builder(alphabet=abc)
 
-        with MSAFile(os.path.join(self.testdata, "3box.sto")) as msa_file:
-            msa_file.set_digital(abc)
+        with MSAFile(os.path.join(self.testdata, "3box.sto"), digital=True) as msa_file:
             msa = next(msa_file)
             msa.name = b"3box"
 
@@ -218,8 +216,7 @@ class TestBuilderMSA(_TestBuilderBase, unittest.TestCase):
         builder = Builder(alphabet=abc)
         # open the MSA
         msa_path = pkg_resources.resource_filename("tests", "data/msa/laccase.clw")
-        with MSAFile(msa_path) as msa_file:
-            msa_file.set_digital(abc)
+        with MSAFile(msa_path, digital=True, alphabet=abc) as msa_file:
             msa = msa_file.read()
             msa.name = b"laccase"
         # read the expected HMM

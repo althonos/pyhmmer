@@ -3678,8 +3678,15 @@ cdef class MSAFile:
         self.alphabet = None
         self._msaf = NULL
 
-    def __init__(self, object file, str format = None):
-        """__init__(self, file, format=None)\n--
+    def __init__(
+        self,
+        object file,
+        str format = None,
+        *,
+        bint digital = False,
+        Alphabet alphabet = None,
+    ):
+        """__init__(self, file, format=None, *, digital=False, alphabet=None)\n--
 
         Create a new MSA file parser wrapping the given ``file``.
 
@@ -3692,11 +3699,22 @@ cdef class MSAFile:
                 ``a2m``, ``psiblast``, ``selex``, ``afa`` (aligned FASTA),
                 ``clustal``, ``clustallike``, ``phylip``, ``phylips``.
 
+        Keyword Arguments:
+            digital (`bool`): Whether to read the sequences in text or digital
+                mode. This will affect the type of `MSA` objects returned
+                later by the `read` function.
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet to use to
+                digitize the sequences while reading.  If `None` given, it
+                will be guessed based on the contents of the first sequence.
+
         Raises:
             `ValueError`: When ``format`` is not a valid MSA format.
 
         .. versionchanged:: 0.4.8
            Support reading from a file-like object.
+
+        .. versionchanged:: 0.5.0
+           Added the ``digital`` and ``alphabet`` keyword arguments.
 
         """
         cdef int   fmt
@@ -3729,6 +3747,20 @@ cdef class MSAFile:
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_msafile_Open")
 
+        # configure the file
+        try:
+            # set digital mode if requested
+            if digital:
+                self.alphabet = self.guess_alphabet() if alphabet is None else alphabet
+                if self.alphabet is None:
+                    raise ValueError("Could not determine alphabet of file: {!r}".format(file))
+                status = libeasel.msafile.esl_msafile_SetDigital(self._msaf, self.alphabet._abc)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "esl_msafile_SetDigital")
+        except Exception as err:
+            self.close()
+            raise err
+
     def __dealloc__(self):
         if self._msaf != NULL:
             warnings.warn("unclosed MSAFile", ResourceWarning)
@@ -3757,56 +3789,15 @@ cdef class MSAFile:
         """
         return self._msaf == NULL
 
-    # --- Methods ------------------------------------------------------------
-
-    cpdef MSA read(self):
-        """read(self)\n--
-
-        Read the next alignment from the file.
-
-        Returns:
-            `MSA`: The next alignment in the file, or `None` if all the
-            alignments were read from the file already.
-
-        Raises:
-            `ValueError`: When attempting to read an alignment from a closed
-                file, or when the file could not be parsed.
-
+    @property
+    def digital(self):
+        """`bool`: Whether the `MSAFile` is in digital mode or not.
         """
-        cdef MSA msa
-
-        if self.alphabet is not None:
-            msa = DigitalMSA.__new__(DigitalMSA, self.alphabet)
-        else:
-            msa = TextMSA.__new__(TextMSA)
-
-        if self._msaf == NULL:
-            raise ValueError("I/O operation on closed file.")
-        else:
-            status = libeasel.msafile.esl_msafile_Read(self._msaf, &msa._msa)
-
-        if status == libeasel.eslOK:
-            return msa
-        elif status == libeasel.eslEOF:
-            return None
-        elif status == libeasel.eslEFORMAT:
-            msg = self._msaf.errmsg.decode("utf-8", "replace")
-            raise ValueError("Could not parse file: {}".format(msg))
-        else:
-            raise UnexpectedError(status, "esl_msafile_Read")
+        return self.alphabet is not None
 
     # --- Utils --------------------------------------------------------------
 
-    cpdef void close(self):
-        """close(self)\n--
-
-        Close the file and free the resources used by the parser.
-
-        """
-        libeasel.msafile.esl_msafile_Close(self._msaf)
-        self._msaf = NULL
-
-    cpdef Alphabet guess_alphabet(self):
+    cdef Alphabet guess_alphabet(self):
         """guess_alphabet(self)\n--
 
         Guess the alphabet of an open `MSAFile`.
@@ -3844,32 +3835,52 @@ cdef class MSAFile:
         else:
             raise UnexpectedError(status, "esl_msafile_GuessAlphabet")
 
-    cpdef Alphabet set_digital(self, Alphabet alphabet):
-        """set_digital(self, alphabet)\n--
+    # --- Methods ------------------------------------------------------------
 
-        Set the `MSAFile` to read in digital mode with ``alphabet``.
+    cpdef void close(self):
+        """close(self)\n--
 
-        This method can be called even after the first alignment have been
-        read; it only affects subsequent sequences in the file.
-
-        Returns:
-            `~pyhmmer.easel.Alphabet`: The alphabet it was given. Useful to
-            wrap `~MSAFile.guess_alphabet` calls and get the resulting
-            alphabet.
-
-        .. versionchanged:: 0.4.0
-            Returns the `Alphabet` given as argument instead of `None`.
+        Close the file and free the resources used by the parser.
 
         """
+        libeasel.msafile.esl_msafile_Close(self._msaf)
+        self._msaf = NULL
+
+    cpdef MSA read(self):
+        """read(self)\n--
+
+        Read the next alignment from the file.
+
+        Returns:
+            `MSA`: The next alignment in the file, or `None` if all the
+            alignments were read from the file already.
+
+        Raises:
+            `ValueError`: When attempting to read an alignment from a closed
+                file, or when the file could not be parsed.
+
+        """
+        cdef MSA msa
+
+        if self.alphabet is not None:
+            msa = DigitalMSA.__new__(DigitalMSA, self.alphabet)
+        else:
+            msa = TextMSA.__new__(TextMSA)
+
         if self._msaf == NULL:
             raise ValueError("I/O operation on closed file.")
-
-        cdef int status = libeasel.msafile.esl_msafile_SetDigital(self._msaf, alphabet._abc)
-        if status == libeasel.eslOK:
-            self.alphabet = alphabet
-            return alphabet
         else:
-            raise UnexpectedError(status, "esl_msafile_SetDigital")
+            status = libeasel.msafile.esl_msafile_Read(self._msaf, &msa._msa)
+
+        if status == libeasel.eslOK:
+            return msa
+        elif status == libeasel.eslEOF:
+            return None
+        elif status == libeasel.eslEFORMAT:
+            msg = self._msaf.errmsg.decode("utf-8", "replace")
+            raise ValueError("Could not parse file: {}".format(msg))
+        else:
+            raise UnexpectedError(status, "esl_msafile_Read")
 
 
 # --- Randomness -------------------------------------------------------------
@@ -5046,11 +5057,11 @@ cdef class SequenceFile:
     def __init__(
         self,
         object file,
-        str format=None,
+        str format = None,
         *,
-        bint ignore_gaps=False,
-        bint digital=False,
-        Alphabet alphabet=None,
+        bint ignore_gaps = False,
+        bint digital = False,
+        Alphabet alphabet = None,
     ):
         """__init__(self, file, format=None, *, ignore_gaps=False, digital=True, alphabet=None)\n--
 
@@ -5096,6 +5107,9 @@ cdef class SequenceFile:
         .. versionchanged:: 0.4.8
            Support reading from a file-like object (except NCBI format).
 
+        .. versionchanged:: 0.5.0
+           Added the ``digital`` and ``alphabet`` keyword arguments.
+
         """
         cdef int   fmt
         cdef int   status
@@ -5135,7 +5149,9 @@ cdef class SequenceFile:
             #                  requested, which is normally not allowed by
             #                  Easel for ungapped formats (althonos/pyhmmer#7).
             if ignore_gaps:
-                libeasel.sqio.esl_sqio_Ignore(self._sqfp, b"-")
+                status = libeasel.sqio.esl_sqio_Ignore(self._sqfp, b"-")
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "esl_sqio_Ignore")
             # set digital mode if requested
             if digital:
                 self.alphabet = self.guess_alphabet() if alphabet is None else alphabet
@@ -5183,7 +5199,7 @@ cdef class SequenceFile:
         .. versionadded:: 0.5.0
 
         """
-        return self._sqfp.do_digital
+        return self.alphabet is not None
 
     # --- Utils --------------------------------------------------------------
 

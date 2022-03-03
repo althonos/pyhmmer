@@ -188,8 +188,7 @@ class TestDigitalMSA(TestMSA, unittest.TestCase):
 
     @staticmethod
     def read_msa(sto):
-        with easel.MSAFile(sto, "stockholm") as msa_file:
-            msa_file.set_digital(msa_file.guess_alphabet())
+        with easel.MSAFile(sto, "stockholm", digital=True) as msa_file:
             return msa_file.read()
 
     def test_eq(self):

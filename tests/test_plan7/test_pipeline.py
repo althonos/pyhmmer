@@ -24,8 +24,7 @@ class TestSearchPipeline(unittest.TestCase):
             cls.references = list(f)
 
         msa_path = pkg_resources.resource_filename("tests", "data/msa/LuxC.sto")
-        with MSAFile(msa_path) as msa_f:
-            msa_f.set_digital(cls.alphabet)
+        with MSAFile(msa_path, digital=True, alphabet=cls.alphabet) as msa_f:
             cls.msa = next(msa_f)
 
     def test_search_seq_alphabet_mismatch(self):

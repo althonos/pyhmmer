@@ -57,7 +57,6 @@ class TestMSAFile(unittest.TestCase):
         with easel.MSAFile(trna_5) as f:
             pass
         self.assertRaises(ValueError, f.read)
-        self.assertRaises(ValueError, f.set_digital, easel.Alphabet.amino())
 
 
 class _TestReadFilename(object):
@@ -83,8 +82,8 @@ class _TestReadFilename(object):
     def test_guess_alphabet(self):
         for filename, alphabet in zip_longest(self.filenames, self.alphabet):
             path = os.path.join(self.folder, filename)
-            with easel.MSAFile(path, self.format) as f:
-                self.assertEqual(f.guess_alphabet(), alphabet)
+            with easel.MSAFile(path, self.format, digital=True) as f:
+                self.assertEqual(f.alphabet, alphabet)
 
 
 class _TestReadFileObject(object):
@@ -117,7 +116,7 @@ class _TestReadFileObject(object):
             with open(path, "rb") as f:
                 buffer = io.BytesIO(f.read())
             with easel.MSAFile(buffer, self.format) as f:
-                self.assertEqual(f.guess_alphabet(), alphabet)
+                self.assertEqual(f.alphabet, alphabet)
 
 
 class TestA2MFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
@@ -214,7 +213,7 @@ class TestSelexFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     @unittest.expectedFailure
     def test_read_fileobject_guess_format(self):
         super().test_read_fileobject_guess_format()
-        
+
 
 class TestStockholmFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "stockholm")
