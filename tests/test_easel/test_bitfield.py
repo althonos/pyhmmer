@@ -7,6 +7,7 @@ from pyhmmer import easel
 
 class TestBitfield(unittest.TestCase):
 
+    @unittest.skipIf(sys.implementation.name == "pypy", "`getsizeof` not supported on PyPY")
     def test_sizeof(self):
         bitfield = easel.Bitfield(8)
         self.assertGreater(sys.getsizeof(bitfield), 0)

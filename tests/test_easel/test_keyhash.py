@@ -8,7 +8,8 @@ from pyhmmer import easel
 
 class TestKeyHash(unittest.TestCase):
 
-    def test_keyhash(self):
+    @unittest.skipIf(sys.implementation.name == "pypy", "`getsizeof` not supported on PyPY")
+    def test_getsizeof(self):
         kh = easel.KeyHash()
         self.assertGreater(sys.getsizeof(kh), 0)
 

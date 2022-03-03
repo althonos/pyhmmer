@@ -9,6 +9,7 @@ class _TestMatrixBase(object):
 
     Matrix = NotImplemented
 
+    @unittest.skipIf(sys.implementation.name == "pypy", "`getsizeof` not supported on PyPY")
     def test_sizeof(self):
         m1 = self.Matrix([[1, 2], [3, 4]])
         m2 = self.Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])

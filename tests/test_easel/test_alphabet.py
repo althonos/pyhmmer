@@ -7,6 +7,7 @@ from pyhmmer import easel
 
 class TestAlphabet(unittest.TestCase):
 
+    @unittest.skipIf(sys.implementation.name == "pypy", "`getsizeof` not supported on PyPY")
     def test_sizeof(self):
         alphabet = easel.Alphabet.dna()
         self.assertGreater(sys.getsizeof(alphabet), 0)

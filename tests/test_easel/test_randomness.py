@@ -8,6 +8,7 @@ from pyhmmer.easel import Randomness
 
 class TestRandomness(unittest.TestCase):
 
+    @unittest.skipIf(sys.implementation.name == "pypy", "`getsizeof` not supported on PyPY")
     def test_sizeof(self):
         rng = Randomness(42, fast=True)
         self.assertGreater(sys.getsizeof(rng), 0)
