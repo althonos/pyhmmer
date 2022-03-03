@@ -796,13 +796,12 @@ if __name__ == "__main__":
     import sys
 
     def _hmmsearch(args: argparse.Namespace) -> int:
-        with SequenceFile(args.seqdb) as seqfile:
-            alphabet = seqfile.guess_alphabet()
-            if alphabet is None:
-                print("could not guess alphabet of input, exiting", file=sys.stderr)
-                return 1
-            seqfile.set_digital(alphabet)
-            sequences: typing.List[DigitalSequence] = list(seqfile)  # type: ignore
+        try:
+            with SequenceFile(args.seqdb, digital=True) as seqfile:
+                sequences: typing.List[DigitalSequence] = list(seqfile)  # type: ignore
+        except EOFError as err:
+            print(err, file=sys.stderr)
+            return 1
 
         with HMMFile(args.hmmfile) as hmms:
             queries = hmms.optimized_profiles() if hmms.is_pressed() else hmms
@@ -824,13 +823,12 @@ if __name__ == "__main__":
         return 0
 
     def _phmmer(args: argparse.Namespace) -> int:
-        with SequenceFile(args.seqdb) as seqfile:
-            alphabet = seqfile.guess_alphabet() or Alphabet.amino()
-            seqfile.set_digital(alphabet)
+        alphabet = Alphabet.amino()
+
+        with SequenceFile(args.seqdb, digital=True, alphabet=alphabet) as seqfile:
             sequences = list(seqfile)
 
-        with SequenceFile(args.seqfile) as queries:
-            queries.set_digital(alphabet)
+        with SequenceFile(args.seqfile, digital=True, alphabet=alphabet) as queries:
             hits_list = phmmer(queries, sequences, cpus=args.jobs)  # type: ignore
 
             for hits in hits_list:
@@ -850,13 +848,10 @@ if __name__ == "__main__":
         return 0
 
     def _nhmmer(args: argparse.Namespace) -> int:
-        with SequenceFile(args.seqdb) as seqfile:
-            alphabet = seqfile.guess_alphabet() or Alphabet.dna()
-            seqfile.set_digital(alphabet)
+        with SequenceFile(args.seqdb, digital=True) as seqfile:
             sequences = list(seqfile)
 
-        with SequenceFile(args.seqfile) as queryfile:
-            queryfile.set_digital(alphabet)
+        with SequenceFile(args.seqfile, digital=True) as queryfile:
             queries = list(queryfile)
             hits_list = nhmmer(queries, sequences, cpus=args.jobs)  # type: ignore
             for hits in hits_list:
@@ -891,13 +886,12 @@ if __name__ == "__main__":
         return 0
 
     def _hmmalign(args: argparse.Namespace) -> int:
-        with SequenceFile(args.seqfile, format=args.informat) as seqfile:
-            alphabet = seqfile.guess_alphabet()
-            if alphabet is None:
-                print("could not guess alphabet of input, exiting", file=sys.stderr)
-                return 1
-            seqfile.set_digital(alphabet)
-            sequences: typing.List[DigitalSequence] = list(seqfile)  # type: ignore
+        try:
+            with SequenceFile(args.seqfile, args.informat, digital=True) as seqfile:
+                sequences: typing.List[DigitalSequence] = list(seqfile)  # type: ignore
+        except EOFError as err:
+            print(err, file=sys.stderr)
+            return 1
 
         with HMMFile(args.hmmfile) as hmms:
             hmm = next(hmms)

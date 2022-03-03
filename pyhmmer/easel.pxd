@@ -199,21 +199,16 @@ cdef class DigitalSequence(Sequence):
 # --- Sequence File ----------------------------------------------------------
 
 cdef class SequenceFile:
-    cdef ESL_SQFILE* _sqfp
-    cdef readonly Alphabet alphabet
+    cdef          ESL_SQFILE* _sqfp
+    cdef readonly Alphabet    alphabet
 
     @staticmethod
     cdef ESL_SQFILE* _open_fileobj(object fh, int fmt) except NULL
-
-    cpdef Sequence read(self, bint skip_info=*, bint skip_sequence=*)
-    cpdef Sequence readinto(self, Sequence, bint skip_info=*, bint skip_sequence=*)
-
-    # cpdef Sequence fetch(self, bytes key, bint skip_info=*, bint skip_sequence=*)
-    # cpdef Sequence fetchinto(self, Sequence seq, bytes key, bint skip_info=*, bint skip_sequence=*)
+    cdef Alphabet guess_alphabet(self)
 
     cpdef void close(self)
-    cpdef Alphabet guess_alphabet(self)
-    cpdef Alphabet set_digital(self, Alphabet)
+    cpdef Sequence read(self, bint skip_info=*, bint skip_sequence=*)
+    cpdef Sequence readinto(self, Sequence, bint skip_info=*, bint skip_sequence=*)
 
 
 # --- Sequence/Subsequence Index ---------------------------------------------

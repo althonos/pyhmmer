@@ -18,11 +18,13 @@ class TestSearchPipeline(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.alphabet = Alphabet.amino()
-        with SequenceFile(pkg_resources.resource_filename("tests", "data/seqs/938293.PRJEB85.HG003687.faa")) as f:
-            f.set_digital(cls.alphabet)
+
+        seq_path = pkg_resources.resource_filename("tests", "data/seqs/938293.PRJEB85.HG003687.faa")
+        with SequenceFile(seq_path, digital=True, alphabet=cls.alphabet) as f:
             cls.references = list(f)
 
-        with MSAFile(pkg_resources.resource_filename("tests", "data/msa/LuxC.sto")) as msa_f:
+        msa_path = pkg_resources.resource_filename("tests", "data/msa/LuxC.sto")
+        with MSAFile(msa_path) as msa_f:
             msa_f.set_digital(cls.alphabet)
             cls.msa = next(msa_f)
 
@@ -99,10 +101,13 @@ class TestScanPipeline(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.alphabet = Alphabet.amino()
-        with SequenceFile(pkg_resources.resource_filename("tests", "data/seqs/938293.PRJEB85.HG003687.faa")) as f:
-            f.set_digital(cls.alphabet)
+
+        seq_path = pkg_resources.resource_filename("tests", "data/seqs/938293.PRJEB85.HG003687.faa")
+        with SequenceFile(seq_path, digital=True, alphabet=cls.alphabet) as f:
             cls.references = list(f)
-        with HMMFile(pkg_resources.resource_filename("tests", "data/hmms/txt/t2pks.hmm")) as f:
+
+        hmm_file = pkg_resources.resource_filename("tests", "data/hmms/txt/t2pks.hmm")
+        with HMMFile(hmm_file) as f:
             cls.hmms = list(f)
 
     def test_alphabet_mismatch(self):

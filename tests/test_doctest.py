@@ -61,11 +61,14 @@ def load_tests(loader, tests, ignore):
 
     # add a sample HMM and some sequences to use with the globals
     data = os.path.realpath(os.path.join(__file__, os.pardir, "data"))
-    with pyhmmer.plan7.HMMFile(os.path.join(data, "hmms", "txt", "Thioesterase.hmm")) as hmm_file:
+    hmm_path = os.path.join(data, "hmms", "txt", "Thioesterase.hmm")
+    with pyhmmer.plan7.HMMFile(hmm_path) as hmm_file:
         thioesterase = next(hmm_file)
-    with pyhmmer.easel.SequenceFile(os.path.join(data, "seqs", "938293.PRJEB85.HG003687.faa")) as seq_file:
-        proteins = [seq.digitize(thioesterase.alphabet) for seq in seq_file]
-    with pyhmmer.easel.MSAFile(os.path.join(data, "msa", "LuxC.faa"), "afa") as msa_file:
+    seq_path = os.path.join(data, "seqs", "938293.PRJEB85.HG003687.faa")
+    with pyhmmer.easel.SequenceFile(seq_path, digital=True, alphabet=thioesterase.alphabet) as seq_file:
+        proteins = list(seq_file)
+    msa_path = os.path.join(data, "msa", "LuxC.faa")
+    with pyhmmer.easel.MSAFile(msa_path, "afa") as msa_file:
         luxc = next(msa_file)
 
     # recursively traverse all library submodules and load tests from them

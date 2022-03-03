@@ -4733,6 +4733,8 @@ cdef class SequenceFile:
     """
 
     _FORMATS = dict(SEQUENCE_FILE_FORMATS) # copy to prevent editing
+    _EMPTY_FORMAT = "fasta" # fallback format used for empty files
+    _EMPTY_ALPHABET = Alphabet.amino() # fallback alphabet used for empty files
 
     # --- Class methods ------------------------------------------------------
 
@@ -4951,8 +4953,16 @@ cdef class SequenceFile:
         self.alphabet = None
         self._sqfp = NULL
 
-    def __init__(self, object file, str format=None, bint ignore_gaps=False):
-        """__init__(self, file, format=None, ignore_gaps=False)\n--
+    def __init__(
+        self,
+        object file,
+        str format=None,
+        *,
+        bint ignore_gaps=False,
+        bint digital=False,
+        Alphabet alphabet=None,
+    ):
+        """__init__(self, file, format=None, *, ignore_gaps=False, digital=True, alphabet=None)\n--
 
         Create a new sequence file parser wrapping the given ``file``.
 
@@ -4965,15 +4975,30 @@ cdef class SequenceFile:
                 ``genbank``, ``ddbj``, ``uniprot``, ``ncbi``, ``daemon``,
                 ``hmmpgmd``, ``fmindex``, plus any format also supported
                 by `~pyhmmer.easel.MSAFile`.
+
+        Keyword Arguments:
             ignore_gaps (`bool`): When set to `True`, allow ignoring gap
                 characters ('-') when they are present in ungapped formats
                 such as ``fasta``. With `False`, stick to the default Easel
                 behaviour.
+            digital (`bool`): Whether to read the sequences in text or digital
+                mode. This will affect the type of `Sequence` objects returned
+                later by the `read` function.
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet to use to
+                digitize the sequences while reading.  If `None` given, it
+                will be guessed based on the contents of the first sequence.
 
         Raises:
             `ValueError`: When ``format`` is not a valid sequence format.
-            `NotImplementedError`: When trying to read sequences from a
-                file-like object in NCBI format.
+            `OSError`: If an internal parser error occurred while guessing
+                the alphabet or the format.
+
+        Caution:
+            `SequenceFile` can generally read sequences from binary-mode
+            file-like objects, except for sequences in an NCBI BLAST
+            database, since it is composed of multiple files. Reading from
+            an NCBI BLAST database passed from a filename is however
+            supported.
 
         .. versionchanged:: 0.4.4
            Added the ``ignore_gaps`` parameter.
@@ -5014,11 +5039,25 @@ cdef class SequenceFile:
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sqfile_Open")
 
-        # HACK(@althonos): allow ignoring the gap character if explicitly
-        #                  requested, which is normally not allowed by
-        #                  Easel for ungapped formats (althonos/pyhmmer#7).
-        if ignore_gaps:
-            libeasel.sqio.esl_sqio_Ignore(self._sqfp, b"-")
+        # configure the file
+        try:
+            # HACK(@althonos): allow ignoring the gap character if explicitly
+            #                  requested, which is normally not allowed by
+            #                  Easel for ungapped formats (althonos/pyhmmer#7).
+            if ignore_gaps:
+                libeasel.sqio.esl_sqio_Ignore(self._sqfp, b"-")
+
+            # set digital mode if requested
+            if digital:
+                self.alphabet = self.guess_alphabet() if alphabet is None else alphabet
+                if self.alphabet is None:
+                    raise ValueError("Could not determine alphabet of file: {!r}".format(file))
+                status = libeasel.sqio.esl_sqfile_SetDigital(self._sqfp, self.alphabet._abc)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "esl_sqfile_SetDigital")
+        except Exception as err:
+            self.close()
+            raise err
 
     def __enter__(self):
         return self
@@ -5048,7 +5087,67 @@ cdef class SequenceFile:
         """
         return self._sqfp == NULL
 
+    @property
+    def digital(self):
+        """`bool`: Whether the `SequenceFile` is in digital mode or not.
+
+        .. versionadded:: 0.5.0
+
+        """
+        return self._sqfp.do_digital
+
+    # --- Utils --------------------------------------------------------------
+
+    cdef Alphabet guess_alphabet(self):
+        """guess_alphabet(self)\n--
+
+        Guess the alphabet of an open `SequenceFile`.
+
+        This method tries to guess the alphabet of a sequence file by
+        inspecting the first sequence in the file. It returns the alphabet,
+        or `None` if the file alphabet cannot be reliably guessed.
+
+        Raises:
+            `EOFError`: if the file is empty.
+            `OSError`: if a parse error occurred.
+            `ValueError`: if this methods is called after the file was closed.
+
+        """
+        cdef int         ty
+        cdef int         status
+        cdef Alphabet    alphabet
+        cdef const char* errbuf
+        cdef str         msg
+
+        if self._sqfp == NULL:
+            raise ValueError("I/O operation on closed file.")
+
+        status = libeasel.sqio.esl_sqfile_GuessAlphabet(self._sqfp, &ty)
+        if status == libeasel.eslOK:
+            alphabet = Alphabet.__new__(Alphabet)
+            alphabet._init_default(ty)
+            return alphabet
+        elif status == libeasel.eslENOALPHABET:
+            return None
+        elif status == libeasel.eslENODATA:
+            raise EOFError("Sequence file appears to be empty.")
+        elif status == libeasel.eslEFORMAT:
+            errbuf = libeasel.sqio.esl_sqfile_GetErrorBuf(self._sqfp)
+            msg = errbuf.decode("utf-8", "replace")
+            raise ValueError("Could not parse file: {}".format(msg))
+        else:
+            raise UnexpectedError(status, "esl_sqfile_GuessAlphabet")
+
     # --- Methods ------------------------------------------------------------
+
+    cpdef void close(self):
+        """close(self)\n--
+
+        Close the file and free the resources used by the parser.
+
+        """
+        libeasel.sqio.esl_sqfile_Close(self._sqfp)
+        self._sqfp = NULL
 
     cpdef Sequence read(self, bint skip_info=False, bint skip_sequence=False):
         """read(self, skip_info=False, skip_sequence=False)\n--
@@ -5156,84 +5255,6 @@ cdef class SequenceFile:
             raise ValueError("Could not parse file: {}".format(msg))
         else:
             raise UnexpectedError(status, funcname)
-
-    # --- Utils --------------------------------------------------------------
-
-    cpdef void close(self):
-        """close(self)\n--
-
-        Close the file and free the resources used by the parser.
-
-        """
-        libeasel.sqio.esl_sqfile_Close(self._sqfp)
-        self._sqfp = NULL
-
-    cpdef Alphabet guess_alphabet(self):
-        """guess_alphabet(self)\n--
-
-        Guess the alphabet of an open `SequenceFile`.
-
-        This method tries to guess the alphabet of a sequence file by
-        inspecting the first sequence in the file. It returns the alphabet,
-        or `None` if the file alphabet cannot be reliably guessed.
-
-        Raises:
-            `EOFError`: if the file is empty.
-            `OSError`: if a parse error occurred.
-            `ValueError`: if this methods is called after the file was closed.
-
-        """
-        cdef int         ty
-        cdef int         status
-        cdef Alphabet    alphabet
-        cdef const char* errbuf
-        cdef str         msg
-
-        if self._sqfp == NULL:
-            raise ValueError("I/O operation on closed file.")
-
-        status = libeasel.sqio.esl_sqfile_GuessAlphabet(self._sqfp, &ty)
-        if status == libeasel.eslOK:
-            alphabet = Alphabet.__new__(Alphabet)
-            alphabet._init_default(ty)
-            return alphabet
-        elif status == libeasel.eslENOALPHABET:
-            return None
-        elif status == libeasel.eslENODATA:
-            raise EOFError("Sequence file appears to be empty.")
-        elif status == libeasel.eslEFORMAT:
-            errbuf = libeasel.sqio.esl_sqfile_GetErrorBuf(self._sqfp)
-            msg = errbuf.decode("utf-8", "replace")
-            raise ValueError("Could not parse file: {}".format(msg))
-        else:
-            raise UnexpectedError(status, "esl_sqfile_GuessAlphabet")
-
-    cpdef Alphabet set_digital(self, Alphabet alphabet):
-        """set_digital(self, alphabet)\n--
-
-        Set the `SequenceFile` to read in digital mode with ``alphabet``.
-
-        This method can be called even after the first sequences have been
-        read; it only affects subsequent sequences in the file.
-
-        Returns:
-            `~pyhmmer.easel.Alphabet`: The alphabet it was given. Useful to
-            wrap `~SequenceFile.guess_alphabet` calls and get the resulting
-            alphabet.
-
-        .. versionchanged:: 0.4.0
-            Returns the `Alphabet` given as argument instead of `None`.
-
-        """
-        if self._sqfp == NULL:
-            raise ValueError("I/O operation on closed file.")
-
-        cdef int status = libeasel.sqio.esl_sqfile_SetDigital(self._sqfp, alphabet._abc)
-        if status == libeasel.eslOK:
-            self.alphabet = alphabet
-            return self.alphabet
-        else:
-            raise UnexpectedError(status, "esl_sqfile_SetDigital")
 
 
 # --- Sequence/Subsequence Index ---------------------------------------------

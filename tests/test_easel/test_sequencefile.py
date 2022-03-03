@@ -129,17 +129,21 @@ class _TestReadFilename(object):
     def test_read_filename_guess_alphabet(self):
         for filename, alphabet in zip_longest(self.filenames, self.alphabet):
             path = os.path.join(self.folder, filename)
-            with easel.SequenceFile(path, self.format) as f:
-                if alphabet is not None:
-                    self.assertEqual(f.guess_alphabet(), alphabet)
-                else:
-                    # FIXME: Until EddyRivasLab/easel#61 is merged, we cannot
-                    #        test the case where `guess_alphabet` would throw
-                    #        an error because of a bug in `sqascii_GuessAlphabet`
-                    #        causing `eslEOD` to be returned when `eslNOALPHABET`
-                    #        is expected.
-                    pass
+            if alphabet is not None:
+                with easel.SequenceFile(path, self.format, digital=True) as f:
+                    self.assertEqual(f.alphabet, alphabet)
+                # FIXME: Until EddyRivasLab/easel#61 is merged, we cannot
+                #        test the case where `guess_alphabet` would throw
+                #        an error because of a bug in `sqascii_GuessAlphabet`
+                #        causing `eslEOD` to be returned when `eslNOALPHABET`
+                #        is expected.
 
+    def test_read_filename_given_alphabet(self):
+        for filename, alphabet in zip_longest(self.filenames, self.alphabet):
+            path = os.path.join(self.folder, filename)
+            if alphabet is not None:
+                with easel.SequenceFile(path, self.format, digital=True, alphabet=alphabet) as f:
+                    self.assertEqual(f.alphabet, alphabet)
 
 class _TestReadFileObject(object):
 
@@ -178,16 +182,14 @@ class _TestReadFileObject(object):
             path = os.path.join(self.folder, filename)
             with open(path, "rb") as f:
                 buffer = io.BytesIO(f.read())
-            with easel.SequenceFile(buffer, self.format) as f:
-                if alphabet is not None:
-                    self.assertEqual(f.guess_alphabet(), alphabet)
-                else:
-                    # FIXME: Until EddyRivasLab/easel#61 is merged, we cannot
-                    #        test the case where `guess_alphabet` would throw
-                    #        an error because of a bug in `sqascii_GuessAlphabet`
-                    #        causing `eslEOD` to be returned when `eslNOALPHABET`
-                    #        is expected.
-                    pass
+            if alphabet is not None:
+                with easel.SequenceFile(buffer, self.format, digital=True) as f:
+                    self.assertEqual(f.alphabet, alphabet)
+                # FIXME: Until EddyRivasLab/easel#61 is merged, we cannot
+                #        test the case where `guess_alphabet` would throw
+                #        an error because of a bug in `sqascii_GuessAlphabet`
+                #        causing `eslEOD` to be returned when `eslNOALPHABET`
+                #        is expected.
 
 
 class TestEMBLFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
