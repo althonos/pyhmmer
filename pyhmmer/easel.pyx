@@ -379,7 +379,7 @@ cdef class Bitfield:
         if length == 0:
             raise ValueError("Cannot create an empty `Bitfield`")
         else:
-            self._shape[0] = (length + 63) / 64
+            self._shape[0] = (length + 63) // 64
 
         # NB: checking whether `self._b` is not NULL before allocating allows
         #     calling __init__ more than once without causing a memory leak.
