@@ -362,6 +362,7 @@ cdef class Bitfield:
 
     def __cinit__(self):
         self._b = NULL
+        self._shape[0] = 0
 
     def __dealloc__(self):
         libeasel.bitfield.esl_bitfield_Destroy(self._b)
@@ -371,7 +372,15 @@ cdef class Bitfield:
 
         Create a new bitfield with the given ``length``.
 
+        Raises:
+            `ValueError`: When given a zero `length`.
+
         """
+        if length == 0:
+            raise ValueError("Cannot create an empty `Bitfield`")
+        else:
+            self._shape[0] = (length + 63) / 64
+
         # NB: checking whether `self._b` is not NULL before allocating allows
         #     calling __init__ more than once without causing a memory leak.
         if self._b != NULL:
@@ -445,6 +454,24 @@ cdef class Bitfield:
         assert self._b != NULL
         cdef size_t nu = (self._b.nb // 64) + (self._b.nb % 64 != 0)
         return sizeof(uint64_t) * nu + sizeof(ESL_BITFIELD) + sizeof(self)
+
+    def __getbuffer__(self, Py_buffer* buffer, int flags):
+        assert self._b != NULL
+
+        if flags & PyBUF_FORMAT:
+            buffer.format = b"Q"
+        else:
+            buffer.format = NULL
+        buffer.buf = self._b.b
+        buffer.internal = NULL
+        buffer.itemsize = sizeof(uint64_t)
+        buffer.len = self._shape[0] * sizeof(uint64_t)
+        buffer.ndim = 1
+        buffer.obj = self
+        buffer.readonly = 0
+        buffer.shape = self._shape
+        buffer.suboffsets = NULL
+        buffer.strides = NULL
 
     # --- Utils --------------------------------------------------------------
 

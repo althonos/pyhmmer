@@ -36,6 +36,7 @@ cdef class Alphabet:
 
 cdef class Bitfield:
     cdef ESL_BITFIELD* _b
+    cdef readonly Py_ssize_t _shape[1]
 
     cdef size_t _wrap_index(self, int index) except -1
     cpdef size_t count(self, bint value=*)

@@ -6,6 +6,14 @@ from pyhmmer import easel
 
 class TestBitfield(unittest.TestCase):
 
+    def test_buffer_protocol(self):
+        bitfield = easel.Bitfield(8)
+        self.assertEqual(memoryview(bitfield).tobytes()[0], 0b00000000)
+        bitfield[0] = bitfield[2] = bitfield[3] = True
+        self.assertEqual(memoryview(bitfield).tobytes()[0], 0b00001101)
+        bitfield2 = easel.Bitfield(256)
+        self.assertEqual(memoryview(bitfield2).shape[0], 4)
+
     def test_index_error(self):
         bitfield = easel.Bitfield(8)
         with self.assertRaises(IndexError):
