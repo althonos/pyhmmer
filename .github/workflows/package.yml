@@ -145,22 +145,16 @@ jobs:
         password: ${{ secrets.PYPI_API_TOKEN }}
         skip_existing: false
 
-  docs:
-    environment: ReadTheDocs
+  release:
+    environment: GitHub Releases
     runs-on: ubuntu-latest
-    name: Rebuild docs
-    needs:
-    - upload
+    if: "startsWith(github.ref, 'refs/tags/v')"
+    name: Release
+    needs: upload
     steps:
-    - name: Ping ReadTheDocs to rebuild the release docs
-      uses: dfm/rtds-action@v1
+    - name: Checkout code
+      uses: actions/checkout@v1
+    - name: Release a Changelog
+      uses: rasmus-saks/release-a-changelog-action@v1.0.1
       with:
-        webhook_url: ${{ secrets.RTDS_WEBHOOK_URL }}
-        webhook_token: ${{ secrets.RTDS_WEBHOOK_TOKEN }}
-        commit_ref: ${{ github.ref }}
-    - name: Ping ReadTheDocs to rebuild the stable docs
-      uses: dfm/rtds-action@v1
-      with:
-        webhook_url: ${{ secrets.RTDS_WEBHOOK_URL }}
-        webhook_token: ${{ secrets.RTDS_WEBHOOK_TOKEN }}
-        commit_ref: refs/head/stable
+        github-token: '${{ secrets.GITHUB_TOKEN }}'
