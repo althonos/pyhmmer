@@ -7,7 +7,7 @@ pyHMMER |Stars|
 
 *Cython bindings and Python interface to* `HMMER3 <http://hmmer.org/>`_.
 
-|Actions| |Coverage| |PyPI| |Bioconda| |Wheel| |Versions| |Implementations| |License| |Source| |Mirror| |Issues| |Docs| |Changelog| |Downloads| |DOI|
+|Actions| |Coverage| |PyPI| |Bioconda| |AUR| |Wheel| |Versions| |Implementations| |License| |Source| |Mirror| |Issues| |Docs| |Changelog| |Downloads| |DOI|
 
 
 .. |Actions| image:: https://img.shields.io/github/workflow/status/althonos/pyhmmer/Test/master?logo=github&style=flat-square&maxAge=300
@@ -16,22 +16,25 @@ pyHMMER |Stars|
 .. |GitLabCI| image:: https://img.shields.io/gitlab/pipeline/larralde/pyhmmer/master?gitlab_url=https%3A%2F%2Fgit.embl.de&logo=gitlab&style=flat-square&maxAge=600
    :target: https://git.embl.de/larralde/pyhmmer/-/pipelines
 
-.. |Coverage| image:: https://img.shields.io/codecov/c/gh/althonos/pyhmmer?style=flat-square&maxAge=600
+.. |Coverage| image:: https://img.shields.io/codecov/c/gh/althonos/pyhmmer?logo=codecov&style=flat-square&maxAge=600
    :target: https://codecov.io/gh/althonos/pyhmmer/
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/pyhmmer.svg?style=flat-square&maxAge=3600
    :target: https://pypi.python.org/pypi/pyhmmer
 
-.. |Bioconda| image:: https://img.shields.io/conda/vn/bioconda/pyhmmer?style=flat-square&maxAge=3600
+.. |Bioconda| image:: https://img.shields.io/conda/vn/bioconda/pyhmmer?ogo=anaconda&style=flat-square&maxAge=3600
    :target: https://anaconda.org/bioconda/pyhmmer
+
+.. |AUR| image:: https://img.shields.io/aur/version/python-pyhmmer?logo=archlinux&style=flat-square&maxAge=3600
+   :target: https://aur.archlinux.org/packages/python-pyhmmer
 
 .. |Wheel| image:: https://img.shields.io/pypi/wheel/pyhmmer?style=flat-square&maxAge=3600
    :target: https://pypi.org/project/pyhmmer/#files
 
-.. |Versions| image:: https://img.shields.io/pypi/pyversions/pyhmmer.svg?style=flat-square&maxAge=3600
+.. |Versions| image:: https://img.shields.io/pypi/pyversions/pyhmmer.svg?logo=python&style=flat-square&maxAge=3600
    :target: https://pypi.org/project/pyhmmer/#files
 
-.. |Implementations| image:: https://img.shields.io/pypi/implementation/pyhmmer.svg?style=flat-square&maxAge=3600&label=impl
+.. |Implementations| image:: https://img.shields.io/pypi/implementation/pyhmmer.svg?logo=python&style=flat-square&maxAge=3600&label=impl
    :target: https://pypi.org/project/pyhmmer/#files
 
 .. |License| image:: https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square&maxAge=3600
