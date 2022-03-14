@@ -3547,6 +3547,10 @@ cdef class PipelineSearchTargets:
     from any other argument type; but if a `PipelineSearchTargets` is
     passed it will be used as-is in the search loop.
 
+    Attributes:
+        alphabet (`Alphabet`, *readonly*): The biological alphabet shared by
+            all sequences in the search targets.
+
     .. versionadded:: 0.5.0
 
     """
@@ -3559,6 +3563,20 @@ cdef class PipelineSearchTargets:
         self.alphabet = None
 
     def __init__(self, object sequences not None):
+        """__init__(self, sequences)\n--
+
+        Create a new list of search targets.
+
+        Arguments:
+            sequence (iterable of `DigitalSequence`): An iterable of sequences
+                stored in digital mode to use as targets for a search
+                pipeline.
+
+        Raises:
+            `~pyhmmer.errors.AlphabetMismatch`: When all sequences don't have
+                the same `~pyhmmer.easel.Alphabet`.
+
+        """
         cdef size_t          i
         cdef DigitalSequence seq
 
