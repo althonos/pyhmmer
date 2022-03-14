@@ -34,6 +34,7 @@ class TestSequenceFile(unittest.TestCase):
             FileNotFoundError, easel.SequenceFile, "path/to/missing/file.fa"
         )
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_iter(self):
         fasta = os.path.join(EASEL_FOLDER, "formats", "fasta")
 
@@ -51,6 +52,7 @@ class TestSequenceFile(unittest.TestCase):
         with self.assertRaises(ValueError):
             _file = easel.SequenceFile.parse(b"> EcoRI\nGAATTC\n", format="nonsense")
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_skip_info(self):
         fasta = os.path.join(EASEL_FOLDER, "formats", "fasta")
 
@@ -64,6 +66,7 @@ class TestSequenceFile(unittest.TestCase):
             self.assertEqual(seq.name, b"")
             self.assertTrue(seq.sequence.startswith("MEMLPNQTIY"))
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_skip_sequence(self):
         fasta = os.path.join(EASEL_FOLDER, "formats", "fasta")
 
@@ -91,7 +94,6 @@ class TestSequenceFile(unittest.TestCase):
 
 class _TestReadFilename(object):
 
-    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_filename_guess_format(self):
         # check reading a file without specifying the format works
         for filename, start in zip_longest(self.filenames, self.starts):
@@ -100,7 +102,6 @@ class _TestReadFilename(object):
                 seq = f.read()
                 self.assertEqual(seq.sequence[:10], start)
 
-    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_filename_given_format(self):
         # check reading a file while specifying the format works
         for filename, start in zip_longest(self.filenames, self.starts):
@@ -109,7 +110,6 @@ class _TestReadFilename(object):
                 seq = f.read()
                 self.assertEqual(seq.sequence[:10], start)
 
-    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_filename_count_sequences(self):
         # check reading a file while specifying the format works
         for filename, count in zip_longest(self.filenames, self.counts):
@@ -118,7 +118,6 @@ class _TestReadFilename(object):
                 sequences = list(f)
                 self.assertEqual(len(sequences), count)
 
-    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_filename_guess_alphabet(self):
         for filename, alphabet in zip_longest(self.filenames, self.alphabet):
             path = os.path.join(self.folder, filename)
@@ -131,7 +130,6 @@ class _TestReadFilename(object):
                 #        causing `eslEOD` to be returned when `eslNOALPHABET`
                 #        is expected.
 
-    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_filename_given_alphabet(self):
         for filename, alphabet in zip_longest(self.filenames, self.alphabet):
             path = os.path.join(self.folder, filename)
@@ -141,7 +139,6 @@ class _TestReadFilename(object):
 
 class _TestReadFileObject(object):
 
-    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_fileobject_guess_format(self):
         # check reading a file while specifying the format works
         for filename, start in zip_longest(self.filenames, self.starts):
@@ -152,7 +149,6 @@ class _TestReadFileObject(object):
                 seq = f.read()
                 self.assertEqual(seq.sequence[:10], start)
 
-    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_fileobject_given_format(self):
         # check reading a file while specifying the format works
         for filename, start in zip_longest(self.filenames, self.starts):
@@ -163,7 +159,6 @@ class _TestReadFileObject(object):
                 seq = f.read()
                 self.assertEqual(seq.sequence[:10], start)
 
-    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_fileobject_count_sequences(self):
         # check reading a file while specifying the format works
         for filename, count in zip_longest(self.filenames, self.counts):
@@ -174,7 +169,6 @@ class _TestReadFileObject(object):
                 sequences = list(f)
                 self.assertEqual(len(sequences), count)
 
-    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_fileobject_guess_alphabet(self):
         for filename, alphabet in zip_longest(self.filenames, self.alphabet):
             path = os.path.join(self.folder, filename)
@@ -190,6 +184,7 @@ class _TestReadFileObject(object):
                 #        is expected.
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestEMBLFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "formats")
     filenames = ["embl"]
@@ -199,6 +194,7 @@ class TestEMBLFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     alphabet  = [easel.Alphabet.dna()]
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestFastaFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "formats")
     filenames = ["fasta", "fasta.2", "fasta.odd.1"]
@@ -208,6 +204,7 @@ class TestFastaFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     alphabet  = [easel.Alphabet.amino(), easel.Alphabet.amino(), None]
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestGenbankFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "formats")
     filenames = ["genbank", "genbank.2"]
@@ -217,6 +214,7 @@ class TestGenbankFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase)
     alphabet  = [easel.Alphabet.dna(), easel.Alphabet.dna()]
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestUniprotFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "formats")
     filenames = ["uniprot"]
@@ -226,6 +224,7 @@ class TestUniprotFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase)
     alphabet  = [easel.Alphabet.amino()]
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestA2MFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "a2m")
     filenames = ["a2m.good.1", "a2m.good.2"]
@@ -242,6 +241,7 @@ class TestA2MFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
         super().test_read_fileobject_guess_format()
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestAlignedFastaFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "afa")
     filenames = ["afa.good.1", "afa.good.2", "afa.good.3"]
@@ -255,6 +255,7 @@ class TestAlignedFastaFile(_TestReadFilename, _TestReadFileObject, unittest.Test
         super().test_read_filename_guess_format()
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestClustalFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "clustal")
     filenames = ["clustal.good.2"]
@@ -264,6 +265,7 @@ class TestClustalFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase)
     alphabet  = [easel.Alphabet.rna()]
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestClustalLikeFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "clustal")
     filenames = ["clustal.good.1"]
@@ -273,6 +275,7 @@ class TestClustalLikeFile(_TestReadFilename, _TestReadFileObject, unittest.TestC
     alphabet  = [easel.Alphabet.amino()]
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestPhylipFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "phylip")
     filenames = ["phylip.good.1", "phylip.good.2", "phylip.good.3"]
@@ -282,6 +285,7 @@ class TestPhylipFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     alphabet  = [easel.Alphabet.dna(), easel.Alphabet.dna(), easel.Alphabet.amino()]
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestPhylipsFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "phylips")
     filenames = ["phylips.good.1", "phylips.good.2"]
@@ -291,6 +295,7 @@ class TestPhylipsFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase)
     alphabet  = [easel.Alphabet.dna(), easel.Alphabet.amino()]
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestPsiblastFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "psiblast")
     filenames = ["psiblast.good.1", "psiblast.good.2"]
@@ -300,6 +305,7 @@ class TestPsiblastFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase
     alphabet  = [easel.Alphabet.amino(), easel.Alphabet.rna()]
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestSelexFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "selex")
     filenames = ["selex.good.1", "selex.good.2", "selex.good.3", "selex.good.4"]
@@ -324,6 +330,7 @@ class TestSelexFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
         super().test_read_fileobject_count_sequences()
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestStockholmFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "stockholm")
     filenames = ["stockholm.good.1"]

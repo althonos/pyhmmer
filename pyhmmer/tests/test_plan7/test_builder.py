@@ -114,6 +114,7 @@ class TestBuilderSingle(_TestBuilderBase, unittest.TestCase):
         self.assertEqual(profile.alphabet, abc)
         self.assertEqual(opt.alphabet, abc)
 
+    @unittest.skipUnless(os.path.exists(HMMER_FOLDER), "test data not available")
     def test_dna(self):
         abc = Alphabet.dna()
         builder = Builder(alphabet=abc)

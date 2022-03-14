@@ -13,6 +13,7 @@ from ..utils import EASEL_FOLDER
 
 class TestMSAFile(unittest.TestCase):
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_init_error_unknownformat(self):
         stockholm = os.path.join(EASEL_FOLDER, "formats", "stockholm.1")
         self.assertRaises(ValueError, easel.MSAFile, stockholm, format="nonsense")
@@ -24,24 +25,28 @@ class TestMSAFile(unittest.TestCase):
     def test_init_file_not_found(self):
         self.assertRaises(FileNotFoundError, easel.MSAFile, "path/to/missing/file.sto")
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_author(self):
         trna_5 = os.path.join(EASEL_FOLDER, "testsuite", "trna-5.stk")
         with easel.MSAFile(trna_5) as f:
             msa = f.read()
         self.assertEqual(msa.author, b"Infernal 0.1")
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_wrong_format(self):
         stockholm = os.path.join(EASEL_FOLDER, "formats", "stockholm.1")
         # check reading while giving another file format fails
         with easel.MSAFile(stockholm, "clustal") as f:
             self.assertRaises(ValueError, f.read)
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_iter(self):
         trna_5 = os.path.join(EASEL_FOLDER, "testsuite", "trna-5.stk")
         with easel.MSAFile(trna_5) as f:
             msa = next(f)
             self.assertRaises(StopIteration, next, f)
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_closed_file(self):
         trna_5 = os.path.join(EASEL_FOLDER, "testsuite", "trna-5.stk")
         with easel.MSAFile(trna_5) as f:
@@ -109,6 +114,7 @@ class _TestReadFileObject(object):
                 self.assertEqual(f.alphabet, alphabet)
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestA2MFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "a2m")
     filenames = ["a2m.good.1", "a2m.good.2"]
@@ -127,6 +133,7 @@ class TestA2MFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
         super().test_read_fileobject_guess_format()
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestAlignedFastaFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "afa")
     filenames = ["afa.good.1", "afa.good.2", "afa.good.3"]
@@ -137,6 +144,7 @@ class TestAlignedFastaFile(_TestReadFilename, _TestReadFileObject, unittest.Test
     alphabet  = [easel.Alphabet.amino(), easel.Alphabet.rna(), easel.Alphabet.amino()]
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestClustalFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "clustal")
     filenames = ["clustal.good.2"]
@@ -147,6 +155,7 @@ class TestClustalFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase)
     alphabet  = [easel.Alphabet.rna()]
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestClustalLikeFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "clustal")
     filenames = ["clustal.good.1"]
@@ -157,6 +166,7 @@ class TestClustalLikeFile(_TestReadFilename, _TestReadFileObject, unittest.TestC
     alphabet  = [easel.Alphabet.amino()]
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestPhylipFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "phylip")
     filenames = ["phylip.good.1", "phylip.good.2", "phylip.good.3"]
@@ -167,6 +177,7 @@ class TestPhylipFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     alphabet  = [easel.Alphabet.dna(), easel.Alphabet.dna(), easel.Alphabet.amino()]
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestPhylipsFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "phylips")
     filenames = ["phylips.good.1", "phylips.good.2"]
@@ -177,6 +188,7 @@ class TestPhylipsFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase)
     alphabet  = [easel.Alphabet.dna(), easel.Alphabet.amino()]
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestPsiblastFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "psiblast")
     filenames = ["psiblast.good.1", "psiblast.good.2"]
@@ -191,6 +203,7 @@ class TestPsiblastFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase
         super().test_read_fileobject_guess_format()
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestSelexFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "selex")
     filenames = ["selex.good.1", "selex.good.2", "selex.good.3", "selex.good.4"]
@@ -205,6 +218,7 @@ class TestSelexFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
         super().test_read_fileobject_guess_format()
 
 
+@unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
 class TestStockholmFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "stockholm")
     filenames = ["stockholm.good.1"]
