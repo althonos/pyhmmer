@@ -3728,6 +3728,7 @@ cdef class MSAFile:
                 raise ValueError("Invalid MSA format: {!r}".format(format))
             fmt = MSA_FILE_FORMATS[format_]
 
+        # open from either a file-like object or a path
         try:
             fspath = os.fsencode(file)
         except TypeError:
@@ -3735,20 +3736,20 @@ cdef class MSAFile:
             status = libeasel.eslOK
         else:
             status = libeasel.msafile.esl_msafile_Open(NULL, fspath, NULL, fmt, NULL, &self._msaf)
-        if status == libeasel.eslENOTFOUND:
-            raise FileNotFoundError(2, "No such file or directory: {!r}".format(file))
-        elif status == libeasel.eslEMEM:
-            raise AllocationError("ESL_MSAFILE", sizeof(ESL_MSAFILE))
-        elif status == libeasel.eslENOFORMAT:
-            if format is None:
-                raise ValueError("Could not determine format of file: {!r}".format(file))
-            else:
-                raise EOFError("Sequence file is empty")
-        elif status != libeasel.eslOK:
-            raise UnexpectedError(status, "esl_msafile_Open")
 
-        # configure the file
         try:
+            # check opening the file was successful
+            if status == libeasel.eslENOTFOUND:
+                raise FileNotFoundError(2, "No such file or directory: {!r}".format(file))
+            elif status == libeasel.eslEMEM:
+                raise AllocationError("ESL_MSAFILE", sizeof(ESL_MSAFILE))
+            elif status == libeasel.eslENOFORMAT:
+                if format is None:
+                    raise ValueError("Could not determine format of file: {!r}".format(file))
+                else:
+                    raise EOFError("Sequence file is empty")
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_msafile_Open")
             # set digital mode if requested
             if digital:
                 self.alphabet = self.guess_alphabet() if alphabet is None else alphabet
@@ -5131,20 +5132,21 @@ cdef class SequenceFile:
             status = libeasel.eslOK
         else:
             status = libeasel.sqio.esl_sqfile_Open(fspath, fmt, NULL, &self._sqfp)
-        if status == libeasel.eslENOTFOUND:
-            raise FileNotFoundError(2, "No such file or directory: {!r}".format(file))
-        elif status == libeasel.eslEMEM:
-            raise AllocationError("ESL_SQFILE", sizeof(ESL_SQFILE))
-        elif status == libeasel.eslEFORMAT:
-            if format is None:
-                raise ValueError("Could not determine format of file: {!r}".format(file))
-            else:
-                raise EOFError("Sequence file is empty")
-        elif status != libeasel.eslOK:
-            raise UnexpectedError(status, "esl_sqfile_Open")
 
         # configure the file
         try:
+            # check opening the file was successful
+            if status == libeasel.eslENOTFOUND:
+                raise FileNotFoundError(2, "No such file or directory: {!r}".format(file))
+            elif status == libeasel.eslEMEM:
+                raise AllocationError("ESL_SQFILE", sizeof(ESL_SQFILE))
+            elif status == libeasel.eslEFORMAT:
+                if format is None:
+                    raise ValueError("Could not determine format of file: {!r}".format(file))
+                else:
+                    raise EOFError("Sequence file is empty")
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_sqfile_Open")
             # HACK(@althonos): allow ignoring the gap character if explicitly
             #                  requested, which is normally not allowed by
             #                  Easel for ungapped formats (althonos/pyhmmer#7).
