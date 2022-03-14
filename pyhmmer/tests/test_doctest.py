@@ -55,7 +55,7 @@ def load_tests(loader, tests, ignore):
         return tests
 
     # doctests require `numpy` to run, which may not be available because
-    # it is a pain to get to work out-of-the-box on OSX
+    # it is a pain to get to work out-of-the-box on OSX inside CI
     if numpy is None:
         return tests
 
@@ -77,7 +77,7 @@ def load_tests(loader, tests, ignore):
     for pkg in iter(packages.pop, None):
         for (_, subpkgname, subispkg) in pkgutil.walk_packages(pkg.__path__):
             # do not import __main__ module to avoid side effects!
-            if subpkgname == "__main__":
+            if subpkgname == "__main__" or subpkgname.startswith("tests"):
                 continue
             # import the submodule and add it to the tests
             module = importlib.import_module(".".join([pkg.__name__, subpkgname]))
@@ -102,7 +102,7 @@ def load_tests(loader, tests, ignore):
             )
             # if the submodule is a package, we need to process its submodules
             # as well, so we add it to the package queue
-            if subispkg:
+            if subispkg and subpkgname != "tests":
                 packages.append(module)
 
     return tests

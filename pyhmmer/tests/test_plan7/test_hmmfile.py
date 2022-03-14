@@ -21,7 +21,7 @@ class _TestHMMFile:
 
     @classmethod
     def setUpClass(cls):
-        cls.hmms_folder = pkg_resources.resource_filename("tests", "data/hmms")
+        cls.hmms_folder = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms")
 
     def open_hmm(self, path):
         raise NotImplementedError()

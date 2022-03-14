@@ -17,7 +17,7 @@ class TestOptimizedProfile(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.hmm_path = pkg_resources.resource_filename("tests", "data/hmms/db/Thioesterase.hmm")
+        cls.hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/db/Thioesterase.hmm")
         with HMMFile(cls.hmm_path) as hmm_file:
             cls.hmm = next(hmm_file)
         cls.alphabet = cls.hmm.alphabet

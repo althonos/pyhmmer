@@ -8,17 +8,7 @@ from itertools import zip_longest
 
 from pyhmmer import easel
 
-
-EASEL_FOLDER = os.path.realpath(
-    os.path.join(
-        __file__,
-        os.pardir,
-        os.pardir,
-        os.pardir,
-        "vendor",
-        "easel",
-    )
-)
+from ..utils import EASEL_FOLDER
 
 
 class TestSequenceFile(unittest.TestCase):
@@ -99,9 +89,9 @@ class TestSequenceFile(unittest.TestCase):
             sequences = list(seq_file)
             self.assertEqual(len(sequences), 13)
 
-
 class _TestReadFilename(object):
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_filename_guess_format(self):
         # check reading a file without specifying the format works
         for filename, start in zip_longest(self.filenames, self.starts):
@@ -110,6 +100,7 @@ class _TestReadFilename(object):
                 seq = f.read()
                 self.assertEqual(seq.sequence[:10], start)
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_filename_given_format(self):
         # check reading a file while specifying the format works
         for filename, start in zip_longest(self.filenames, self.starts):
@@ -118,6 +109,7 @@ class _TestReadFilename(object):
                 seq = f.read()
                 self.assertEqual(seq.sequence[:10], start)
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_filename_count_sequences(self):
         # check reading a file while specifying the format works
         for filename, count in zip_longest(self.filenames, self.counts):
@@ -126,6 +118,7 @@ class _TestReadFilename(object):
                 sequences = list(f)
                 self.assertEqual(len(sequences), count)
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_filename_guess_alphabet(self):
         for filename, alphabet in zip_longest(self.filenames, self.alphabet):
             path = os.path.join(self.folder, filename)
@@ -138,6 +131,7 @@ class _TestReadFilename(object):
                 #        causing `eslEOD` to be returned when `eslNOALPHABET`
                 #        is expected.
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_filename_given_alphabet(self):
         for filename, alphabet in zip_longest(self.filenames, self.alphabet):
             path = os.path.join(self.folder, filename)
@@ -147,6 +141,7 @@ class _TestReadFilename(object):
 
 class _TestReadFileObject(object):
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_fileobject_guess_format(self):
         # check reading a file while specifying the format works
         for filename, start in zip_longest(self.filenames, self.starts):
@@ -157,6 +152,7 @@ class _TestReadFileObject(object):
                 seq = f.read()
                 self.assertEqual(seq.sequence[:10], start)
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_fileobject_given_format(self):
         # check reading a file while specifying the format works
         for filename, start in zip_longest(self.filenames, self.starts):
@@ -167,6 +163,7 @@ class _TestReadFileObject(object):
                 seq = f.read()
                 self.assertEqual(seq.sequence[:10], start)
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_fileobject_count_sequences(self):
         # check reading a file while specifying the format works
         for filename, count in zip_longest(self.filenames, self.counts):
@@ -177,6 +174,7 @@ class _TestReadFileObject(object):
                 sequences = list(f)
                 self.assertEqual(len(sequences), count)
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_fileobject_guess_alphabet(self):
         for filename, alphabet in zip_longest(self.filenames, self.alphabet):
             path = os.path.join(self.folder, filename)

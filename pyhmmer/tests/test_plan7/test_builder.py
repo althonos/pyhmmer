@@ -15,40 +15,34 @@ from pyhmmer.errors import EaselError, AlphabetMismatch
 from pyhmmer.easel import Alphabet, SequenceFile, MSAFile
 from pyhmmer.plan7 import HMMFile, Pipeline, Builder, Background
 
+from ..utils import HMMER_FOLDER
 
 class _TestBuilderBase(object):
 
     @classmethod
     def setUpClass(cls):
-        cls.testdata = os.path.realpath(os.path.join(
-            __file__,
-            os.pardir,
-            os.pardir,
-            os.pardir,
-            "vendor",
-            "hmmer",
-            "testsuite",
-        ))
+        cls.testdata = os.path.join(HMMER_FOLDER, "testsuite")
 
-        cls.ecori_fa = os.path.join(cls.testdata, "ecori.fa")
-        with SequenceFile(cls.ecori_fa) as seqf:
-            cls.dna = next(seqf)
-
-        cls.ecori_hmm = cls.ecori_fa.replace(".fa", ".hmm")
-        with HMMFile(cls.ecori_hmm) as hmmf:
-            cls.ecori = next(hmmf)
-
-        cls.faa_path = pkg_resources.resource_filename("tests", "data/seqs/PKSI.faa")
+        cls.faa_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/PKSI.faa")
         with SequenceFile(cls.faa_path) as seqf:
             cls.proteins = list(seqf)
 
-        cls.msa_path = os.path.join(cls.testdata, "3box.sto")
-        with MSAFile(cls.msa_path, digital=True) as msa_file:
-            cls.msa = next(msa_file)
-            cls.msa.name = b"3box"
+        if os.path.exists(cls.testdata):
+            cls.ecori_fa = os.path.join(cls.testdata, "ecori.fa")
+            with SequenceFile(cls.ecori_fa) as seqf:
+                cls.dna = next(seqf)
+
+            cls.ecori_hmm = cls.ecori_fa.replace(".fa", ".hmm")
+            with HMMFile(cls.ecori_hmm) as hmmf:
+                cls.ecori = next(hmmf)
+
+            cls.msa_path = os.path.join(cls.testdata, "3box.sto")
+            with MSAFile(cls.msa_path, digital=True) as msa_file:
+                cls.msa = next(msa_file)
+                cls.msa.name = b"3box"
 
 
-class TestBuilder(_TestBuilderBase, unittest.TestCase):
+class TestBuilder(unittest.TestCase):
 
     def test_invalid_window_length(self):
         abc = Alphabet.amino()
@@ -130,6 +124,7 @@ class TestBuilderSingle(_TestBuilderBase, unittest.TestCase):
         self.assertEqual(opt.alphabet, abc)
         self.assertEqual(hmm.M, self.ecori.M)
 
+    @unittest.skipUnless(os.path.exists(HMMER_FOLDER), "test data not available")
     def test_score_system_change(self):
         abc = Alphabet.amino()
         bg = Background(abc)
@@ -159,6 +154,7 @@ class TestBuilderSingle(_TestBuilderBase, unittest.TestCase):
 
 class TestBuilderMSA(_TestBuilderBase, unittest.TestCase):
 
+    @unittest.skipUnless(os.path.exists(HMMER_FOLDER), "test data not available")
     def test_command_line(self):
         abc = Alphabet.dna()
         builder = Builder(alphabet=abc)
@@ -175,6 +171,7 @@ class TestBuilderMSA(_TestBuilderBase, unittest.TestCase):
             hmm, profile, opt = builder.build_msa(msa, Background(abc))
         self.assertEqual(hmm.command_line, " ".join(argv))
 
+    @unittest.skipUnless(os.path.exists(HMMER_FOLDER), "test data not available")
     def test_creation_time(self):
         abc = Alphabet.dna()
         builder = Builder(alphabet=abc)
@@ -186,6 +183,7 @@ class TestBuilderMSA(_TestBuilderBase, unittest.TestCase):
 
         self.assertIsInstance(hmm.creation_time, datetime.datetime)
 
+    @unittest.skipUnless(os.path.exists(HMMER_FOLDER), "test data not available")
     def test_dna(self):
         abc = Alphabet.dna()
         builder = Builder(alphabet=abc)
@@ -198,6 +196,7 @@ class TestBuilderMSA(_TestBuilderBase, unittest.TestCase):
         self.assertEqual(hmm.name, b"3box")
         self.assertEqual(hmm.M, hmm_exp.M)
 
+    @unittest.skipUnless(os.path.exists(HMMER_FOLDER), "test data not available")
     def test_alphabet_mismatch(self):
         dna = Alphabet.dna()
         amino = Alphabet.amino()
@@ -215,12 +214,12 @@ class TestBuilderMSA(_TestBuilderBase, unittest.TestCase):
         abc = Alphabet.amino()
         builder = Builder(alphabet=abc)
         # open the MSA
-        msa_path = pkg_resources.resource_filename("tests", "data/msa/laccase.clw")
+        msa_path = pkg_resources.resource_filename("pyhmmer.tests", "data/msa/laccase.clw")
         with MSAFile(msa_path, digital=True, alphabet=abc) as msa_file:
             msa = msa_file.read()
             msa.name = b"laccase"
         # read the expected HMM
-        hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/laccase.hmm")
+        hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/laccase.hmm")
         with HMMFile(hmm_path) as hmm_file:
             hmm_hmmbuild = next(hmm_file)
             hmm_hmmbuild.creation_time = None

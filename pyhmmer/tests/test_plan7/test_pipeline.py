@@ -19,11 +19,11 @@ class TestSearchPipeline(unittest.TestCase):
     def setUpClass(cls):
         cls.alphabet = Alphabet.amino()
 
-        seq_path = pkg_resources.resource_filename("tests", "data/seqs/938293.PRJEB85.HG003687.faa")
+        seq_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/938293.PRJEB85.HG003687.faa")
         with SequenceFile(seq_path, digital=True, alphabet=cls.alphabet) as f:
             cls.references = list(f)
 
-        msa_path = pkg_resources.resource_filename("tests", "data/msa/LuxC.sto")
+        msa_path = pkg_resources.resource_filename("pyhmmer.tests", "data/msa/LuxC.sto")
         with MSAFile(msa_path, digital=True, alphabet=cls.alphabet) as msa_f:
             cls.msa = next(msa_f)
 
@@ -122,11 +122,11 @@ class TestScanPipeline(unittest.TestCase):
     def setUpClass(cls):
         cls.alphabet = Alphabet.amino()
 
-        seq_path = pkg_resources.resource_filename("tests", "data/seqs/938293.PRJEB85.HG003687.faa")
+        seq_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/938293.PRJEB85.HG003687.faa")
         with SequenceFile(seq_path, digital=True, alphabet=cls.alphabet) as f:
             cls.references = list(f)
 
-        hmm_file = pkg_resources.resource_filename("tests", "data/hmms/txt/t2pks.hmm")
+        hmm_file = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/t2pks.hmm")
         with HMMFile(hmm_file) as f:
             cls.hmms = list(f)
 

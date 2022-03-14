@@ -8,17 +8,7 @@ from itertools import zip_longest
 
 from pyhmmer import easel
 
-
-EASEL_FOLDER = os.path.realpath(
-    os.path.join(
-        __file__,
-        os.pardir,
-        os.pardir,
-        os.pardir,
-        "vendor",
-        "easel",
-    )
-)
+from ..utils import EASEL_FOLDER
 
 
 class TestMSAFile(unittest.TestCase):

@@ -8,16 +8,15 @@ import tempfile
 
 from pyhmmer import easel
 
+from ..utils import EASEL_FOLDER
+
 
 class TestMSA(object):
     @classmethod
     def setUpClass(cls):
-        cls.formats_folder = os.path.realpath(
-            os.path.join(
-                __file__, os.pardir, os.pardir, os.pardir, "vendor", "easel", "formats"
-            )
-        )
+        cls.formats_folder = os.path.join(EASEL_FOLDER, "formats")
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_write_roundtrip_stockholm(self):
         sto = os.path.join(self.formats_folder, "stockholm.1")
         msa = self.read_msa(sto)
@@ -32,6 +31,7 @@ class TestMSA(object):
         msa = easel.TextMSA()
         self.assertRaises(ValueError, msa.write, io.BytesIO(), "invalidformat")
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_sequences(self):
         sto = os.path.join(self.formats_folder, "stockholm.1")
         msa = self.read_msa(sto)

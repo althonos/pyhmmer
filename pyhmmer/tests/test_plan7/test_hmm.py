@@ -18,7 +18,7 @@ class TestHMM(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/Thioesterase.hmm")
+        cls.hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/Thioesterase.hmm")
         with HMMFile(cls.hmm_path) as hmm_file:
             cls.hmm = next(hmm_file)
 
@@ -27,7 +27,7 @@ class TestHMM(unittest.TestCase):
         hmm = HMM(100, abc)
         self.assertIs(hmm.checksum, None)
 
-        hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/LuxC.hmm")
+        hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/LuxC.hmm")
         with HMMFile(hmm_path) as hmm_file:
             hmm = next(hmm_file)
         self.assertEqual(hmm.checksum, 395769323)
@@ -212,7 +212,7 @@ class TestHMM(unittest.TestCase):
         self.assertEqual(h1, h2)
 
     def test_no_cutoffs(self):
-        hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/Thioesterase.hmm")
+        hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/Thioesterase.hmm")
         with HMMFile(hmm_path) as hmm_file:
             hmm = next(hmm_file)
 
@@ -254,7 +254,7 @@ class TestHMM(unittest.TestCase):
         self.assertEqual(hmm.cutoffs.trusted2, 14.0)
 
     def test_cutoffs(self):
-        hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/PF02826.hmm")
+        hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/PF02826.hmm")
         with HMMFile(hmm_path) as hmm_file:
             hmm = next(hmm_file)
 

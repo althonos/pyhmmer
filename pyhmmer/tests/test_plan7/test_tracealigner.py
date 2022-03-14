@@ -15,8 +15,8 @@ from pyhmmer.plan7 import HMM, HMMFile, TraceAligner, Traces
 class TestTraceAligner(unittest.TestCase):
 
     def setUp(self):
-        hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/LuxC.hmm")
-        seqs_path = pkg_resources.resource_filename("tests", "data/seqs/LuxC.faa")
+        hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/LuxC.hmm")
+        seqs_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/LuxC.faa")
 
         with HMMFile(hmm_path) as hmm_file:
             self.hmm = next(hmm_file)

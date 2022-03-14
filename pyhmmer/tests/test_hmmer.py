@@ -405,9 +405,9 @@ class TestHmmalign(unittest.TestCase):
         self.tmpout = tempfile.NamedTemporaryFile(suffix=".hmm", delete=False).name
 
     def test_luxc(self):
-        hmm_path = pkg_resources.resource_filename("tests", "data/hmms/txt/LuxC.hmm")
-        seqs_path = pkg_resources.resource_filename("tests", "data/seqs/LuxC.faa")
-        ref_path = pkg_resources.resource_filename("tests", "data/msa/LuxC.hmmalign.sto")
+        hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/LuxC.hmm")
+        seqs_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/LuxC.faa")
+        ref_path = pkg_resources.resource_filename("pyhmmer.tests", "data/msa/LuxC.hmmalign.sto")
 
         with HMMFile(hmm_path) as hmm_file:
             hmm = next(hmm_file)
