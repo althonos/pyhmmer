@@ -161,6 +161,7 @@ API Reference
         pyhmmer.plan7.Cutoffs
         pyhmmer.plan7.EvalueParameters
         pyhmmer.plan7.Offsets
+        pyhmmer.plan7.PipelineSearchTargets
 
 
     Errors

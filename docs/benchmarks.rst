@@ -13,6 +13,16 @@ and the version 33.1 of the `Pfam <https://pfam.xfam.org/>`_ HMM library contain
 the times for pressed HMMs, and dashed-lines the times for HMMs in text format.*
 
 
+v0.5.0 - 2022-03-14
+-------------------
+
+.. image:: _images/bench-v0.5.0.svg
+
+A new dedicated collection has been added to store the target sequences of a
+`~pyhmmer.plan7.Pipeline`, saving some overhead if the same target sequences
+are reused with multiple queries.
+
+
 v0.4.5 - 2021-07-19
 -------------------
 

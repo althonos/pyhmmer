@@ -159,3 +159,10 @@ Offsets
 
 .. autoclass:: pyhmmer.plan7.Offsets
    :members:
+
+PipelineSearchTargets
+^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: pyhmmer.plan7.PipelineSearchTargets
+   :special-members: __init__
+   :members:
