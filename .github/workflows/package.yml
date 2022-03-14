@@ -32,8 +32,14 @@ jobs:
           pyo3-python: /opt/pypy/pypy3.6-7.3.3/bin/python
           manylinux-img: pypywheels/manylinux2010-pypy_x86_64
         - python-version: pypy-3.7
-          pyo3-python: /opt/python/pp37-pypy37_pp73/bin/python
-          manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
+          pyo3-python: /opt/pypy/pypy3.7-7.3.4/bin/python
+          manylinux-img: pypywheels/manylinux2010-pypy_x86_64
+        - python-version: pypy-3.8
+          pyo3-python: /opt/pypy/pypy3.7-7.3.4/bin/python
+          manylinux-img: pypywheels/manylinux2010-pypy_x86_64
+        - python-version: pypy-3.9
+          pyo3-python: /opt/pypy/pypy3.7-7.3.4/bin/python
+          manylinux-img: pypywheels/manylinux2010-pypy_x86_64
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -55,6 +61,38 @@ jobs:
         name: dist
         path: dist/*
 
+  test-linux:
+    runs-on: ubuntu-latest
+    name: Test Linux wheels
+    needs:
+    - wheel-linux
+    strategy:
+      matrix:
+        python-version:
+        - 3.6
+        - 3.7
+        - 3.8
+        - 3.9
+        - '3.10'
+    steps:
+    - name: Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Download built wheels
+      uses: actions/download-artifact@v2
+      with:
+          name: dist
+          path: dist
+    - name: Update pip to latest version
+      run: python -m pip install -U pip setuptools wheel
+    - name: Install requirements
+      run: python -m pip install psutil
+    - name: Install built wheel
+      run: python -m pip install --no-index --find-links=dist pyhmmer
+    - name: Run tests without coverage
+      run: python -m unittest pyhmmer.tests -vv
+
   wheel-osx:
     runs-on: macos-latest
     name: Build OSX wheels
@@ -66,8 +104,9 @@ jobs:
         - 3.8
         - 3.9
         - '3.10'
-        # - pypy-3.6
         - pypy-3.7
+        - pypy-3.8
+        - pypy-3.9
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -101,6 +140,41 @@ jobs:
         name: dist
         path: dist/*
 
+  test-osx:
+    runs-on: macos-latest
+    name: Test OSX wheels
+    needs:
+    - wheel-osx
+    strategy:
+      matrix:
+        python-version:
+        - 3.6
+        - 3.7
+        - 3.8
+        - 3.9
+        - '3.10'
+        - pypy-3.7
+        - pypy-3.8
+        - pypy-3.9
+    steps:
+    - name: Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Download built wheels
+      uses: actions/download-artifact@v2
+      with:
+          name: dist
+          path: dist
+    - name: Update pip to latest version
+      run: python -m pip install -U pip setuptools wheel
+    - name: Install requirements
+      run: python -m pip install psutil
+    - name: Install built wheel
+      run: python -m pip install --no-index --find-links=dist pyhmmer
+    - name: Run tests without coverage
+      run: python -m unittest pyhmmer.tests -vv
+
   sdist:
     runs-on: ubuntu-latest
     name: Build source distribution
@@ -130,7 +204,9 @@ jobs:
     needs:
     - sdist
     - wheel-linux
+    - test-linux
     - wheel-osx
+    - test-osx
     steps:
     - name: Download built distributions
       uses: actions/download-artifact@v2
