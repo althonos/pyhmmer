@@ -257,11 +257,11 @@ jobs:
           name: dist
           path: dist
     - name: Extract package version
-      run: echo PKGVER=$(python setup.py --version) >> $GITHUB_ENV
+      run: "echo PKGVER=$(python setup.py --version) >> $GITHUB_ENV"
     - name: Compute SHA256 of source distribution
-      run: echo SHA256=$(sha256sum dist/pyhmmer-${{ env.PKGVER }}.tar.gz | cut -f1 -d' ') >> $GITHUB_ENV
+      run: "echo SHA256=$(sha256sum dist/pyhmmer-${{ env.PKGVER }}.tar.gz | cut -f1 -d' ') >> $GITHUB_ENV"
     - name: Generate PKGBUILD
-      run: sed -e "s/%pkgver/${{ env.PKGVER }}/g" -e "s/%sha256sum/${{ env.SHA256 }}/g" pkg/aur/PKGBUILD.in > pkg/aur/PKGBUILD
+      run: 'sed -e "s/%pkgver/${{ env.PKGVER }}/g" -e "s/%sha256sum/${{ env.SHA256 }}/g" pkg/aur/PKGBUILD.in > pkg/aur/PKGBUILD'
     - name: Update package
       uses: KSXGitHub/github-actions-deploy-aur@v2.2.5
       with:
