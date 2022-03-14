@@ -4753,12 +4753,12 @@ cdef class SequenceFile:
         files containing multiple sequence alignments: in that case, the
         sequences will be read sequentially, removing the gap characters::
 
-            >>> with SequenceFile("vendor/easel/formats/stockholm.1") as sf:
+            >>> with SequenceFile("tests/data/msa/LuxC.sto") as sf:
             ...     sequences = list(sf)
-            >>> print(sequences[0].name, sequences[0].sequence)
-            b'seq1' GAATTC
-            >>> print(sequences[1].name, sequences[1].sequence)
-            b'seq2' GAATTC
+            >>> print(sequences[0].name[:6], sequences[0].sequence[:30])
+            b'Q9KV99' LANQPLEAILGLINEARKSWSSTPELDPYR
+            >>> print(sequences[1].name[:6], sequences[1].sequence[:30])
+            b'Q2WLE3' IYSYPSEAMIEIINEYSKILCSDRKFLSYE
 
     .. versionadded:: 0.2.0
        The ``alphabet`` attribute.
@@ -5318,7 +5318,7 @@ cdef class SequenceFile:
             Use `SequenceFile.readinto` to loop over the sequences in a file
             while recycling the same `Sequence` buffer:
 
-            >>> with SequenceFile("vendor/hmmer/testsuite/ecori.fa") as sf:
+            >>> with SequenceFile("tests/data/seqs/LuxC.faa") as sf:
             ...     seq = TextSequence()
             ...     while sf.readinto(seq) is not None:
             ...         # ... process seq here ... #
