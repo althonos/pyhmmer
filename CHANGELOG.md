@@ -6,7 +6,28 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.11...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.5.0...HEAD
+
+
+## [v0.5.0] - 2022-03-14
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.11...v0.5.0
+
+### Added
+- `plan7.PipelineSearchTargets` to reduce the overhead when searching the same sequences several times with different. query profiles.
+- `TopHits.copy` method to duplicate a `TopHits` instance.
+- `TopHits.merge` method to merge hits obtained with the same query on different targets.
+- Buffer protocol implementation for `pyhmmer.easel.Bitfield`.
+
+### Changed
+- Renamed `TopHits.included` and `TopHits.reported` properties to `TopHits.hits_included` and `TopHits.hits_included`.
+- `MSAFile` and `SequenceFile` are now directly in digital mode if they are instantiated with `digital=True`.
+- `SequenceFile.parse` can now return a sequence in digital mode.
+- Reorganized tests to make then runnable from a site install.
+
+### Fixed
+- Usage of `memcpy` in contexts where it may have had undefined behaviour.
+- `VectorF.__eq__` crashing when comparing two empty objects.
+- `SequenceFile` and `MSAFile` not closing file handles when raising an error in `__init__`.
 
 
 ## [v0.4.11] - 2021-12-15
