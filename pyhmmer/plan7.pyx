@@ -5551,42 +5551,65 @@ cdef class TopHits:
     @property
     def searched_models(self):
         """`int`: The number of models searched.
+
+        .. versionadded:: 0.5.0
+
         """
         return self._pli.nmodels
 
     @property
     def searched_nodes(self):
         """`int`: The number of model nodes searched.
+
+        .. versionadded:: 0.5.0
+
         """
         return self._pli.nres
 
     @property
     def searched_sequences(self):
         """`int`: The number of sequences searched.
+
+        .. versionadded:: 0.5.0
+
         """
         return self._pli.nseqs
 
     @property
     def searched_residues(self):
         """`int`: The number of residues searched.
+
+        .. versionadded:: 0.5.0
+
         """
         return self._pli.nres
 
     @property
     def long_targets(self):
         """`bool`: Whether these hits were produced by a long targets pipeline.
+
+        .. versionadded:: 0.5.0
+
         """
         return self._pli.long_targets
 
     @property
     def hits_reported(self):
         """`int`: The number of hits that are above the reporting threshold.
+
+        .. versionchanged:: 0.5.0
+           Renamed from ``reported`` to ``hits_reported``.
+
         """
         return self._th.nreported
 
     @property
     def hits_included(self):
         """`int`: The number of hits that are above the inclusion threshold.
+
+        .. versionchanged:: 0.5.0
+           Renamed from ``included`` to ``hits_included``.
+
         """
         return self._th.nincluded
 
@@ -5594,9 +5617,11 @@ cdef class TopHits:
     def strand(self):
         """`str` or `None`: The strand these hits were obtained from.
 
-        Returns `None` when the hits were not obtained from a long targets
-        pipeline, or when the long targets pipeline was configured to
-        search both strands.
+        Is always `None` when the hits were not obtained from a long targets
+        pipeline, or when the long targets pipeline was configured to search
+        both strands.
+
+        .. versionadded:: 0.5.0
 
         """
         if self._pli.long_targets:
@@ -5608,10 +5633,12 @@ cdef class TopHits:
 
     @property
     def block_length(self):
-        """`int` or `None`: The block length with which these hits were obtained.
+        """`int` or `None`: The block length these hits were obtained with.
 
-        Returns `None` when the hits were not obtained from a long targets
+        Is always `None` when the hits were not obtained from a long targets
         pipeline.
+
+        .. versionadded:: 0.5.0
 
         """
         return self._pli.block_length if self._pli.long_targets else None
@@ -5837,9 +5864,9 @@ cdef class TopHits:
             raise UnexpectedError(status, "p7_tophits_Alignment")
 
     def merge(self,  *others):
-        """merge(self, *other)\n--
+        """merge(self, *others)\n--
 
-        Concatenate the hits from this instance and ``other``.
+        Concatenate the hits from this instance and ``others``.
 
         If the ``Z`` and ``domZ`` values used to compute E-values were
         computed by the `Pipeline` from the number of targets, the returned
@@ -5851,6 +5878,11 @@ cdef class TopHits:
             `~pyhmmer.plan7.TopHits`: A new collection of hits containing
             a copy of all the hits from ``self`` and ``other``, sorted
             by key.
+
+        Raises:
+            `ValueError`: When trying to merge together several hits
+                obtained from different `Pipeline` with incompatible
+                parameters.
 
         Caution:
             This should only be done for hits obtained for the same domain
