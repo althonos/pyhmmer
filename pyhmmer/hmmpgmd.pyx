@@ -1,6 +1,11 @@
 # coding: utf-8
 # cython: language_level=3, linetrace=True
-"""Reimplementation of the HMMPGMD client.
+"""Implementation of the ``hmmpgmd`` client.
+
+``hmmpgmd`` is a server daemon provided by HMMER3 to run distributed
+search/scan pipelines on one or more worker machines. It is used to
+power the `HMMER web server <https://www.ebi.ac.uk/Tools/hmmer/>`_.
+
 """
 
 # --- C imports --------------------------------------------------------------
@@ -34,19 +39,15 @@ import warnings
 cdef class Client:
     """A `socket`-based client to communicate with a ``hmmpgmd`` server.
 
-    ``hmmpgmd`` is a server daemon provided by HMMER3 to run distributed
-    search/scan pipelines on one or more worker machines. It is used to
-    power the `HMMER web server <https://www.ebi.ac.uk/Tools/hmmer/>`_.
-
     This class implements the client-side protocol to query a database with
-    an `~easel.Sequence`, `~easel.MSA` or `~plan7.HMM`. It must first connect
-    to the server with the `~Client.connect` method::
+    a `~pyhmmer.easel.Sequence`, `~pyhmmer.easel.MSA` or `~pyhmmer.plan7.HMM`.
+    It must first connect to the server with the `~Client.connect` method::
 
         >>> client = hmmpgmd.Client("127.0.0.1", 51371)
         >>> client.connect()
 
     Afterwards, the client can be used to run pipelined searches,
-    returning a `~plan7.TopHits`::
+    returning a `~pyhmmer.plan7.TopHits`::
 
         >>> client.search_hmm(thioesterase)
         <pyhmmer.plan7.TopHits object at 0x...>
@@ -58,9 +59,8 @@ cdef class Client:
         <pyhmmer.plan7.TopHits object at 0x...>
 
     Hint:
-        `~hmmpgmd.Client` implements the context manager protocol, which can
-        be used to open and close a connection to the server within a
-        context::
+        `Client` implements the context manager protocol, which can be used
+        to open and close a connection to the server within a context::
 
             >>> with hmmpgmd.Client() as client:
             ...    client.search_hmm(thioesterase)
@@ -105,6 +105,19 @@ cdef class Client:
 
     def __exit__(self, exc_value, exc_type, traceback):
         self.close()
+
+    def __repr__(self):
+        cdef object ty   = type(self)
+        cdef list   args = []
+        if self.address != DEFAULT_ADDRESS:
+            args.append(self.address)
+        if self.port != DEFAULT_PORT:
+            args.append(self.port)
+        return "{}.{}({})".format(
+            ty.__module__,
+            ty.__name__,
+            "".join(args)
+        )
 
     # --- C Methods ----------------------------------------------------------
 
@@ -288,6 +301,9 @@ cdef class Client:
                 to query the sequence database.
             db (`int`): The index of the sequence database to query.
 
+        Returns:
+            `~plan7.TopHits`: The hits found in the sequence database.
+
         """
         cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
         cdef Pipeline pli = Pipeline(abc, **options)
@@ -303,10 +319,8 @@ cdef class Client:
                 object to use to query the sequence database.
             db (`int`): The index of the sequence database to query.
 
-        Note:
-            Additional keyword arguments can be passed to customize the
-            pipelined search. All parameters from `~pyhmmer.plan7.Pipeline`
-            are supported.
+        Returns:
+            `~plan7.TopHits`: The hits found in the sequence database.
 
         """
         cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
@@ -314,7 +328,7 @@ cdef class Client:
         return self._client(query, db, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
 
     def search_hmm(self, HMM query, uint64_t db = 1, **options):
-        """search_msa(self, query, db=1, **options)\n--
+        """search_hmm(self, query, db=1, **options)\n--
 
         Query the ``hmmpgmd`` server in search mode with a query HMM.
 
@@ -323,24 +337,25 @@ cdef class Client:
                 query the sequence database.
             db (`int`): The index of the sequence database to query.
 
-        Note:
-            Additional keyword arguments can be passed to customize the
-            pipelined search. All parameters from `~pyhmmer.plan7.Pipeline`
-            are supported.
+        Returns:
+            `~plan7.TopHits`: The hits found in the sequence database.
 
         """
         cdef Pipeline pli = Pipeline(query.alphabet, **options)
         return self._client(query, db, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
 
     def scan_seq(self, Sequence query, uint64_t db = 1, **options):
-        """search_msa(self, query, db=1, **options)\n--
+        """scan_seq(self, query, db=1, **options)\n--
 
         Query the ``hmmpgmd`` server in scan mode with a query sequence.
 
         Arguments:
-            query (`~pyhmmer.easel.MSA`): The profile HMM object to use to
-                query the sequence database.
-            db (`int`): The index of the sequence database to query.
+            query (`~pyhmmer.easel.Sequence`): The sequence object to use
+                to query the HMM database.
+            db (`int`): The index of the HMM database to query.
+
+        Returns:
+            `~plan7.TopHits`: The hits found in the HMM database.
 
         """
         cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
@@ -348,14 +363,17 @@ cdef class Client:
         return self._client(query, db, pli, p7_pipemodes_e.p7_SCAN_MODELS)
 
     def scan_msa(self, MSA query, uint64_t db = 1, **options):
-        """search_msa(self, query, db=1, **options)\n--
+        """scan_msa(self, query, db=1, **options)\n--
 
         Query the ``hmmpgmd`` server in scan mode with a query MSA.
 
         Arguments:
-            query (`~pyhmmer.easel.MSA`): The profile HMM object to use to
-                query the sequence database.
-            db (`int`): The index of the sequence database to query.
+            query (`~pyhmmer.easel.MSA`): The multiple sequence alignment
+                object to use to query the HMM database.
+            db (`int`): The index of the HMM database to query.
+
+        Returns:
+            `~plan7.TopHits`: The hits found in the HMM database.
 
         """
         cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
