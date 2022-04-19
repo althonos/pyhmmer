@@ -88,6 +88,7 @@ cdef class Client:
         cdef uint32_t           hits_start
         cdef uint32_t           buf_offset    = 0
         cdef TopHits            hits          = TopHits()
+        cdef str                options       = "".join(pli.arguments())
 
         # clean memory for data structures allocated on the stack
         memset(&search_stats, 0, sizeof(HMMD_SEARCH_STATS))
@@ -95,9 +96,8 @@ cdef class Client:
         search_stats.hit_offsets = NULL
 
         try:
-
             # serialize the query over the socket
-            self.socket.sendall(f"@--seqdb {db}\n".encode("ascii"))
+            self.socket.sendall(f"@--seqdb {db} {options}\n".encode("ascii"))
             query.write(self.socket.makefile("wb"))
             self.socket.sendall(b"//")
 
