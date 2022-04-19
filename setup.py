@@ -620,6 +620,13 @@ extensions = [
         define_macros=platform_define_macros,
         extra_compile_args=platform_compile_args,
     ),
+    Extension(
+        "pyhmmer.hmmpgmd",
+        [os.path.join("pyhmmer", "hmmpgmd.pyx")],
+        libraries=["hmmer", "easel", "divsufsort"],
+        define_macros=platform_define_macros,
+        extra_compile_args=platform_compile_args,
+    )
 ]
 
 
