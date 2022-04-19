@@ -621,8 +621,8 @@ extensions = [
         extra_compile_args=platform_compile_args,
     ),
     Extension(
-        "pyhmmer.hmmpgmd",
-        [os.path.join("pyhmmer", "hmmpgmd.pyx")],
+        "pyhmmer.daemon",
+        [os.path.join("pyhmmer", "daemon.pyx")],
         libraries=["hmmer", "easel", "divsufsort"],
         define_macros=platform_define_macros,
         extra_compile_args=platform_compile_args,

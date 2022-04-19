@@ -1,10 +1,26 @@
 # coding: utf-8
 # cython: language_level=3, linetrace=True
-"""Implementation of the ``hmmpgmd`` client.
+"""Implementation of a client for the HMMER daemon.
 
-``hmmpgmd`` is a server daemon provided by HMMER3 to run distributed
+The HMMER daemon is a server daemon provided by HMMER3 to run distributed
 search/scan pipelines on one or more worker machines. It is used to
 power the `HMMER web server <https://www.ebi.ac.uk/Tools/hmmer/>`_.
+
+This module only provides a client (such as the one in the ``hmmc2``
+executable). To run the server, you need a database in the right format
+(either a pressed HMM database, or sequences in a special FASTA format).
+First launch the master process, and then the worker processes:
+
+.. code:: console
+
+    $ hmmpgmd --master --seqdb db.fasta --cport 51371 --wport 51372
+    $ hmmpgmd --worker 127.0.0.1 --wport 51372
+
+You can communicate to the master process after instantiating the
+`pyhmmer.daemon.Client` class with the address of the master process and
+the port on which it listens for client/server communication::
+
+    >>> client = pyhmmer.daemon.Client("127.0.0.1", 51371)
 
 """
 
@@ -37,13 +53,13 @@ import warnings
 # --- Cython classes ---------------------------------------------------------
 
 cdef class Client:
-    """A `socket`-based client to communicate with a ``hmmpgmd`` server.
+    """A `socket`-based client to communicate with a HMMER daemon server.
 
     This class implements the client-side protocol to query a database with
     a `~pyhmmer.easel.Sequence`, `~pyhmmer.easel.MSA` or `~pyhmmer.plan7.HMM`.
     It must first connect to the server with the `~Client.connect` method::
 
-        >>> client = hmmpgmd.Client("127.0.0.1", 51371)
+        >>> client = daemon.Client("127.0.0.1", 51371)
         >>> client.connect()
 
     Afterwards, the client can be used to run pipelined searches,
@@ -62,7 +78,7 @@ cdef class Client:
         `Client` implements the context manager protocol, which can be used
         to open and close a connection to the server within a context::
 
-            >>> with hmmpgmd.Client() as client:
+            >>> with daemon.Client() as client:
             ...    client.search_hmm(thioesterase)
             <pyhmmer.plan7.TopHits object at 0x...>
 
@@ -86,13 +102,14 @@ cdef class Client:
         str address=DEFAULT_ADDRESS,
         uint16_t port=DEFAULT_PORT,
     ):
-        f"""__init__(self, address={DEFAULT_ADDRESS}, port={DEFAULT_PORT})\n--
+        """__init__(self, address="127.0.0.1", port=51371)\n--
 
-        Create a new `~hmmpgmd.Client` connecting to the given server.
+        Create a new `Client` connecting to the given HMMEr daemon server.
 
         Arguments:
-            address (`str`): The address of the server.
-            port (`int`): The port of the server.
+            address (`str`): The address of the HMMER daemon server.
+            port (`int`): The port over which the HMMER daemon server
+                performs client/server communication.
 
         """
         self.address = address
@@ -278,7 +295,7 @@ cdef class Client:
     def connect(self):
         """connect(self)\n--
 
-        Connect the client to the ``hmmpgmd`` server.
+        Connect the client to the HMMER daemon server.
 
         """
         self.socket.connect((self.address, self.port))
@@ -286,7 +303,7 @@ cdef class Client:
     def close(self):
         """close(self)\n--
 
-        Close the connection to the ``hmmpgmd`` server.
+        Close the connection to the HMMER daemon server.
 
         """
         self.socket.close()
@@ -294,7 +311,7 @@ cdef class Client:
     def search_seq(self, Sequence query, uint64_t db = 1, **options):
         """search_seq(self, query, db=1, **options)\n--
 
-        Query the ``hmmpgmd`` server in search mode with a query sequence.
+        Search the HMMER daemon database with a query sequence.
 
         Arguments:
             query (`~pyhmmer.easel.Sequence`): The sequence object to use
@@ -312,7 +329,7 @@ cdef class Client:
     def search_msa(self, MSA query, uint64_t db = 1, **options):
         """search_msa(self, query, db=1, **options)\n--
 
-        Query the ``hmmpgmd`` server in search mode with a query MSA.
+        Search the HMMER daemon database with a query MSA.
 
         Arguments:
             query (`~pyhmmer.easel.MSA`): The multiple sequence alignment
@@ -330,7 +347,7 @@ cdef class Client:
     def search_hmm(self, HMM query, uint64_t db = 1, **options):
         """search_hmm(self, query, db=1, **options)\n--
 
-        Query the ``hmmpgmd`` server in search mode with a query HMM.
+        Search the HMMER daemon database with a query HMM.
 
         Arguments:
             query (`~pyhmmer.easel.MSA`): The profile HMM object to use to
@@ -347,7 +364,7 @@ cdef class Client:
     def scan_seq(self, Sequence query, uint64_t db = 1, **options):
         """scan_seq(self, query, db=1, **options)\n--
 
-        Query the ``hmmpgmd`` server in scan mode with a query sequence.
+        Search the HMMER daemon database with a query sequence.
 
         Arguments:
             query (`~pyhmmer.easel.Sequence`): The sequence object to use
@@ -365,7 +382,7 @@ cdef class Client:
     def scan_msa(self, MSA query, uint64_t db = 1, **options):
         """scan_msa(self, query, db=1, **options)\n--
 
-        Query the ``hmmpgmd`` server in scan mode with a query MSA.
+        Search the HMMER daemon database with a query MSA.
 
         Arguments:
             query (`~pyhmmer.easel.MSA`): The multiple sequence alignment

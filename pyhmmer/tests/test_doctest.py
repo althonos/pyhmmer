@@ -43,14 +43,14 @@ def load_tests(loader, tests, ignore):
     """`load_test` function used by unittest to find the doctests.
     """
     _current_cwd = os.getcwd()
-    _hmmpgmd_client = mock.patch("pyhmmer.hmmpgmd.Client")
+    _daemon_client = mock.patch("pyhmmer.daemon.Client")
 
     def setUp(self):
         warnings.simplefilter("ignore")
         os.chdir(os.path.realpath(os.path.join(__file__, "..", "..")))
         # mock the HMMPGMD client to show usage examples without having
         # to actually spawn an HMMPGMD server in the background
-        _client = _hmmpgmd_client.__enter__()
+        _client = _daemon_client.__enter__()
         _client.return_value = _client
         _client.__enter__.return_value = _client
         _client.connect.return_value = None
@@ -59,7 +59,7 @@ def load_tests(loader, tests, ignore):
     def tearDown(self):
         os.chdir(_current_cwd)
         warnings.simplefilter(warnings.defaultaction)
-        _hmmpgmd_client.__exit__(None, None, None)
+        _daemon_client.__exit__(None, None, None)
 
     # doctests are not compatible with `green`, so we may want to bail out
     # early if `green` is running the tests
@@ -97,7 +97,7 @@ def load_tests(loader, tests, ignore):
                 numpy=numpy,
                 easel=pyhmmer.easel,
                 plan7=pyhmmer.plan7,
-                hmmpgmd=pyhmmer.hmmpgmd,
+                daemon=pyhmmer.daemon,
                 thioesterase=thioesterase,
                 proteins=proteins,
                 luxc=luxc,
