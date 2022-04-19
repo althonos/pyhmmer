@@ -64,6 +64,7 @@ cdef class Client:
 
             >>> with hmmpgmd.Client() as client:
             ...    client.search_hmm(thioesterase)
+            <pyhmmer.plan7.TopHits object at 0x...>
 
     Caution:
         Hits returned by the server will not have corresponding hit names,
