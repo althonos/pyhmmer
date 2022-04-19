@@ -11,12 +11,13 @@ from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_bg cimport P7_BG
 from libhmmer.p7_builder cimport P7_BUILDER
 from libhmmer.p7_domain cimport P7_DOMAIN
+from libhmmer.p7_hit cimport P7_HIT
 from libhmmer.p7_hmm cimport P7_HMM
 from libhmmer.p7_hmmfile cimport P7_HMMFILE
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e
 from libhmmer.p7_profile cimport P7_PROFILE
 from libhmmer.p7_scoredata cimport P7_SCOREDATA
-from libhmmer.p7_tophits cimport P7_TOPHITS, P7_HIT
+from libhmmer.p7_tophits cimport P7_TOPHITS
 from libhmmer.p7_trace cimport P7_TRACE
 
 IF HMMER_IMPL == "VMX":

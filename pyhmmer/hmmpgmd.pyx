@@ -9,13 +9,13 @@ from cpython.bytearray cimport PyByteArray_AS_STRING
 
 cimport libeasel
 cimport libhmmer.hmmpgmd
-cimport libhmmer.p7_tophits
+cimport libhmmer.p7_hit
 from libc.stdlib cimport free, realloc
 from libc.string cimport memset, memcpy
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint64_t
 from libhmmer.hmmpgmd cimport HMMD_SEARCH_STATUS_SERIAL_SIZE, HMMD_SEARCH_STATUS, HMMD_SEARCH_STATS
 from libhmmer.p7_pipeline cimport p7_pipemodes_e, P7_PIPELINE
-from libhmmer.p7_tophits cimport P7_HIT
+from libhmmer.p7_hit cimport P7_HIT
 
 from pyhmmer.easel cimport Sequence, Alphabet
 from pyhmmer.errors import UnexpectedError, AllocationError
@@ -32,11 +32,6 @@ import warnings
 # --- Cython classes ---------------------------------------------------------
 
 cdef class Client:
-
-    cdef str            address
-    cdef uint16_t       port
-    cdef object         socket
-    cdef p7_pipemodes_e mode
 
     def __init__(
         self,
@@ -102,7 +97,9 @@ cdef class Client:
         try:
 
             # serialize the query over the socket
+            self.socket.sendall(f"@--seqdb {db}\n".encode("ascii"))
             query.write(self.socket.makefile("wb"))
+            self.socket.sendall(b"//")
 
             # get the search status back
             response = self._recvall(HMMD_SEARCH_STATUS_SERIAL_SIZE)
@@ -176,7 +173,7 @@ cdef class Client:
                         with gil:
                             warnings.warn(f"Hit offset {i} did not match expected (expected {search_stats.hit_offsets[i]}, found {buf_offset - hits_start})")
                     # deserialize and record the hit
-                    status = libhmmer.p7_tophits.p7_hit_Deserialize(
+                    status = libhmmer.p7_hit.p7_hit_Deserialize(
                         <const uint8_t*> response_data,
                         &buf_offset,
                         &hits._th.unsrt[i]

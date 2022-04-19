@@ -3,7 +3,10 @@
 
 # --- C imports --------------------------------------------------------------
 
+from libc.stdint cimport uint16_t, uint64_t
 from libhmmer.p7_pipeline cimport p7_pipemodes_e
+
+from pyhmmer.plan7 cimport TopHits, Pipeline
 
 
 # --- Cython classes ---------------------------------------------------------
@@ -14,3 +17,12 @@ cdef class Client:
     cdef uint16_t       port
     cdef object         socket
     cdef p7_pipemodes_e mode
+
+    cdef bytearray _recvall(self, size_t message_size)
+    cdef TopHits _client(
+        self,
+        object query,
+        uint64_t db,
+        Pipeline pli,
+        p7_pipemodes_e mode,
+    )

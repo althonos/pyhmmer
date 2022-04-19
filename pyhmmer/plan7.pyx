@@ -45,6 +45,7 @@ cimport libhmmer.p7_hmm
 cimport libhmmer.p7_builder
 cimport libhmmer.p7_bg
 cimport libhmmer.p7_domaindef
+cimport libhmmer.p7_hit
 cimport libhmmer.p7_hmmfile
 cimport libhmmer.p7_pipeline
 cimport libhmmer.p7_prior
@@ -63,7 +64,7 @@ from libhmmer.logsum cimport p7_FLogsumInit
 from libhmmer.p7_builder cimport P7_BUILDER, p7_archchoice_e, p7_wgtchoice_e, p7_effnchoice_e
 from libhmmer.p7_hmm cimport p7H_NTRANSITIONS, p7H_TC, p7H_GA, p7H_NC, p7H_MAP
 from libhmmer.p7_hmmfile cimport p7_hmmfile_formats_e
-from libhmmer.p7_tophits cimport p7_hitflags_e, P7_HIT
+from libhmmer.p7_hit cimport p7_hitflags_e, P7_HIT
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e, p7_strands_e, p7_complementarity_e
 from libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL
