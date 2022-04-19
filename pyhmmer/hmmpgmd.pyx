@@ -34,11 +34,44 @@ import warnings
 cdef class Client:
     """A `socket`-based client to communicate with a ``hmmpgmd`` server.
 
-    ``
+    ``hmmpgmd`` is a server daemon provided by HMMER3 to run distributed
+    search/scan pipelines on one or more worker machines. It is used to
+    power the `HMMER web server <https://www.ebi.ac.uk/Tools/hmmer/>`_.
 
-    Note:
-        Additional keyword arguments can be passed to customize the pipelined
-        search. All parameters from `~pyhmmer.plan7.Pipeline` are supported.
+    This class implements the client-side protocol to query a database with
+    an `~easel.Sequence`, `~easel.MSA` or `~plan7.HMM`. It must first connect
+    to the server with the `~Client.connect` method::
+
+        >>> client = hmmpgmd.Client("127.0.0.1", 51371)
+        >>> client.connect()
+
+    Afterwards, the client can be used to run pipelined searches,
+    returning a `~plan7.TopHits`::
+
+        >>> client.search_hmm(thioesterase)
+        <pyhmmer.plan7.TopHits object at 0x...>
+
+    Additional keyword arguments can be passed to customize the pipelined
+    search. All parameters from `~pyhmmer.plan7.Pipeline` are supported::
+
+        >>> client.search_hmm(thioesterase, F1=0.02, E=1e-5)
+        <pyhmmer.plan7.TopHits object at 0x...>
+
+    Hint:
+        `~hmmpgmd.Client` implements the context manager protocol, which can
+        be used to open and close a connection to the server within a
+        context::
+
+            >>> with hmmpgmd.Client() as client:
+            ...    client.search_hmm(thioesterase)
+
+    Caution:
+        Hits returned by the server will not have corresponding hit names,
+        but only numerical identifiers. It is up to the client user to map
+        these to the actual target names, often using an external file or
+        database. If the database is small and several queries are made, it
+        is feasible to parse the database from the client side to extract
+        identifiers of the target HMMs or sequences.
 
     """
 

@@ -5,6 +5,7 @@ API Reference
    :hidden:
 
    hmmer <hmmer>
+   hmmpgmd <hmmpgmd>
    easel <easel>
    plan7 <plan7>
    errors <errors>
@@ -28,6 +29,15 @@ API Reference
         pyhmmer.hmmer.nhmmer
         pyhmmer.hmmer.hmmpress
         pyhmmer.hmmer.hmmalign
+
+
+    HMMPGMD
+    -------
+
+    .. autosummary::
+        :nosignatures:
+
+        pyhmmer.hmmpgmd.Client
 
 
     Easel
