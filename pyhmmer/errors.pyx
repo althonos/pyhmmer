@@ -134,3 +134,22 @@ class AlphabetMismatch(ValueError):
         if not isinstance(other, AlphabetMismatch):
             return NotImplemented
         return self.actual == other.actual and self.expected == other.expected
+
+
+class ServerError(RuntimeError):
+    """A runtime error that happened in a ``hmmpgmd`` server.
+    """
+
+    def __init__(self, int code, str message):
+        self.code = code
+        self.message = message
+
+    def __repr__(self):
+        return "{}({!r}, {!r})".format(type(self).__name__, self.code, self.message)
+
+    def __str__(self):
+        return "Error in server: {}, {} (status code {})".format(
+            self.message,
+            statuscode.get(self.code, "<unknown>"),
+            self.code,
+        )

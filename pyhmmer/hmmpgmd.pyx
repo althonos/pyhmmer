@@ -23,7 +23,7 @@ from libhmmer.p7_pipeline cimport p7_pipemodes_e, P7_PIPELINE
 from libhmmer.p7_hit cimport P7_HIT
 
 from pyhmmer.easel cimport Sequence, Alphabet, MSA
-from pyhmmer.errors import UnexpectedError, AllocationError
+from pyhmmer.errors import UnexpectedError, AllocationError, ServerError
 from pyhmmer.plan7 cimport TopHits, Pipeline, HMM
 
 
@@ -200,7 +200,7 @@ cdef class Client:
             # check if error happened
             if search_status.status != libeasel.eslOK:
                 error = self.socket.recv(search_status.msg_size)
-                raise RuntimeError(error.decode("utf-8", "replace"))
+                raise ServerError(search_status.status, error.decode("utf-8", "replace"))
 
             # get the response
             response = self._recvall(search_status.msg_size)
