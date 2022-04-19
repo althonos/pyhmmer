@@ -17,7 +17,7 @@ from libhmmer.hmmpgmd cimport HMMD_SEARCH_STATUS_SERIAL_SIZE, HMMD_SEARCH_STATUS
 from libhmmer.p7_pipeline cimport p7_pipemodes_e, P7_PIPELINE
 from libhmmer.p7_hit cimport P7_HIT
 
-from pyhmmer.easel cimport Sequence, Alphabet
+from pyhmmer.easel cimport Sequence, Alphabet, MSA
 from pyhmmer.errors import UnexpectedError, AllocationError
 from pyhmmer.plan7 cimport TopHits, Pipeline, HMM
 
@@ -32,12 +32,35 @@ import warnings
 # --- Cython classes ---------------------------------------------------------
 
 cdef class Client:
+    """A `socket`-based client to communicate with a ``hmmpgmd`` server.
+
+    ``
+
+    Note:
+        Additional keyword arguments can be passed to customize the pipelined
+        search. All parameters from `~pyhmmer.plan7.Pipeline` are supported.
+
+    """
+
+    DEF DEFAULT_ADDRESS = "127.0.0.1"
+    DEF DEFAULT_PORT    = 51371
+
+    # --- Magic methods ------------------------------------------------------
 
     def __init__(
         self,
-        str address="127.0.0.1",
-        uint16_t port=51371,
+        str address=DEFAULT_ADDRESS,
+        uint16_t port=DEFAULT_PORT,
     ):
+        f"""__init__(self, address={DEFAULT_ADDRESS}, port={DEFAULT_PORT})\n--
+
+        Create a new `~hmmpgmd.Client` connecting to the given server.
+
+        Arguments:
+            address (`str`): The address of the server.
+            port (`int`): The port of the server.
+
+        """
         self.address = address
         self.port = port
         self.socket = socket.socket()
@@ -49,19 +72,18 @@ cdef class Client:
     def __exit__(self, exc_value, exc_type, traceback):
         self.close()
 
-    def connect(self):
-        self.socket.connect((self.address, self.port))
-
-    def close(self):
-        self.socket.close()
+    # --- C Methods ----------------------------------------------------------
 
     cdef bytearray _recvall(self, size_t message_size):
+        """_recvall(self, message_size)\n--
 
+        Receive exactly ``message_size`` bytes from ``self.socket``.
+
+        """
         cdef bytearray buffer = bytearray(message_size)
         cdef object    view   = memoryview(buffer)
         cdef size_t received  = 0
         cdef size_t recv_size = 0
-
         while received < message_size:
             recv_size = self.socket.recv_into(view)
             if recv_size == 0:
@@ -77,6 +99,20 @@ cdef class Client:
         Pipeline pli,
         p7_pipemodes_e mode,
     ):
+        """_client(self, query, db, pli, mode)\n--
+
+        A generic implementation of the steps to communicate with the server.
+
+        Arguments:
+            query (`~easel.Sequence`, `~easel.MSA` or `~plan7.HMM`): A query
+                object that can be written to a binary file handle.
+            db (`int`): The index of the database to query.
+            pli (`~plan7.Pipeline`): A pipeline object used to store generic
+                configuration for the search/scan.
+            mode (`int`): The pipeline mode marking whether the server should
+                be queried in search or scan mode.
+
+        """
         cdef int                status
         cdef HMMD_SEARCH_STATS  search_stats
         cdef HMMD_SEARCH_STATUS search_status
@@ -97,7 +133,10 @@ cdef class Client:
 
         try:
             # serialize the query over the socket
-            self.socket.sendall(f"@--seqdb {db} {options}\n".encode("ascii"))
+            if mode == p7_pipemodes_e.p7_SEARCH_SEQS:
+                self.socket.sendall(f"@--seqdb {db} {options}\n".encode("ascii"))
+            else:
+                self.socket.sendall(f"@--hmmdb {db} {options}\n".encode("ascii"))
             query.write(self.socket.makefile("wb"))
             self.socket.sendall(b"//")
 
@@ -187,11 +226,104 @@ cdef class Client:
 
         return hits
 
+    # --- Python Methods -----------------------------------------------------
+
+    def connect(self):
+        """connect(self)\n--
+
+        Connect the client to the ``hmmpgmd`` server.
+
+        """
+        self.socket.connect((self.address, self.port))
+
+    def close(self):
+        """close(self)\n--
+
+        Close the connection to the ``hmmpgmd`` server.
+
+        """
+        self.socket.close()
+
     def search_seq(self, Sequence query, uint64_t db = 1, **options):
+        """search_seq(self, query, db=1, **options)\n--
+
+        Query the ``hmmpgmd`` server in search mode with a query sequence.
+
+        Arguments:
+            query (`~pyhmmer.easel.Sequence`): The sequence object to use
+                to query the sequence database.
+            db (`int`): The index of the sequence database to query.
+
+        """
+        cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
+        cdef Pipeline pli = Pipeline(abc, **options)
+        return self._client(query, db, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
+
+    def search_msa(self, MSA query, uint64_t db = 1, **options):
+        """search_msa(self, query, db=1, **options)\n--
+
+        Query the ``hmmpgmd`` server in search mode with a query MSA.
+
+        Arguments:
+            query (`~pyhmmer.easel.MSA`): The multiple sequence alignment
+                object to use to query the sequence database.
+            db (`int`): The index of the sequence database to query.
+
+        Note:
+            Additional keyword arguments can be passed to customize the
+            pipelined search. All parameters from `~pyhmmer.plan7.Pipeline`
+            are supported.
+
+        """
         cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
         cdef Pipeline pli = Pipeline(abc, **options)
         return self._client(query, db, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
 
     def search_hmm(self, HMM query, uint64_t db = 1, **options):
+        """search_msa(self, query, db=1, **options)\n--
+
+        Query the ``hmmpgmd`` server in search mode with a query HMM.
+
+        Arguments:
+            query (`~pyhmmer.easel.MSA`): The profile HMM object to use to
+                query the sequence database.
+            db (`int`): The index of the sequence database to query.
+
+        Note:
+            Additional keyword arguments can be passed to customize the
+            pipelined search. All parameters from `~pyhmmer.plan7.Pipeline`
+            are supported.
+
+        """
         cdef Pipeline pli = Pipeline(query.alphabet, **options)
         return self._client(query, db, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
+
+    def scan_seq(self, Sequence query, uint64_t db = 1, **options):
+        """search_msa(self, query, db=1, **options)\n--
+
+        Query the ``hmmpgmd`` server in scan mode with a query sequence.
+
+        Arguments:
+            query (`~pyhmmer.easel.MSA`): The profile HMM object to use to
+                query the sequence database.
+            db (`int`): The index of the sequence database to query.
+
+        """
+        cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
+        cdef Pipeline pli = Pipeline(abc, **options)
+        return self._client(query, db, pli, p7_pipemodes_e.p7_SCAN_MODELS)
+
+    def scan_msa(self, MSA query, uint64_t db = 1, **options):
+        """search_msa(self, query, db=1, **options)\n--
+
+        Query the ``hmmpgmd`` server in scan mode with a query MSA.
+
+        Arguments:
+            query (`~pyhmmer.easel.MSA`): The profile HMM object to use to
+                query the sequence database.
+            db (`int`): The index of the sequence database to query.
+
+        """
+        cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
+        cdef Pipeline pli = Pipeline(abc, **options)
+        return self._client(query, db, pli, p7_pipemodes_e.p7_SCAN_MODELS)
