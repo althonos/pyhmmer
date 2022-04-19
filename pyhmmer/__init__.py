@@ -19,6 +19,7 @@ import os as _os
 from . import errors
 from . import easel
 from . import plan7
+from . import hmmpgmd
 
 from .hmmer import hmmalign, hmmsearch, hmmpress, nhmmer, phmmer
 
@@ -30,6 +31,7 @@ __all__ = [
     errors.__name__,
     easel.__name__,
     plan7.__name__,
+    hmmpgmd.__name__,
     hmmalign.__name__,
     hmmsearch.__name__,
     hmmpress.__name__,
