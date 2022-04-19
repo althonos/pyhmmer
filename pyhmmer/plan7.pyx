@@ -3662,6 +3662,15 @@ cdef class Pipeline:
 
     """
 
+    DEF DEFAULT_SEED    = 42
+    DEF DEFAULT_F1      = 0.02
+    DEF DEFAULT_F2      = 1e-3
+    DEF DEFAULT_F3      = 1e-5
+    DEF DEFAULT_E       = 10.0
+    DEF DEFAULT_DOME    = 10.0
+    DEF DEFAULT_INCE    = 0.01
+    DEF DEFAULT_INCDOME = 0.01
+
     M_HINT = 100         # default model size
     L_HINT = 100         # default sequence size
     _BIT_CUTOFFS = dict(PIPELINE_BIT_CUTOFFS)
@@ -3682,19 +3691,19 @@ cdef class Pipeline:
         *,
         bint bias_filter=True,
         bint null2=True,
-        uint32_t seed=42,
+        uint32_t seed=DEFAULT_SEED,
         object Z=None,
         object domZ=None,
-        double F1=0.02,
-        double F2=1e-3,
-        double F3=1e-5,
-        double E=10.0,
+        double F1=DEFAULT_F1,
+        double F2=DEFAULT_F2,
+        double F3=DEFAULT_F3,
+        double E=DEFAULT_E,
         object T=None,
-        double domE=10.0,
+        double domE=DEFAULT_DOME,
         object domT=None,
-        double incE=0.01,
+        double incE=DEFAULT_INCE,
         object incT=None,
-        double incdomE=0.01,
+        double incdomE=DEFAULT_INCDOME,
         object incdomT=None,
         str bit_cutoffs=None,
     ):
@@ -3765,8 +3774,8 @@ cdef class Pipeline:
 
         """
         # extract default parameters from the class attributes
-        cdef int  m_hint       = self.M_HINT
-        cdef int  l_hint       = self.L_HINT
+        cdef int m_hint = self.M_HINT
+        cdef int l_hint = self.L_HINT
 
         # store a reference to the alphabet to avoid deallocation
         self.alphabet = alphabet
@@ -4216,6 +4225,92 @@ cdef class Pipeline:
         else:
             ty = type(query).__name__
             raise TypeError(f"Expected HMM, Profile or OptimizedProfile, found {ty}")
+
+    cpdef list arguments(self):
+        """arguments(self)\n--
+
+        Generate an ``argv``-like list with pipeline options as CLI flags.
+
+        Example:
+            >>> alphabet = easel.Alphabet.amino()
+            >>> plan7.Pipeline(alphabet).arguments()
+            []
+            >>> plan7.Pipeline(alphabet, F1=0.01).arguments()
+            ['--F1', '0.01']
+
+        """
+        cdef list argv = []
+        cdef str  cutoff
+
+        if self._pli.use_bit_cutoffs:
+            cutoff = self.bit_cutoffs
+            if cutoff == "gathering":
+                argv.append("--cut_ga")
+            elif cutoff == "noise":
+                argv.append("--cut_nc")
+            elif cutoff == "trusted":
+                argv.append("--cut_tc")
+            else:
+                raise ValueError(f"Unknown bit cutoffs: {cutoff!r}")
+        else:
+            # options controlling reporting thresholds
+            if self._pli.by_E:
+                if self._pli.E != DEFAULT_E:
+                    argv.append("-E")
+                    argv.append(str(self._pli.E))
+            else:
+                argv.append("-T")
+                argv.append(str(self._pli.T))
+            if self._pli.dom_by_E:
+                if self._pli.domE != DEFAULT_DOME:
+                    argv.append("--domE")
+                    argv.append(str(self._pli.domE))
+            else:
+                argv.append("--domT")
+                argv.append(str(self._pli.domT))
+            # options controlling inclusion thresholds
+            if self._pli.inc_by_E:
+                if self._pli.incE != DEFAULT_INCE:
+                    argv.append("--incE")
+                    argv.append(str(self._pli.incE))
+            else:
+                argv.append("--incT")
+                argv.append(str(self._pli.incT))
+            if self._pli.incdom_by_E:
+                if self._pli.incdomE != DEFAULT_INCDOME:
+                    argv.append("--incdomE")
+                    argv.append(str(self._pli.incdomE))
+            else:
+                argv.append("--incdomT")
+                argv.append(str(self._pli.incdomT))
+
+        if self._pli.F1 != DEFAULT_F1:
+            argv.append("--F1")
+            argv.append(str(self.F1))
+        if self._pli.F2 != DEFAULT_F2:
+            argv.append("--F2")
+            argv.append(str(self.F2))
+        if self._pli.F3 != DEFAULT_F3:
+            argv.append("--F3")
+            argv.append(str(self.F3))
+
+        if not self.bias_filter:
+            argv.append("--nobias")
+        if not self.null2:
+            argv.append("--nonull2")
+
+        if self._pli.Z_setby == p7_zsetby_e.p7_ZSETBY_OPTION:
+            argv.append("-Z")
+            argv.append(str(self._pli.Z))
+        if self._pli.domZ_setby == p7_zsetby_e.p7_ZSETBY_OPTION:
+            argv.append("--domZ")
+            argv.append(str(self._pli.domZ))
+
+        if self._seed != DEFAULT_SEED:
+            argv.append("--seed")
+            argv.append(str(self._seed))
+
+        return argv
 
     cpdef void clear(self):
         """clear(self)\n--
@@ -4675,6 +4770,14 @@ cdef class LongTargetsPipeline(Pipeline):
 
     """
 
+    DEF DEFAULT_F1           = 0.02
+    DEF DEFAULT_F2           = 3e-3
+    DEF DEFAULT_F3           = 3e-5
+    DEF DEFAULT_B1           = 100
+    DEF DEFAULT_B2           = 240
+    DEF DEFAULT_B3           = 1000
+    DEF DEFAULT_BLOCK_LENGTH = 0x40000
+
     # --- Magic methods ------------------------------------------------------
 
     def __init__(
@@ -4682,14 +4785,14 @@ cdef class LongTargetsPipeline(Pipeline):
         Alphabet alphabet,
         Background background = None,
         *,
-        double F1=0.02,
-        double F2=3e-3,
-        double F3=3e-5,
+        double F1=DEFAULT_F1,
+        double F2=DEFAULT_F2,
+        double F3=DEFAULT_F3,
         str strand=None,
-        int B1=100,
-        int B2=240,
-        int B3=1000,
-        int block_length=0x40000,
+        int B1=DEFAULT_B1,
+        int B2=DEFAULT_B2,
+        int B3=DEFAULT_B3,
+        int block_length=DEFAULT_BLOCK_LENGTH,
         **kwargs,
     ):
         """__init__(self, alphabet, background=None, *, F1=0.02, F2=3e-3, F3=3e-5, strand=None, B1=100, B2=240, B3=1000, block_length=0x40000, **kwargs)\n--
@@ -4797,6 +4900,102 @@ cdef class LongTargetsPipeline(Pipeline):
             raise ValueError(f"invalid strand: {strand!r}")
 
     # --- Methods ------------------------------------------------------------
+
+    cpdef list arguments(self):
+        """arguments(self)\n--
+
+        Generate an ``argv``-like list with pipeline options as CLI flags.
+
+        Example:
+            >>> alphabet = easel.Alphabet.dna()
+            >>> plan7.LongTargetsPipeline(alphabet).arguments()
+            []
+            >>> plan7.LongTargetsPipeline(alphabet, B1=200).arguments()
+            ['--B1', '200']
+
+        """
+        cdef list argv = []
+        cdef str  cutoff
+
+        if self._pli.use_bit_cutoffs:
+            cutoff = self.bit_cutoffs
+            if cutoff == "gathering":
+                argv.append("--cut_ga")
+            elif cutoff == "noise":
+                argv.append("--cut_nc")
+            elif cutoff == "trusted":
+                argv.append("--cut_tc")
+            else:
+                raise ValueError(f"Unknown bit cutoffs: {cutoff!r}")
+        else:
+            # options controlling reporting thresholds
+            if self._pli.by_E:
+                if self._pli.E != DEFAULT_E:
+                    argv.append("-E")
+                    argv.append(str(self._pli.E))
+            else:
+                argv.append("-T")
+                argv.append(str(self._pli.T))
+            if self._pli.dom_by_E:
+                if self._pli.domE != DEFAULT_DOME:
+                    argv.append("--domE")
+                    argv.append(str(self._pli.domE))
+            else:
+                argv.append("--domT")
+                argv.append(str(self._pli.domT))
+            # options controlling inclusion thresholds
+            if self._pli.inc_by_E:
+                if self._pli.incE != DEFAULT_INCE:
+                    argv.append("--incE")
+                    argv.append(str(self._pli.incE))
+            else:
+                argv.append("--incT")
+                argv.append(str(self._pli.incT))
+            if self._pli.incdom_by_E:
+                if self._pli.incdomE != DEFAULT_INCDOME:
+                    argv.append("--incdomE")
+                    argv.append(str(self._pli.incdomE))
+            else:
+                argv.append("--incdomT")
+                argv.append(str(self._pli.incdomT))
+
+        if self._pli.F1 != DEFAULT_F1:
+            argv.append("--F1")
+            argv.append(str(self.F1))
+        if self._pli.F2 != DEFAULT_F2:
+            argv.append("--F2")
+            argv.append(str(self.F2))
+        if self._pli.F3 != DEFAULT_F3:
+            argv.append("--F3")
+            argv.append(str(self.F3))
+
+        if self._pli.B1 != DEFAULT_B1:
+            argv.append("--B1")
+            argv.append(str(self.B1))
+        if self._pli.B2 != DEFAULT_B2:
+            argv.append("--B2")
+            argv.append(str(self.B2))
+        if self._pli.B3 != DEFAULT_B3:
+            argv.append("--B3")
+            argv.append(str(self.B3))
+
+        if not self.bias_filter:
+            argv.append("--nobias")
+        if not self.null2:
+            argv.append("--nonull2")
+
+        if self._pli.Z_setby == p7_zsetby_e.p7_ZSETBY_OPTION:
+            argv.append("-Z")
+            argv.append(str(self._pli.Z))
+        if self._pli.domZ_setby == p7_zsetby_e.p7_ZSETBY_OPTION:
+            argv.append("--domZ")
+            argv.append(str(self._pli.domZ))
+
+        if self._seed != DEFAULT_SEED:
+            argv.append("--seed")
+            argv.append(str(self._seed))
+
+        return argv
 
     cpdef TopHits scan_seq(
         self,
