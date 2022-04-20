@@ -160,6 +160,7 @@ cdef class Client:
         self,
         object query,
         uint64_t db,
+        list ranges,
         Pipeline pli,
         p7_pipemodes_e mode,
     ):
@@ -171,6 +172,8 @@ cdef class Client:
             query (`~easel.Sequence`, `~easel.MSA` or `~plan7.HMM`): A query
                 object that can be written to a binary file handle.
             db (`int`): The index of the database to query.
+            ranges (`list` of `tuple`): A list of ranges of target sequences
+                to query inside the database.
             pli (`~plan7.Pipeline`): A pipeline object used to store generic
                 configuration for the search/scan.
             mode (`int`): The pipeline mode marking whether the server should
@@ -190,6 +193,14 @@ cdef class Client:
         cdef TopHits            hits          = TopHits()
         cdef str                options       = "".join(pli.arguments())
 
+        # check ranges argument
+        if ranges is not None and len(ranges) < 1:
+            raise ValueError("At least one range is needed for the `ranges` argument")
+        elif any(len(r) != 2 for r in ranges):
+            raise ValueError("`ranges` must be a list of two-element tuples")
+        elif not all(isinstance(r[0], int) and isinstance(r[1], int) for r in ranges):
+            raise TypeError("`ranges` must be a list where elements are 2-tuples of int")
+
         # clean memory for data structures allocated on the stack
         memset(&search_stats, 0, sizeof(HMMD_SEARCH_STATS))
         memset(&search_status, 0, sizeof(HMMD_SEARCH_STATUS))
@@ -198,6 +209,11 @@ cdef class Client:
         try:
             # serialize the query over the socket
             if mode == p7_pipemodes_e.p7_SEARCH_SEQS:
+                if ranges is not None:
+                    options = "--seqdb_ranges {} {}".format(
+                        ",".join("{}..{}".format(*r) for r in ranges),
+                        options
+                    )
                 self.socket.sendall(f"@--seqdb {db} {options}\n".encode("ascii"))
             else:
                 self.socket.sendall(f"@--hmmdb {db} {options}\n".encode("ascii"))
@@ -308,8 +324,14 @@ cdef class Client:
         """
         self.socket.close()
 
-    def search_seq(self, Sequence query, uint64_t db = 1, **options):
-        """search_seq(self, query, db=1, **options)\n--
+    def search_seq(
+        self,
+        Sequence query,
+        uint64_t db = 1,
+        list ranges = None,
+        **options
+    ):
+        """search_seq(self, query, db=1, ranges=None, **options)\n--
 
         Search the HMMER daemon database with a query sequence.
 
@@ -317,6 +339,8 @@ cdef class Client:
             query (`~pyhmmer.easel.Sequence`): The sequence object to use
                 to query the sequence database.
             db (`int`): The index of the sequence database to query.
+            ranges (`list` of `tuple`): A list of ranges of target sequences
+                to query inside the database.
 
         Returns:
             `~plan7.TopHits`: The hits found in the sequence database.
@@ -328,10 +352,16 @@ cdef class Client:
         """
         cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
         cdef Pipeline pli = Pipeline(abc, **options)
-        return self._client(query, db, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
+        return self._client(query, db, ranges, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
 
-    def search_msa(self, MSA query, uint64_t db = 1, **options):
-        """search_msa(self, query, db=1, **options)\n--
+    def search_msa(
+        self,
+        MSA query,
+        uint64_t db = 1,
+        list ranges = None,
+        **options,
+    ):
+        """search_msa(self, query, db=1, ranges=None, **options)\n--
 
         Search the HMMER daemon database with a query MSA.
 
@@ -339,6 +369,8 @@ cdef class Client:
             query (`~pyhmmer.easel.MSA`): The multiple sequence alignment
                 object to use to query the sequence database.
             db (`int`): The index of the sequence database to query.
+            ranges (`list` of `tuple`): A list of ranges of target sequences
+                to query inside the database.
 
         Returns:
             `~plan7.TopHits`: The hits found in the sequence database.
@@ -351,10 +383,16 @@ cdef class Client:
         """
         cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
         cdef Pipeline pli = Pipeline(abc, **options)
-        return self._client(query, db, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
+        return self._client(query, db, ranges, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
 
-    def search_hmm(self, HMM query, uint64_t db = 1, **options):
-        """search_hmm(self, query, db=1, **options)\n--
+    def search_hmm(
+        self,
+        HMM query,
+        uint64_t db = 1,
+        list ranges = None,
+        **options
+    ):
+        """search_hmm(self, query, db=1, ranges=None, **options)\n--
 
         Search the HMMER daemon database with a query HMM.
 
@@ -362,6 +400,8 @@ cdef class Client:
             query (`~pyhmmer.easel.MSA`): The profile HMM object to use to
                 query the sequence database.
             db (`int`): The index of the sequence database to query.
+            ranges (`list` of `tuple`): A list of ranges of target sequences
+                to query inside the database.
 
         Returns:
             `~plan7.TopHits`: The hits found in the sequence database.
@@ -373,7 +413,7 @@ cdef class Client:
 
         """
         cdef Pipeline pli = Pipeline(query.alphabet, **options)
-        return self._client(query, db, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
+        return self._client(query, db, ranges, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
 
     def scan_seq(self, Sequence query, uint64_t db = 1, **options):
         """scan_seq(self, query, db=1, **options)\n--
@@ -396,4 +436,4 @@ cdef class Client:
         """
         cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
         cdef Pipeline pli = Pipeline(abc, **options)
-        return self._client(query, db, pli, p7_pipemodes_e.p7_SCAN_MODELS)
+        return self._client(query, db, None, pli, p7_pipemodes_e.p7_SCAN_MODELS)

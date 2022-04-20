@@ -54,11 +54,11 @@ HMMER internals, which has the following advantages over CLI wrappers
   [`Bio.SearchIO.HmmerIO`](https://biopython.org/docs/dev/api/Bio.SearchIO.HmmerIO.html)
   is struggling on some sequences).
 - **efficient**: Using `pyhmmer` to launch `hmmsearch` on sequences
-  and HMMs in disk storage is typically faster than directly using the
+  and HMMs in disk storage is typically as fast as directly using the
   `hmmsearch` binary (see the [Benchmarks section](#%EF%B8%8F-benchmarks)).
   [`pyhmmer.hmmer.hmmsearch`](https://pyhmmer.readthedocs.io/en/stable/api/hmmer.html#hmmsearch)
   uses a different parallelisation strategy compared to
-  the `hmmsearch` binary from HMMER, which helps getting the most of
+  the `hmmsearch` binary from HMMER, which can help getting the most of
   multiple CPUs when annotating smaller sequence databases.
 
 *This library is still a work-in-progress, and in an experimental stage,

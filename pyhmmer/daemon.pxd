@@ -23,6 +23,7 @@ cdef class Client:
         self,
         object query,
         uint64_t db,
+        list ranges,
         Pipeline pli,
         p7_pipemodes_e mode,
     )
