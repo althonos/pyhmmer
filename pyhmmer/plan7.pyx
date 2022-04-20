@@ -5016,9 +5016,9 @@ cdef class LongTargetsPipeline(Pipeline):
             argv.append("--block_length")
             argv.append(str(self._pli.block_length))
 
-        if self._pli.strands = p7_strands_e.p7_STRAND_TOPONLY:
+        if self._pli.strands == p7_strands_e.p7_STRAND_TOPONLY:
             argv.append("--watson")
-        elif self._pli.strands = p7_strands_e.p7_STRAND_BOTTOMONLY:
+        elif self._pli.strands == p7_strands_e.p7_STRAND_BOTTOMONLY:
             argv.append("--crick")
 
         return argv
