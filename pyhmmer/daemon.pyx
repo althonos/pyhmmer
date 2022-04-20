@@ -378,21 +378,3 @@ cdef class Client:
         cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
         cdef Pipeline pli = Pipeline(abc, **options)
         return self._client(query, db, pli, p7_pipemodes_e.p7_SCAN_MODELS)
-
-    def scan_msa(self, MSA query, uint64_t db = 1, **options):
-        """scan_msa(self, query, db=1, **options)\n--
-
-        Search the HMMER daemon database with a query MSA.
-
-        Arguments:
-            query (`~pyhmmer.easel.MSA`): The multiple sequence alignment
-                object to use to query the HMM database.
-            db (`int`): The index of the HMM database to query.
-
-        Returns:
-            `~plan7.TopHits`: The hits found in the HMM database.
-
-        """
-        cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
-        cdef Pipeline pli = Pipeline(abc, **options)
-        return self._client(query, db, pli, p7_pipemodes_e.p7_SCAN_MODELS)

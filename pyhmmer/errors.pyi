@@ -1,6 +1,8 @@
 # coding: utf-8
 import typing
 
+from pyhmmer.easel import Alphabet
+
 statuscode: typing.Dict[int, str]
 
 class UnexpectedError(RuntimeError):
@@ -31,7 +33,7 @@ class AlphabetMismatch(ValueError):
     def __init__(self, expected: Alphabet, actual: Alphabet) -> None: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
-    def __eq__(self, other: object) -> bool: ... 
+    def __eq__(self, other: object) -> bool: ...
 
 class ServerError(RuntimeError):
     code: int

@@ -905,7 +905,7 @@ if __name__ == "__main__":
                 msa.write(out, args.outformat)
                 print(out.getvalue().decode("ascii"), end="")
         else:
-            with open(args.output, "wb") as out:  # type: ignore
+            with open(args.output, "wb") as out:
                 msa.write(out, args.outformat)
 
         return 0

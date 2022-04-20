@@ -13,10 +13,10 @@ from pyhmmer.plan7 cimport TopHits, Pipeline
 
 cdef class Client:
 
-    cdef str            address
-    cdef uint16_t       port
-    cdef object         socket
-    cdef p7_pipemodes_e mode
+    cdef readonly str            address
+    cdef readonly uint16_t       port
+    cdef readonly object         socket
+    cdef          p7_pipemodes_e mode
 
     cdef bytearray _recvall(self, size_t message_size)
     cdef TopHits _client(
