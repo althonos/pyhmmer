@@ -4382,6 +4382,10 @@ cdef class Pipeline:
                 current pipeline does not match the alphabet of the given
                 HMM.
 
+        Hint:
+            This method corresponds to running ``hmmsearch`` with the
+            ``query`` HMM against the ``sequences`` database.
+
         .. versionadded:: 0.2.0
 
         .. versionchanged:: 0.4.9
@@ -4466,6 +4470,11 @@ cdef class Pipeline:
                 current pipeline does not match the alphabet of the given
                 query.
 
+        Hint:
+            This method corresponds to running ``phmmer`` with the
+            ``query`` multiple sequence alignment against the ``sequences``
+            database.
+
         .. versionadded:: 0.3.0
 
         """
@@ -4510,6 +4519,10 @@ cdef class Pipeline:
             `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
                 current pipeline does not match the alphabet of the given
                 query.
+
+        Hint:
+            This method corresponds to running ``phmmer`` with the
+            ``query`` sequence against the ``sequences`` database.
 
         .. versionadded:: 0.2.0
 
@@ -4610,6 +4623,10 @@ cdef class Pipeline:
             MSV and SSV filters to be rebuilt at each iteration, which could
             be slow. Consider at least pre-fetching the HMM database if
             calling this method several times in a row.
+
+        Hint:
+            This method corresponds to running ``hmmscan`` with the
+            ``query`` sequence against the ``hmms`` database.
 
         .. versionadded:: 0.4.0
 
@@ -4995,6 +5012,15 @@ cdef class LongTargetsPipeline(Pipeline):
             argv.append("--seed")
             argv.append(str(self._seed))
 
+        if self._pli.block_length != DEFAULT_BLOCK_LENGTH:
+            argv.append("--block_length")
+            argv.append(str(self._pli.block_length))
+
+        if self._pli.strands = p7_strands_e.p7_STRAND_TOPONLY:
+            argv.append("--watson")
+        elif self._pli.strands = p7_strands_e.p7_STRAND_BOTTOMONLY:
+            argv.append("--crick")
+
         return argv
 
     cpdef TopHits scan_seq(
@@ -5009,6 +5035,32 @@ cdef class LongTargetsPipeline(Pipeline):
         object query,
         object sequences
     ):
+        """search_hmm(self, query, sequences)\n--
+
+        Run the pipeline using a query HMM against a sequence database.
+
+        Arguments:
+            query (`HMM`, `Profile` or `OptimizedProfile`): The object to use
+                to query the sequence database.
+            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
+                sequences to query with the HMM.
+
+        Returns:
+            `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
+
+        Raises:
+            `ValueError`: When the pipeline is configured to use model-specific
+                reporting thresholds but the `HMM` query doesn't have the right
+                cutoffs available.
+            `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
+                current pipeline does not match the alphabet of the given
+                HMM.
+
+        Hint:
+            This method corresponds to running ``nhmmer`` with the
+            ``query`` HMM against the ``sequences`` database.
+
+        """
         assert self._pli != NULL
 
         cdef size_t                L
@@ -5092,6 +5144,32 @@ cdef class LongTargetsPipeline(Pipeline):
         object sequences,
         Builder builder = None,
     ):
+        """search_seq(self, query, sequences, builder=None)\n--
+
+        Run the pipeline using a query sequence against a sequence database.
+
+        Arguments:
+            query (`~pyhmmer.easel.DigitalSequence`): The sequence object to
+                use to query the sequence database.
+            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
+                sequences to query.
+            builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
+                use to convert the query to a `~pyhmmer.plan7.HMM`. If
+                `None` is given, it will use a default one.
+
+        Returns:
+            `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
+
+        Raises:
+            `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
+                current pipeline does not match the alphabet of the given
+                query.
+
+        Hint:
+            This method corresponds to running ``nhmmer`` with the
+            ``query`` sequence against the ``sequences`` database.
+
+        """
         assert self._pli != NULL
         if not self.alphabet._eq(query.alphabet):
             raise AlphabetMismatch(self.alphabet, query.alphabet)
@@ -5106,6 +5184,33 @@ cdef class LongTargetsPipeline(Pipeline):
         object sequences,
         Builder builder = None,
     ):
+        """search_msa(self, query, sequences, builder=None)\n--
+
+        Run the pipeline using a query alignment against a sequence database.
+
+        Arguments:
+            query (`~pyhmmer.easel.DigitalMSA`): The multiple sequence
+                alignment to use to query the sequence database.
+            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
+                sequences to query.
+            builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
+                use to convert the query to a `~pyhmmer.plan7.HMM`. If
+                `None` is given, it will use a default one.
+
+        Returns:
+            `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
+
+        Raises:
+            `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
+                current pipeline does not match the alphabet of the given
+                query.
+
+        Hint:
+            This method corresponds to running ``nhmmer`` with the
+            ``query`` multiple sequence alignment against the ``sequences``
+            database.
+
+        """
         assert self._pli != NULL
 
         if not self.alphabet._eq(query.alphabet):

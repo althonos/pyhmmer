@@ -321,6 +321,10 @@ cdef class Client:
         Returns:
             `~plan7.TopHits`: The hits found in the sequence database.
 
+        Hint:
+            This method corresponds to running ``phmmer`` with the ``query``
+            sequence against the sequence database loaded on the server side.
+
         """
         cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
         cdef Pipeline pli = Pipeline(abc, **options)
@@ -338,6 +342,11 @@ cdef class Client:
 
         Returns:
             `~plan7.TopHits`: The hits found in the sequence database.
+
+        Hint:
+            This method corresponds to running ``phmmer`` with the ``query``
+            multiple sequence alignment against the sequence database loaded
+            on the server side.
 
         """
         cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
@@ -357,6 +366,11 @@ cdef class Client:
         Returns:
             `~plan7.TopHits`: The hits found in the sequence database.
 
+        Hint:
+            This method corresponds to running ``hmmsearch`` with the
+            ``query`` HMM against the sequence database loaded on the
+            server side.
+
         """
         cdef Pipeline pli = Pipeline(query.alphabet, **options)
         return self._client(query, db, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
@@ -373,6 +387,11 @@ cdef class Client:
 
         Returns:
             `~plan7.TopHits`: The hits found in the HMM database.
+
+        Hint:
+            This method corresponds to running ``hmmscan`` with the
+            ``query`` sequence against the HMM database loaded on the
+            server side.
 
         """
         cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
