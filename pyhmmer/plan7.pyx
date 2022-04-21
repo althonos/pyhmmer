@@ -1656,6 +1656,8 @@ cdef class Hit:
         a multiple sequence alignment from the `TopHits` object, even if it
         was above inclusion thresholds.
 
+        .. versionadded:: 0.5.1
+
         """
         self._hit.flags = p7_hitflags_e.p7_IS_DROPPED
 
@@ -1667,6 +1669,8 @@ cdef class Hit:
         Including a hit manually means that it will be used when building a
         multiple sequence alignment from the `TopHits` object, even if it
         was under inclusion thresholds.
+
+        .. versionadded:: 0.5.1
 
         """
         self._hit.flags = p7_hitflags_e.p7_IS_INCLUDED
@@ -6165,6 +6169,8 @@ cdef class TopHits:
     cpdef MSA to_msa(
         self,
         Alphabet alphabet,
+        list sequences=None,
+        list traces=None,
         bint trim=False,
         bint digitize=False,
         bint all_consensus_cols=False
@@ -6177,6 +6183,10 @@ cdef class TopHits:
             alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the
                 HMM this `TopHits` was obtained from. It is required to
                 convert back hits to single sequences.
+            sequences (`list` of `~easel.Sequence`, optional): A list of
+                additional sequences to include in the alignment.
+            traces (`list` of `~plan7.Trace`, optional): A list of
+                additional traces to include in the alignment.
 
         Keyword Arguments:
             trim (`bool`): Trim off any residues that get assigned to
@@ -6195,14 +6205,23 @@ cdef class TopHits:
 
         .. versionadded:: 0.3.0
 
+        .. versionchanged:: 0.5.1
+           Added the ``sequences`` and ``traces`` arguments.
+
         """
         assert self._th != NULL
         assert alphabet._abc != NULL
 
-        cdef int status
-        cdef int flags  = libhmmer.p7_DEFAULT
-        cdef MSA msa
+        cdef int        status
+        cdef int        extras
+        cdef int        flags  = libhmmer.p7_DEFAULT
+        cdef MSA        msa
+        cdef Sequence   seq
+        cdef Trace      trace
+        cdef ESL_SQ**   sqarr  = NULL
+        cdef P7_TRACE** trarr  = NULL
 
+        # prepare additional flags
         if trim:
             flags |= libhmmer.p7_TRIM
         if all_consensus_cols:
@@ -6213,22 +6232,46 @@ cdef class TopHits:
         else:
             msa = TextMSA.__new__(TextMSA)
 
-        status = libhmmer.p7_tophits.p7_tophits_Alignment(
-            self._th,
-            alphabet._abc,
-            NULL, # inc_sqarr
-            NULL, # inc_trarr
-            0,    # inc_n
-            flags,
-            &msa._msa
-        )
-
-        if status == libeasel.eslOK:
-            return msa
-        elif status == libeasel.eslFAIL:
-            raise ValueError("No included domains found")
+        # check if any additional sequences/traces are given
+        sequences = [] if sequences is None else sequences
+        traces = [] if traces is None else traces
+        if len(sequences) != len(traces):
+            raise ValueError("`sequences` and `traces` must have the same length")
         else:
-            raise UnexpectedError(status, "p7_tophits_Alignment")
+            extras = len(sequences)
+
+        try:
+            # make arrays for the additional sequences/traces
+            if extras > 0:
+                sqarr = <ESL_SQ**> calloc(sizeof(ESL_SQ*), extras)
+                if sqarr == NULL:
+                    raise AllocationError("ESL_SQ*", sizeof(ESL_SQ*), extras)
+                trarr = <P7_TRACE**> calloc(sizeof(P7_TRACE*), extras)
+                if trarr == NULL:
+                    raise AllocationError("P7_TRACE*", sizeof(ESL_SQ*), extras)
+                for i, (seq, trace) in enumerate(zip(sequences, traces)):
+                    sqarr[i] = seq._sq
+                    trarr[i] = trace._tr
+            # build the alignment
+            status = libhmmer.p7_tophits.p7_tophits_Alignment(
+                self._th,
+                alphabet._abc,
+                sqarr,
+                trarr,
+                extras,
+                flags,
+                &msa._msa
+            )
+            if status == libeasel.eslOK:
+                return msa
+            elif status == libeasel.eslFAIL:
+                raise ValueError("No included domains found")
+            else:
+                raise UnexpectedError(status, "p7_tophits_Alignment")
+        finally:
+            free(sqarr)
+            free(trarr)
+
 
     def merge(self, *others):
         """merge(self, *others)\n--
@@ -6328,6 +6371,8 @@ cdef class Trace:
         """from_sequence(cls, sequence)\n--
 
         Create a faux trace from a single sequence.
+
+        .. versionadded:: 0.5.1
 
         """
         cdef int   status

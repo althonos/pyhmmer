@@ -235,5 +235,10 @@ class TestTopHits(unittest.TestCase):
         unique_names = { seq.name.split(b"/")[0] for seq in msa.sequences }
         self.assertEqual(len(unique_names), self.hits.hits_included)
 
-        msa_d = self.hits.to_msa(self.hmm.alphabet, True, True, True)
+        msa_d = self.hits.to_msa(
+            self.hmm.alphabet,
+            trim=True,
+            digitize=True,
+            all_consensus_cols=True
+        )
         self.assertIsInstance(msa_d, DigitalMSA)

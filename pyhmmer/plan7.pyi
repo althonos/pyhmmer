@@ -710,6 +710,9 @@ class TopHits(typing.Sequence[Hit]):
     def to_msa(
         self,
         alphabet: Alphabet,
+        sequences: typing.Optional[typing.List[Sequence]] = None,
+        traces: typing.Optional[typing.List[Trace]] = None,
+        *,
         trim: bool = False,
         digitize: bool = False,
         all_consensus_cols: bool = False,
