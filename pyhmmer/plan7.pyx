@@ -1529,6 +1529,14 @@ cdef class Hit:
         assert self._hit.name != NULL
         return <bytes> self._hit.name
 
+    @name.setter
+    def name(self, bytes name not None):
+        assert self._hit != NULL
+        free(self._hit.name)
+        self._hit.name = strdup(<const char*> name)
+        if self._hit.name == NULL:
+            raise AllocationError("char", sizeof(char), strlen(name))
+
     @property
     def accession(self):
         """`bytes` or `None`: The accession of the database hit, if any.
@@ -1538,6 +1546,17 @@ cdef class Hit:
             return None
         return <bytes> self._hit.acc
 
+    @accession.setter
+    def accession(self, bytes accession):
+        assert self._hit != NULL
+        free(self._hit.acc)
+        if accession is None:
+            self._hit.acc = NULL
+        else:
+            self._hit.acc = strdup(<const char*> accession)
+            if self._hit.acc == NULL:
+                raise AllocationError("char", sizeof(char), strlen(accession))
+
     @property
     def description(self):
         """`bytes` or `None`: The description of the database hit, if any.
@@ -1546,6 +1565,17 @@ cdef class Hit:
         if self._hit.desc == NULL:
             return None
         return <bytes> self._hit.desc
+
+    @description.setter
+    def description(self, bytes description):
+        assert self._hit != NULL
+        free(self._hit.desc)
+        if description is None:
+            self._hit.desc = NULL
+        else:
+            self._hit.desc = strdup(<const char*> description)
+            if self._hit.desc == NULL:
+                raise AllocationError("char", sizeof(char), strlen(description))
 
     @property
     def score(self):
@@ -2710,7 +2740,7 @@ cdef class HMMFile:
             filename = fh.name.encode()
             hfp.fname = strdup(filename)
             if hfp.fname == NULL:
-                raise AllocationError("char", sizeof(char), len(filename))
+                raise AllocationError("char", sizeof(char), strlen(filename))
 
         # check if the parser is in binary format,
         magic = int.from_bytes(fh_.peek(4)[:4], sys.byteorder)
