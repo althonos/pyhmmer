@@ -1647,6 +1647,30 @@ cdef class Hit:
 
     # --- Methods ------------------------------------------------------------
 
+    cpdef void drop(self):
+        """drop(self)\n--
+
+        Mark this hit as dropped.
+
+        Dropping a hit manually means that it will not be used when building
+        a multiple sequence alignment from the `TopHits` object, even if it
+        was above inclusion thresholds.
+
+        """
+        self._hit.flags = p7_hitflags_e.p7_IS_DROPPED
+
+    cpdef void include_ "include"(self):
+        """include(self)\n--
+
+        Mark this hit as included.
+
+        Including a hit manually means that it will be used when building a
+        multiple sequence alignment from the `TopHits` object, even if it
+        was under inclusion thresholds.
+
+        """
+        self._hit.flags = p7_hitflags_e.p7_IS_INCLUDED
+
     cpdef bint is_included(self):
         """is_included(self)\n--
 
@@ -6138,8 +6162,14 @@ cdef class TopHits:
         else:
             raise ValueError("Invalid value for `by` argument: {!r}".format(by))
 
-    cpdef MSA to_msa(self, Alphabet alphabet, bint trim=False, bint digitize=False, bint all_consensus_cols=False):
-        """to_msa(self, alphabet, trim=False, digitize=False, all_consensus_cols=False)\n--
+    cpdef MSA to_msa(
+        self,
+        Alphabet alphabet,
+        bint trim=False,
+        bint digitize=False,
+        bint all_consensus_cols=False
+    ):
+        """to_msa(self, alphabet, *, trim=False, digitize=False, all_consensus_cols=False)\n--
 
         Create multiple alignment of all included domains.
 
@@ -6147,6 +6177,8 @@ cdef class TopHits:
             alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the
                 HMM this `TopHits` was obtained from. It is required to
                 convert back hits to single sequences.
+
+        Keyword Arguments:
             trim (`bool`): Trim off any residues that get assigned to
                 flanking :math:`N` and :math:`C` states (in profile traces)
                 or :math:`I_0` and :math:`I_m` (in core traces).
@@ -6198,7 +6230,7 @@ cdef class TopHits:
         else:
             raise UnexpectedError(status, "p7_tophits_Alignment")
 
-    def merge(self,  *others):
+    def merge(self, *others):
         """merge(self, *others)\n--
 
         Concatenate the hits from this instance and ``others``.

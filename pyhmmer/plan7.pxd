@@ -112,6 +112,9 @@ cdef class Hit:
     cpdef bint is_dropped(self)
     cpdef bint is_duplicate(self)
 
+    cpdef void drop(self)
+    cpdef void include_ "include"(self)
+
 
 cdef class HMM:
     cdef P7_HMM* _hmm
