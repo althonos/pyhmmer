@@ -68,7 +68,7 @@ from libhmmer.p7_hit cimport p7_hitflags_e, P7_HIT
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e, p7_strands_e, p7_complementarity_e
 from libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL
-from libhmmer.p7_trace cimport P7_TRACE
+from libhmmer.p7_trace cimport P7_TRACE, p7t_statetype_e
 
 IF HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init
@@ -6291,6 +6291,32 @@ cdef class Trace:
 
     """
 
+    @classmethod
+    def from_sequence(cls, Sequence sequence not None):
+        """from_sequence(cls, sequence)\n--
+
+        Create a faux trace from a single sequence.
+
+        """
+        cdef int   status
+        cdef Trace trace  = cls()
+
+        status = libhmmer.p7_trace.p7_trace_Append(trace._tr, p7t_statetype_e.p7T_B, 0, 0)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_trace_Append")
+
+        for i in range(1, sequence._sq.n + 1):
+            status = libhmmer.p7_trace.p7_trace_Append(trace._tr, p7t_statetype_e.p7T_M, i, i)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_trace_Append")
+
+        status = libhmmer.p7_trace.p7_trace_Append(trace._tr, p7t_statetype_e.p7T_E, 0, 0)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_trace_Append")
+
+        trace._tr.M = trace._tr.L = sequence._sq.n
+        return trace
+
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
@@ -6308,7 +6334,7 @@ cdef class Trace:
 
         """
         # make `__init__` calllable more than once to avoid bugs
-        is self._tr != NULL:
+        if self._tr != NULL:
             if self.traces is None:
                 libhmmer.p7_trace.p7_trace_Destroy(self._tr)
             self._tr = NULL
