@@ -6297,6 +6297,29 @@ cdef class Trace:
         self._tr = NULL
         self.traces = None
 
+    def __init__(self, posteriors=False):
+        """__init__(self, posteriors=False)\n--
+
+        Create a new `Trace` object.
+
+        Arguments:
+            posteriors (`bool`): Whether or not to allocate additional memory
+                for the storage of posterior probabilties.
+
+        """
+        # make `__init__` calllable more than once to avoid bugs
+        is self._tr != NULL:
+            if self.traces is None:
+                libhmmer.p7_trace.p7_trace_Destroy(self._tr)
+            self._tr = NULL
+            self.traces = None
+        if posteriors:
+            self._tr = libhmmer.p7_trace.p7_trace_CreateWithPP()
+        else:
+            self._tr = libhmmer.p7_trace.p7_trace_Create()
+        if self._tr == NULL:
+            raise AllocationError("P7_TRACE", sizeof(P7_TRACE))
+
     def __dealloc__(self):
         if self.traces is None:
             libhmmer.p7_trace.p7_trace_Destroy(self._tr)
