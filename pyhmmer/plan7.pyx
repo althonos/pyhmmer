@@ -6335,9 +6335,11 @@ cdef class Trace:
 
     @property
     def posterior_probabilities(self):
-        """`VectorF`: The posterior probability of each residue.
+        """`VectorF` or `None`: The posterior probability of each residue.
         """
         assert self._tr != NULL
+        if self._tr.pp == NULL:
+            return None
         cdef VectorF pp = VectorF.__new__(VectorF)
         pp._owner = self
         pp._n = pp._shape[0] = self._tr.N
