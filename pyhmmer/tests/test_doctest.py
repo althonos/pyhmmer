@@ -82,6 +82,9 @@ def load_tests(loader, tests, ignore):
     msa_path = os.path.join(data, "msa", "LuxC.faa")
     with pyhmmer.easel.MSAFile(msa_path, "afa") as msa_file:
         luxc = next(msa_file)
+    seq_path = os.path.join(data, "seqs", "LuxC.faa")
+    with pyhmmer.easel.SequenceFile(seq_path, digital=True) as seq_file:
+        reductase = next(seq for seq in seq_file if b"P12748" in seq.name)
 
     # recursively traverse all library submodules and load tests from them
     packages = [None, pyhmmer]
@@ -101,6 +104,7 @@ def load_tests(loader, tests, ignore):
                 thioesterase=thioesterase,
                 proteins=proteins,
                 luxc=luxc,
+                reductase=reductase,
                 pyhmmer=pyhmmer,
                 **module.__dict__
             )

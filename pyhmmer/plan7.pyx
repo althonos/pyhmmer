@@ -130,6 +130,7 @@ import datetime
 import errno
 import math
 import io
+import itertools
 import os
 import sys
 import warnings
@@ -4823,6 +4824,137 @@ cdef class Pipeline:
         # Return 0 to indicate success
         return 0
 
+    def iterate_seq(
+        self,
+        DigitalSequence query,
+        object sequences,
+        Builder builder = None,
+    ):
+        """iterate_seq(self, query, hmms)\n--
+
+        Run the pipeline to find homologous sequences to a query sequence.
+
+        This method implements an iterative search over a database to find
+        all sequences homologous to a query sequence. It is very sensitive
+        to the pipeline inclusion thresholds (``incE`` and ``incdomE``).
+
+        Since this method is a coroutine, the local results of each
+        iteration will be available for inspection before starting the next
+        one. In addition, this means that the intermediate `TopHits` can be
+        manually modified to force inclusion and exclusion of certain hits
+        (with the `Hit.include` and `Hit.drop` methods), which is not
+        supported in the original ``jackhmmer``, but available on the HMMER
+        `web client <https://www.ebi.ac.uk/Tools/hmmer/search/jackhmmer>`_.
+
+        Arguments:
+            query (`~pyhmmer.easel.DigitalSequence`): The sequence object to
+                use to query the sequence database.
+            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
+                sequences to query.
+            builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
+                use to convert the query and subsequent alignments to a
+                `~pyhmmer.plan7.HMM`. If `None` is given, this method will
+                create one with the default parameters.
+            max_iterations (`int`): The maximum number of iterations to run
+                before converging.
+
+        Yields:
+            `tuple` of `DigitalMSA`, `HMM`, `TopHits`, `bool`: The multiple
+            sequence alignments, profile HMM, and database hits for the
+            current iteration, as well as a flag on whether the searched
+            converged.
+
+        Raises:
+            `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
+                current pipeline does not match the alphabet of the given
+                query or database sequences.
+
+        Hint:
+            This method corresponds to running ``jackhmmer`` with the
+            ``query`` sequence against the ``sequences`` database.
+
+        Caution:
+            Default values used for ``jackhmmer`` do not correspond to the
+            default parameters used for creating a pipeline in the other
+            cases. To have truly identical results to the ``jackhmmer``
+            results in default mode, create the `Pipeline` object
+            with ``incE=0.001`` and ``incdomE=0.001`.
+
+        Example:
+            Starting from a pipeline and a query sequence, let's first
+            obtain the iterator over the successive results::
+
+                >>> abc = easel.Alphabet.amino()
+                >>> pli = plan7.Pipeline(abc, incE=1e-3, incdomE=1e-3)
+                >>> iterator = pli.iterate_seq(reductase, proteins)
+
+            Once this is ready, we can keep iterating until we converge::
+
+                >>> converged = False
+                >>> while not converged:
+                ...     msa, hmm, hits, converged = next(iterator)
+                ...     print(f"Hits: {len(hits)}")
+                Hits: 1
+                Hits: 2
+                Hits: 2
+
+            To prevent diverging searches from running infinitely, you
+            could wrap the search in a ``for`` loop instead, using a
+            number of maximum iterations as the upper boundary::
+
+                >>> iterator = pli.iterate_seq(reductase, proteins)
+                >>> max_iterations = 10
+                >>> for iteration in range(max_iterations):
+                ...     msa, hmm, hits, converged = next(iterator)
+                ...     if converged:
+                ...         break
+
+            Note that in all these examples, editing the hits *inside* the
+            loop would have an issue on the next iteration, so you could
+            possibly use that to make an interactive client to force the
+            inclusion / exclusion of hits independently of the default
+            thresholds.
+
+        .. versionadded:: 0.5.1
+
+        """
+        cdef int        n_new
+        cdef ssize_t    n_prev
+        cdef DigitalMSA msa
+        cdef KeyHash    ranking   = KeyHash()
+        cdef Trace      trace     = Trace.from_sequence(query)
+
+        builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
+
+        for iteration in itertools.count(1):
+            if iteration == 1:
+                hmm, _, _ = builder.build(query, self.background)
+                n_prev = 1
+            else:
+                hmm, _, _ = builder.build_msa(msa, self.background)
+                n_prev = len(msa.sequences)
+
+            hits = self.search_hmm(hmm, sequences)
+            n_new = hits.compare_ranking(ranking)
+
+            msa = hits.to_msa(
+                self.alphabet,
+                sequences=[query] if iteration == 1 else None,
+                traces=[trace] if iteration == 1 else None,
+                all_consensus_cols=True,
+                digitize=True
+            )
+            msa.name = f"{query.name}-i{iteration}".encode()
+            msa.description = query.description or None
+            msa.author = f"jackhmmer (pyHMMER)".encode("ascii")
+
+            if n_new == 0 and len(msa.sequences) <= n_prev:
+                yield msa, hmm, hits, True
+                break
+            else:
+                yield msa, hmm, hits, False
+
+            self.clear()
 
 cdef class LongTargetsPipeline(Pipeline):
     """An HMMER3 pipeline tuned for long targets.
