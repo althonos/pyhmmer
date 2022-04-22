@@ -3180,9 +3180,11 @@ cdef class IterativeSearch:
         else:
             hmm, _, opt = self.builder.build_msa(self.msa, self.pipeline.background)
             n_prev = len(self.msa.sequences)
-            extra_sequences = extra_traces = None
+            extra_sequences = [self.query]
+            extra_traces = [Trace.from_sequence(self.query)]
 
         hits = self.pipeline.search_hmm(opt, self.targets)
+        hits.sort(by="key")
         n_new = hits.compare_ranking(self.ranking)
 
         self.msa = hits.to_msa(
@@ -4978,13 +4980,13 @@ cdef class Pipeline:
             raise AlphabetMismatch(self.alphabet, query.alphabet)
         if not self.alphabet._eq(targets.alphabet):
             raise AlphabetMismatch(self.alphabet, targets.alphabet)
+        # check that builder is in hand architecture, not fast
+        if builder is None:
+            builder = Builder(self.alphabet, seed=self.seed, architecture="hand")
+        elif builder.architecture != "hand":
+            raise ValueError("`iterate_seq` only supports a builder with 'hand' architecture")
         # return the iterator
-        return IterativeSearch(
-            pipeline=self,
-            builder=Builder(self.alphabet, seed=self.seed) if builder is None else builder,
-            query=query,
-            targets=targets,
-        )
+        return IterativeSearch(self, builder, query, targets)
 
     def iterate_seq(
         self,
@@ -5089,13 +5091,13 @@ cdef class Pipeline:
             raise AlphabetMismatch(self.alphabet, query.alphabet)
         if not self.alphabet._eq(targets.alphabet):
             raise AlphabetMismatch(self.alphabet, targets.alphabet)
+        # check that builder is in hand architecture, not fast
+        if builder is None:
+            builder = Builder(self.alphabet, seed=self.seed, architecture="hand")
+        elif builder.architecture != "hand":
+            raise ValueError("`iterate_seq` only supports a builder with 'hand' architecture")
         # return the iterator
-        return IterativeSearch(
-            pipeline=self,
-            builder=Builder(self.alphabet, seed=self.seed) if builder is None else builder,
-            query=query,
-            targets=targets,
-        )
+        return IterativeSearch(self, builder, query, targets)
 
 
 cdef class LongTargetsPipeline(Pipeline):

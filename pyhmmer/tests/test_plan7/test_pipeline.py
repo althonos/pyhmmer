@@ -146,3 +146,47 @@ class TestScanPipeline(unittest.TestCase):
         pipeline = Pipeline(alphabet=self.alphabet)
         hits = pipeline.scan_seq(seq, self.hmms)
         self.assertEqual(len(hits), 6)  # number found with `hmmscan`
+
+
+class TestIteratePipeline(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.alphabet = Alphabet.amino()
+
+        seq_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/938293.PRJEB85.HG003687.faa")
+        with SequenceFile(seq_path, digital=True, alphabet=cls.alphabet) as f:
+            cls.references = list(f)
+
+        query_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/LuxC.faa")
+        with SequenceFile(query_path, digital=True, alphabet=cls.alphabet) as f:
+            cls.query = next(seq for seq in f if b"P12748" in seq.name)
+
+    def test_iterate_seq(self):
+        # check that `Pipeline.iterate_seq` produces consistent results
+        # compared to a 'gold standard' run of `jackhmmer`.
+        pipeline = Pipeline(alphabet=self.alphabet, incE=0.001, incdomE=0.001)
+        search_iterator = pipeline.iterate_seq(self.query, self.references)
+
+        for n in range(3):
+            self.assertEqual(search_iterator.iteration, n)
+            iteration = next(search_iterator)
+
+            self.assertEqual(search_iterator.iteration, n+1)
+            self.assertEqual(iteration.index, n+1)
+
+            msa_path = pkg_resources.resource_filename("pyhmmer.tests", f"data/jackhmmer/p12748-{iteration.index}.sto")
+            with MSAFile(msa_path, digital=True, alphabet=self.alphabet) as msa_file:
+                ref_msa = msa_file.read()
+
+            self.assertEqual(len(iteration.msa), len(ref_msa))
+            self.assertEqual(len(iteration.msa.sequences), len(ref_msa.sequences))
+            self.assertEqual(iteration.msa.name, ref_msa.name)
+
+            self.assertEqual(
+                {seq.name for seq in iteration.msa.sequences},
+                {seq.name for seq in ref_msa.sequences},
+            )
+
+        self.assertEqual(iteration.index, 3)
+        self.assertTrue(iteration.converged)
