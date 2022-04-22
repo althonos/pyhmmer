@@ -25,7 +25,7 @@ IF HMMER_IMPL == "VMX":
 ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
-from .easel cimport Alphabet, DigitalSequence, DigitalMSA, MSA, Randomness, VectorF
+from .easel cimport Alphabet, DigitalSequence, DigitalMSA, KeyHash, MSA, Randomness, VectorF
 
 
 cdef extern from "hmmer.h" nogil:
@@ -279,6 +279,7 @@ cdef class TopHits:
 
     cpdef void sort(self, str by=*) except *
     cpdef bint is_sorted(self, str by=*) except *
+    cpdef int compare_ranking(self, KeyHash) except -1
     cpdef TopHits copy(self)
     cpdef MSA to_msa(self, Alphabet alphabet, list sequences=?, list traces=?, bint trim=*, bint digitize=?, bint all_consensus_cols=?)
 

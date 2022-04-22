@@ -58,6 +58,7 @@ from libeasel cimport eslERRBUFSIZE, eslCONST_LOG2R
 from libeasel.alphabet cimport ESL_ALPHABET, esl_alphabet_Create, esl_abc_ValidateType
 from libeasel.getopts cimport ESL_GETOPTS, ESL_OPTIONS
 from libeasel.sq cimport ESL_SQ
+from libeasel.keyhash cimport ESL_KEYHASH
 from libeasel.fileparser cimport ESL_FILEPARSER
 from libhmmer cimport p7_LOCAL, p7_EVPARAM_UNSET, p7_CUTOFF_UNSET, p7_NEVPARAM, p7_NCUTOFFS, p7_offsets_e, p7_cutoffs_e, p7_evparams_e
 from libhmmer.logsum cimport p7_FLogsumInit
@@ -95,6 +96,7 @@ from .easel cimport (
     Alphabet,
     Sequence,
     DigitalSequence,
+    KeyHash,
     MSA,
     TextMSA,
     DigitalMSA,
@@ -6128,6 +6130,41 @@ cdef class TopHits:
 
         return copy
 
+    cpdef int compare_ranking(self, KeyHash ranking) except -1:
+        """compare_ranking(self, ranking)\n--
+
+        Compare current top hits to previous top hits ranking.
+
+        This method is used by ``jackhmmer`` to record the hits obtained
+        during each iteration, so that the inner loop can converge.
+
+        Arguments:
+            ranking (`~pyhmmer.easel.KeyHash`): A keyhash containing the
+                ranks of the top hits from a previous run.
+
+        Returns:
+            `int`: The number of new hits found in this iteration.
+
+        """
+        assert self._th != NULL
+        assert ranking._kh != NULL
+
+        cdef int new_hits
+        cdef int status
+
+        with nogil:
+            status = libhmmer.p7_tophits.p7_tophits_CompareRanking(
+                self._th,
+                ranking._kh,
+                &new_hits
+            )
+        if status == libeasel.eslEMEM:
+            raise AllocationError("ESL_KEYHASH", sizeof(ESL_KEYHASH))
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_tophits_CompareRanking")
+
+        return new_hits
+
     cpdef void sort(self, str by="key") except *:
         """sort(self, by="key")\n--
 
@@ -6272,7 +6309,6 @@ cdef class TopHits:
             free(sqarr)
             free(trarr)
 
-
     def merge(self, *others):
         """merge(self, *others)\n--
 
@@ -6375,6 +6411,7 @@ cdef class Trace:
         .. versionadded:: 0.5.1
 
         """
+        cdef int   i
         cdef int   status
         cdef Trace trace  = cls()
 
