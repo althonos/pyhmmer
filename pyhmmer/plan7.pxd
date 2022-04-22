@@ -158,6 +158,16 @@ cdef class HMMPressedFile:
     cpdef OptimizedProfile read(self)
 
 
+cdef class IterativeSearch:
+    cdef readonly object                query
+    cdef readonly Pipeline              pipeline
+    cdef readonly Builder               builder
+    cdef readonly bint                  converged
+    cdef readonly PipelineSearchTargets targets
+    cdef readonly KeyHash               ranking
+    cdef readonly size_t                iteration
+    cdef          DigitalMSA            msa
+
 cdef class OptimizedProfile:
     cdef P7_OPROFILE* _om
     cdef readonly Alphabet alphabet

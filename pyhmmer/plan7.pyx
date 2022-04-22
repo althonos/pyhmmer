@@ -3106,6 +3106,100 @@ cdef class HMMPressedFile:
             raise UnexpectedError(status, "p7_oprofile_ReadMSV")
 
 
+cdef class IterativeSearch:
+    """A helper class for running iterative queries like JackHMMER.
+
+    See `Pipeline.iterate_seq` and `Pipeline.iterate_hmm` for more
+    information.
+
+    Attributes:
+        pipeline (`~pyhmmer.plan7.Pipeline`): The pipeline object to use
+            to get hits on each iteration.
+        builder (`~pyhmmer.plan7.Builder`): The builder object for
+            converting multiple sequence alignments obtained after each
+            run to a `~pyhmmer.plan7.HMM`.
+        query (`~pyhmmer.easel.DigitalSequence` or `~pyhmmer.plan7.HMM`):
+            The query object to use for the first iteration.
+        converged (`bool`): Whether the iterative search already converged
+            or not.
+        targets (`~pyhmmer.plan7.PipelineSearchTargets`): The search
+            targets to search for homologous sequences.
+        ranking (`~pyhmmer.easel.KeyHash`): A mapping storing the rank of
+            hits from previous iterations.
+        iteration (`int`): The index of the last iteration done so far.
+
+    References:
+        - Johnson, Steven L., Eddy, Sean R. & Portugaly, Elon.
+          *Hidden Markov model speed heuristic and iterative HMM search
+          procedure*. BMC Bioinformatics 11, 431 (18 August 2010).
+          :doi:`10.1186/1471-2105-11-431`.
+
+    """
+
+    def __init__(
+        self,
+        Pipeline pipeline,
+        Builder builder,
+        object query,
+        PipelineSearchTargets targets,
+    ):
+        self.pipeline = pipeline
+        self.builder = builder
+        self.query = query
+        self.targets = targets
+        self.converged = False
+        self.ranking = KeyHash()
+        self.msa = None
+        self.iteration = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        cdef list             extra_sequences
+        cdef list             extra_traces
+        cdef HMM              hmm
+        cdef OptimizedProfile opt
+
+        if self.converged:
+            raise StopIteration
+        elif self.iteration == 0:
+            if isinstance(self.query, HMM):
+                hmm = self.query
+                n_prev = 1
+            else:
+                hmm, _, opt = self.builder.build(self.query, self.pipeline.background)
+                n_prev = 1
+                extra_sequences = [self.query]
+                extra_traces = [Trace.from_sequence(self.query)]
+        else:
+            hmm, _, opt = self.builder.build_msa(self.msa, self.pipeline.background)
+            n_prev = len(self.msa.sequences)
+            extra_sequences = extra_traces = None
+
+        hits = self.pipeline.search_hmm(opt, self.targets)
+        n_new = hits.compare_ranking(self.ranking)
+
+        self.msa = hits.to_msa(
+            self.pipeline.alphabet,
+            sequences=extra_sequences,
+            traces=extra_traces,
+            all_consensus_cols=True,
+            digitize=True,
+        )
+        self.msa.name = self.query.name + f"-i{self.iteration+1}".encode("utf-8")
+        self.msa.description = self.query.description
+        self.msa.accession = self.query.accession
+        self.msa.author = b"jackhmmer (pyHMMER)"
+
+        if n_new == 0 and len(self.msa.sequences) <= n_prev:
+            self.converged = True
+
+        self.pipeline.clear()
+        self.iteration += 1
+        return self.msa, hmm, hits, self.converged
+
+
 cdef class OptimizedProfile:
     """An optimized profile that uses platform-specific instructions.
 
@@ -4824,13 +4918,76 @@ cdef class Pipeline:
         # Return 0 to indicate success
         return 0
 
+    def iterate_hmm(
+        self,
+        DigitalSequence query,
+        object sequences,
+        Builder builder = None,
+    ):
+        """iterate_hmm(self, query, sequences, builder=None)\n--
+
+        Run the pipeline to find homologous sequences to a query HMM.
+
+        Arguments:
+            query (`~pyhmmer.plan7.HMM`): The sequence object to use to
+                query the sequence database.
+            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
+                sequences to query.
+            builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
+                use to convert the query and subsequent alignments to a
+                `~pyhmmer.plan7.HMM`. If `None` is given, this method will
+                create one with the default parameters.
+            max_iterations (`int`): The maximum number of iterations to run
+                before converging.
+
+        Raises:
+            `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
+                current pipeline does not match the alphabet of the given
+                query or database sequences.
+
+        Hint:
+            This method corresponds to running ``jackhmmer`` with the
+            ``query`` sequence against the ``sequences`` database.
+
+        Caution:
+            Default values used for ``jackhmmer`` do not correspond to the
+            default parameters used for creating a pipeline in the other
+            cases. To have truly identical results to the ``jackhmmer``
+            results in default mode, create the `Pipeline` object
+            with ``incE=0.001`` and ``incdomE=0.001`.
+
+        See Also:
+            The `~Pipeline.iterate_seq`, which does the same operation with
+            a query sequence instead of a query HMM, and contains more
+            details and examples.
+
+        """
+        # collect target sequences into an optimized structure
+        cdef PipelineSearchTargets targets
+        if not isinstance(sequences, PipelineSearchTargets):
+            targets = PipelineSearchTargets(sequences)
+        else:
+            targets = sequences
+        # check that alphabets are consistent
+        if not self.alphabet._eq(query.alphabet):
+            raise AlphabetMismatch(self.alphabet, query.alphabet)
+        if not self.alphabet._eq(targets.alphabet):
+            raise AlphabetMismatch(self.alphabet, targets.alphabet)
+        # return the iterator
+        return IterativeSearch(
+            pipeline=self,
+            builder=Builder(self.alphabet, seed=self.seed) if builder is None else builder,
+            query=query,
+            targets=targets,
+        )
+
     def iterate_seq(
         self,
         DigitalSequence query,
         object sequences,
         Builder builder = None,
     ):
-        """iterate_seq(self, query, hmms)\n--
+        """iterate_seq(self, query, sequences, builder=None)\n--
 
         Run the pipeline to find homologous sequences to a query sequence.
 
@@ -4918,43 +5075,25 @@ cdef class Pipeline:
         .. versionadded:: 0.5.1
 
         """
-        cdef int        n_new
-        cdef ssize_t    n_prev
-        cdef DigitalMSA msa
-        cdef KeyHash    ranking   = KeyHash()
-        cdef Trace      trace     = Trace.from_sequence(query)
+        # collect target sequences into an optimized structure
+        cdef PipelineSearchTargets targets
+        if not isinstance(sequences, PipelineSearchTargets):
+            targets = PipelineSearchTargets(sequences)
+        else:
+            targets = sequences
+        # check that alphabets are consistent
+        if not self.alphabet._eq(query.alphabet):
+            raise AlphabetMismatch(self.alphabet, query.alphabet)
+        if not self.alphabet._eq(targets.alphabet):
+            raise AlphabetMismatch(self.alphabet, targets.alphabet)
+        # return the iterator
+        return IterativeSearch(
+            pipeline=self,
+            builder=Builder(self.alphabet, seed=self.seed) if builder is None else builder,
+            query=query,
+            targets=targets,
+        )
 
-        builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
-
-        for iteration in itertools.count(1):
-            if iteration == 1:
-                hmm, _, _ = builder.build(query, self.background)
-                n_prev = 1
-            else:
-                hmm, _, _ = builder.build_msa(msa, self.background)
-                n_prev = len(msa.sequences)
-
-            hits = self.search_hmm(hmm, sequences)
-            n_new = hits.compare_ranking(ranking)
-
-            msa = hits.to_msa(
-                self.alphabet,
-                sequences=[query] if iteration == 1 else None,
-                traces=[trace] if iteration == 1 else None,
-                all_consensus_cols=True,
-                digitize=True
-            )
-            msa.name = f"{query.name}-i{iteration}".encode()
-            msa.description = query.description or None
-            msa.author = f"jackhmmer (pyHMMER)".encode("ascii")
-
-            if n_new == 0 and len(msa.sequences) <= n_prev:
-                yield msa, hmm, hits, True
-                break
-            else:
-                yield msa, hmm, hits, False
-
-            self.clear()
 
 cdef class LongTargetsPipeline(Pipeline):
     """An HMMER3 pipeline tuned for long targets.
