@@ -162,6 +162,16 @@ API Reference
         pyhmmer.plan7.Trace
 
 
+    Iterative Searches
+    ^^^^^^^^^^^^^^^^^^
+
+    .. autosummary::
+       :nosignatures:
+
+       pyhmmer.plan7.IterativeSearch
+       pyhmmer.plan7.SearchIteration
+
+
     Miscellaneous
     ^^^^^^^^^^^^^
 
@@ -183,3 +193,12 @@ API Reference
        pyhmmer.errors.AllocationError
        pyhmmer.errors.UnexpectedError
        pyhmmer.errors.EaselError
+
+
+    Daemon
+    ------
+
+    .. autosummary::
+        :nosignatures:
+
+        pyhmmer.daemon.Client

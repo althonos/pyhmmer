@@ -139,6 +139,25 @@ Trace
    :members:
 
 
+Iterative Searches
+------------------
+
+IterativeSearch
+^^^^^^^^^^^^^^^
+
+.. autoclass:: pyhmmer.plan7.IterativeSearch
+    :special-members: __init__
+    :members:
+
+
+SearchIteration
+^^^^^^^^^^^^^^^
+
+.. autoclass:: pyhmmer.plan7.SearchIteration
+    :special-members: __init__
+    :members:
+
+
 Miscellaneous
 -------------
 

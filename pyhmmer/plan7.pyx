@@ -4961,7 +4961,7 @@ cdef class Pipeline:
             default parameters used for creating a pipeline in the other
             cases. To have truly identical results to the ``jackhmmer``
             results in default mode, create the `Pipeline` object
-            with ``incE=0.001`` and ``incdomE=0.001`.
+            with ``incE=0.001`` and ``incdomE=0.001``.
 
         See Also:
             The `~Pipeline.iterate_seq`, which does the same operation with
@@ -5040,7 +5040,7 @@ cdef class Pipeline:
             default parameters used for creating a pipeline in the other
             cases. To have truly identical results to the ``jackhmmer``
             results in default mode, create the `Pipeline` object
-            with ``incE=0.001`` and ``incdomE=0.001`.
+            with ``incE=0.001`` and ``incdomE=0.001``.
 
         Example:
             Starting from a pipeline and a query sequence, let's first
