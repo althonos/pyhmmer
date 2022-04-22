@@ -194,12 +194,13 @@ cdef class Client:
         cdef str                options       = "".join(pli.arguments())
 
         # check ranges argument
-        if ranges is not None and len(ranges) < 1:
-            raise ValueError("At least one range is needed for the `ranges` argument")
-        elif any(len(r) != 2 for r in ranges):
-            raise ValueError("`ranges` must be a list of two-element tuples")
-        elif not all(isinstance(r[0], int) and isinstance(r[1], int) for r in ranges):
-            raise TypeError("`ranges` must be a list where elements are 2-tuples of int")
+        if ranges is not None:
+            if len(ranges) < 1:
+                raise ValueError("At least one range is needed for the `ranges` argument")
+            elif any(len(r) != 2 for r in ranges):
+                raise ValueError("`ranges` must be a list of two-element tuples")
+            elif not all(isinstance(r[0], int) and isinstance(r[1], int) for r in ranges):
+                raise TypeError("`ranges` must be a list where elements are 2-tuples of int")
 
         # clean memory for data structures allocated on the stack
         memset(&search_stats, 0, sizeof(HMMD_SEARCH_STATS))
@@ -218,7 +219,7 @@ cdef class Client:
             else:
                 self.socket.sendall(f"@--hmmdb {db} {options}\n".encode("ascii"))
             query.write(self.socket.makefile("wb"))
-            self.socket.sendall(b"//")
+            self.socket.sendall(b"\n//")
 
             # get the search status back
             response = self._recvall(HMMD_SEARCH_STATUS_SERIAL_SIZE)
@@ -348,37 +349,6 @@ cdef class Client:
         Hint:
             This method corresponds to running ``phmmer`` with the ``query``
             sequence against the sequence database loaded on the server side.
-
-        """
-        cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
-        cdef Pipeline pli = Pipeline(abc, **options)
-        return self._client(query, db, ranges, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
-
-    def search_msa(
-        self,
-        MSA query,
-        uint64_t db = 1,
-        list ranges = None,
-        **options,
-    ):
-        """search_msa(self, query, db=1, ranges=None, **options)\n--
-
-        Search the HMMER daemon database with a query MSA.
-
-        Arguments:
-            query (`~pyhmmer.easel.MSA`): The multiple sequence alignment
-                object to use to query the sequence database.
-            db (`int`): The index of the sequence database to query.
-            ranges (`list` of `tuple`): A list of ranges of target sequences
-                to query inside the database.
-
-        Returns:
-            `~plan7.TopHits`: The hits found in the sequence database.
-
-        Hint:
-            This method corresponds to running ``phmmer`` with the ``query``
-            multiple sequence alignment against the sequence database loaded
-            on the server side.
 
         """
         cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
