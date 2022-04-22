@@ -280,7 +280,7 @@ cdef class SearchIteration:
     cdef readonly DigitalMSA msa
     cdef readonly HMM        hmm
     cdef readonly bint       converged
-    cdef readonly size_t     index
+    cdef readonly size_t     iteration
 
 
 cdef class TopHits:

@@ -683,7 +683,7 @@ class SearchIteration(typing.NamedTuple):
     hits: TopHits
     msa: DigitalMSA
     converged: bool
-    index: int
+    iteration: int
 
 class TopHits(typing.Sequence[Hit]):
     def __init__(self) -> None: ...

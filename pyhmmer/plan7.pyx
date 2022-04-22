@@ -6036,7 +6036,7 @@ cdef class SearchIteration:
         converged (`bool`): A flag marking whether this iteration converged
             (no new hit found in the target sequences with respect to the
             pipeline inclusion thresholds).
-        index (`int`): The index of this iteration.
+        iteration (`int`): The iteration count.
 
     """
 
@@ -6046,16 +6046,16 @@ cdef class SearchIteration:
         TopHits hits,
         DigitalMSA msa,
         bint converged,
-        size_t index
+        size_t iteration
     ):
         self.hmm = hmm
         self.hits = hits
         self.msa = msa
         self.converged = converged
-        self.index = index
+        self.iteration = iteration
 
     def __iter__(self):
-        yield from (self.hmm, self.hits, self.msa, self.converged, self.index)
+        yield from (self.hmm, self.hits, self.msa, self.converged, self.iteration)
 
 
 cdef class TopHits:

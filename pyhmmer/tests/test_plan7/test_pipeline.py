@@ -173,9 +173,9 @@ class TestIteratePipeline(unittest.TestCase):
             iteration = next(search_iterator)
 
             self.assertEqual(search_iterator.iteration, n+1)
-            self.assertEqual(iteration.index, n+1)
+            self.assertEqual(iteration.iteration, n+1)
 
-            msa_path = pkg_resources.resource_filename("pyhmmer.tests", f"data/jackhmmer/p12748-{iteration.index}.sto")
+            msa_path = pkg_resources.resource_filename("pyhmmer.tests", f"data/jackhmmer/p12748-{n+1}.sto")
             with MSAFile(msa_path, digital=True, alphabet=self.alphabet) as msa_file:
                 ref_msa = msa_file.read()
 
@@ -188,5 +188,5 @@ class TestIteratePipeline(unittest.TestCase):
                 {seq.name for seq in ref_msa.sequences},
             )
 
-        self.assertEqual(iteration.index, 3)
+        self.assertEqual(iteration.iteration, 3)
         self.assertTrue(iteration.converged)

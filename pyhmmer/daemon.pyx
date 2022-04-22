@@ -104,7 +104,7 @@ cdef class Client:
     ):
         """__init__(self, address="127.0.0.1", port=51371)\n--
 
-        Create a new `Client` connecting to the given HMMEr daemon server.
+        Create a new `Client` connecting to the given HMMER daemon server.
 
         Arguments:
             address (`str`): The address of the HMMER daemon server.
@@ -345,7 +345,7 @@ cdef class Client:
                 to query inside the database.
 
         Returns:
-            `~plan7.TopHits`: The hits found in the sequence database.
+            `~pyhmmer.plan7.TopHits`: The hits found in the target sequences.
 
         Hint:
             This method corresponds to running ``phmmer`` with the ``query``
@@ -382,7 +382,7 @@ cdef class Client:
                 to query inside the database.
 
         Returns:
-            `~plan7.TopHits`: The hits found in the sequence database.
+            `~pyhmmer.plan7.TopHits`: The hits found in the target sequences.
 
         Hint:
             This method corresponds to running ``hmmsearch`` with the
@@ -411,7 +411,7 @@ cdef class Client:
             db (`int`): The index of the HMM database to query.
 
         Returns:
-            `~plan7.TopHits`: The hits found in the HMM database.
+            `~pyhmmer.plan7.TopHits`: The hits found in the target sequences.
 
         Hint:
             This method corresponds to running ``hmmscan`` with the
