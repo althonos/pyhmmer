@@ -158,7 +158,7 @@ cdef class Client:
 
     cdef TopHits _client(
         self,
-        object query,
+        bytes query,
         uint64_t db,
         list ranges,
         Pipeline pli,
@@ -169,8 +169,8 @@ cdef class Client:
         A generic implementation of the steps to communicate with the server.
 
         Arguments:
-            query (`~easel.Sequence`, `~easel.MSA` or `~plan7.HMM`): A query
-                object that can be written to a binary file handle.
+            query (`bytes`): A buffer storing the serialized query in
+                encoded form.
             db (`int`): The index of the database to query.
             ranges (`list` of `tuple`): A list of ranges of target sequences
                 to query inside the database.
@@ -208,7 +208,7 @@ cdef class Client:
         search_stats.hit_offsets = NULL
 
         try:
-            # serialize the query over the socket
+            # send the options
             if mode == p7_pipemodes_e.p7_SEARCH_SEQS:
                 if ranges is not None:
                     options = "--seqdb_ranges {} {}".format(
@@ -218,8 +218,9 @@ cdef class Client:
                 self.socket.sendall(f"@--seqdb {db} {options}\n".encode("ascii"))
             else:
                 self.socket.sendall(f"@--hmmdb {db} {options}\n".encode("ascii"))
-            query.write(self.socket.makefile("wb"))
-            self.socket.sendall(b"\n//")
+
+            # send the query
+            self.socket.sendall(query)
 
             # get the search status back
             response = self._recvall(HMMD_SEARCH_STATUS_SERIAL_SIZE)
@@ -351,9 +352,16 @@ cdef class Client:
             sequence against the sequence database loaded on the server side.
 
         """
+        cdef bytes    txt
         cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
         cdef Pipeline pli = Pipeline(abc, **options)
-        return self._client(query, db, ranges, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
+
+        with io.BytesIO() as buffer:
+            query.write(buffer)
+            buffer.write(b"\n//")
+            txt = buffer.getvalue()
+
+        return self._client(txt, db, ranges, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
 
     def search_hmm(
         self,
@@ -382,8 +390,15 @@ cdef class Client:
             server side.
 
         """
+        cdef bytes    txt
         cdef Pipeline pli = Pipeline(query.alphabet, **options)
-        return self._client(query, db, ranges, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
+
+        with io.BytesIO() as buffer:
+            query.write(buffer)
+            buffer.write(b"\n//")
+            txt = buffer.getvalue()
+
+        return self._client(txt, db, ranges, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
 
     def scan_seq(self, Sequence query, uint64_t db = 1, **options):
         """scan_seq(self, query, db=1, **options)\n--
@@ -404,6 +419,13 @@ cdef class Client:
             server side.
 
         """
+        cdef bytes    txt
         cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
         cdef Pipeline pli = Pipeline(abc, **options)
-        return self._client(query, db, None, pli, p7_pipemodes_e.p7_SCAN_MODELS)
+
+        with io.BytesIO() as buffer:
+            query.write(buffer)
+            buffer.write(b"\n//")
+            txt = buffer.getvalue()
+
+        return self._client(txt, db, None, pli, p7_pipemodes_e.p7_SCAN_MODELS)
