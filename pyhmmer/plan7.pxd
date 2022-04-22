@@ -275,6 +275,14 @@ cdef class ScoreData:
     cpdef ScoreData copy(self)
 
 
+cdef class SearchIteration:
+    cdef readonly TopHits    hits
+    cdef readonly DigitalMSA msa
+    cdef readonly HMM        hmm
+    cdef readonly bint       converged
+    cdef readonly size_t     index
+
+
 cdef class TopHits:
 
     # NOTE(@althonos): this is not a full pipeline, but a local copy of the

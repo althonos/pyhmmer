@@ -3128,6 +3128,11 @@ cdef class IterativeSearch:
             hits from previous iterations.
         iteration (`int`): The index of the last iteration done so far.
 
+    Yields:
+        `~pyhmmer.plan7.SearchIteration`: A named tuple containing the hits,
+        multiple sequence alignment and HMM for each iteration, as well as
+        the iteration index and a flag marking whether the search converged.
+
     References:
         - Johnson, Steven L., Eddy, Sean R. & Portugaly, Elon.
           *Hidden Markov model speed heuristic and iterative HMM search
@@ -3197,7 +3202,7 @@ cdef class IterativeSearch:
 
         self.pipeline.clear()
         self.iteration += 1
-        return self.msa, hmm, hits, self.converged
+        return SearchIteration(hmm, hits, self.msa, self.converged, self.iteration)
 
 
 cdef class OptimizedProfile:
@@ -5015,11 +5020,9 @@ cdef class Pipeline:
             max_iterations (`int`): The maximum number of iterations to run
                 before converging.
 
-        Yields:
-            `tuple` of `DigitalMSA`, `HMM`, `TopHits`, `bool`: The multiple
-            sequence alignments, profile HMM, and database hits for the
-            current iteration, as well as a flag on whether the searched
-            converged.
+        Returns:
+            `~pyhmmer.plan7.IterativeSearch`: An iterator object yielding
+            the hits, sequence alignment, and HMM for each iteration.
 
         Raises:
             `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
@@ -5049,7 +5052,7 @@ cdef class Pipeline:
 
                 >>> converged = False
                 >>> while not converged:
-                ...     msa, hmm, hits, converged = next(iterator)
+                ...     _, hits, _, converged, _ = next(iterator)
                 ...     print(f"Hits: {len(hits)}")
                 Hits: 1
                 Hits: 2
@@ -5061,9 +5064,9 @@ cdef class Pipeline:
 
                 >>> iterator = pli.iterate_seq(reductase, proteins)
                 >>> max_iterations = 10
-                >>> for iteration in range(max_iterations):
-                ...     msa, hmm, hits, converged = next(iterator)
-                ...     if converged:
+                >>> for n in range(max_iterations):
+                ...     iteration = next(iterator)
+                ...     if iteration.converged:
                 ...         break
 
             Note that in all these examples, editing the hits *inside* the
@@ -6016,6 +6019,41 @@ cdef class ScoreData:
         if new._sd == NULL:
             raise AllocationError("P7_SCOREDATA", sizeof(P7_SCOREDATA))
         return new
+
+
+cdef class SearchIteration:
+    """The results of a single iteration from an `IterativeSearch`.
+
+    Attributes:
+        hmm (`~pyhmmer.plan7.HMM`): The HMM used to search for hits
+            during this iteration.
+        hits (`~pyhmmer.plan7.TopHits`): The hits found during this
+            iteration.
+        msa (`~pyhmmer.easel.DigitalMSA`): A multiple sequence alignment
+            containing the hits from this iteration.
+        converged (`bool`): A flag marking whether this iteration converged
+            (no new hit found in the target sequences with respect to the
+            pipeline inclusion thresholds).
+        index (`int`): The index of this iteration.
+
+    """
+
+    def __cinit__(
+        self,
+        HMM hmm,
+        TopHits hits,
+        DigitalMSA msa,
+        bint converged,
+        size_t index
+    ):
+        self.hmm = hmm
+        self.hits = hits
+        self.msa = msa
+        self.converged = converged
+        self.index = index
+
+    def __iter__(self):
+        yield from (self.hmm, self.hits, self.msa, self.converged, self.index)
 
 
 cdef class TopHits:
