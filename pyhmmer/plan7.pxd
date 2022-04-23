@@ -167,6 +167,10 @@ cdef class IterativeSearch:
     cdef readonly KeyHash               ranking
     cdef readonly size_t                iteration
     cdef          DigitalMSA            msa
+    cdef          object                select_hits
+
+    cdef void _default_select(self, TopHits hits)
+
 
 cdef class OptimizedProfile:
     cdef P7_OPROFILE* _om

@@ -1662,6 +1662,8 @@ cdef class Hit:
         .. versionadded:: 0.5.1
 
         """
+        if self.is_included():
+            self.hits._hits.nincluded -= 1
         self._hit.flags = p7_hitflags_e.p7_IS_DROPPED
 
     cpdef void include_ "include"(self):
@@ -1676,6 +1678,8 @@ cdef class Hit:
         .. versionadded:: 0.5.1
 
         """
+        if not self.is_included():
+            self.hits._hits.nincluded += 1
         self._hit.flags = p7_hitflags_e.p7_IS_INCLUDED
 
     cpdef bint is_included(self):
@@ -3147,6 +3151,7 @@ cdef class IterativeSearch:
         Builder builder,
         object query,
         PipelineSearchTargets targets,
+        object select_hits = None,
     ):
         self.pipeline = pipeline
         self.builder = builder
@@ -3156,6 +3161,7 @@ cdef class IterativeSearch:
         self.ranking = KeyHash()
         self.msa = None
         self.iteration = 0
+        self.select_hits = select_hits or self._default_select
 
     def __iter__(self):
         return self
@@ -3185,6 +3191,7 @@ cdef class IterativeSearch:
 
         hits = self.pipeline.search_hmm(opt, self.targets)
         hits.sort(by="key")
+        self.select_hits(hits)
         n_new = hits.compare_ranking(self.ranking)
 
         self.msa = hits.to_msa(
@@ -3205,6 +3212,9 @@ cdef class IterativeSearch:
         self.pipeline.clear()
         self.iteration += 1
         return SearchIteration(hmm, hits, self.msa, self.converged, self.iteration)
+
+    cdef void _default_select(self, TopHits hits):
+        pass
 
 
 cdef class OptimizedProfile:
@@ -4930,8 +4940,9 @@ cdef class Pipeline:
         DigitalSequence query,
         object sequences,
         Builder builder = None,
+        object select_hits = None,
     ):
-        """iterate_hmm(self, query, sequences, builder=None)\n--
+        """iterate_hmm(self, query, sequences, builder=None, select_hits=None)\n--
 
         Run the pipeline to find homologous sequences to a query HMM.
 
@@ -4944,8 +4955,10 @@ cdef class Pipeline:
                 use to convert the query and subsequent alignments to a
                 `~pyhmmer.plan7.HMM`. If `None` is given, this method will
                 create one with the default parameters.
-            max_iterations (`int`): The maximum number of iterations to run
-                before converging.
+            select_hits (callable, optional): A function or callable object
+                for manually selecting hits during each iteration. It should
+                take a single `TopHits` argument and change the inclusion of
+                individual hits with the `Hit.include` and `Hit.drop` methods.
 
         Raises:
             `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
@@ -4986,15 +4999,16 @@ cdef class Pipeline:
         elif builder.architecture != "hand":
             raise ValueError("`iterate_seq` only supports a builder with 'hand' architecture")
         # return the iterator
-        return IterativeSearch(self, builder, query, targets)
+        return IterativeSearch(self, builder, query, targets, select_hits)
 
     def iterate_seq(
         self,
         DigitalSequence query,
         object sequences,
         Builder builder = None,
+        object select_hits = None,
     ):
-        """iterate_seq(self, query, sequences, builder=None)\n--
+        """iterate_seq(self, query, sequences, builder=None, select_hits=None)\n--
 
         Run the pipeline to find homologous sequences to a query sequence.
 
@@ -5002,11 +5016,10 @@ cdef class Pipeline:
         all sequences homologous to a query sequence. It is very sensitive
         to the pipeline inclusion thresholds (``incE`` and ``incdomE``).
 
-        Since this method is a coroutine, the local results of each
+        Since this method returns an iterator, the local results of each
         iteration will be available for inspection before starting the next
-        one. In addition, this means that the intermediate `TopHits` can be
-        manually modified to force inclusion and exclusion of certain hits
-        (with the `Hit.include` and `Hit.drop` methods), which is not
+        one. The ``select_hits`` callback in particular can be used for
+        manually including/excluding hits in each iteration, which is not
         supported in the original ``jackhmmer``, but available on the HMMER
         `web client <https://www.ebi.ac.uk/Tools/hmmer/search/jackhmmer>`_.
 
@@ -5019,8 +5032,10 @@ cdef class Pipeline:
                 use to convert the query and subsequent alignments to a
                 `~pyhmmer.plan7.HMM`. If `None` is given, this method will
                 create one with the default parameters.
-            max_iterations (`int`): The maximum number of iterations to run
-                before converging.
+            select_hits (callable, optional): A function or callable object
+                for manually selecting hits during each iteration. It should
+                take a single `TopHits` argument and change the inclusion of
+                individual hits with the `Hit.include` and `Hit.drop` methods.
 
         Returns:
             `~pyhmmer.plan7.IterativeSearch`: An iterator object yielding
@@ -5055,10 +5070,10 @@ cdef class Pipeline:
                 >>> converged = False
                 >>> while not converged:
                 ...     _, hits, _, converged, _ = next(iterator)
-                ...     print(f"Hits: {len(hits)}")
-                Hits: 1
-                Hits: 2
-                Hits: 2
+                ...     print(f"Hits: {len(hits)}  Converged: {converged}")
+                Hits: 1  Converged: False
+                Hits: 2  Converged: False
+                Hits: 2  Converged: True
 
             To prevent diverging searches from running infinitely, you
             could wrap the search in a ``for`` loop instead, using a
@@ -5070,12 +5085,6 @@ cdef class Pipeline:
                 ...     iteration = next(iterator)
                 ...     if iteration.converged:
                 ...         break
-
-            Note that in all these examples, editing the hits *inside* the
-            loop would have an issue on the next iteration, so you could
-            possibly use that to make an interactive client to force the
-            inclusion / exclusion of hits independently of the default
-            thresholds.
 
         .. versionadded:: 0.5.1
 
@@ -5097,7 +5106,7 @@ cdef class Pipeline:
         elif builder.architecture != "hand":
             raise ValueError("`iterate_seq` only supports a builder with 'hand' architecture")
         # return the iterator
-        return IterativeSearch(self, builder, query, targets)
+        return IterativeSearch(self, builder, query, targets, select_hits)
 
 
 cdef class LongTargetsPipeline(Pipeline):
