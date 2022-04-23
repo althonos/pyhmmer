@@ -13,7 +13,6 @@ from pyhmmer.plan7 import TopHits, HMM, Builder
 
 BIT_CUTOFFS = Literal["gathering", "trusted", "noise"]
 
-
 class Client:
     address: str
     port: int
@@ -152,7 +151,6 @@ class Client:
         incdomT: typing.Optional[float] = None,
         bit_cutoffs: typing.Optional[BIT_CUTOFFS] = None,
     ) -> IterativeSearch: ...
-
 
 class IterativeSearch(pyhmmer.plan7.IterativeSearch):
     client: Client
