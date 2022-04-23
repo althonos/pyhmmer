@@ -3154,6 +3154,7 @@ cdef class IterativeSearch:
         object select_hits = None,
     ):
         self.pipeline = pipeline
+        self.background = pipeline.background
         self.builder = builder
         self.query = query
         self.targets = targets
@@ -3161,7 +3162,7 @@ cdef class IterativeSearch:
         self.ranking = KeyHash()
         self.msa = None
         self.iteration = 0
-        self.select_hits = select_hits or self._default_select
+        self.select_hits = select_hits
 
     def __iter__(self):
         return self
@@ -3170,7 +3171,6 @@ cdef class IterativeSearch:
         cdef list             extra_sequences
         cdef list             extra_traces
         cdef HMM              hmm
-        cdef OptimizedProfile opt
 
         if self.converged:
             raise StopIteration
@@ -3178,20 +3178,23 @@ cdef class IterativeSearch:
             if isinstance(self.query, HMM):
                 hmm = self.query
                 n_prev = 1
+                extra_sequences = None
+                extra_traces = None
             else:
-                hmm, _, opt = self.builder.build(self.query, self.pipeline.background)
+                hmm, _, _ = self.builder.build(self.query, self.background)
                 n_prev = 1
                 extra_sequences = [self.query]
                 extra_traces = [Trace.from_sequence(self.query)]
         else:
-            hmm, _, opt = self.builder.build_msa(self.msa, self.pipeline.background)
+            hmm, _, _ = self.builder.build_msa(self.msa, self.background)
             n_prev = len(self.msa.sequences)
             extra_sequences = [self.query]
             extra_traces = [Trace.from_sequence(self.query)]
 
-        hits = self.pipeline.search_hmm(opt, self.targets)
+        hits = self._search_hmm(hmm)
         hits.sort(by="key")
-        self.select_hits(hits)
+        if self.select_hits is not None:
+            self.select_hits(hits)
         n_new = hits.compare_ranking(self.ranking)
 
         self.msa = hits.to_msa(
@@ -3213,8 +3216,8 @@ cdef class IterativeSearch:
         self.iteration += 1
         return SearchIteration(hmm, hits, self.msa, self.converged, self.iteration)
 
-    cdef void _default_select(self, TopHits hits):
-        pass
+    cpdef TopHits _search_hmm(self, HMM hmm):
+        return self.pipeline.search_hmm(hmm, self.targets)
 
 
 cdef class OptimizedProfile:
@@ -4959,6 +4962,10 @@ cdef class Pipeline:
                 for manually selecting hits during each iteration. It should
                 take a single `TopHits` argument and change the inclusion of
                 individual hits with the `Hit.include` and `Hit.drop` methods.
+
+        Returns:
+            `~pyhmmer.plan7.IterativeSearch`: An iterator object yielding
+            the hits, sequence alignment, and HMM for each iteration.
 
         Raises:
             `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the

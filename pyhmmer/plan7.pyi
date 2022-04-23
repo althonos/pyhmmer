@@ -380,6 +380,7 @@ class IterativeSearch(typing.Iterator[SearchIteration]):
         builder: Builder,
         query: typing.Union[DigitalSequence, HMM],
         targets: PipelineSearchTargets,
+        select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
     ) -> None: ...
     def __iter__(self) -> IterativeSearch: ...
     def __next__(self) -> SearchIteration: ...
@@ -596,7 +597,6 @@ class Pipeline(object):
         builder: typing.Optional[Builder] = None,
         select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
     ) -> typing.Iterator[typing.Tuple[DigitalMSA, HMM, TopHits, bool]]: ...
-
 
 class LongTargetsPipeline(Pipeline):
     def __init__(

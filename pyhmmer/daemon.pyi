@@ -7,8 +7,9 @@ try:
 except ImportError:
     from typing_extensions import Literal  # type: ignore
 
+import pyhmmer.plan7
 from pyhmmer.easel import Sequence, MSA
-from pyhmmer.plan7 import TopHits, HMM
+from pyhmmer.plan7 import TopHits, HMM, Builder
 
 BIT_CUTOFFS = Literal["gathering", "trusted", "noise"]
 
@@ -99,3 +100,70 @@ class Client:
         incdomT: typing.Optional[float] = None,
         bit_cutoffs: typing.Optional[BIT_CUTOFFS] = None,
     ) -> TopHits: ...
+    def iterate_seq(
+        self,
+        query: Sequence,
+        db: int = 1,
+        ranges: typing.Optional[typing.List[typing.Tuple[int, int]]] = None,
+        builder: typing.Optional[Builder] = None,
+        select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+        *,
+        bias_filter: bool = True,
+        null2: bool = True,
+        seed: int = 42,
+        Z: typing.Optional[float] = None,
+        domZ: typing.Optional[float] = None,
+        F1: float = 0.02,
+        F2: float = 1e-3,
+        F3: float = 1e-5,
+        E: float = 10.0,
+        T: typing.Optional[float] = None,
+        domE: float = 10.0,
+        domT: typing.Optional[float] = None,
+        incE: float = 0.001,
+        incT: typing.Optional[float] = None,
+        incdomE: float = 0.001,
+        incdomT: typing.Optional[float] = None,
+        bit_cutoffs: typing.Optional[BIT_CUTOFFS] = None,
+    ) -> IterativeSearch: ...
+    def iterate_hmm(
+        self,
+        query: HMM,
+        db: int = 1,
+        ranges: typing.Optional[typing.List[typing.Tuple[int, int]]] = None,
+        builder: typing.Optional[Builder] = None,
+        select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+        *,
+        bias_filter: bool = True,
+        null2: bool = True,
+        seed: int = 42,
+        Z: typing.Optional[float] = None,
+        domZ: typing.Optional[float] = None,
+        F1: float = 0.02,
+        F2: float = 1e-3,
+        F3: float = 1e-5,
+        E: float = 10.0,
+        T: typing.Optional[float] = None,
+        domE: float = 10.0,
+        domT: typing.Optional[float] = None,
+        incE: float = 0.001,
+        incT: typing.Optional[float] = None,
+        incdomE: float = 0.001,
+        incdomT: typing.Optional[float] = None,
+        bit_cutoffs: typing.Optional[BIT_CUTOFFS] = None,
+    ) -> IterativeSearch: ...
+
+
+class IterativeSearch(pyhmmer.plan7.IterativeSearch):
+    client: Client
+    db: int
+    def __init__(
+        self,
+        client: Client,
+        query: typing.Union[HMM, Sequence],
+        db: int,
+        builder: Builder,
+        ranges: typing.Optional[typing.List[typing.Tuple[int, int]]] = None,
+        select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+        options: typing.Dict[str, object] = None,
+    ) -> None: ...

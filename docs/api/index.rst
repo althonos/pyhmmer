@@ -202,3 +202,4 @@ API Reference
         :nosignatures:
 
         pyhmmer.daemon.Client
+        pyhmmer.daemon.IterativeSearch

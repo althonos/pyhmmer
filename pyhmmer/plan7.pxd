@@ -161,6 +161,7 @@ cdef class HMMPressedFile:
 cdef class IterativeSearch:
     cdef readonly object                query
     cdef readonly Pipeline              pipeline
+    cdef readonly Background            background
     cdef readonly Builder               builder
     cdef readonly bint                  converged
     cdef readonly PipelineSearchTargets targets
@@ -169,7 +170,7 @@ cdef class IterativeSearch:
     cdef          DigitalMSA            msa
     cdef          object                select_hits
 
-    cdef void _default_select(self, TopHits hits)
+    cpdef TopHits _search_hmm(self, HMM hmm)
 
 
 cdef class OptimizedProfile:

@@ -38,9 +38,10 @@ from libhmmer.hmmpgmd cimport HMMD_SEARCH_STATUS_SERIAL_SIZE, HMMD_SEARCH_STATUS
 from libhmmer.p7_pipeline cimport p7_pipemodes_e, P7_PIPELINE
 from libhmmer.p7_hit cimport P7_HIT
 
-from pyhmmer.easel cimport Sequence, Alphabet, MSA
+cimport pyhmmer.plan7
+from pyhmmer.easel cimport Sequence, Alphabet, MSA, KeyHash
 from pyhmmer.errors import UnexpectedError, AllocationError, ServerError
-from pyhmmer.plan7 cimport TopHits, Pipeline, HMM
+from pyhmmer.plan7 cimport Builder, TopHits, Pipeline, HMM, Background
 
 
 # --- Python imports ---------------------------------------------------------
@@ -429,3 +430,181 @@ cdef class Client:
             txt = buffer.getvalue()
 
         return self._client(txt, db, None, pli, p7_pipemodes_e.p7_SCAN_MODELS)
+
+    def iterate_seq(
+        self,
+        Sequence query,
+        uint64_t db = 1,
+        list ranges = None,
+        Builder builder = None,
+        object select_hits = None,
+        **options
+    ):
+        """iterate_seq(self, query, db=1, ranges=None, builder=None, select_hits=None, **options)\n--
+
+        Search iteratively against the daemon database with a query sequence.
+
+        Arguments:
+            query (`~pyhmmer.easel.Sequence`): The sequence object to use
+                to query the server-side sequence database.
+            db (`int`): The index of the sequence database to query.
+            ranges (`list` of `tuple`, optional): A list of ranges of target
+                sequences to query inside the database.
+            builder (`~pyhmmer.plan7.Builder`, optional): A builder instance
+                to use to convert the `~pyhmmer.easel.MSA` objects obtained
+                during each iteration into `~pyhmmer.plan7.HMM` objects.
+            select_hits (callable, optional): A function or callable object
+                for manually selecting hits during each iteration. It should
+                take a single `TopHits` argument and change the inclusion of
+                individual hits with the `Hit.include` and `Hit.drop` methods.
+
+        Returns:
+            `~pyhmmer.daemon.IterativeSearch`: An iterator object yielding
+            the hits, sequence alignment, and HMM for each iteration.
+
+        Hint:
+            This method corresponds to running ``jackhmmer`` with the
+            ``query`` sequence against the sequence database loaded on the
+            server side.
+
+        Caution:
+            Default values used for ``jackhmmer`` do not correspond to the
+            default parameters used for creating a pipeline in the other
+            cases. This method will use default values of ``incE=0.001`` and
+            ``incdomE=0.001`` unless other values are given as keyword
+            arguments.
+
+        """
+        # check that builder is in hand architecture, not fast
+        if builder is None:
+            builder = Builder(Alphabet.amino(), architecture="hand")
+        elif builder.architecture != "hand":
+            raise ValueError("`iterate_seq` only supports a builder with 'hand' architecture")
+        # use `jackhmmer` defaults
+        options.setdefault("incE", 0.001)
+        options.setdefault("incdomE", 0.001)
+        # return the iterator
+        return IterativeSearch(self, query, db, builder, ranges, select_hits, options)
+
+    def iterate_hmm(
+        self,
+        HMM query,
+        uint64_t db = 1,
+        list ranges = None,
+        Builder builder = None,
+        object select_hits = None,
+        **options
+    ):
+        """iterate_hmm(self, query, db=1, ranges=None, builder=None, select_hits=None, **options)\n--
+
+        Search iteratively against the daemon database with a query HMM.
+
+        Arguments:
+            query (`~pyhmmer.plan7.HMM`): The HMM object to use to query the
+                server-side sequence database.
+            db (`int`): The index of the sequence database to query.
+            ranges (`list` of `tuple`, optional): A list of ranges of target
+                sequences to query inside the database.
+            builder (`~pyhmmer.plan7.Builder`, optional): A builder instance
+                to use to convert the `~pyhmmer.easel.MSA` objects obtained
+                during each iteration into `~pyhmmer.plan7.HMM` objects.
+            select_hits (callable, optional): A function or callable object
+                for manually selecting hits during each iteration. It should
+                take a single `TopHits` argument and change the inclusion of
+                individual hits with the `Hit.include` and `Hit.drop` methods.
+
+        Returns:
+            `~pyhmmer.daemon.IterativeSearch`: An iterator object yielding
+            the hits, sequence alignment, and HMM for each iteration.
+
+        Hint:
+            This method corresponds to running ``jackhmmer`` with the
+            ``query`` HMM against the sequence database loaded on the
+            server side.
+
+        Caution:
+            Default values used for ``jackhmmer`` do not correspond to the
+            default parameters used for creating a pipeline in the other
+            cases. This method will use default values of ``incE=0.001`` and
+            ``incdomE=0.001`` unless other values are given as keyword
+            arguments.
+
+        """
+        # check that builder is in hand architecture, not fast
+        if builder is None:
+            builder = Builder(Alphabet.amino(), architecture="hand")
+        elif builder.architecture != "hand":
+            raise ValueError("`iterate_seq` only supports a builder with 'hand' architecture")
+        # use `jackhmmer` defaults
+        options.setdefault("incE", 0.001)
+        options.setdefault("incdomE", 0.001)
+        # return the iterator
+        return IterativeSearch(self, query, db, builder, ranges, select_hits, options)
+
+
+cdef class IterativeSearch(pyhmmer.plan7.IterativeSearch):
+    """A helper class for running iterative queries against a HMMER daemon.
+
+    See `Client.iterate_seq` and `Client.iterate_hmm` for more
+    information.
+
+    Attributes:
+        client (`~pyhmmer.daemon.Client`): The HMMER daemon client to use
+            to get hits on each iteration.
+        db (`int`): The index of the database to query for hits on each
+            iteration.
+        builder (`~pyhmmer.plan7.Builder`): The builder object for
+            converting multiple sequence alignments obtained after each
+            run to a `~pyhmmer.plan7.HMM`.
+        query (`~pyhmmer.easel.DigitalSequence` or `~pyhmmer.plan7.HMM`):
+            The query object to use for the first iteration.
+        converged (`bool`): Whether the iterative search already converged
+            or not.
+        ranking (`~pyhmmer.easel.KeyHash`): A mapping storing the rank of
+            hits from previous iterations.
+        iteration (`int`): The index of the last iteration done so far.
+
+    Yields:
+        `~pyhmmer.plan7.SearchIteration`: A named tuple containing the hits,
+        multiple sequence alignment and HMM for each iteration, as well as
+        the iteration index and a flag marking whether the search converged.
+
+    References:
+        - Johnson, Steven L., Eddy, Sean R. & Portugaly, Elon.
+          *Hidden Markov model speed heuristic and iterative HMM search
+          procedure*. BMC Bioinformatics 11, 431 (18 August 2010).
+          :doi:`10.1186/1471-2105-11-431`.
+
+    """
+
+    def __init__(
+        self,
+        Client client,
+        object query,
+        uint64_t db,
+        Builder builder,
+        list ranges = None,
+        object select_hits = None,
+        dict options = None
+    ):
+        self.client = client
+        self.builder = builder
+        self.select_hits = select_hits
+        self.options = options or {}
+        self.db = db
+        self.query = query
+        self.background = Background(builder.alphabet)
+        self.converged = False
+        self.ranking = KeyHash()
+        self.msa = None
+        self.iteration = 0
+        self.pipeline = None
+        self.targets = None
+
+    cpdef TopHits _search_hmm(self, HMM hmm):
+        return self.client.search_hmm(
+            hmm,
+            db=self.db,
+            ranges=self.ranges,
+            **self.options
+        )
