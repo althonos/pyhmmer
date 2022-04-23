@@ -3004,6 +3004,10 @@ cdef class HMMFile:
 
         Get an iterator over the `OptimizedProfile` in the HMM database.
 
+        Returns:
+            `~pyhmmer.plan7.HMMPressedFile`: An iterator over the optimized
+            profiles in a pressed HMM database.
+
         .. versionadded:: 0.4.11
 
         """
@@ -3048,6 +3052,10 @@ cdef class HMMPressedFile:
         self._alphabet = None
         self._hmmfile = None
         self._hfp = NULL
+
+    def __init__(self, *args, **kwargs):
+        cdef str ty = type(self).__name__
+        raise TypeError(f"cannot create {ty!r} instances")
 
     def __iter__(self):
         return self
