@@ -3019,7 +3019,7 @@ cdef class HMMFile:
 
 
 cdef class HMMPressedFile:
-    """An iterator over the `OptimizedProfile`s in a pressed HMM database.
+    """An iterator over each `OptimizedProfile` in a pressed HMM database.
 
     This class cannot be instantiated: use the `HMMFile.optimized_profiles`
     to obtain an instance from an `HMMFile` that wraps a pressed HMM
@@ -3110,6 +3110,42 @@ cdef class HMMPressedFile:
             raise UnexpectedError(status, "p7_oprofile_ReadMSV")
 
 
+cdef class IterationResult:
+    """The results of a single iteration from an `IterativeSearch`.
+
+    Attributes:
+        hmm (`~pyhmmer.plan7.HMM`): The HMM used to search for hits
+            during this iteration.
+        hits (`~pyhmmer.plan7.TopHits`): The hits found during this
+            iteration.
+        msa (`~pyhmmer.easel.DigitalMSA`): A multiple sequence alignment
+            containing the hits from this iteration.
+        converged (`bool`): A flag marking whether this iteration converged
+            (no new hit found in the target sequences with respect to the
+            pipeline inclusion thresholds).
+        iteration (`int`): The number of iterations done so far. First
+            iteration starts at *1*.
+
+    """
+
+    def __cinit__(
+        self,
+        HMM hmm,
+        TopHits hits,
+        DigitalMSA msa,
+        bint converged,
+        size_t iteration
+    ):
+        self.hmm = hmm
+        self.hits = hits
+        self.msa = msa
+        self.converged = converged
+        self.iteration = iteration
+
+    def __iter__(self):
+        yield from (self.hmm, self.hits, self.msa, self.converged, self.iteration)
+
+
 cdef class IterativeSearch:
     """A helper class for running iterative queries like JackHMMER.
 
@@ -3133,7 +3169,7 @@ cdef class IterativeSearch:
         iteration (`int`): The index of the last iteration done so far.
 
     Yields:
-        `~pyhmmer.plan7.SearchIteration`: A named tuple containing the hits,
+        `~pyhmmer.plan7.IterationResult`: A named tuple containing the hits,
         multiple sequence alignment and HMM for each iteration, as well as
         the iteration index and a flag marking whether the search converged.
 
@@ -3214,7 +3250,7 @@ cdef class IterativeSearch:
 
         self.pipeline.clear()
         self.iteration += 1
-        return SearchIteration(hmm, hits, self.msa, self.converged, self.iteration)
+        return IterationResult(hmm, hits, self.msa, self.converged, self.iteration)
 
     cpdef TopHits _search_hmm(self, HMM hmm):
         return self.pipeline.search_hmm(hmm, self.targets)
@@ -6037,41 +6073,6 @@ cdef class ScoreData:
         if new._sd == NULL:
             raise AllocationError("P7_SCOREDATA", sizeof(P7_SCOREDATA))
         return new
-
-
-cdef class SearchIteration:
-    """The results of a single iteration from an `IterativeSearch`.
-
-    Attributes:
-        hmm (`~pyhmmer.plan7.HMM`): The HMM used to search for hits
-            during this iteration.
-        hits (`~pyhmmer.plan7.TopHits`): The hits found during this
-            iteration.
-        msa (`~pyhmmer.easel.DigitalMSA`): A multiple sequence alignment
-            containing the hits from this iteration.
-        converged (`bool`): A flag marking whether this iteration converged
-            (no new hit found in the target sequences with respect to the
-            pipeline inclusion thresholds).
-        iteration (`int`): The iteration count.
-
-    """
-
-    def __cinit__(
-        self,
-        HMM hmm,
-        TopHits hits,
-        DigitalMSA msa,
-        bint converged,
-        size_t iteration
-    ):
-        self.hmm = hmm
-        self.hits = hits
-        self.msa = msa
-        self.converged = converged
-        self.iteration = iteration
-
-    def __iter__(self):
-        yield from (self.hmm, self.hits, self.msa, self.converged, self.iteration)
 
 
 cdef class TopHits:

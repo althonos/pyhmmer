@@ -150,10 +150,10 @@ IterativeSearch
     :members:
 
 
-SearchIteration
+IterationResult
 ^^^^^^^^^^^^^^^
 
-.. autoclass:: pyhmmer.plan7.SearchIteration
+.. autoclass:: pyhmmer.plan7.IterationResult
     :special-members: __init__
     :members:
 

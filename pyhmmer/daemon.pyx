@@ -565,7 +565,7 @@ cdef class IterativeSearch(pyhmmer.plan7.IterativeSearch):
         iteration (`int`): The index of the last iteration done so far.
 
     Yields:
-        `~pyhmmer.plan7.SearchIteration`: A named tuple containing the hits,
+        `~pyhmmer.plan7.IterationResult`: A named tuple containing the hits,
         multiple sequence alignment and HMM for each iteration, as well as
         the iteration index and a flag marking whether the search converged.
 

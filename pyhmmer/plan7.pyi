@@ -366,7 +366,14 @@ class HMMPressedFile(typing.Iterator[OptimizedProfile]):
     def __next__(self) -> OptimizedProfile: ...
     def read(self) -> typing.Optional[OptimizedProfile]: ...
 
-class IterativeSearch(typing.Iterator[SearchIteration]):
+class IterationResult(typing.NamedTuple):
+    hmm: HMM
+    hits: TopHits
+    msa: DigitalMSA
+    converged: bool
+    iteration: int
+
+class IterativeSearch(typing.Iterator[IterationResult]):
     pipeline: Pipeline
     builder: Builder
     query: typing.Union[DigitalSequence, HMM]
@@ -383,7 +390,8 @@ class IterativeSearch(typing.Iterator[SearchIteration]):
         select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
     ) -> None: ...
     def __iter__(self) -> IterativeSearch: ...
-    def __next__(self) -> SearchIteration: ...
+    def __next__(self) -> IterationResult: ...
+
 
 class OptimizedProfile(object):
     alphabet: Alphabet
@@ -686,13 +694,6 @@ class ScoreData(object):
     def __init__(self, gm: Profile, om: OptimizedProfile) -> None: ...
     def __copy__(self) -> ScoreData: ...
     def copy(self) -> ScoreData: ...
-
-class SearchIteration(typing.NamedTuple):
-    hmm: HMM
-    hits: TopHits
-    msa: DigitalMSA
-    converged: bool
-    iteration: int
 
 class TopHits(typing.Sequence[Hit]):
     def __init__(self) -> None: ...

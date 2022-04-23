@@ -169,7 +169,7 @@ API Reference
        :nosignatures:
 
        pyhmmer.plan7.IterativeSearch
-       pyhmmer.plan7.SearchIteration
+       pyhmmer.plan7.IterationResult
 
 
     Miscellaneous

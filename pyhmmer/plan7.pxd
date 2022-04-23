@@ -158,6 +158,14 @@ cdef class HMMPressedFile:
     cpdef OptimizedProfile read(self)
 
 
+cdef class IterationResult:
+    cdef readonly TopHits    hits
+    cdef readonly DigitalMSA msa
+    cdef readonly HMM        hmm
+    cdef readonly bint       converged
+    cdef readonly size_t     iteration
+
+
 cdef class IterativeSearch:
     cdef readonly object                query
     cdef readonly Pipeline              pipeline
@@ -278,14 +286,6 @@ cdef class ScoreData:
     cdef readonly int  Kp
 
     cpdef ScoreData copy(self)
-
-
-cdef class SearchIteration:
-    cdef readonly TopHits    hits
-    cdef readonly DigitalMSA msa
-    cdef readonly HMM        hmm
-    cdef readonly bint       converged
-    cdef readonly size_t     iteration
 
 
 cdef class TopHits:
