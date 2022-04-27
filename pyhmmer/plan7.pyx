@@ -1650,24 +1650,26 @@ cdef class Hit:
 
     # --- Methods ------------------------------------------------------------
 
-    cpdef void drop(self):
-        """drop(self)\n--
+    cpdef void manually_drop(self):
+        """manually_drop(self)\n--
 
         Mark this hit as dropped.
 
         Dropping a hit manually means that it will not be used when building
         a multiple sequence alignment from the `TopHits` object, even if it
-        was above inclusion thresholds.
+        was above inclusion thresholds. This can be useful when manually 
+        selecting hits during an iterative search performed by 
+        `Pipeline.iterate_seq`.
 
         .. versionadded:: 0.5.1
 
         """
         if self.is_included():
-            self.hits._hits.nincluded -= 1
+            self.hits._th.nincluded -= 1
         self._hit.flags = p7_hitflags_e.p7_IS_DROPPED
 
-    cpdef void include_ "include"(self):
-        """include(self)\n--
+    cpdef void manually_include(self):
+        """manually_include(self)\n--
 
         Mark this hit as included.
 
@@ -1679,7 +1681,7 @@ cdef class Hit:
 
         """
         if not self.is_included():
-            self.hits._hits.nincluded += 1
+            self.hits._th.nincluded += 1
         self._hit.flags = p7_hitflags_e.p7_IS_INCLUDED
 
     cpdef bint is_included(self):
