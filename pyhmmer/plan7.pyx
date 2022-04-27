@@ -3214,9 +3214,12 @@ cdef class IterativeSearch:
         return self
 
     def __next__(self):
-        cdef list             extra_sequences
-        cdef list             extra_traces
-        cdef HMM              hmm
+        cdef list    extra_sequences
+        cdef list    extra_traces
+        cdef HMM     hmm
+        cdef TopHits hits
+        cdef int     n_new
+        cdef int     n_prev
 
         if self.converged:
             raise StopIteration
