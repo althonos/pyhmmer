@@ -2863,8 +2863,15 @@ cdef class MSA:
         assert self._msa != NULL
 
         cdef       int       status
-        cdef       esl_pos_t length = len(accession)
-        cdef const char*     acc    = accession
+        cdef       esl_pos_t length
+        cdef const char*     acc
+
+        if accession is None:
+            length = -1
+            acc = NULL
+        else:
+            length = len(accession)
+            acc = accession
 
         with nogil:
             status = libeasel.msa.esl_msa_SetAccession(self._msa, acc, length)
@@ -2887,8 +2894,15 @@ cdef class MSA:
         assert self._msa != NULL
 
         cdef       int       status
-        cdef       esl_pos_t length = len(author)
-        cdef const char*     au   = author
+        cdef       esl_pos_t length
+        cdef const char*     au
+
+        if author is None:
+            length = -1
+            au = NULL
+        else:
+            length = len(author)
+            au = author        
 
         with nogil:
             status = libeasel.msa.esl_msa_SetAuthor(self._msa, au, length)
@@ -2911,8 +2925,15 @@ cdef class MSA:
         assert self._msa != NULL
 
         cdef       int       status
-        cdef       esl_pos_t length = len(name)
-        cdef const char*     nm     = name
+        cdef       esl_pos_t length
+        cdef const char*     nm
+
+        if name is None:
+            length = -1
+            nm = NULL
+        else:
+            length = len(name)
+            nm = name
 
         with nogil:
             status = libeasel.msa.esl_msa_SetName(self._msa, nm, length)
@@ -2935,8 +2956,15 @@ cdef class MSA:
         assert self._msa != NULL
 
         cdef       int       status
-        cdef       esl_pos_t length = len(description)
-        cdef const char*     desc   = description
+        cdef       esl_pos_t length
+        cdef const char*     desc
+
+        if description is None:
+            length = -1
+            desc = NULL
+        else:
+            length = len(description)
+            desc = description
 
         with nogil:
             status = libeasel.msa.esl_msa_SetDesc(self._msa, desc, length)
