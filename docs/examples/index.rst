@@ -8,3 +8,4 @@ Examples
    Build an HMM from an multiple sequence alignment <msa_to_hmm>
    Analyse the active site of an enzymatic domain <active_site>
    Fetch Marker Genes from a genome <fetchmgs>
+   Run an iterative search to build a HMM for rhodopsins <iterative_search>
