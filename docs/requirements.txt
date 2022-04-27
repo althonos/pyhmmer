@@ -17,3 +17,4 @@ https://github.com/althonos/sphinx-bootstrap-theme/archive/master.zip
 # dependencies to run the example notebook(s)
 ipykernel ~=5.3
 dna_features_viewer ~=3.0
+taxopy ~=0.9.2
