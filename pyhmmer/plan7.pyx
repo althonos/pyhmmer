@@ -3254,8 +3254,8 @@ cdef class IterativeSearch:
             digitize=True,
         )
         self.msa.name = self.query.name + f"-i{self.iteration+1}".encode("utf-8")
-        self.msa.description = self.query.description
-        self.msa.accession = self.query.accession
+        self.msa.description = self.query.description or None
+        self.msa.accession = self.query.accession or None
         self.msa.author = b"jackhmmer (pyHMMER)"
 
         if n_new == 0 and len(self.msa.sequences) <= n_prev:
