@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [v0.5.0] - 2022-03-14
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.4.11...v0.5.0
+[v0.5.0]: https://github.com/althonos/pyhmmer/compare/v0.4.11...v0.5.0
 
 ### Added
 - `plan7.PipelineSearchTargets` to reduce the overhead when searching the same sequences several times with different. query profiles.
