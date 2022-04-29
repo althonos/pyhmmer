@@ -35,8 +35,10 @@ cdef void py_handler(int errcode, int use_errno, char* sourcefile, int sourcelin
         # recover the internal error, if any
         if PyErr_Occurred():
             PyErr_Fetch(&type, &value, &traceback)
-            error = (<object> type)(<object> value)
-            error.__traceback__ = <object> traceback
+            if isinstance(<object> value, Exception):
+                error = <object> value
+            else:
+                error = (<object> type)(<object> value)
         else:
             error = None
 
