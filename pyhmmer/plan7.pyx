@@ -731,6 +731,8 @@ cdef class Builder:
         Raises:
             `~pyhmmer.errors.AlphabetMismatch`: When either ``sequence`` or
                 ``background`` have the wrong alphabet for this builder.
+            `ValueError`: When the HMM cannot be created successfully
+                from the input; the error message contains more details.
 
         Hint:
             The score matrix and the gap probabilities used here can be set
@@ -835,6 +837,25 @@ cdef class Builder:
         Raises:
             `~pyhmmer.errors.AlphabetMismatch`: When either ``msa`` or
                 ``background`` have the wrong alphabet for this builder.
+            `ValueError`: When the HMM cannot be created successfully
+                from the input; the error message contains more details.
+
+        Caution:
+            HMMER requires that every HMM has a name, so the `Builder` will
+            attempt to use the name of the sequence to name the HMM. Passing
+            an MSA without a name will result in an error::
+
+                >>> alphabet = easel.Alphabet.amino()
+                >>> msa = easel.TextMSA(sequences=[
+                ...   easel.TextSequence(name=b"ustiA", sequence="YAIG"),
+                ...   easel.TextSequence(name=b"ustiB", sequence="YVIG")
+                ... ])
+                >>> builder = plan7.Builder(alphabet)
+                >>> background = plan7.Background(alphabet)
+                >>> builder.build_msa(msa.digitize(alphabet), background)
+                Traceback (most recent call last):
+                  ...
+                ValueError: Could not build HMM: Unable to name the HMM.
 
         .. versionadded:: 0.3.0
 
@@ -1657,8 +1678,8 @@ cdef class Hit:
 
         Dropping a hit manually means that it will not be used when building
         a multiple sequence alignment from the `TopHits` object, even if it
-        was above inclusion thresholds. This can be useful when manually 
-        selecting hits during an iterative search performed by 
+        was above inclusion thresholds. This can be useful when manually
+        selecting hits during an iterative search performed by
         `Pipeline.iterate_seq`.
 
         .. versionadded:: 0.5.1
@@ -4693,11 +4714,20 @@ cdef class Pipeline:
             `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
                 current pipeline does not match the alphabet of the given
                 query.
+            `ValueError`: When the `Builder` fails to create an HMM from
+                the given `DigitalMSA` query.
 
         Hint:
             This method corresponds to running ``phmmer`` with the
             ``query`` multiple sequence alignment against the ``sequences``
             database.
+
+        Caution:
+            Internally, this method will create a new HMM from the query MSA
+            using the `Builder.build_msa` method. HMMER requires that every
+            HMM has a name, so the `Builder` will attempt to use the name
+            of the query MSA to name the HMM. Passing an MSA without a name
+            will result in an error.
 
         .. versionadded:: 0.3.0
 
@@ -4743,6 +4773,8 @@ cdef class Pipeline:
             `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
                 current pipeline does not match the alphabet of the given
                 query.
+            `ValueError`: When the `Builder` fails to create an HMM from
+                the given `DigitalSequence` query.
 
         Hint:
             This method corresponds to running ``phmmer`` with the

@@ -2902,7 +2902,7 @@ cdef class MSA:
             au = NULL
         else:
             length = len(author)
-            au = author        
+            au = author
 
         with nogil:
             status = libeasel.msa.esl_msa_SetAuthor(self._msa, au, length)
@@ -4170,7 +4170,7 @@ cdef class Sequence:
         return <bytes> self._sq.name
 
     @name.setter
-    def name(self, bytes name):
+    def name(self, bytes name not None):
         assert self._sq != NULL
 
         cdef       int   status
