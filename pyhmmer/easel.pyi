@@ -7,6 +7,11 @@ import sys
 import types
 import typing
 
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal  # type: ignore
+
 BUFFER = typing.Union[bytes, bytearray, memoryview]
 
 # --- Alphabet ---------------------------------------------------------------
@@ -491,18 +496,12 @@ class Sequence(typing.Sized, abc.ABC):
     @abc.abstractmethod
     def copy(self) -> Sequence: ...
     def write(self, fh: typing.BinaryIO) -> None: ...
-    if sys.version_info >= (3, 8):
-        @typing.overload
-        def reverse_complement(self, inplace: typing.Literal[True]) -> None: ...
-        @typing.overload
-        def reverse_complement(
-            self, inplace: typing.Literal[False] = False
-        ) -> Sequence: ...
-    else:
-        @typing.overload
-        def reverse_complement(
-            self, inplace: bool = False
-        ) -> typing.Optional[Sequence]: ...
+    @typing.overload
+    def reverse_complement(self, inplace: Literal[True]) -> None: ...
+    @typing.overload
+    def reverse_complement(
+        self, inplace: Literal[False] = False
+    ) -> Sequence: ...
 
 class TextSequence(Sequence):
     def __init__(
@@ -517,17 +516,12 @@ class TextSequence(Sequence):
     def digitize(self, alphabet: Alphabet) -> DigitalSequence: ...
     @property
     def sequence(self) -> str: ...
-    if sys.version_info >= (3, 8):
-        @typing.overload
-        def reverse_complement(self, inplace: typing.Literal[True]) -> None: ...
-        @typing.overload
-        def reverse_complement(
-            self, inplace: typing.Literal[False] = False
-        ) -> TextSequence: ...
-    else:
-        def reverse_complement(
-            self, inplace: bool = False
-        ) -> typing.Optional[TextSequence]: ...
+    @typing.overload
+    def reverse_complement(self, inplace: Literal[True]) -> None: ...
+    @typing.overload
+    def reverse_complement(
+        self, inplace: Literal[False] = False
+    ) -> TextSequence: ...
 
 class DigitalSequence(Sequence):
     alphabet: Alphabet
@@ -544,17 +538,12 @@ class DigitalSequence(Sequence):
     def textize(self) -> TextSequence: ...
     @property
     def sequence(self) -> VectorU8: ...
-    if sys.version_info >= (3, 8):
-        @typing.overload
-        def reverse_complement(self, inplace: typing.Literal[True]) -> None: ...
-        @typing.overload
-        def reverse_complement(
-            self, inplace: typing.Literal[False] = False
-        ) -> DigitalSequence: ...
-    else:
-        def reverse_complement(
-            self, inplace: bool = False
-        ) -> typing.Optional[DigitalSequence]: ...
+    @typing.overload
+    def reverse_complement(self, inplace: Literal[True]) -> None: ...
+    @typing.overload
+    def reverse_complement(
+        self, inplace: Literal[False] = False
+    ) -> DigitalSequence: ...
 
 # --- Sequence File ----------------------------------------------------------
 

@@ -5185,6 +5185,18 @@ cdef class SequenceFile:
         cdef int   status
         cdef bytes fspath
 
+        # TODO: Remove in v0.7.0
+        if ignore_gaps:
+            warnings.warn(
+                (
+                  "`ignore_gaps` is deprecated and will be removed from future "
+                  "versions, use the aligned FASTA format ('afa') to read a "
+                  "FASTA file with gap characters."
+                ),
+                DeprecationWarning,
+                stacklevel=2
+            )
+
         # get format from string passed as input
         fmt = libeasel.sqio.eslSQFILE_UNKNOWN
         if format is not None:
