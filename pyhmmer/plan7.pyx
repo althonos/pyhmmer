@@ -206,6 +206,31 @@ cdef class Alignment:
     def __len__(self):
         return self.hmm_to - self.hmm_from
 
+    def __str__(self):
+        assert self._ad != NULL
+
+        cdef int    status
+        cdef object buffer = io.BytesIO()
+        cdef FILE*  fp     = fopen_obj(buffer, "w")
+
+        try:
+            status = libhmmer.p7_alidisplay.p7_nontranslated_alidisplay_Print(
+                fp,
+                self._ad,
+                0,
+                -1,
+                False,
+            )
+            if status == libeasel.eslEWRITE:
+                raise OSError("Failed to write alignment")
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_alidisplay_Print")
+        finally:
+            fclose(fp)
+
+        return buffer.getvalue().decode("ascii")
+
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -993,7 +1018,7 @@ cdef class Cutoffs:
         c._owner = self._owner
         return c
 
-    def __str__(self):
+    def __repr__(self):
         ty = type(self).__name__
         return "<Pfam score cutoffs of {!r}>".format(
             self._owner,
@@ -1403,7 +1428,7 @@ cdef class EvalueParameters:
         ev._evparams = self._evparams
         return ev
 
-    def __str__(self):
+    def __repr__(self):
         ty = type(self).__name__
         return "<e-value parameters of {!r}>".format(
             self._owner,

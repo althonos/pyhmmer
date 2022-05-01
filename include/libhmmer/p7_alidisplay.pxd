@@ -14,6 +14,13 @@ ELIF HMMER_IMPL == "SSE":
 
 cdef extern from "hmmer.h" nogil:
 
+    cdef struct p7_pipeline:
+        pass
+    ctypedef p7_pipeline P7_PIPELINE
+
+
+cdef extern from "hmmer.h" nogil:
+
     cdef struct p7_alidisplay_s:
         char* rfline
         char* mmline
@@ -56,11 +63,14 @@ cdef extern from "hmmer.h" nogil:
     float          p7_alidisplay_DecodePostProb(char pc);
     char           p7_alidisplay_EncodeAliPostProb(float p, float hi, float med, float lo);
 
-    # int            p7_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, P7_PIPELINE *pli);
-    # int            p7_translated_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, P7_PIPELINE *pli);
-    int            p7_nontranslated_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, int show_accessions);
-
     int            p7_alidisplay_Backconvert(const P7_ALIDISPLAY *ad, const ESL_ALPHABET *abc, ESL_SQ **ret_sq, P7_TRACE **ret_tr);
     int            p7_alidisplay_Sample(ESL_RANDOMNESS *rng, int N, P7_ALIDISPLAY **ret_ad);
     int            p7_alidisplay_Dump(FILE *fp, const P7_ALIDISPLAY *ad);
     int            p7_alidisplay_Compare(const P7_ALIDISPLAY *ad1, const P7_ALIDISPLAY *ad2);
+
+# The GIL may be held there in case the FILE* is a Python file object
+cdef extern from "hmmer.h":
+
+    int            p7_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, P7_PIPELINE *pli);
+    int            p7_translated_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, P7_PIPELINE *pli);
+    int            p7_nontranslated_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, int show_accessions);
