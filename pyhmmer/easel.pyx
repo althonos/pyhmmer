@@ -1088,36 +1088,36 @@ cdef class VectorF(Vector):
         3.0
         >>> v[0] = v[-1] = 4.0
         >>> v
-        VectorF([4.0, 2.0, 4.0])
+        pyhmmer.easel.VectorF([4.0, 2.0, 4.0])
 
     Slices are also supported, and they do not copy data (use the
     `~pyhmmer.easel.VectorF.copy` method to allocate a new vector)::
 
-        >>> v = VectorF(range(10))
+        >>> v = VectorF(range(6))
         >>> v[2:5]
-        VectorF([2.0, 3.0, 4.0])
-        >>> v[5:-1] = 10.0
+        pyhmmer.easel.VectorF([2.0, 3.0, 4.0])
+        >>> v[2:-1] = 10.0
         >>> v
-        VectorF([0.0, 1.0, 2.0, 3.0, 4.0, 10.0, 10.0, 10.0, 10.0, 9.0])
+        pyhmmer.easel.VectorF([0.0, 1.0, 10.0, 10.0, 10.0, 5.0])
 
     Addition and multiplication is supported for scalars, in place or not::
 
         >>> v = VectorF([1.0, 2.0, 3.0])
         >>> v += 1
         >>> v
-        VectorF([2.0, 3.0, 4.0])
+        pyhmmer.easel.VectorF([2.0, 3.0, 4.0])
         >>> v * 3
-        VectorF([6.0, 9.0, 12.0])
+        pyhmmer.easel.VectorF([6.0, 9.0, 12.0])
 
     Pairwise operations can also be performed, but only on vectors of
     the same dimension and precision::
 
         >>> v = VectorF([1.0, 2.0, 3.0])
         >>> v * v
-        VectorF([1.0, 4.0, 9.0])
+        pyhmmer.easel.VectorF([1.0, 4.0, 9.0])
         >>> v += VectorF([3.0, 4.0, 5.0])
         >>> v
-        VectorF([4.0, 6.0, 8.0])
+        pyhmmer.easel.VectorF([4.0, 6.0, 8.0])
         >>> v *= VectorF([1.0])
         Traceback (most recent call last):
           ...
@@ -2221,14 +2221,14 @@ cdef class MatrixF(Matrix):
         >>> m = MatrixF.zeros(2, 2)
         >>> m[0, 0] = 3.0
         >>> m
-        MatrixF([[3.0, 0.0], [0.0, 0.0]])
+        pyhmmer.easel.MatrixF([[3.0, 0.0], [0.0, 0.0]])
 
     Indexing can also be performed at the row-level to get a `VectorF`
     without copying the underlying data::
 
         >>> m = MatrixF([ [1.0, 2.0], [3.0, 4.0] ])
         >>> m[0]
-        VectorF([1.0, 2.0])
+        pyhmmer.easel.VectorF([1.0, 2.0])
 
     Objects of this type support the buffer protocol, and can be viewed
     as a `numpy.ndarray` with two dimensions using the `numpy.asarray`

@@ -88,7 +88,7 @@ class TestSequenceFile(unittest.TestCase):
         with easel.SequenceFile(luxc, "fasta") as seq_file:
             self.assertRaises(ValueError, seq_file.read)
         # succeeds if ignoring gaps
-        with easel.SequenceFile(luxc, "fasta", ignore_gaps=True) as seq_file:
+        with easel.SequenceFile(luxc, "afa") as seq_file:
             sequences = list(seq_file)
             self.assertEqual(len(sequences), 13)
 

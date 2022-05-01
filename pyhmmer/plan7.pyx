@@ -2312,7 +2312,7 @@ cdef class HMM:
 
                 >>> hmm = HMM(100, alphabet=easel.Alphabet.dna())
                 >>> hmm.match_emissions[0]
-                VectorF([1.0, 0.0, 0.0, 0.0])
+                pyhmmer.easel.VectorF([1.0, 0.0, 0.0, 0.0])
 
         Caution:
             If editing this matrix manually, note that rows must contain
