@@ -115,6 +115,10 @@ cdef dict MSA_FILE_FORMATS = {
     "phylips": libeasel.msafile.eslMSAFILE_PHYLIPS,
 }
 
+cdef dict MSA_FILE_FORMATS_INDEX = {
+    v:k for k,v in MSA_FILE_FORMATS.items()
+}
+
 cdef dict SEQUENCE_FILE_FORMATS = {
     "fasta": libeasel.sqio.eslSQFILE_FASTA,
     "embl": libeasel.sqio.eslSQFILE_EMBL,
@@ -128,6 +132,9 @@ cdef dict SEQUENCE_FILE_FORMATS = {
     **MSA_FILE_FORMATS,
 }
 
+cdef dict SEQUENCE_FILE_FORMATS_INDEX = {
+    v:k for k,v in SEQUENCE_FILE_FORMATS.items()
+}
 
 # --- Alphabet ---------------------------------------------------------------
 
@@ -209,16 +216,18 @@ cdef class Alphabet:
         assert self._abc != NULL
 
         cdef type   ty   = type(self)
+        cdef str    name = ty.__name__
         cdef str    mod  = ty.__module__
 
         if self._abc.type == libeasel.alphabet.eslRNA:
-            return f"{mod}.Alphabet.rna()"
+            return f"{mod}.{name}.rna()"
         elif self._abc.type == libeasel.alphabet.eslDNA:
-            return f"{mod}.Alphabet.dna()"
+            return f"{mod}.{name}.dna()"
         elif self._abc.type == libeasel.alphabet.eslAMINO:
-            return f"{mod}.Alphabet.amino()"
+            return f"{mod}.{name}.amino()"
         else:
-            return f"{mod}.Alphabet({!r}, K={!r}, Kp={!r})".format(
+            return "{}.{name}({!r}, K={!r}, Kp={!r})".format(
+                mod,
                 self._abc.sym.decode('ascii'),
                 self._abc.K,
                 self._abc.Kp
@@ -3775,6 +3784,10 @@ cdef class MSAFile:
         else:
             status = libeasel.msafile.esl_msafile_Open(NULL, fspath, NULL, fmt, NULL, &self._msaf)
 
+        # store a reference to the argument
+        self._file = file
+
+        # configure the new instance
         try:
             # check opening the file was successful
             if status == libeasel.eslENOTFOUND:
@@ -3820,6 +3833,16 @@ cdef class MSAFile:
             raise StopIteration()
         return msa
 
+    def __repr__(self):
+        cdef type ty   = type(self)
+        cdef str  name = ty.__name__
+        cdef str  mod  = ty.__module__
+        cdef list args = [repr(self._file), repr(self.format)]
+        if self.digital:
+            args.append(f"digital={self.digital}")
+            args.append(f"alphabet={self.alphabet!r}")
+        return f"{mod}.{name}({', '.join(args)})"
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -3833,6 +3856,14 @@ cdef class MSAFile:
         """`bool`: Whether the `MSAFile` is in digital mode or not.
         """
         return self.alphabet is not None
+
+    @property
+    def format(self):
+        """`str`: The format of the `MSAFile`.
+        """
+        if self._msaf == NULL:
+            raise ValueError("I/O operation on closed file.")
+        return MSA_FILE_FORMATS_INDEX[self._msaf.format]
 
     # --- Utils --------------------------------------------------------------
 
@@ -5171,6 +5202,9 @@ cdef class SequenceFile:
         else:
             status = libeasel.sqio.esl_sqfile_Open(fspath, fmt, NULL, &self._sqfp)
 
+        # store a reference to the argument
+        self._file = file
+
         # configure the file
         try:
             # check opening the file was successful
@@ -5224,6 +5258,16 @@ cdef class SequenceFile:
             raise StopIteration()
         return seq
 
+    def __repr__(self):
+        cdef type ty   = type(self)
+        cdef str  name = ty.__name__
+        cdef str  mod  = ty.__module__
+        cdef list args = [repr(self._file), repr(self.format)]
+        if self.digital:
+            args.append(f"digital={self.digital}")
+            args.append(f"alphabet={self.alphabet!r}")
+        return f"{mod}.{name}({', '.join(args)})"
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -5240,6 +5284,14 @@ cdef class SequenceFile:
 
         """
         return self.alphabet is not None
+
+    @property
+    def format(self):
+        """`str`: The format of the `SequenceFile`.
+        """
+        if self._sqfp == NULL:
+            raise ValueError("I/O operation on closed file.")
+        return SEQUENCE_FILE_FORMATS_INDEX[self._sqfp.format]
 
     # --- Utils --------------------------------------------------------------
 

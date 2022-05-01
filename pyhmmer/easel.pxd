@@ -145,8 +145,9 @@ cdef class DigitalMSA(MSA):
 # --- MSA File ---------------------------------------------------------------
 
 cdef class MSAFile:
-    cdef ESL_MSAFILE* _msaf
-    cdef readonly Alphabet alphabet
+    cdef          ESL_MSAFILE* _msaf
+    cdef          object       _file
+    cdef readonly Alphabet     alphabet
 
     @staticmethod
     cdef ESL_MSAFILE* _open_fileobj(object fh, int fmt) except NULL
@@ -199,6 +200,7 @@ cdef class DigitalSequence(Sequence):
 
 cdef class SequenceFile:
     cdef          ESL_SQFILE* _sqfp
+    cdef          object      _file
     cdef readonly Alphabet    alphabet
 
     @staticmethod
