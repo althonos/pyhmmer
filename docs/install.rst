@@ -33,6 +33,21 @@ use the ``conda`` installer:
 	 $ conda install -c bioconda pyhmmer
 
 
+Arch User Repository
+^^^^^^^^^^^^^^^^^^^^
+
+A package recipe for Arch Linux can be found in the Arch User Repository
+under the name `python-pyhmmer <https://aur.archlinux.org/packages/python-pyhmmer>`_.
+It will always match the latest release from PyPI.
+
+Steps to install on ArchLinux depend on your `AUR helper <https://wiki.archlinux.org/title/AUR_helpers>`_
+(``yaourt``, ``aura``, ``yay``, etc.). For ``aura``, you'll need to run:
+
+.. code:: console
+
+   $ aura -A python-pyhmmer
+
+
 .. EMBL Package Registry
 .. ^^^^^^^^^^^^^^^^^^^^^
 ..
