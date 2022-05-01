@@ -1707,7 +1707,7 @@ cdef class Hit:
         selecting hits during an iterative search performed by
         `Pipeline.iterate_seq`.
 
-        .. versionadded:: 0.5.1
+        .. versionadded:: 0.6.0
 
         """
         if self.is_included():
@@ -1723,7 +1723,7 @@ cdef class Hit:
         multiple sequence alignment from the `TopHits` object, even if it
         was under inclusion thresholds.
 
-        .. versionadded:: 0.5.1
+        .. versionadded:: 0.6.0
 
         """
         if not self.is_included():
@@ -4515,6 +4515,8 @@ cdef class Pipeline:
             >>> plan7.Pipeline(alphabet, F1=0.01).arguments()
             ['--F1', '0.01']
 
+        .. versionadded:: 0.6.0
+
         """
         cdef list argv = []
         cdef str  cutoff
@@ -5206,7 +5208,7 @@ cdef class Pipeline:
                 ...     if iteration.converged:
                 ...         break
 
-        .. versionadded:: 0.5.1
+        .. versionadded:: 0.6.0
 
         """
         # collect target sequences into an optimized structure
@@ -5394,6 +5396,8 @@ cdef class LongTargetsPipeline(Pipeline):
             []
             >>> plan7.LongTargetsPipeline(alphabet, B1=200).arguments()
             ['--B1', '200']
+
+        .. versionadded:: 0.6.0
 
         """
         cdef list argv = []
@@ -6550,6 +6554,8 @@ cdef class TopHits:
         Returns:
             `int`: The number of new hits found in this iteration.
 
+        .. versionadded:: 0.6.0
+
         """
         assert self._th != NULL
         assert ranking._kh != NULL
@@ -6617,7 +6623,7 @@ cdef class TopHits:
         bint digitize=False,
         bint all_consensus_cols=False
     ):
-        """to_msa(self, alphabet, *, trim=False, digitize=False, all_consensus_cols=False)\n--
+        """to_msa(self, alphabet, *, sequences=None, traces=None, trim=False, digitize=False, all_consensus_cols=False)\n--
 
         Create multiple alignment of all included domains.
 
@@ -6647,7 +6653,7 @@ cdef class TopHits:
 
         .. versionadded:: 0.3.0
 
-        .. versionchanged:: 0.5.1
+        .. versionchanged:: 0.6.0
            Added the ``sequences`` and ``traces`` arguments.
 
         """
@@ -6813,7 +6819,7 @@ cdef class Trace:
 
         Create a faux trace from a single sequence.
 
-        .. versionadded:: 0.5.1
+        .. versionadded:: 0.6.0
 
         """
         cdef int   i

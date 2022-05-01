@@ -5187,6 +5187,9 @@ cdef class SequenceFile:
         .. versionchanged:: 0.5.0
            Added the ``digital`` and ``alphabet`` keyword arguments.
 
+        .. deprecated:: 0.6.0
+           The ``ignore_gaps`` keyword argument, use ``afa`` format instead.
+
         """
         cdef int   fmt
         cdef int   status

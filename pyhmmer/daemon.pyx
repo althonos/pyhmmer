@@ -91,6 +91,8 @@ cdef class Client:
         is feasible to parse the database from the client side to extract
         identifiers of the target HMMs or sequences.
 
+    .. versionadded:: 0.6.0
+
     """
 
     DEF DEFAULT_ADDRESS = "127.0.0.1"
@@ -574,6 +576,8 @@ cdef class IterativeSearch(pyhmmer.plan7.IterativeSearch):
           *Hidden Markov model speed heuristic and iterative HMM search
           procedure*. BMC Bioinformatics 11, 431 (18 August 2010).
           :doi:`10.1186/1471-2105-11-431`.
+
+    .. versionadded:: 0.6.0
 
     """
 

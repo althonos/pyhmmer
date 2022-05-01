@@ -6,7 +6,38 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.6.0...HEAD
+
+
+## [v0.6.0] - 2022-05-01
+[v0.6.0]: https://github.com/althonos/pyhmmer/compare/v0.5.0...v0.6.0
+
+### Added
+- `pyhmmer.daemon` module with an client implementation to communicate to a `hmmpgmd` server.
+- `Pipeline.arguments` methods to get a list of CLI arguments from the parameters used to initialize the `Pipeline`.
+- Setters for `name`, `accession` and `description` properties of `plan7.Hit`.
+- Constructor for individual `plan7.Trace` objects outside a `plan7.Traces` list.
+- `plan7.Trace.from_sequence` constructor to create a faux trace from a single sequence.
+- `manually_include` and `manually_drop` methods to `plan7.Hit` for manually selecting the inclusion status of a `Hit` in a `TopHits` instance.
+- `compare_ranking` method to `plan7.TopHits` for comparing the order of the hits compared to a previous run on the same targets stored in an `easel.KeyHash` object.
+- `Pipeline.iterate_seq` and `Pipeline.iterate_hmm` to run iterative queries like JackHMMER.
+- `repr` implementations for `easel.MSAFile`, `easel.SequenceFile` and `easel.HMMFile` showing the path or file object they were created from.
+- `repr` implementation for `easel.Randomness` showing the seed and the RNG algorithm in use.
+- `str` implementation for `plan7.Alignment` using HMMER original code to display a domain alignment like in search/scan results.
+
+### Changed
+- `plan7.Trace.posterior_probabilities` property may now be `None` in case no memory is allocated for the posteriors in the `P7_TRACE` struct.
+- `TopHits.to_msa` can now add additional sequences passed as arguments to the alignment.
+- `plan7.HMMPressedFile` now raises an exception on attempts to create a new instance manually.
+- `ignore_gaps` argument of `easel.SequenceFile` is now deprecated.
+- `repr` implementations for `easel` types now use the fully qualified class name.
+
+### Fixed
+- `easel.SequenceFile.readinto` docstring not rendering properly in documentation.
+- Type annotations of `hits_included` and `hits_reported` of `plan7.TopHits` marking these properties as `bool` instead of `int`.
+- Setters of `name`, `accession`, `description` and `author` properties of `easel.MSA` crashing when given `None` values.
+- Exception value raised from Easel code not being properly extracted.
+- Plain strings being used in example for `easel.TextSequence` and `easel.TextMSA` constructors where byte strings are expected ([#20](https://github.com/althonos/pyhmmer/pull/20)).
 
 
 ## [v0.5.0] - 2022-03-14
@@ -264,7 +295,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - `plan7.Builder.build_msa` to build a pHMM from a sequence alignment.
 - Additional methods to `easel.KeyHash`, allowing to use it as a `dict`/`set` hybrid.
 - `Sequence.write` and `MSA.write` methods to format a sequence or an alignment to a file handle.
-- `plan7.TopHist.to_msa` method to convert all the top hits of a query against a database into a multiple sequence alignment.
+- `plan7.TopHits.to_msa` method to convert all the top hits of a query against a database into a multiple sequence alignment.
 - `easel.MSA.sequences` attribute to access individual sequences of an alignment using the `collections.abc.Sequence` interface.
 - `easel.DigitalMSA.textize` method to convert a multiple sequence alignment in digital mode to its text-mode counterpart.
 - Read-only `name`, `accession` and `description` properties to `plan7.Profile` showing attributes inherited from the HMM it was configured with.
