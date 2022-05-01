@@ -139,7 +139,8 @@ cdef class HMM:
 
 cdef class HMMFile:
     cdef P7_HMMFILE* _hfp
-    cdef Alphabet _alphabet
+    cdef Alphabet    _alphabet
+    cdef object      _file
 
     cpdef HMM read(self)
     cpdef void close(self)

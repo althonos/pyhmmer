@@ -2901,6 +2901,7 @@ cdef class HMMFile:
 
         self._alphabet = Alphabet.__new__(Alphabet)
         self._alphabet._abc = NULL
+        self._file = file
 
     def __dealloc__(self):
         if self._hfp:
@@ -2921,6 +2922,12 @@ cdef class HMMFile:
         if hmm is None:
             raise StopIteration()
         return hmm
+
+    def __repr__(self):
+        cdef type ty   = type(self)
+        cdef str  name = ty.__name__
+        cdef str  mod  = ty.__module__
+        return f"{mod}.{name}({self._file!r}, db={self.is_pressed()!r})"
 
     # --- Properties ---------------------------------------------------------
 
@@ -3732,7 +3739,7 @@ cdef class Offsets:
         copy._owner = self._owner
         return copy
 
-    def __str__(self):
+    def __repr__(self):
         ty = type(self).__name__
         return "<offsets of {!r} model={!r} filter={!r} profile={!r}>".format(
             self._owner,
