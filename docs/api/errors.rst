@@ -36,3 +36,11 @@ AlphabetMismatch
 .. autoexception:: AlphabetMismatch(ValueError)
    :special-members: __init__
    :members:
+
+
+ServerError
+-----------
+
+.. autoexception:: ServerError(RuntimeError)
+   :special-members: __init__
+   :members:

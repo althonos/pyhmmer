@@ -2496,7 +2496,7 @@ cdef class HMM:
 
     @property
     def evalue_parameters(self):
-        """`~plan7.EvalueParameters`: The e-value parameters for this HMM.
+        """`EvalueParameters`: The e-value parameters for this HMM.
         """
         assert self._hmm != NULL
         cdef EvalueParameters ep = EvalueParameters.__new__(EvalueParameters)
@@ -2506,7 +2506,7 @@ cdef class HMM:
 
     @property
     def cutoffs(self):
-        """`~pyhmmer.plan7.Cutoffs`: The bitscore cutoffs for this HMM.
+        """`Cutoffs`: The bitscore cutoffs for this HMM.
         """
         assert self._hmm != NULL
         cdef Cutoffs cutoffs = Cutoffs.__new__(Cutoffs)

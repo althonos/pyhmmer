@@ -105,6 +105,7 @@ API Reference
 
         pyhmmer.plan7.HMM
         pyhmmer.plan7.HMMFile
+        pyhmmer.plan7.HMMPressedFile
 
 
     Profile
