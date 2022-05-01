@@ -207,14 +207,18 @@ cdef class Alphabet:
 
     def __repr__(self):
         assert self._abc != NULL
+
+        cdef type   ty   = type(self)
+        cdef str    mod  = ty.__module__
+
         if self._abc.type == libeasel.alphabet.eslRNA:
-            return "Alphabet.rna()"
+            return f"{mod}.Alphabet.rna()"
         elif self._abc.type == libeasel.alphabet.eslDNA:
-            return "Alphabet.dna()"
+            return f"{mod}.Alphabet.dna()"
         elif self._abc.type == libeasel.alphabet.eslAMINO:
-            return "Alphabet.amino()"
+            return f"{mod}.Alphabet.amino()"
         else:
-            return "Alphabet({!r}, K={!r}, Kp={!r})".format(
+            return f"{mod}.Alphabet({!r}, K={!r}, Kp={!r})".format(
                 self._abc.sym.decode('ascii'),
                 self._abc.K,
                 self._abc.Kp
@@ -926,7 +930,10 @@ cdef class Vector:
             buffer.internal = NULL
 
     def __repr__(self):
-        return f"{type(self).__name__}({list(self)!r})"
+        cdef type ty   = type(self)
+        cdef str  name = ty.__name__
+        cdef str  mod  = ty.__module__
+        return f"{mod}.{name}({list(self)!r})"
 
     def __sizeof__(self):
         return self._n * self.itemsize + sizeof(self)
@@ -2062,7 +2069,10 @@ cdef class Matrix:
 
     def __repr__(self):
         cdef Vector row
-        return f"{type(self).__name__}({[list(row) for row in self]!r})"
+        cdef type   ty   = type(self)
+        cdef str    name = ty.__name__
+        cdef str    mod  = ty.__module__
+        return f"{mod}.{name}({[list(row) for row in self]!r})"
 
     def __sizeof__(self):
         return (
