@@ -5,9 +5,9 @@ API Reference
    :hidden:
 
    hmmer <hmmer>
-   daemon <daemon>
    easel <easel>
    plan7 <plan7>
+   daemon <daemon>
    errors <errors>
 
 
@@ -29,15 +29,6 @@ API Reference
         pyhmmer.hmmer.nhmmer
         pyhmmer.hmmer.hmmpress
         pyhmmer.hmmer.hmmalign
-
-
-    Daemon
-    ------
-
-    .. autosummary::
-        :nosignatures:
-
-        pyhmmer.daemon.Client
 
 
     Easel
@@ -184,6 +175,16 @@ API Reference
         pyhmmer.plan7.PipelineSearchTargets
 
 
+    Daemon
+    ------
+
+    .. autosummary::
+        :nosignatures:
+
+        pyhmmer.daemon.Client
+        pyhmmer.daemon.IterativeSearch
+
+
     Errors
     ------
 
@@ -193,13 +194,3 @@ API Reference
        pyhmmer.errors.AllocationError
        pyhmmer.errors.UnexpectedError
        pyhmmer.errors.EaselError
-
-
-    Daemon
-    ------
-
-    .. autosummary::
-        :nosignatures:
-
-        pyhmmer.daemon.Client
-        pyhmmer.daemon.IterativeSearch
