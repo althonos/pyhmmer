@@ -4011,6 +4011,13 @@ cdef class Randomness:
         state = self.getstate()
         return Randomness, (state[0], state[1]), state
 
+    def __repr__(self):
+        assert self._rng != NULL
+        cdef type ty   = type(self)
+        cdef str  name = ty.__name__
+        cdef str  mod  = ty.__module__
+        return f"{mod}.{name}({self._rng.seed!r}, fast={self.is_fast()!r})"
+
     def __getstate__(self):
         return self.getstate()
 
