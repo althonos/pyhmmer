@@ -179,7 +179,7 @@ The HMMER3 and Easel code is available under the
 [BSD 3-clause](https://choosealicense.com/licenses/bsd-3-clause/) license.
 See `vendor/hmmer/LICENSE` and `vendor/easel/LICENSE` for more information.
 
-*This project is in no way not affiliated, sponsored, or otherwise endorsed by
+*This project is in no way affiliated, sponsored, or otherwise endorsed by
 the [original HMMER authors](http://hmmer.org/). It was developed by
 [Martin Larralde](https://github.com/althonos/pyhmmer) during his PhD project
 at the [European Molecular Biology Laboratory](https://www.embl.de/) in
