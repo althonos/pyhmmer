@@ -2819,7 +2819,7 @@ cdef class HMMFile:
         hfp.errbuf[0] = b"\0"
 
         # extract the filename if the file handle has a `name` attribute
-        if hasattr(fh, "name"):
+        if getattr(fh, "name", None) is not None:
             filename = fh.name.encode()
             hfp.fname = strdup(filename)
             if hfp.fname == NULL:
