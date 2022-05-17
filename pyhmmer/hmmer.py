@@ -493,7 +493,7 @@ def hmmsearch(
 
     """
     # count the number of CPUs to use
-    _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or multiprocessing.cpu_count()
+    _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count()
     runner: _ModelSearch[_M] = _ModelSearch(queries, sequences, _cpus, callback, **options) # type: ignore
     return runner.run()
 
@@ -541,7 +541,7 @@ def phmmer(
        Allow using `DigitalMSA` queries.
 
     """
-    _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or multiprocessing.cpu_count()
+    _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count()
     _builder = Builder(Alphabet.amino()) if builder is None else builder
 
     try:
@@ -626,7 +626,7 @@ def nhmmer(
        Allow using `Profile` and `OptimizedProfile` queries.
 
     """
-    _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or multiprocessing.cpu_count()
+    _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count()
     _builder = Builder(Alphabet.dna()) if builder is None else builder
 
     try:
