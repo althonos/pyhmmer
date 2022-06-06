@@ -2335,7 +2335,7 @@ cdef class HMM:
 
     @property
     def insert_emissions(self):
-        """`memoryview` of `float`: The insert emissions of the model.
+        """`~pyhmmer.easel.MatrixF`: The insert emissions of the model.
 
         The property exposes a matrix of shape :math:`(M+1, K)`, with one
         row per node and one column per alphabet symbol.

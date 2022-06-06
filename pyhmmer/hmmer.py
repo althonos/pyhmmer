@@ -330,7 +330,7 @@ class _Search(typing.Generic[_Q], abc.ABC):
                 # get the next query and add it to the query queue
                 query_count.value += 1
                 chore = _Chore(query)
-                query_queue.put(chore)
+                query_queue.put(chore) # <-- blocks if too many chores in queue
                 query_available.release()
                 results.append(chore)
                 # aggressively wait for the result with a very short
@@ -345,7 +345,7 @@ class _Search(typing.Generic[_Q], abc.ABC):
                 query_available.release()
             # yield all remaining results, in order
             while results:
-                yield results[0].get()
+                yield results[0].get() # <-- blocks until result is available
                 results.popleft()
         except BaseException:
             # make sure threads are killed to avoid being stuck,
