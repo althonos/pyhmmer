@@ -65,7 +65,7 @@ class _Chore(typing.Generic[_Q]):
         """
         return self.event.is_set()
 
-    def wait(self, timeout=None) -> bool:
+    def wait(self, timeout: typing.Optional[float] = None) -> bool:
         """Wait for the chore to be done.
         """
         return self.event.wait(timeout)
@@ -142,7 +142,7 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
         self.sequences = sequences
         self.pipeline = pipeline_class(alphabet=alphabet, **options)
         self.query_available: threading.Semaphore = query_available
-        self.query_queue = query_queue
+        self.query_queue: "queue.Queue[typing.Optional[_Chore[_Q]]]" = query_queue
         self.query_count = query_count
         self.callback: typing.Optional[typing.Callable[[_Q, int], None]] = callback or self._none_callback
         self.kill_switch = kill_switch
@@ -261,7 +261,7 @@ class _Search(typing.Generic[_Q], abc.ABC):
         callback: typing.Optional[typing.Callable[[_Q, int], None]] = None,
         pipeline_class: typing.Type[Pipeline] = Pipeline,
         alphabet: Alphabet = Alphabet.amino(),
-        **options # type: typing.Dict[str, object]get
+        **options # type: object
     ) -> None:
         self.queries: typing.Iterable[_Q] = queries
         self.cpus = cpus
