@@ -195,3 +195,4 @@ API Reference
        pyhmmer.errors.AllocationError
        pyhmmer.errors.UnexpectedError
        pyhmmer.errors.EaselError
+       pyhmmer.errors.AlphabetMismatch
