@@ -3,7 +3,9 @@
 
 import collections
 import configparser
+import functools
 import glob
+import multiprocessing.pool
 import os
 import platform
 import re
@@ -409,10 +411,20 @@ class build_clib(_build_clib):
 
     # --- Distutils command interface ---
 
+    user_options = _build_clib.user_options + [
+        ("parallel", "j", "number of parallel build jobs"),
+    ]
+
+    def initialize_options(self):
+        _build_clib.initialize_options(self)
+        self.parallel = None
+
     def finalize_options(self):
         _build_clib.finalize_options(self)
         self._configure_cmd = self.get_finalized_command("configure")
         self._configure_cmd.force = self.force
+        if self.parallel is not None:
+            self.parallel = int(self.parallel)
 
     # --- Compatibility with base `build_clib` command ---
 
@@ -478,16 +490,32 @@ class build_clib(_build_clib):
             elif self.compiler.compiler_type == "msvc":
                 library.extra_compile_args.append("/Od")
 
-        # build objects and create a static library
-        objects = self.compiler.compile(
-            library.sources,
-            output_dir=self.build_temp,
-            include_dirs=library.include_dirs + [self.build_clib],
-            macros=library.define_macros,
-            debug=self.debug,
-            depends=library.depends,
-            extra_preargs=library.extra_compile_args,
+        # store compile args
+        compile_args = (
+            self.build_temp,
+            library.define_macros,
+            library.include_dirs + [self.build_clib],
+            self.debug,
+            library.extra_compile_args,
+            None,
+            library.depends,
         )
+
+        # manually prepare sources and get the names of object files
+        sources = library.sources.copy()
+        objects = [
+            os.path.join(self.build_temp, s.replace(".c", self.compiler.obj_extension))
+            for s in sources
+        ]
+
+        # compile outdated files in parallel
+        with multiprocessing.pool.ThreadPool(self.parallel) as pool:
+            pool.starmap(
+                functools.partial(self._compile_file, compile_args=compile_args),
+                zip(sources, objects)
+            )
+
+        # create a static library
         self.compiler.create_static_lib(
             objects,
             library.name,
@@ -500,6 +528,14 @@ class build_clib(_build_clib):
             lines = f.readlines()
         with open(new, "w") as f:
             f.writelines(l.replace("static ", "") for l in lines)
+
+    def _compile_file(self, source, object, compile_args):
+        self.make_file(
+            [source],
+            object,
+            self.compiler.compile,
+            ([source], *compile_args)
+        )
 
 
 class clean(_clean):
