@@ -62,6 +62,8 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Show Python build environment
+      run: python -m sysconfig
     - name: Update pip
       run: python -m pip install -U pip wheel setuptools
     - name: Install Python requirements
@@ -134,6 +136,8 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Show Python build environment
+      run: python -m sysconfig
     - name: Update pip
       run: python -m pip install -U pip wheel setuptools
     - name: Install Python requirements
