@@ -11,6 +11,7 @@ import platform
 import re
 import sys
 import subprocess
+from pprint import pprint
 from unittest import mock
 
 import setuptools
@@ -35,6 +36,17 @@ def _split_multiline(value):
 
 def _eprint(*args, **kwargs):
     print(*args, **kwargs, file=sys.stderr)
+
+def _patch_osx_compiler(compiler):
+    # On newer OSX, Python has been compiled as a universal binary, so
+    # it will attempt to pass universal binary flags when building the
+    # extension. This will not work because the code makes use of SSE2.
+    for tool in ("compiler", "compiler_so", "linker_so"):
+        flags = getattr(compiler, tool)
+        i = next((i for i in range(1, len(flags)) if flags[i-1] == "-arch" and flags[i] == "arm64"), None)
+        if i is not None:
+            flags.pop(i)
+            flags.pop(i-1)
 
 # --- `setup.py` commands ----------------------------------------------------
 
@@ -142,6 +154,10 @@ class build_ext(_build_ext):
                 ext.define_macros.append(("CYTHON_TRACE_NOGIL", 1))
         else:
             ext.define_macros.append(("CYTHON_WITHOUT_ASSERTIONS", 1))
+
+        # remove universal binary CFLAGS from the compiler if any
+        if platform.system() == "Darwin":
+            _patch_osx_compiler(self.compiler)
 
         # update link and include directories
         ext.include_dirs.append(self._clib_cmd.build_clib)
@@ -318,6 +334,10 @@ class configure(_build_clib):
         # ensure the output directory exists, otherwise create it
         self.mkpath(self.build_clib)
 
+        # remove universal binary CFLAGS from the compiler if any
+        if platform.system() == "Darwin":
+            _patch_osx_compiler(self.compiler)
+
         # run the `configure_library` method sequentially on each library,
         # unless the header already exists and the configuration has not
         # been edited
@@ -471,6 +491,10 @@ class build_clib(_build_clib):
         _build_clib.run(self)
 
     def build_libraries(self, libraries):
+        # remove universal binary CFLAGS from the compiler if any
+        if platform.system() == "Darwin":
+            _patch_osx_compiler(self.compiler)
+        # build extensions sequentially
         self.mkpath(self.build_clib)
         for library in libraries:
             self.make_file(
