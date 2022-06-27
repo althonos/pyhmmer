@@ -103,6 +103,7 @@ class build_ext(_build_ext):
                 "SYS_VERSION_INFO_MAJOR": sys.version_info.major,
                 "SYS_VERSION_INFO_MINOR": sys.version_info.minor,
                 "SYS_VERSION_INFO_MICRO": sys.version_info.micro,
+                "SYS_BYTEORDER": sys.byteorder,
             }
         }
         if hmmer_impl is not None:

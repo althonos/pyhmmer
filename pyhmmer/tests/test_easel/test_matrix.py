@@ -260,6 +260,16 @@ class TestMatrixF(_TestMatrixBase, unittest.TestCase):
         with self.assertRaises(IndexError):
             x = mat[10, 0]
 
+    def test_from_raw_bytes_littleendian(self):
+        mat = self.Matrix._from_raw_bytes(b'\x00\x00\x80>', 1, 1, byteorder="little")
+        self.assertEqual(len(mat), 1)
+        self.assertEqual(mat[0][0], 0.25)
+
+    def test_from_raw_bytes_bigendian(self):
+        mat = self.Matrix._from_raw_bytes(b'>\x80\x00\x00', 1, 1, byteorder="big")
+        self.assertEqual(len(mat), 1)
+        self.assertEqual(mat[0][0], 0.25)
+
 
 class TestMatrixU8(_TestMatrixBase, unittest.TestCase):
 

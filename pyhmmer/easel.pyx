@@ -858,21 +858,30 @@ cdef class Vector:
         return vec
 
     @classmethod
-    def _from_raw_bytes(cls, buffer, int n):
-        """_from_raw_bytes(cls, buffer, n)\n--
+    def _from_raw_bytes(cls, object buffer, int n, str byteorder):
+        f"""_from_raw_bytes(cls, buffer, n, byteorder)\n--
 
         Create a new vector using the given bytes to fill its contents.
 
         """
-        cdef Vector       vec      = cls.zeros(n)
-        cdef size_t       itemsize = vec.itemsize
-        cdef object       view     = memoryview(buffer)
-        cdef uint8_t[::1] bytes    = view.cast("B")
+        cdef const uint8_t[::1] bytes
+        cdef Vector             vec      = cls.zeros(n)
+        cdef size_t             itemsize = vec.itemsize
+        cdef object             view     = memoryview(buffer)
 
+        # fix endianness if needed
+        if byteorder != SYS_BYTEORDER and vec.itemsize > 1:
+            newbuffer = array.array(vec.format)
+            newbuffer.frombytes(view)
+            newbuffer.byteswap()
+            view = memoryview(newbuffer)
+
+        # assign the items
+        bytes = view.cast("B")
         assert bytes.shape[0] == n * vec.itemsize
         if n > 0:
             with nogil:
-                memcpy(vec._data, &bytes[0], vec._n * itemsize)
+                memcpy(vec._data, &bytes[0], n * itemsize)
         return vec
 
     # --- Magic methods ------------------------------------------------------
@@ -960,7 +969,7 @@ cdef class Vector:
             buffer = array.array(self.format)
             buffer.frombytes(memoryview(self).cast("b"))
 
-        return self._from_raw_bytes, (buffer, self._n)
+        return self._from_raw_bytes, (buffer, self._n, SYS_BYTEORDER)
 
     def __add__(Vector self, object other):
         assert self._data != NULL
@@ -1996,23 +2005,30 @@ cdef class Matrix:
         return mat
 
     @classmethod
-    def _from_raw_bytes(cls, buffer, int m, int n):
-        """_from_raw_bytes(cls, buffer, m, n)\n--
+    def _from_raw_bytes(cls, buffer, int m, int n, str byteorder):
+        """_from_raw_bytes(cls, buffer, m, n, byteorder)\n--
 
         Create a new matrix using the given bytes to fill its contents.
 
         """
-        cdef Matrix       mat      = cls.zeros(m, n)
-        cdef size_t       itemsize = mat.itemsize
-        cdef object       view     = memoryview(buffer)
-        cdef uint8_t[::1] bytes    = view.cast("B")
-        cdef float**      data     = <float**> mat._data
+        cdef const uint8_t[::1] bytes
+        cdef Matrix             mat      = cls.zeros(m, n)
+        cdef size_t             itemsize = mat.itemsize
+        cdef object             view     = memoryview(buffer)
+
+        # fix endianness if needed
+        if byteorder != SYS_BYTEORDER and mat.itemsize > 1:
+            newbuffer = array.array(mat.format)
+            newbuffer.frombytes(view)
+            newbuffer.byteswap()
+            view = memoryview(newbuffer)
 
         # assign the items
+        bytes = view.cast("B")
         assert bytes.shape[0] == m * n * itemsize
-        with nogil:
-            memcpy(data[0], &bytes[0], m * n * itemsize)
-
+        if n > 0 and m > 0:
+            with nogil:
+                memcpy(mat._data[0], &bytes[0], m * n * itemsize)
         return mat
 
     # --- Magic methods ------------------------------------------------------
@@ -2103,7 +2119,7 @@ cdef class Matrix:
             buffer = array.array(self.format)
             buffer.frombytes(memoryview(self).cast("b"))
 
-        return self._from_raw_bytes, (buffer, self._m, self._n)
+        return self._from_raw_bytes, (buffer, self._m, self._n, SYS_BYTEORDER)
 
     def __add__(Matrix self, object other):
         assert self._data != NULL

@@ -6342,7 +6342,7 @@ cdef class TopHits:
             unsrt.append(state)
 
         for i in range(self._th.N):
-            offset = (<ptrdiff_t> self._th.hit[i] - <ptrdiff_t> &self._th.unsrt[0]) / sizeof(P7_HIT)
+            offset = (<ptrdiff_t> self._th.hit[i] - <ptrdiff_t> &self._th.unsrt[0]) // sizeof(P7_HIT)
             hits.append(offset)
 
         return {

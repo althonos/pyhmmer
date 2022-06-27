@@ -366,6 +366,16 @@ class TestVectorF(_TestVectorBase, unittest.TestCase):
         vec /= self.Vector([])
         self.assertEqual(vec, self.Vector([]))
 
+    def test_from_raw_bytes_littleendian(self):
+        vec = self.Vector._from_raw_bytes(b'\x00\x00\x80>', 1, byteorder="little")
+        self.assertEqual(len(vec), 1)
+        self.assertEqual(vec[0], 0.25)
+
+    def test_from_raw_bytes_bigendian(self):
+        vec = self.Vector._from_raw_bytes(b'>\x80\x00\x00', 1, byteorder="big")
+        self.assertEqual(len(vec), 1)
+        self.assertEqual(vec[0], 0.25)
+
 
 class TestVectorU8(_TestVectorBase, unittest.TestCase):
 
