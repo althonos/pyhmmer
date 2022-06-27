@@ -125,7 +125,7 @@ class TestTopHits(unittest.TestCase):
     def test_searched_nodes(self):
         empty = TopHits()
         self.assertEqual(empty.searched_nodes, 0)
-        self.assertEqual(self.hits.searched_nodes, 682583)
+        self.assertEqual(self.hits.searched_nodes, self.hmm.M)
 
     def test_searched_residues(self):
         empty = TopHits()

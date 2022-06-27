@@ -6514,7 +6514,7 @@ cdef class TopHits:
         .. versionadded:: 0.5.0
 
         """
-        return self._pli.nres
+        return self._pli.nnodes
 
     @property
     def searched_sequences(self):
