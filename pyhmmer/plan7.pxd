@@ -42,6 +42,7 @@ cdef class Alignment:
     cdef P7_ALIDISPLAY* _ad
 
     cpdef dict __getstate__(self)
+    cpdef object __setstate__(self, dict state)
 
 
 cdef class Background:
@@ -91,6 +92,7 @@ cdef class Domain:
     cdef P7_DOMAIN* _dom
 
     cpdef dict __getstate__(self)
+    cpdef object __setstate__(self, list state)
 
 
 cdef class Domains:

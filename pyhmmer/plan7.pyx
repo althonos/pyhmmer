@@ -280,6 +280,89 @@ cdef class Alignment:
 
         return state
 
+    cpdef object __setstate__(self, dict state):
+        assert self._ad != NULL
+        assert len(state["mem"]) == state["memsize"]
+
+        cdef char[::1] memview = state["mem"]
+
+        # setup numeric attributes
+        self._ad.N = state["N"]
+        self._ad.hmmfrom = state["hmmfrom"]
+        self._ad.hmmto = state["hmmto"]
+        self._ad.M = state["M"]
+        self._ad.sqfrom = state["sqfrom"]
+        self._ad.sqto = state["sqto"]
+        self._ad.L = state["L"]
+
+        # setup string storage
+        self._ad.memsize = state["memsize"]
+        if self._ad.mem == NULL:
+            self._ad.mem = <char*> calloc(state["memsize"], sizeof(char))
+        else:
+            self._ad.mem = <char*> realloc(self._ad.mem, state["memsize"]*sizeof(char))
+        if self._ad.mem == NULL:
+            raise AllocationError("char", sizeof(char), state["memsize"])
+        memcpy(self._ad.mem, &memview[0], state["memsize"] * sizeof(char))
+
+        # setup string pointers
+        if state["rfline"] is None:
+            self._ad.rfline = NULL
+        else:
+            self._ad.rfline  = self._ad.mem + <ptrdiff_t> state["rfline"]
+        if state["mmline"] is None:
+            self._ad.mmline = NULL
+        else:
+            self._ad.mmline  = self._ad.mem + <ptrdiff_t> state["mmline"]
+        if state["csline"] is None:
+            self._ad.csline = NULL
+        else:
+            self._ad.csline = self._ad.mem + <ptrdiff_t> state["csline"]
+        if state["model"] is None:
+            self._ad.model = NULL
+        else:
+            self._ad.model = self._ad.mem + <ptrdiff_t> state["model"]
+        if state["mline"] is None:
+            self._ad.mline = NULL
+        else:
+            self._ad.mline = self._ad.mem + <ptrdiff_t> state["mline"]
+        if state["aseq"] is None:
+            self._ad.aseq = NULL
+        else:
+            self._ad.aseq = self._ad.mem + <ptrdiff_t> state["aseq"]
+        if state["ntseq"] is None:
+            self._ad.ntseq = NULL
+        else:
+            self._ad.ntseq = self._ad.mem + <ptrdiff_t> state["ntseq"]
+        if state["ppline"] is None:
+            self._ad.ppline = NULL
+        else:
+            self._ad.ppline = self._ad.mem + <ptrdiff_t> state["ppline"]
+        if state["hmmname"] is None:
+            self._ad.hmmname = NULL
+        else:
+            self._ad.hmmname = self._ad.mem + <ptrdiff_t> state["hmmname"]
+        if state["hmmacc"] is None:
+            self._ad.hmmacc = NULL
+        else:
+            self._ad.hmmacc = self._ad.mem + <ptrdiff_t> state["hmmacc"]
+        if state["hmmdesc"] is None:
+            self._ad.hmmdesc = NULL
+        else:
+            self._ad.hmmdesc = self._ad.mem + <ptrdiff_t> state["hmmdesc"]
+        if state["sqname"] is None:
+            self._ad.sqname = NULL
+        else:
+            self._ad.sqname  = self._ad.mem + <ptrdiff_t> state["sqname"]
+        if state["sqacc"] is None:
+            self._ad.sqacc = NULL
+        else:
+            self._ad.sqacc   = self._ad.mem + <ptrdiff_t> state["sqacc"]
+        if state["sqdesc"] is None:
+            self._ad.sqdesc = NULL
+        else:
+            self._ad.sqdesc  = self._ad.mem + <ptrdiff_t> state["sqdesc"]
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -1375,6 +1458,38 @@ cdef class Domain:
                 scores_per_pos.append(self._dom.scores_per_pos[i])
 
         return state
+
+    cpdef object __setstate__(self, list state):
+        assert self._dom != NULL
+
+        cdef float[::1] view
+
+        self._dom.ienv = state["ienv"]
+        self._dom.jenv = state["jenv"]
+        self._dom.iali = state["iali"]
+        self._dom.jali = state["jali"]
+        self._dom.iorf = state["iorf"]
+        self._dom.jorf = state["jorf"]
+        self._dom.envsc = state["envsc"]
+        self._dom.domcorrection = state["domcorrection"]
+        self._dom.dombias = state["dombias"]
+        self._dom.oasc = state["oasc"]
+        self._dom.bitscore = state["bitscore"]
+        self._dom.lnP = state["lnP"]
+        self._dom.is_reported = state["is_reported"]
+        self._dom.is_included = state["is_included"]
+
+        self.alignment.__setstate__(state["ad"])
+
+        if state["scores_per_pos"] is None:
+            free(self._dom.scores_per_pos)
+            self._dom.scores_per_pos = NULL
+        else:
+            view = state["scores_per_pos"]
+            self._dom.scores_per_pos = <float*> realloc(self._dom.scores_per_pos, self._dom.ad.N * sizeof(float))
+            if self._dom.scores_per_pos == NULL:
+                raise AllocationError("float", sizeof(float), self._dom.ad.N)
+            memcpy(self._dom.scores_per_pos, &view[0], self._dom.ad.N * sizeof(float))
 
     # --- Properties ---------------------------------------------------------
 
