@@ -307,6 +307,7 @@ cdef class TopHits:
     cdef P7_TOPHITS* _th
 
     cpdef dict __getstate__(self)
+    cpdef object __setstate__(self, dict state)
 
     cdef int _threshold(self, Pipeline pipeline) nogil except 1
     cdef int _sort_by_key(self) nogil except 1

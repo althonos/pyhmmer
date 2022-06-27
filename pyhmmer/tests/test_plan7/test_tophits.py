@@ -1,6 +1,7 @@
 import io
 import itertools
 import os
+import pickle
 import shutil
 import unittest
 import tempfile
@@ -242,3 +243,7 @@ class TestTopHits(unittest.TestCase):
             all_consensus_cols=True
         )
         self.assertIsInstance(msa_d, DigitalMSA)
+
+    def test_pickle(self):
+        pickled = pickle.loads(pickle.dumps(self.hits))
+        self.assertHitsEqual(pickled, self.hits)
