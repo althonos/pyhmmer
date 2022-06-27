@@ -96,6 +96,8 @@ cdef class Domain:
 cdef class Domains:
     cdef readonly Hit hit
 
+    cpdef list __getstate__(self)
+
 
 cdef class EvalueParameters:
     cdef object              _owner
@@ -109,6 +111,8 @@ cdef class Hit:
     # the internal data is never deallocated before the Python class.
     cdef readonly TopHits hits
     cdef P7_HIT* _hit
+
+    cpdef dict __getstate__(self)
 
     cpdef bint is_included(self)
     cpdef bint is_reported(self)
@@ -300,6 +304,8 @@ cdef class TopHits:
     #                  computed and thresholding can be done correctly.
     cdef P7_PIPELINE _pli
     cdef P7_TOPHITS* _th
+
+    cpdef dict __getstate__(self)
 
     cdef int _threshold(self, Pipeline pipeline) nogil except 1
     cdef int _sort_by_key(self) nogil except 1

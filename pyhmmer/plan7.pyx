@@ -1471,6 +1471,10 @@ cdef class Domains:
             raise IndexError("list index out of range")
         return Domain(self.hit, <size_t> index)
 
+    cpdef list __getstate__(self):
+        assert self.hit is not None
+        return [ domain.__getstate__() for domain in self ]
+
 
 @cython.freelist(8)
 @cython.no_gc_clear
@@ -1649,6 +1653,36 @@ cdef class Hit:
         assert index < hits._th.N
         self.hits = hits
         self._hit = hits._th.hit[index]
+
+    cpdef dict __getstate__(self):
+        assert self._hit != NULL
+        return {
+            "name": None if self._hit.name == NULL else <bytes> self._hit.name,
+            "acc": None if self._hit.acc == NULL else <bytes> self._hit.acc,
+            "desc": None if self._hit.desc == NULL else <bytes> self._hit.desc,
+            "window_length": self._hit.window_length,
+            "sortkey": self._hit.sortkey,
+            "score": self._hit.score,
+            "pre_score": self._hit.pre_score,
+            "sum_score": self._hit.sum_score,
+            "lnP": self._hit.lnP,
+            "pre_lnP": self._hit.pre_lnP,
+            "sum_lnP": self._hit.sum_lnP,
+            "nexpected": self._hit.nexpected,
+            "nregions": self._hit.nregions,
+            "nclustered": self._hit.nclustered,
+            "noverlaps": self._hit.noverlaps,
+            "nenvelopes": self._hit.nenvelopes,
+            "ndom": self._hit.ndom,
+            "flags": self._hit.flags,
+            "nreported": self._hit.nreported,
+            "nincluded": self._hit.nincluded,
+            "best_domain": self._hit.best_domain,
+            "seqidx": self._hit.seqidx,
+            "subseq_start": self._hit.subseq_start,
+            "offset": self._hit.offset,
+            "domains": self.domains.__getstate__(),
+        }
 
     # --- Properties ---------------------------------------------------------
 
@@ -6305,6 +6339,66 @@ cdef class TopHits:
 
     def __add__(TopHits self, TopHits other):
         return self.merge(other)
+
+    cpdef dict __getstate__(self):
+        assert self._th != NULL
+        cdef Hit hit
+        return {
+            "hits": [ hit.__getstate__() for hit in self ],
+            "Nalloc": self._th.Nalloc,
+            "N": self._th.N,
+            "nreported": self._th.nreported,
+            "nincluded": self._th.nincluded,
+            "is_sorted_by_sortkey": self._th.is_sorted_by_sortkey,
+            "is_sorted_by_seqidx": self._th.is_sorted_by_seqidx,
+            "pipeline": {
+                "by_E": self._pli.by_E,
+                "E": self._pli.E,
+                "T": self._pli.T,
+                "dom_by_E": self._pli.dom_by_E,
+                "domE": self._pli.domE,
+                "domT": self._pli.domT,
+                "use_bit_cutoffs": self._pli.use_bit_cutoffs,
+                "inc_by_E": self._pli.inc_by_E,
+                "incE": self._pli.incE,
+                "incT": self._pli.incT,
+                "incdom_by_E": self._pli.incdom_by_E,
+                "incdomE": self._pli.incdomE,
+                "incdomT": self._pli.incdomT,
+                "Z": self._pli.Z,
+                "domZ": self._pli.domZ,
+                "Z_setby": self._pli.Z_setby,
+                "domZ_setby": self._pli.domZ_setby,
+                "do_max": self._pli.do_max,
+                "F1": self._pli.F1,
+                "F2": self._pli.F2,
+                "F3": self._pli.F3,
+                "B1": self._pli.B1,
+                "B2": self._pli.B2,
+                "B3": self._pli.B3,
+                "do_biasfilter": self._pli.do_biasfilter,
+                "do_null2": self._pli.do_null2,
+                "nmodels": self._pli.nmodels,
+                "nseqs": self._pli.nseqs,
+                "nres": self._pli.nres,
+                "nnodes": self._pli.nnodes,
+                "n_past_msv": self._pli.n_past_msv,
+                "n_past_bias": self._pli.n_past_bias,
+                "n_past_vit": self._pli.n_past_vit,
+                "n_past_fwd": self._pli.n_past_fwd,
+                "n_output": self._pli.n_output,
+                "pos_past_msv": self._pli.pos_past_msv,
+                "pos_past_bias": self._pli.pos_past_bias,
+                "pos_past_vit": self._pli.pos_past_vit,
+                "pos_past_fwd": self._pli.pos_past_fwd,
+                "pos_output": self._pli.pos_output,
+                "mode": self._pli.mode,
+                "long_targets": self._pli.long_targets,
+                "strands": self._pli.strands,
+                "W": self._pli.W,
+                "block_length": self._pli.block_length
+            }
+        }
 
     # --- Properties ---------------------------------------------------------
 
