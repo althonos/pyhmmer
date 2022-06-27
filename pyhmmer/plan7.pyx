@@ -44,6 +44,7 @@ cimport libhmmer.p7_alidisplay
 cimport libhmmer.p7_hmm
 cimport libhmmer.p7_builder
 cimport libhmmer.p7_bg
+cimport libhmmer.p7_domain
 cimport libhmmer.p7_domaindef
 cimport libhmmer.p7_hit
 cimport libhmmer.p7_hmmfile
@@ -1326,75 +1327,39 @@ cdef class Domain:
         self.hit = hit
         self.alignment = Alignment(self)
 
-    cpdef dict __getstate__(self):
+    cpdef VectorU8 __getstate__(self):
         assert self._dom != NULL
 
-        cdef dict   state
-        cdef object scores_per_pos
+        cdef int       status
+        cdef uint32_t  n      = 0
+        cdef uint32_t  nalloc = 0
+        cdef uint8_t*  buffer = NULL
+        cdef VectorU8  vec
 
-        state = {
-            "ienv": self._dom.ienv,
-            "jenv": self._dom.jenv,
-            "iali": self._dom.iali,
-            "jali": self._dom.jali,
-            "iorf": self._dom.iorf,
-            "jorf": self._dom.jorf,
-            "envsc": self._dom.envsc,
-            "domcorrection": self._dom.domcorrection,
-            "dombias": self._dom.dombias,
-            "oasc": self._dom.oasc,
-            "bitscore": self._dom.bitscore,
-            "lnP": self._dom.lnP,
-            "is_reported": self._dom.is_reported,
-            "is_included": self._dom.is_included,
-            "ad": self.alignment.__getstate__(),
-        }
+        with nogil:
+            status = libhmmer.p7_domain.p7_domain_Serialize(self._dom, &buffer, &n, &nalloc)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_domain_Serialize")
 
-        if self._dom.scores_per_pos == NULL:
-            state["scores_per_pos"] = None
-        else:
-            state["scores_per_pos"] = scores_per_pos = array.array("f")
-            for i in range(self._dom.ad.N):
-                scores_per_pos.append(self._dom.scores_per_pos[i])
+        vec = VectorU8.__new__(VectorU8)
+        vec._owner = None
+        vec._n = vec._shape[0] = nalloc
+        vec._data = <void*> buffer
+        return vec
 
-        return state
+    cpdef object __setstate__(self, uint8_t[::1] state):
+        cdef int      status
+        cdef uint32_t offset = 0
 
-    cpdef object __setstate__(self, dict state):
-        assert self._dom != NULL
+        if self._dom == NULL:
+            self._dom = libhmmer.p7_domain.p7_domain_Create_empty()
+            if self._dom == NULL:
+                raise AllocationError("P7_DOMAIN", sizeof(P7_DOMAIN))
 
-        cdef float[::1] view
-
-        self._dom.ienv = state["ienv"]
-        self._dom.jenv = state["jenv"]
-        self._dom.iali = state["iali"]
-        self._dom.jali = state["jali"]
-        self._dom.iorf = state["iorf"]
-        self._dom.jorf = state["jorf"]
-        self._dom.envsc = state["envsc"]
-        self._dom.domcorrection = state["domcorrection"]
-        self._dom.dombias = state["dombias"]
-        self._dom.oasc = state["oasc"]
-        self._dom.bitscore = state["bitscore"]
-        self._dom.lnP = state["lnP"]
-        self._dom.is_reported = state["is_reported"]
-        self._dom.is_included = state["is_included"]
-
-        if self._dom.ad != NULL:
-            libhmmer.p7_alidisplay.p7_alidisplay_Destroy(self._dom.ad)
-        self._dom.ad = libhmmer.p7_alidisplay.p7_alidisplay_Create_empty()
-        if self._dom.ad == NULL:
-            raise AllocationError("P7_ALIDISPLAY", sizeof(P7_ALIDISPLAY))
-        self.alignment.__setstate__(state["ad"])
-
-        if state["scores_per_pos"] is None:
-            free(self._dom.scores_per_pos)
-            self._dom.scores_per_pos = NULL
-        else:
-            view = state["scores_per_pos"]
-            self._dom.scores_per_pos = <float*> realloc(self._dom.scores_per_pos, self._dom.ad.N * sizeof(float))
-            if self._dom.scores_per_pos == NULL:
-                raise AllocationError("float", sizeof(float), self._dom.ad.N)
-            memcpy(self._dom.scores_per_pos, &view[0], self._dom.ad.N * sizeof(float))
+        with nogil:
+            status = libhmmer.p7_domain.p7_domain_Deserialize(&state[0], &offset, self._dom)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_domain_Deserialize")
 
     # --- Properties ---------------------------------------------------------
 
@@ -1490,10 +1455,6 @@ cdef class Domains:
         if index >= self.hit._hit.ndom or index < 0:
             raise IndexError("list index out of range")
         return Domain(self.hit, <size_t> index)
-
-    cpdef list __getstate__(self):
-        assert self.hit is not None
-        return [ domain.__getstate__() for domain in self ]
 
 
 @cython.freelist(8)
@@ -1674,35 +1635,40 @@ cdef class Hit:
         self.hits = hits
         self._hit = hits._th.hit[index]
 
-    cpdef dict __getstate__(self):
+    cpdef VectorU8 __getstate__(self):
         assert self._hit != NULL
-        return {
-            "name": None if self._hit.name == NULL else <bytes> self._hit.name,
-            "acc": None if self._hit.acc == NULL else <bytes> self._hit.acc,
-            "desc": None if self._hit.desc == NULL else <bytes> self._hit.desc,
-            "window_length": self._hit.window_length,
-            "sortkey": self._hit.sortkey,
-            "score": self._hit.score,
-            "pre_score": self._hit.pre_score,
-            "sum_score": self._hit.sum_score,
-            "lnP": self._hit.lnP,
-            "pre_lnP": self._hit.pre_lnP,
-            "sum_lnP": self._hit.sum_lnP,
-            "nexpected": self._hit.nexpected,
-            "nregions": self._hit.nregions,
-            "nclustered": self._hit.nclustered,
-            "noverlaps": self._hit.noverlaps,
-            "nenvelopes": self._hit.nenvelopes,
-            "ndom": self._hit.ndom,
-            "flags": self._hit.flags,
-            "nreported": self._hit.nreported,
-            "nincluded": self._hit.nincluded,
-            "best_domain": self._hit.best_domain,
-            "seqidx": self._hit.seqidx,
-            "subseq_start": self._hit.subseq_start,
-            "offset": self._hit.offset,
-            "domains": self.domains.__getstate__(),
-        }
+
+        cdef int       status
+        cdef uint32_t  n      = 0
+        cdef uint32_t  nalloc = 0
+        cdef uint8_t*  buffer = NULL
+        cdef VectorU8  vec
+
+        with nogil:
+            status = libhmmer.p7_hit.p7_hit_Serialize(self._hit, &buffer, &n, &nalloc)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_hit_Serialize")
+
+        vec = VectorU8.__new__(VectorU8)
+        vec._owner = None
+        vec._n = vec._shape[0] = nalloc
+        vec._data = <void*> buffer
+        return vec
+
+    cpdef object __setstate__(self, uint8_t[::1] state):
+        cdef int      status
+        cdef uint32_t offset = 0
+
+        if self._hit == NULL:
+            self._hit = libhmmer.p7_hit.p7_hit_Create_empty()
+            if self._hit == NULL:
+                raise AllocationError("P7_HIT", sizeof(P7_HIT))
+
+        with nogil:
+            status = libhmmer.p7_hit.p7_hit_Deserialize(&state[0], &offset, self._hit)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_hit_Deserialize")
+
 
     # --- Properties ---------------------------------------------------------
 

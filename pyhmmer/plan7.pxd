@@ -91,14 +91,12 @@ cdef class Domain:
     cdef readonly Hit hit
     cdef P7_DOMAIN* _dom
 
-    cpdef dict __getstate__(self)
-    cpdef object __setstate__(self, dict state)
+    cpdef VectorU8 __getstate__(self)
+    cpdef object __setstate__(self, uint8_t[::1] state)
 
 
 cdef class Domains:
     cdef readonly Hit hit
-
-    cpdef list __getstate__(self)
 
 
 cdef class EvalueParameters:
@@ -114,7 +112,8 @@ cdef class Hit:
     cdef readonly TopHits hits
     cdef P7_HIT* _hit
 
-    cpdef dict __getstate__(self)
+    cpdef VectorU8 __getstate__(self)
+    cpdef object __setstate__(self, uint8_t[::1] state)
 
     cpdef bint is_included(self)
     cpdef bint is_reported(self)
