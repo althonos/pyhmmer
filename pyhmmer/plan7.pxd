@@ -3,7 +3,7 @@
 
 # --- C imports --------------------------------------------------------------
 
-from libc.stdint cimport uint32_t
+from libc.stdint cimport uint8_t, uint32_t
 from posix.types cimport off_t
 
 from libeasel.sq cimport ESL_SQ
@@ -25,7 +25,7 @@ IF HMMER_IMPL == "VMX":
 ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
-from .easel cimport Alphabet, DigitalSequence, DigitalMSA, KeyHash, MSA, Randomness, VectorF
+from .easel cimport Alphabet, DigitalSequence, DigitalMSA, KeyHash, MSA, Randomness, VectorF, VectorU8
 
 
 cdef extern from "hmmer.h" nogil:
@@ -41,8 +41,8 @@ cdef class Alignment:
     cdef readonly Domain domain
     cdef P7_ALIDISPLAY* _ad
 
-    cpdef dict __getstate__(self)
-    cpdef object __setstate__(self, dict state)
+    cpdef VectorU8 __getstate__(self)
+    cpdef object __setstate__(self, uint8_t[::1] state)
 
 
 cdef class Background:
@@ -92,7 +92,7 @@ cdef class Domain:
     cdef P7_DOMAIN* _dom
 
     cpdef dict __getstate__(self)
-    cpdef object __setstate__(self, list state)
+    cpdef object __setstate__(self, dict state)
 
 
 cdef class Domains:

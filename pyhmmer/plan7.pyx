@@ -101,6 +101,7 @@ from .easel cimport (
     TextMSA,
     DigitalMSA,
     VectorF,
+    VectorU8,
     MatrixF,
     MatrixU8,
 )
@@ -230,138 +231,37 @@ cdef class Alignment:
 
         return buffer.getvalue().decode("ascii")
 
-    cpdef dict __getstate__(self):
-        assert self._ad != NULL
+    cpdef VectorU8 __getstate__(self):
+        cdef int       status
+        cdef uint32_t  n      = 0
+        cdef uint32_t  nalloc = 0
+        cdef uint8_t*  buffer = NULL
+        cdef VectorU8  vec
 
-        cdef dict      state
-        cdef ptrdiff_t ptr
-        cdef str       attr
-        cdef bytearray mem   = bytearray(self._ad.memsize)
-        cdef char[::1] view  = mem
+        with nogil:
+            status = libhmmer.p7_alidisplay.p7_alidisplay_Serialize(self._ad, &buffer, &n, &nalloc)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_alidisplay_Serialize")
 
-        # copy numerical attributes
-        state = {
-            "N": self._ad.N,
-            "hmmfrom": self._ad.hmmfrom,
-            "hmmto": self._ad.hmmto,
-            "M": self._ad.M,
-            "sqfrom": self._ad.sqfrom,
-            "sqto": self._ad.sqto,
-            "L": self._ad.L,
-            "memsize": self._ad.memsize,
-        }
+        vec = VectorU8.__new__(VectorU8)
+        vec._owner = None
+        vec._n = vec._shape[0] = nalloc
+        vec._data = <void*> buffer
+        return vec
 
-        # copy allocated memory contents
-        memcpy(&view[0], self._ad.mem, self._ad.memsize*sizeof(char))
-        state["mem"] = mem
+    cpdef object __setstate__(self, uint8_t[::1] state):
+        cdef int      status
+        cdef uint32_t offset = 0
 
-        # copy pointers to allocated memory
-        for attr, ptr in [
-            ("rfline", <ptrdiff_t> self._ad.rfline),
-            ("mmline", <ptrdiff_t> self._ad.mmline),
-            ("csline", <ptrdiff_t> self._ad.csline),
-            ("model", <ptrdiff_t> self._ad.model),
-            ("mline", <ptrdiff_t> self._ad.mline),
-            ("aseq", <ptrdiff_t> self._ad.aseq),
-            ("ntseq", <ptrdiff_t> self._ad.ntseq),
-            ("ppline", <ptrdiff_t> self._ad.ppline),
-            ("hmmname", <ptrdiff_t> self._ad.hmmname),
-            ("hmmacc", <ptrdiff_t> self._ad.hmmacc),
-            ("hmmdesc", <ptrdiff_t> self._ad.hmmdesc),
-            ("sqname", <ptrdiff_t> self._ad.sqname),
-            ("sqacc", <ptrdiff_t> self._ad.sqacc),
-            ("sqdesc", <ptrdiff_t> self._ad.sqdesc),
-        ]:
-            if <void*> ptr == NULL:
-                state[attr] = None
-            else:
-                assert <ptrdiff_t> self._ad.mem <= ptr <= (<ptrdiff_t> self._ad.mem + self._ad.memsize)
-                state[attr] = ptr - <ptrdiff_t> self._ad.mem
+        if self._ad == NULL:
+            self.domain._dom.ad = self._ad = libhmmer.p7_alidisplay.p7_alidisplay_Create_empty()
+            if self._ad == NULL:
+                raise AllocationError("P7_ALIDISPLAY", sizeof(P7_ALIDISPLAY))
 
-        return state
-
-    cpdef object __setstate__(self, dict state):
-        assert self._ad != NULL
-        assert len(state["mem"]) == state["memsize"]
-
-        cdef char[::1] memview = state["mem"]
-
-        # setup numeric attributes
-        self._ad.N = state["N"]
-        self._ad.hmmfrom = state["hmmfrom"]
-        self._ad.hmmto = state["hmmto"]
-        self._ad.M = state["M"]
-        self._ad.sqfrom = state["sqfrom"]
-        self._ad.sqto = state["sqto"]
-        self._ad.L = state["L"]
-
-        # setup string storage
-        self._ad.memsize = state["memsize"]
-        if self._ad.mem == NULL:
-            self._ad.mem = <char*> calloc(state["memsize"], sizeof(char))
-        else:
-            self._ad.mem = <char*> realloc(self._ad.mem, state["memsize"]*sizeof(char))
-        if self._ad.mem == NULL:
-            raise AllocationError("char", sizeof(char), state["memsize"])
-        memcpy(self._ad.mem, &memview[0], state["memsize"] * sizeof(char))
-
-        # setup string pointers
-        if state["rfline"] is None:
-            self._ad.rfline = NULL
-        else:
-            self._ad.rfline  = self._ad.mem + <ptrdiff_t> state["rfline"]
-        if state["mmline"] is None:
-            self._ad.mmline = NULL
-        else:
-            self._ad.mmline  = self._ad.mem + <ptrdiff_t> state["mmline"]
-        if state["csline"] is None:
-            self._ad.csline = NULL
-        else:
-            self._ad.csline = self._ad.mem + <ptrdiff_t> state["csline"]
-        if state["model"] is None:
-            self._ad.model = NULL
-        else:
-            self._ad.model = self._ad.mem + <ptrdiff_t> state["model"]
-        if state["mline"] is None:
-            self._ad.mline = NULL
-        else:
-            self._ad.mline = self._ad.mem + <ptrdiff_t> state["mline"]
-        if state["aseq"] is None:
-            self._ad.aseq = NULL
-        else:
-            self._ad.aseq = self._ad.mem + <ptrdiff_t> state["aseq"]
-        if state["ntseq"] is None:
-            self._ad.ntseq = NULL
-        else:
-            self._ad.ntseq = self._ad.mem + <ptrdiff_t> state["ntseq"]
-        if state["ppline"] is None:
-            self._ad.ppline = NULL
-        else:
-            self._ad.ppline = self._ad.mem + <ptrdiff_t> state["ppline"]
-        if state["hmmname"] is None:
-            self._ad.hmmname = NULL
-        else:
-            self._ad.hmmname = self._ad.mem + <ptrdiff_t> state["hmmname"]
-        if state["hmmacc"] is None:
-            self._ad.hmmacc = NULL
-        else:
-            self._ad.hmmacc = self._ad.mem + <ptrdiff_t> state["hmmacc"]
-        if state["hmmdesc"] is None:
-            self._ad.hmmdesc = NULL
-        else:
-            self._ad.hmmdesc = self._ad.mem + <ptrdiff_t> state["hmmdesc"]
-        if state["sqname"] is None:
-            self._ad.sqname = NULL
-        else:
-            self._ad.sqname  = self._ad.mem + <ptrdiff_t> state["sqname"]
-        if state["sqacc"] is None:
-            self._ad.sqacc = NULL
-        else:
-            self._ad.sqacc   = self._ad.mem + <ptrdiff_t> state["sqacc"]
-        if state["sqdesc"] is None:
-            self._ad.sqdesc = NULL
-        else:
-            self._ad.sqdesc  = self._ad.mem + <ptrdiff_t> state["sqdesc"]
+        with nogil:
+            status = libhmmer.p7_alidisplay.p7_alidisplay_Deserialize(&state[0], &offset, self._ad)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_alidisplay_Deserialize")
 
     # --- Properties ---------------------------------------------------------
 
@@ -1459,7 +1359,7 @@ cdef class Domain:
 
         return state
 
-    cpdef object __setstate__(self, list state):
+    cpdef object __setstate__(self, dict state):
         assert self._dom != NULL
 
         cdef float[::1] view
@@ -1479,6 +1379,11 @@ cdef class Domain:
         self._dom.is_reported = state["is_reported"]
         self._dom.is_included = state["is_included"]
 
+        if self._dom.ad != NULL:
+            libhmmer.p7_alidisplay.p7_alidisplay_Destroy(self._dom.ad)
+        self._dom.ad = libhmmer.p7_alidisplay.p7_alidisplay_Create_empty()
+        if self._dom.ad == NULL:
+            raise AllocationError("P7_ALIDISPLAY", sizeof(P7_ALIDISPLAY))
         self.alignment.__setstate__(state["ad"])
 
         if state["scores_per_pos"] is None:
