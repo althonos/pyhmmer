@@ -230,6 +230,55 @@ cdef class Alignment:
 
         return buffer.getvalue().decode("ascii")
 
+    cpdef dict __getstate__(self):
+        assert self._ad != NULL
+
+        cdef dict      state
+        cdef ptrdiff_t ptr
+        cdef str       attr
+        cdef bytearray mem   = bytearray(self._ad.memsize)
+        cdef char[::1] view  = mem
+
+        # copy numerical attributes
+        state = {
+            "N": self._ad.N,
+            "hmmfrom": self._ad.hmmfrom,
+            "hmmto": self._ad.hmmto,
+            "M": self._ad.M,
+            "sqfrom": self._ad.sqfrom,
+            "sqto": self._ad.sqto,
+            "L": self._ad.L,
+            "memsize": self._ad.memsize,
+        }
+
+        # copy allocated memory contents
+        memcpy(&view[0], self._ad.mem, self._ad.memsize*sizeof(char))
+        state["mem"] = mem
+
+        # copy pointers to allocated memory
+        for attr, ptr in [
+            ("rfline", <ptrdiff_t> self._ad.rfline),
+            ("mmline", <ptrdiff_t> self._ad.mmline),
+            ("csline", <ptrdiff_t> self._ad.csline),
+            ("model", <ptrdiff_t> self._ad.model),
+            ("mline", <ptrdiff_t> self._ad.mline),
+            ("aseq", <ptrdiff_t> self._ad.aseq),
+            ("ntseq", <ptrdiff_t> self._ad.ntseq),
+            ("ppline", <ptrdiff_t> self._ad.ppline),
+            ("hmmname", <ptrdiff_t> self._ad.hmmname),
+            ("hmmacc", <ptrdiff_t> self._ad.hmmacc),
+            ("hmmdesc", <ptrdiff_t> self._ad.hmmdesc),
+            ("sqname", <ptrdiff_t> self._ad.sqname),
+            ("sqacc", <ptrdiff_t> self._ad.sqacc),
+            ("sqdesc", <ptrdiff_t> self._ad.sqdesc),
+        ]:
+            if <void*> ptr == NULL:
+                state[attr] = None
+            else:
+                assert <ptrdiff_t> self._ad.mem <= ptr <= (<ptrdiff_t> self._ad.mem + self._ad.memsize)
+                state[attr] = ptr - <ptrdiff_t> self._ad.mem
+
+        return state
 
     # --- Properties ---------------------------------------------------------
 
@@ -1293,6 +1342,39 @@ cdef class Domain:
         self._dom = &hit._hit.dcl[index]
         self.hit = hit
         self.alignment = Alignment(self)
+
+    cpdef dict __getstate__(self):
+        assert self._dom != NULL
+
+        cdef dict   state
+        cdef object scores_per_pos
+
+        state = {
+            "ienv": self._dom.ienv,
+            "jenv": self._dom.jenv,
+            "iali": self._dom.iali,
+            "jali": self._dom.jali,
+            "iorf": self._dom.iorf,
+            "jorf": self._dom.jorf,
+            "envsc": self._dom.envsc,
+            "domcorrection": self._dom.domcorrection,
+            "dombias": self._dom.dombias,
+            "oasc": self._dom.oasc,
+            "bitscore": self._dom.bitscore,
+            "lnP": self._dom.lnP,
+            "is_reported": self._dom.is_reported,
+            "is_included": self._dom.is_included,
+            "ad": self.alignment.__getstate__(),
+        }
+
+        if self._dom.scores_per_pos == NULL:
+            state["scores_per_pos"] = None
+        else:
+            state["scores_per_pos"] = scores_per_pos = array.array("f")
+            for i in range(self._dom.ad.N):
+                scores_per_pos.append(self._dom.scores_per_pos[i])
+
+        return state
 
     # --- Properties ---------------------------------------------------------
 

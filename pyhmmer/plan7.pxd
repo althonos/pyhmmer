@@ -41,6 +41,8 @@ cdef class Alignment:
     cdef readonly Domain domain
     cdef P7_ALIDISPLAY* _ad
 
+    cpdef dict __getstate__(self)
+
 
 cdef class Background:
     cdef readonly bint     uniform
@@ -87,6 +89,8 @@ cdef class Domain:
     cdef readonly Alignment alignment
     cdef readonly Hit hit
     cdef P7_DOMAIN* _dom
+
+    cpdef dict __getstate__(self)
 
 
 cdef class Domains:
