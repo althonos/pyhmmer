@@ -6,7 +6,28 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.6.1...HEAD
+
+
+## [v0.6.1] - 2022-06-28
+[v0.6.1]: https://github.com/althonos/pyhmmer/compare/v0.6.0...v0.6.1
+
+### Added
+- `pickle` protocol support for `TopHits` objects, using the HMMER network serialization.
+- `TopHits.write` method to write hits to a file in tabular format.
+- `query_name` and `query_accession` properties to `TopHits` objects to access the name and accession of the query that produced the hits.
+
+### Fixed
+- Extraction of filename from file-like objects in the `HMMFile` constructor.
+- Use `os.cpu_count` instead of `multiprocessing.cpu_count` where applicable to preserve OS scheduling.
+- Wrong return type in docstring of `HMM.insert_emissions`.
+- `TopHits.searched_nodes` returning the searched number of residues instead of the searched number of model nodes.
+- Unsound decoding of pickled `MatrixF` or `VectorF` when data comes from a source of different endianness.
+
+### Changed
+- Rewrite `pyhmmer.hmmer` threading code using `Deque` instead of `collections.Queue` to store the queries and results.
+- Reduce memory consumption of `pyhmmer.hmmer` by reducing the number of semaphores and event flags used concurrently.
+- Make `pyhmmer.hmmer` main threads block on query insertion rather than result retrieval to make sure worker threads are never idling.
 
 
 ## [v0.6.0] - 2022-05-01

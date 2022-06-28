@@ -197,6 +197,9 @@ cdef class Alignment:
     Attributes:
         domain (`Domain`): The domain this alignment corresponds to.
 
+    .. versionadded:: 0.6.1
+       `pickle` protocol support.
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -1318,6 +1321,9 @@ cdef class Domain:
         alignment (`~pyhmmer.plan7.Alignment`): The alignment of this domain
             to a target sequence.
 
+    .. versionadded:: 0.6.1
+       `pickle` protocol support.
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -1625,6 +1631,10 @@ cdef class EvalueParameters:
 
 cdef class Hit:
     """A high-scoring database hit found by the comparison pipeline.
+
+    .. versionadded:: 0.6.1
+       `pickle` protocol support.
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -6287,6 +6297,9 @@ cdef class TopHits:
         1
         >>> hits[0].name
         b'938293.PRJEB85.HG003687_113'
+
+    .. versionadded:: 0.6.1
+       `pickle` protocol support.
 
     """
 
