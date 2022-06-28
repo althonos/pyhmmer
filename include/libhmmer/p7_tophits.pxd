@@ -62,8 +62,8 @@ cdef extern from "hmmer.h" nogil:
     int p7_tophits_Alignment(const P7_TOPHITS *th, const ESL_ALPHABET *abc,
     				ESL_SQ **inc_sqarr, P7_TRACE **inc_trarr, int inc_n, int optflags,
     				ESL_MSA **ret_msa)
-    int p7_tophits_TabularTargets(FILE *ofp, char *qname, char *qacc, P7_TOPHITS *th, P7_PIPELINE *pli, int show_header)
-    int p7_tophits_TabularDomains(FILE *ofp, char *qname, char *qacc, P7_TOPHITS *th, P7_PIPELINE *pli, int show_header)
+    int p7_tophits_TabularTargets(FILE *ofp, char *qname, char *qacc, P7_TOPHITS *th, P7_PIPELINE *pli, int show_header) except *
+    int p7_tophits_TabularDomains(FILE *ofp, char *qname, char *qacc, P7_TOPHITS *th, P7_PIPELINE *pli, int show_header) except *
     int p7_tophits_TabularXfam(FILE *ofp, char *qname, char *qacc, P7_TOPHITS *th, P7_PIPELINE *pli)
     int p7_tophits_TabularTail(FILE *ofp, const char *progname, p7_pipemodes_e pipemode,
     				  const char *qfile, const char *tfile, const ESL_GETOPTS *go)

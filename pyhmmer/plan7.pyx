@@ -7038,6 +7038,83 @@ cdef class TopHits:
             free(sqarr)
             free(trarr)
 
+    cpdef void write(self, object fh, str format="targets", bint header=True) except *:
+        """write(self, fh, format="targets", header=True)\n--
+
+        Write the hits in tabular format to a file-like object.
+
+        Arguments:
+            fh (`io.IOBase`): A Python file handle, opened in binary mode.
+            format (`str`): The tabular format in which to write the hits.
+            header (`bool`): Whether to write a table header. Ignored
+                when writing in the ``pfam`` format.
+
+        Hint:
+            The hits can be written in one of the following formats:
+
+            ``targets``
+              A tabular output format of per-target hits, as obtained
+              with the ``--tblout`` output flag of ``hmmsearch`` or
+              ``hmmscan``.
+
+            ``domains``
+              A tabular output format of per-domain hits, as obtained
+              with the ``--domtblout`` output flag of ``hmmsearch`` or
+              ``hmmscan``.
+
+            ``pfam``
+              A tabular output format suitable for Pfam, merging per-sequence
+              and per-domain hits in a single file, with fewer fields and
+              sorted by score.
+
+        .. versionadded:: 0.6.1
+
+        """
+        cdef FILE* file
+        cdef str   fname
+        cdef int   status
+        cdef char* unk    = b"-"
+        cdef char* qname  = unk if self._qname is None else <char*> self._qname
+        cdef char* qacc   = unk if self._qacc is None else <char*> self._qacc
+
+        file = fopen_obj(fh, mode="w")
+        try:
+            if format == "targets":
+                fname = "p7_tophits_TabularTargets"
+                status = libhmmer.p7_tophits.p7_tophits_TabularTargets(
+                    file,
+                    qname,
+                    qacc,
+                    self._th,
+                    &self._pli,
+                    header
+                )
+            elif format == "domains":
+                fname = "p7_tophits_TabularDomains"
+                status = libhmmer.p7_tophits.p7_tophits_TabularDomains(
+                    file,
+                    qname,
+                    qacc,
+                    self._th,
+                    &self._pli,
+                    header
+                )
+            elif format == "pfam":
+                fname = "p7_tophits_TabularXfam"
+                status = libhmmer.p7_tophits.p7_tophits_TabularXfam(
+                    file,
+                    qname,
+                    qacc,
+                    self._th,
+                    &self._pli,
+                )
+            else:
+                raise ValueError("Invalid hits tabular format: {!r}".format(format))
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, fname)
+        finally:
+            fclose(file)
+
     def merge(self, *others):
         """merge(self, *others)\n--
 

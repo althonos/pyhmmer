@@ -320,6 +320,7 @@ cdef class TopHits:
     cpdef bint is_sorted(self, str by=*) except *
     cpdef void sort(self, str by=*) except *
     cpdef MSA to_msa(self, Alphabet alphabet, list sequences=?, list traces=?, bint trim=*, bint digitize=?, bint all_consensus_cols=?)
+    cpdef void write(self, object fh, str format=*, bint header=*) except *
 
 
 cdef class Trace:
