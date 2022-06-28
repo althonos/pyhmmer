@@ -255,3 +255,25 @@ class TestTopHits(unittest.TestCase):
 
     def test_query_accession(self):
         self.assertEqual(self.hits.query_accession, self.hmm.accession)
+
+    def test_write_target(self):
+        buffer = io.BytesIO()
+        self.hits.write(buffer, format="targets")
+        lines = buffer.getvalue().decode().splitlines()
+
+        expected = pkg_resources.resource_string("pyhmmer.tests", "data/tables/PF02826.tbl").decode().splitlines()
+        while expected[-1].startswith("#"):
+            expected.pop()
+
+        self.assertMultiLineEqual("\n".join(lines), "\n".join(expected))
+
+    def test_write_domains(self):
+        buffer = io.BytesIO()
+        self.hits.write(buffer, format="domains")
+        lines = buffer.getvalue().decode().splitlines()
+
+        expected = pkg_resources.resource_string("pyhmmer.tests", "data/tables/PF02826.domtbl").decode().splitlines()
+        while expected[-1].startswith("#"):
+            expected.pop()
+
+        self.assertMultiLineEqual("\n".join(lines), "\n".join(expected))
