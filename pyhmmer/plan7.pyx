@@ -13,7 +13,7 @@ See Also:
 # --- C imports --------------------------------------------------------------
 
 cimport cython
-from cpython.bytes cimport PyBytes_FromStringAndSize
+from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_FromString
 from cpython.list cimport PyList_New, PyList_SET_ITEM
 from cpython.ref cimport PyObject
 from cpython.exc cimport PyErr_Clear
@@ -4821,6 +4821,11 @@ cdef class Pipeline:
             hits._sort_by_key()
             hits._threshold(self)
 
+        # record the query name and accession
+        hits._qname = PyBytes_FromString(om.name)
+        if om.acc != NULL:
+            hits._qacc = PyBytes_FromString(om.acc)
+
         # return the hits
         return hits
 
@@ -5059,6 +5064,12 @@ cdef class Pipeline:
             hmms_iter,
             hmm.alphabet
         )
+
+        # record the query name
+        if query._sq.name != NULL:
+            hits._qname = PyBytes_FromString(query._sq.name)
+        if query._sq.acc != NULL:
+            hits._qacc = PyBytes_FromString(query._sq.acc)
 
         # threshold hits
         hits._sort_by_key()
@@ -6283,6 +6294,8 @@ cdef class TopHits:
 
     def __cinit__(self):
         self._th = NULL
+        self._qname = None
+        self._qacc = None
         memset(&self._pli, 0, sizeof(P7_PIPELINE))
 
     def __init__(self):
@@ -6346,6 +6359,8 @@ cdef class TopHits:
             hits.append(offset)
 
         return {
+            "qname": self._qname,
+            "qacc": self._qacc,
             "unsrt": unsrt,
             "hit": hits,
             "Nalloc": self._th.Nalloc,
@@ -6409,6 +6424,10 @@ cdef class TopHits:
         cdef uint32_t n
         cdef size_t   offset
         cdef VectorU8 hit_state
+
+        # record query name and accession
+        self._qname = state["qname"]
+        self._qacc = state["qacc"]
 
         # deallocate current data if needed
         if self._th != NULL:
@@ -6500,6 +6519,24 @@ cdef class TopHits:
         self._pli.block_length = state["pipeline"]["block_length"]
 
     # --- Properties ---------------------------------------------------------
+
+    @property
+    def query_name(self):
+        """`bytes` or `None`: The name of the query, if any.
+
+        .. versionadded:: 0.6.1
+
+        """
+        return self._qname
+
+    @property
+    def query_accession(self):
+        """`bytes` or `None`: The accession of the query, if any.
+
+        .. versionadded:: 0.6.1
+
+        """
+        return self._qacc
 
     @property
     def Z(self):
@@ -6735,9 +6772,15 @@ cdef class TopHits:
         cdef P7_DOMAIN* dom_copy
         cdef TopHits    copy     = TopHits.__new__(TopHits)
 
+        # record query name and accession
+        copy._qname = self._qname
+        copy._qacc = self._qacc
+
         # WARN(@althonos): there is no way to do this in the HMMER codebase
         #                  so this is a manual implementation; make sure
         #                  that it stays consistent if P7_TOPHITS changes!
+        # TODO(@althonos): Replace with `p7_tophits_Clone` as implemented
+        #                  in EddyRivasLab/hmmer#273 when formally released.
         with nogil:
             # copy pipeline configuration
             memcpy(&copy._pli, &self._pli, sizeof(P7_PIPELINE))
@@ -7053,6 +7096,14 @@ cdef class TopHits:
                 raise ValueError("Trying to merge `TopHits` with `domZ` values obtained with different methods.")
             elif self._pli.domZ_setby != p7_zsetby_e.p7_ZSETBY_NTARGETS and self._pli.domZ != other._pli.domZ:
                 raise ValueError("Trying to merge `TopHits` obtained from pipelines manually configured to different `domZ` values.")
+
+            # copy query name and accession if merging into an empty, otherwise
+            # check that names/accessions are consistent
+            if merged._th.N == 0:
+                merged._qname = other._qname
+                merged._qacc = other._qacc
+            elif merged._qname != other._qname or merged._qacc != other._qacc:
+                raise ValueError("Trying to merge `TopHits` obtained from different queries")
 
             # copy hits (`p7_tophits_Merge` effectively destroys the old storage
             # but because of Python references we cannot be sure that the data is

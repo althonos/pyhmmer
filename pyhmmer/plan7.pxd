@@ -305,6 +305,8 @@ cdef class TopHits:
     #                  computed and thresholding can be done correctly.
     cdef P7_PIPELINE _pli
     cdef P7_TOPHITS* _th
+    cdef bytes       _qname
+    cdef bytes       _qacc
 
     cpdef dict __getstate__(self)
     cpdef object __setstate__(self, dict state)
@@ -313,10 +315,10 @@ cdef class TopHits:
     cdef int _sort_by_key(self) nogil except 1
     cdef int _sort_by_seqidx(self) nogil except 1
 
-    cpdef void sort(self, str by=*) except *
-    cpdef bint is_sorted(self, str by=*) except *
-    cpdef int compare_ranking(self, KeyHash) except -1
     cpdef TopHits copy(self)
+    cpdef int compare_ranking(self, KeyHash) except -1
+    cpdef bint is_sorted(self, str by=*) except *
+    cpdef void sort(self, str by=*) except *
     cpdef MSA to_msa(self, Alphabet alphabet, list sequences=?, list traces=?, bint trim=*, bint digitize=?, bint all_consensus_cols=?)
 
 

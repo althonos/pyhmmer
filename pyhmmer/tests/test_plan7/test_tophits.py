@@ -75,6 +75,8 @@ class TestTopHits(unittest.TestCase):
             self.assertDomainEqual(d1, d2)
 
     def assertHitsEqual(self, hits1, hits2):
+        self.assertEqual(hits1.query_name, hits2.query_name)
+        self.assertEqual(hits1.query_accession, hits2.query_accession)
         self.assertEqual(len(hits1), len(hits2))
         for h1, h2 in zip(hits1, hits2):
             self.assertHitEqual(h1, h2)
@@ -247,3 +249,9 @@ class TestTopHits(unittest.TestCase):
     def test_pickle(self):
         pickled = pickle.loads(pickle.dumps(self.hits))
         self.assertHitsEqual(pickled, self.hits)
+
+    def test_query_name(self):
+        self.assertEqual(self.hits.query_name, self.hmm.name)
+
+    def test_query_accession(self):
+        self.assertEqual(self.hits.query_accession, self.hmm.accession)
