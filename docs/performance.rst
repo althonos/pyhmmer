@@ -4,21 +4,21 @@ Performance
 Background
 ----------
 
-Benchmarks of pyHMMER conducted against the ``hmmsearch`` and ``hmmscan`` binaries
+Benchmarks of PyHMMER conducted against the ``hmmsearch`` and ``hmmscan`` binaries
 suggest that running a domain search pipeline takes about the same time in
 single-threaded mode, and are faster when the right number of CPUs is used.
 
 This comes from several changes in the implementation of the search pipeline
-with the pyHMMER API compared to the original HMMER C code, both of which have
+with the PyHMMER API compared to the original HMMER C code, both of which have
 absolutely no effect on the final result.
 
 
 Parallelisation strategy
 ------------------------
 
-Both pyHMMER and HMMER support searching / scanning several targets with
+Both PyHMMER and HMMER support searching / scanning several targets with
 several queries in parallel using multithreading. However, benchmarks suggest
-that pyHMMER takes a greater advantage of the number of available CPUs.
+that PyHMMER takes a greater advantage of the number of available CPUs.
 
 Querying modes
 ^^^^^^^^^^^^^^
@@ -47,7 +47,7 @@ sequence targets in either of two modes:
 
 Although the threaded mode removes the potential I/O bottleneck, it only works for
 a sufficiently large number of targets (:math:`1000 \times n_{cpus}`). To achieve
-true parallelism, pyHMMER improves on the threaded mode by switching the worker
+true parallelism, PyHMMER improves on the threaded mode by switching the worker
 thread logic. Target sequences are pre-fetched in memory before looping
 over the queries, and are passed by reference to all the worker threads. Each
 worker then receives a HMM from the main thread, and process the entirety of
@@ -58,8 +58,8 @@ other before moving on to the next query**.
 
 .. admonition:: Note
 
-    Obviously, the pyHMMER parallelisation strategy will only work for multiple
-    queries. But one main motivation to develop pyHMMER was to annotate protein
+    Obviously, the PyHMMER parallelisation strategy will only work for multiple
+    queries. But one main motivation to develop PyHMMER was to annotate protein
     sequences with a subset of the `Pfam <http://pfam.xfam.org/>`_ HMM library,
     which is why we benchmark this particular use case.
 
@@ -71,7 +71,7 @@ other before moving on to the next query**.
 Example
 ^^^^^^^
 
-To check how well pyHMMER and HMMER3 handle parallelism on a real dataset,
+To check how well PyHMMER and HMMER3 handle parallelism on a real dataset,
 we annotated proteins from representative genomes of the
 `proGenomes <https://progenomes.embl.de/>`_ database with the
 `Pfam <http://pfam.xfam.org/>`_ collection of HMMs. ``hmmsearch`` runs
@@ -87,8 +87,8 @@ and we measured the runtime of either the* ``hmmsearch`` *binary or the*
 Memory allocation
 -----------------
 
-pyHMMER is slightly more conservative with memory: in several places where
-the original HMMER binary would reallocate memory within loops, pyHMMER tries
+PyHMMER is slightly more conservative with memory: in several places where
+the original HMMER binary would reallocate memory within loops, PyHMMER tries
 to simply clear the original buffers instead to allow reusing a previous
 object.
 
@@ -119,7 +119,7 @@ For instance, the ``hmmsearch`` binary will reallocate a new ``P7_PROFILE`` and
 These ``struct`` are not so large by themselves, but they in turn allocate a
 buffer of sufficient size to store the :math:`N` nodes of a HMM.
 
-In pyHMMER, the pipeline will cache memory to be used for the profile and optimized
+In PyHMMER, the pipeline will cache memory to be used for the profile and optimized
 profiles, and only reallocate if the new HMM to be processed is larger than what the
 currently cached ``P7_OPROFILE`` can store.
 

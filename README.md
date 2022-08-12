@@ -1,4 +1,4 @@
-# 🐍🟡♦️🟦 pyHMMER [![Stars](https://img.shields.io/github/stars/althonos/pyhmmer.svg?style=social&maxAge=3600&label=Star)](https://github.com/althonos/pyhmmer/stargazers)
+# 🐍🟡♦️🟦 PyHMMER [![Stars](https://img.shields.io/github/stars/althonos/pyhmmer.svg?style=social&maxAge=3600&label=Star)](https://github.com/althonos/pyhmmer/stargazers)
 
 *[Cython](https://cython.org/) bindings and Python interface to [HMMER3](http://hmmer.org/).*
 
@@ -159,7 +159,7 @@ A possible explanation for this observation would be that HMMER
 platform-specific code requires too many [SIMD](https://en.wikipedia.org/wiki/SIMD)
 registers per thread to benefit from [simultaneous multi-threading](https://en.wikipedia.org/wiki/Simultaneous_multithreading).
 
-To read more about how pyHMMER achieves better parallelism than HMMER for
+To read more about how PyHMMER achieves better parallelism than HMMER for
 many-to-many searches, have a look at the [Performance page](https://pyhmmer.readthedocs.io/en/stable/performance.html)
 of the documentation.
 

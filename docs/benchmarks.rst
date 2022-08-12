@@ -50,7 +50,7 @@ v0.4.0 - 2021-06-05
 
 .. image:: _images/bench-v0.4.0.svg
 
-The overhead of pyHMMER has been reduced, and has a much smaller effect when
+The overhead of PyHMMER has been reduced, and has a much smaller effect when
 using a high number of threads.
 
 The main thread has been updated so that it only loads the next `pyhmmer.plan7.HMM`
@@ -79,5 +79,5 @@ total number of physical CPUs (6 cores). This could be a hint of hindrance
 between the different threads.
 
 Loading from a pressed HMM saves a constant time, independently of the number
-of threads. pyHMMER also has a constant overhead compared to HMMER for a
+of threads. PyHMMER also has a constant overhead compared to HMMER for a
 higher number of threads.
