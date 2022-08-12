@@ -2889,6 +2889,30 @@ cdef class HMM:
 
 cdef class HMMFile:
     """A wrapper around a file (or database), storing serialized HMMs.
+
+    You can use this class to iterate on the HMMs inside a file,
+    loading them into `~pyhmmer.plan7.HMM` objects.
+
+    Example:
+        Load the first HMM from an HMM file located on the
+        local filesystem::
+
+            >>> with HMMFile("tests/data/hmms/txt/PF02826.hmm") as hmm_file:
+            ...     hmm = hmm_file.read()
+            >>> hmm.name
+            b'2-Hacid_dh_C'
+            >>> hmm.accession
+            b'PF02826.20'
+
+        Load all the HMMs from an HMM file into a `list`::
+
+            >>> with HMMFile("tests/data/hmms/txt/t2pks.hmm") as hmm_file:
+            ...     hmms = list(hmm_file)
+            >>> len(hmms)
+            40
+            >>> hmms[0].name
+            b'CLF'
+
     """
 
     _FORMATS = dict(HMM_FILE_FORMATS)
@@ -3003,9 +3027,9 @@ cdef class HMMFile:
         Create a new HMM reader from the given file.
 
         Arguments:
-            file (`str` or file-like object): Either the path to a file
-                containing the HMMs to read, or a file-like object opened in
-                **binary mode**.
+            file (`str`, `bytes`, `os.PathLike` or file-like object): Either
+                the path to a file containing the HMMs to read, or a
+                file-like object in **binary mode**.
             db (`bool`): Set to `False` to force the parser to ignore the
                 pressed HMM database if it finds one. Defaults to `True`.
 
