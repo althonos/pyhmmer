@@ -1,5 +1,12 @@
 # coding: utf-8
-"""Reimplementation of HMMER binaries with the pyHMMER API.
+"""Reimplementation of HMMER binaries with the PyHMMER API.
+
+Note:
+    Functions of this module handle parallelization using threads to run
+    searches in parallel for the different queries. If less queries are
+    given, the number of threads will be reduced to avoid spawning idle
+    threads.
+
 """
 
 import abc
@@ -8,12 +15,13 @@ import collections
 import ctypes
 import itertools
 import io
-import queue
-import time
-import threading
-import typing
-import os
 import multiprocessing
+import os
+import operator
+import queue
+import threading
+import time
+import typing
 
 import psutil
 
@@ -264,15 +272,25 @@ class _Search(typing.Generic[_Q], abc.ABC):
         **options # type: object
     ) -> None:
         self.queries: typing.Iterable[_Q] = queries
-        self.cpus = cpus
         self.callback: typing.Optional[typing.Callable[[_Q, int], None]] = callback
         self.options = options
         self.pipeline_class = pipeline_class
         self.alphabet = alphabet
+
+        # build an efficient collection to handle the search targets
         if isinstance(sequences, PipelineSearchTargets):
             self.sequences = sequences
         else:
             self.sequences = PipelineSearchTargets(sequences)
+
+        # make sure a positive number of CPUs is requested
+        if cpus <= 0:
+            raise ValueError("`cpus` must be strictly positive, not {!r}".format(cpus))
+
+        # reduce the number of threads if there are less queries (at best
+        # use one thread by query)
+        hint = operator.length_hint(queries)
+        self.cpus = min(cpus, hint) if hint > 0 else cpus
 
     @abc.abstractmethod
     def _new_thread(
@@ -488,9 +506,15 @@ def hmmsearch(
         `~pyhmmer.errors.AlphabetMismatch`: When any of the query HMMs
         and the sequences do not share the same alphabet.
 
-    Note:
+    Hint:
         Any additional arguments passed to the `hmmsearch` function will be
         passed transparently to the `~pyhmmer.plan7.Pipeline` to be created.
+        For instance, to run a ``hmmsearch`` using a bitscore cutoffs of
+        5 instead of the default E-value cutoff, use::
+
+            >>> hits = next(hmmsearch([thioesterase], proteins, T=5))
+            >>> hits[0].score
+            8.601...
 
     .. versionadded:: 0.1.0
 
@@ -536,7 +560,7 @@ def phmmer(
         `~pyhmmer.plan7.TopHits`: A *top hits* instance for each query,
         in the same order the queries were passed in the input.
 
-    Note:
+    Hint:
         Any additional keyword arguments passed to the `phmmer` function
         will be passed transparently to the `~pyhmmer.plan7.Pipeline` to
         be created in each worker thread.
@@ -612,13 +636,13 @@ def nhmmer(
         `~pyhmmer.plan7.TopHits`: A *top hits* instance for each query,
         in the same order the queries were passed in the input.
 
-    Note:
+    Hint:
         Any additional keyword arguments passed to the `nhmmer` function
         will be passed to the `~pyhmmer.plan7.LongTargetsPipeline` created
         in each worker thread. The ``strand`` argument can be used to
         restrict the search on the direct or reverse strand.
 
-    Hint:
+    Caution:
         This function is not just `phmmer` for nucleotide sequences; it
         actually uses a `~pyhmmer.plan7.LongTargetsPipeline` internally
         instead of processing each target sequence in its entirety when
