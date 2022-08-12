@@ -6,7 +6,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.6.2...HEAD
+
+
+## [v0.6.2] - 2022-08-12
+[v0.6.2]: https://github.com/althonos/pyhmmer/compare/v0.6.1...v0.6.2
+
+### Changed
+- `hmmsearch`, `phmmer` and `nhmmer` functions will reduce the requested number of threads to the number of queries, if it can be detected using `operator.length_hint`.
+
+### Added
+- Documentation for loading all HMMs from an `HMMFile` object at once ([#23](https://github.com/althonos/pyhmmer/issues/23)).
+- List of projects depending on PyHMMER to the `Examples` page of the documentation.
 
 
 ## [v0.6.1] - 2022-06-28
