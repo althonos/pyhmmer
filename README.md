@@ -166,9 +166,15 @@ of the documentation.
 
 ## 🔍 See Also
 
-If despite of all the advantages listed earlier, you would rather use HMMER through its CLI,
-this package will not be of great help. You should then check the
-[`hmmer-py`](https://github.com/EBI-Metagenomics/hmmer-py) package developed
+Building a HMM from scratch? Then you may be interested in the [`pyfamsa`](https://pypi.org/project/pyfamsa/)
+package, providing bindings to [FAMSA](https://github.com/refresh-bio/FAMSA),
+a very fast multiple sequence aligner. In addition, you may want to trim alignments:
+in that case, consider [`pytrimal`](https://pypi.org/project/pytrimal), which
+wraps [trimAl 2.0](https://github.com/inab/trimal/tree/2.0_RC).
+
+If despite of all the advantages listed earlier, you would rather use HMMER
+through its CLI, this package will not be of great help. You can instead check
+the [`hmmer-py`](https://github.com/EBI-Metagenomics/hmmer-py) package developed
 by [Danilo Horta](https://github.com/horta) at the [EMBL-EBI](https://www.ebi.ac.uk).
 
 
