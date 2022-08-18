@@ -13,6 +13,10 @@ from ..utils import EASEL_FOLDER
 
 class TestSequenceFile(unittest.TestCase):
 
+    def test_guess_alphabet_empty_sequence(self):
+        buffer = io.BytesIO(b">seq1\n\n")
+        self.assertRaises(ValueError, easel.SequenceFile, buffer, format="fasta", digital=True)
+
     def test_init_error_unknownformat(self):
         with self.assertRaises(ValueError):
             _file = easel.SequenceFile("file.x", format="nonsense")

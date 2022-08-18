@@ -13,6 +13,10 @@ from ..utils import EASEL_FOLDER
 
 class TestMSAFile(unittest.TestCase):
 
+    def test_guess_alphabet_empty_sequence(self):
+        buffer = io.BytesIO(b">seq1\n\n")
+        self.assertRaises(ValueError, easel.MSAFile, buffer, format="afa", digital=True)
+
     @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_init_error_unknownformat(self):
         stockholm = os.path.join(EASEL_FOLDER, "formats", "stockholm.1")

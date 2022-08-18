@@ -3911,7 +3911,7 @@ cdef class MSAFile:
             alphabet = Alphabet.__new__(Alphabet)
             alphabet._init_default(ty)
             return alphabet
-        elif status == libeasel.eslENOALPHABET:
+        elif status == libeasel.eslENOALPHABET or status == libeasel.eslEOD:
             return None
         elif status == libeasel.eslENODATA:
             raise EOFError("Sequence file appears to be empty.")
@@ -5362,7 +5362,7 @@ cdef class SequenceFile:
             alphabet = Alphabet.__new__(Alphabet)
             alphabet._init_default(ty)
             return alphabet
-        elif status == libeasel.eslENOALPHABET:
+        elif status == libeasel.eslENOALPHABET or status == libeasel.eslEOD:
             return None
         elif status == libeasel.eslENODATA:
             raise EOFError("Sequence file appears to be empty.")
