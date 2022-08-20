@@ -3881,9 +3881,18 @@ cdef class MSAFile:
             raise ValueError("I/O operation on closed file.")
         return MSA_FILE_FORMATS_INDEX[self._msaf.format]
 
-    # --- Utils --------------------------------------------------------------
+    # --- Methods ------------------------------------------------------------
 
-    cdef Alphabet guess_alphabet(self):
+    cpdef void close(self):
+        """close(self)\n--
+
+        Close the file and free the resources used by the parser.
+
+        """
+        libeasel.msafile.esl_msafile_Close(self._msaf)
+        self._msaf = NULL
+
+    cpdef Alphabet guess_alphabet(self):
         """guess_alphabet(self)\n--
 
         Guess the alphabet of an open `MSAFile`.
@@ -3896,6 +3905,11 @@ cdef class MSAFile:
             `EOFError`: if the file is empty.
             `OSError`: if a parse error occurred.
             `ValueError`: if this methods is called after the file was closed.
+
+        Example:
+            >>> with MSAFile("tests/data/msa/laccase.clw") as mf:
+            ...     mf.guess_alphabet()
+            pyhmmer.easel.Alphabet.amino()
 
         """
         cdef int      ty
@@ -3920,17 +3934,6 @@ cdef class MSAFile:
             raise ValueError("Could not parse file: {}".format(msg))
         else:
             raise UnexpectedError(status, "esl_msafile_GuessAlphabet")
-
-    # --- Methods ------------------------------------------------------------
-
-    cpdef void close(self):
-        """close(self)\n--
-
-        Close the file and free the resources used by the parser.
-
-        """
-        libeasel.msafile.esl_msafile_Close(self._msaf)
-        self._msaf = NULL
 
     cpdef MSA read(self):
         """read(self)\n--
@@ -5331,9 +5334,18 @@ cdef class SequenceFile:
             raise ValueError("I/O operation on closed file.")
         return SEQUENCE_FILE_FORMATS_INDEX[self._sqfp.format]
 
-    # --- Utils --------------------------------------------------------------
+    # --- Methods ------------------------------------------------------------
 
-    cdef Alphabet guess_alphabet(self):
+    cpdef void close(self):
+        """close(self)\n--
+
+        Close the file and free the resources used by the parser.
+
+        """
+        libeasel.sqio.esl_sqfile_Close(self._sqfp)
+        self._sqfp = NULL
+
+    cpdef Alphabet guess_alphabet(self):
         """guess_alphabet(self)\n--
 
         Guess the alphabet of an open `SequenceFile`.
@@ -5345,7 +5357,17 @@ cdef class SequenceFile:
         Raises:
             `EOFError`: if the file is empty.
             `OSError`: if a parse error occurred.
-            `ValueError`: if this methods is called after the file was closed.
+            `ValueError`: if this methods is called on a closed file.
+
+        Example:
+            >>> with SequenceFile("tests/data/seqs/bmyD.fna") as sf:
+            ...     sf.guess_alphabet()
+            pyhmmer.easel.Alphabet.dna()
+            >>> with SequenceFile("tests/data/seqs/LuxC.faa") as sf:
+            ...     sf.guess_alphabet()
+            pyhmmer.easel.Alphabet.amino()
+
+        .. versionadded:: 0.6.3
 
         """
         cdef int         ty
@@ -5372,17 +5394,6 @@ cdef class SequenceFile:
             raise ValueError("Could not parse file: {}".format(msg))
         else:
             raise UnexpectedError(status, "esl_sqfile_GuessAlphabet")
-
-    # --- Methods ------------------------------------------------------------
-
-    cpdef void close(self):
-        """close(self)\n--
-
-        Close the file and free the resources used by the parser.
-
-        """
-        libeasel.sqio.esl_sqfile_Close(self._sqfp)
-        self._sqfp = NULL
 
     cpdef Sequence read(self, bint skip_info=False, bint skip_sequence=False):
         """read(self, skip_info=False, skip_sequence=False)\n--

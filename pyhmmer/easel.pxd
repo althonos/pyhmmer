@@ -151,10 +151,10 @@ cdef class MSAFile:
 
     @staticmethod
     cdef ESL_MSAFILE* _open_fileobj(object fh, int fmt) except NULL
-    cdef Alphabet guess_alphabet(self)
 
-    cpdef MSA read(self)
     cpdef void close(self)
+    cpdef Alphabet guess_alphabet(self)
+    cpdef MSA read(self)
 
 
 # --- Randomness -------------------------------------------------------------
@@ -205,9 +205,9 @@ cdef class SequenceFile:
 
     @staticmethod
     cdef ESL_SQFILE* _open_fileobj(object fh, int fmt) except NULL
-    cdef Alphabet guess_alphabet(self)
 
     cpdef void close(self)
+    cpdef Alphabet guess_alphabet(self)
     cpdef Sequence read(self, bint skip_info=*, bint skip_sequence=*)
     cpdef Sequence readinto(self, Sequence, bint skip_info=*, bint skip_sequence=*)
 
