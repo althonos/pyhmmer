@@ -33,6 +33,7 @@ from libc.stdio cimport fclose
 from libc.stdlib cimport calloc, malloc, realloc, free
 from libc.string cimport memcmp, memcpy, memmove, strdup, strlen, strncpy
 from posix.types cimport off_t
+from unicode cimport PyUnicode_New, PyUnicode_DATA, PyUnicode_KIND, PyUnicode_WRITE, PyUnicode_READY, PyUnicode_READ, Py_UCS4
 
 cimport libeasel
 cimport libeasel.alphabet
@@ -198,11 +199,8 @@ cdef class Alphabet:
         alphabet._init_default(libeasel.alphabet.eslRNA)
         return alphabet
 
-    # def __init__(self, str alphabet, int K, int Kp):
-    #     buffer = alphabet.encode('ascii')
-    #     self._alphabet = libeasel.alphabet.esl_alphabet_CreateCustom(<char*> buffer, K, Kp)
-    #     if not self._alphabet:
-    #         raise AllocationError("ESL_ALPHABET")
+    def __init__(self):
+        raise TypeError("Cannot instantiate an alphabet directly")
 
     # --- Magic methods ------------------------------------------------------
 
@@ -344,6 +342,91 @@ cdef class Alphabet:
              self._abc.type == libeasel.alphabet.eslDNA
           or self._abc.type == libeasel.alphabet.eslRNA
         )
+
+    cpdef VectorU8 encode(self, str sequence):
+        """encode(self, sequence)\n--
+
+        Encode a text sequence into its digital representation.
+
+        Arguments:
+            sequence (`str`): A raw sequence in text format.
+
+        Returns:
+            `~pyhmmer.easel.VectorU8`: A raw sequence in digital format.
+
+        Example:
+            >>> alphabet = easel.Alphabet.dna()
+            >>> alphabet.encode("ACGT")
+            pyhmmer.easel.VectorU8([0, 1, 2, 3])
+
+        .. versionadded:: 0.6.3
+
+        """
+        assert self._abc != NULL
+
+        # make sure the unicode string is in canonical form,
+        # --> won't be needed anymore in Python 3.12
+        IF SYS_VERSION_INFO_MAJOR <= 3 and SYS_VERSION_INFO_MINOR < 12:
+            PyUnicode_READY(sequence)
+
+        cdef size_t   i
+        cdef Py_UCS4  c
+        cdef size_t   length  = len(sequence)
+        cdef int      kind    = PyUnicode_KIND(sequence)
+        cdef void*    data    = PyUnicode_DATA(sequence)
+        cdef VectorU8 encoded = VectorU8.zeros(length)
+        cdef uint8_t* buffer  = <uint8_t*> encoded._data
+
+        with nogil:
+            for i in range(length):
+                c = PyUnicode_READ(kind, data, i)
+                if libeasel.alphabet.esl_abc_CIsValid(self._abc, c):
+                    buffer[i] = libeasel.alphabet.esl_abc_DigitizeSymbol(self._abc, c)
+                else:
+                    raise ValueError(f"Invalid alphabet character in text sequence: {c}")
+
+        return encoded
+
+
+    cpdef str decode(self, const libeasel.ESL_DSQ[::1] sequence):
+        """decode(self, sequence)\n--
+
+        Decode a digital sequence into its textual representation.
+
+        Arguments:
+            sequence (`~pyhmmmer.easel.VectorU8`): A raw sequence in digital
+                format.
+
+        Returns:
+            `str`: A raw sequence in textual format.
+
+        Example:
+            >>> alphabet = easel.Alphabet.amino()
+            >>> dseq = easel.VectorU8([0, 4, 2, 17, 3, 13, 0, 0, 5])
+            >>> alphabet.decode(dseq)
+            'AFDVEQAAG'
+
+        .. versionadded:: 0.6.3
+
+        """
+        assert self._abc != NULL
+
+        cdef libeasel.ESL_DSQ x
+        cdef size_t           i
+        cdef size_t           length  = sequence.shape[0]
+        cdef str              decoded = PyUnicode_New(length, 0x7F)
+        cdef int              kind    = PyUnicode_KIND(decoded)
+        cdef void*            data    = PyUnicode_DATA(decoded)
+
+        with nogil:
+            for i in range(length):
+                x = sequence[i]
+                if libeasel.alphabet.esl_abc_XIsValid(self._abc, x):
+                    PyUnicode_WRITE(kind, data, i, self._abc.sym[x])
+                else:
+                    raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
+
+        return decoded
 
 
 # --- Bitfield ---------------------------------------------------------------
@@ -4589,7 +4672,7 @@ cdef class TextSequence(Sequence):
                 inplace and return `None`.
 
         Raises:
-            UserWarning: When the sequence contains unknown characters.
+            `UserWarning`: When the sequence contains unknown characters.
 
         Example:
             >>> seq = TextSequence(sequence="ATGC")
@@ -4659,6 +4742,10 @@ cdef class DigitalSequence(Sequence):
         """__init__(self, alphabet, name=None, description=None, accession=None, sequence=None, source=None)\n--
 
         Create a new digital-mode sequence with the given attributes.
+
+        Raises:
+            `ValueError`: When ``sequence`` contains digits outside the
+                alphabet symbol range.
 
         .. versionadded:: 0.1.4
 
@@ -4808,8 +4895,8 @@ cdef class DigitalSequence(Sequence):
                 inplace and return `None`.
 
         Raises:
-            ValueError: When the alphabet of the `DigitalSequence` does
-            not have a complement mapping set (e.g., `Alphabet.amino`).
+            `ValueError`: When the alphabet of the `DigitalSequence` does
+                not have a complement mapping set (e.g., `Alphabet.amino`).
 
         Caution:
             The copy made when ``inplace`` is `False` is an exact copy, so

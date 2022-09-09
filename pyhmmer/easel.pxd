@@ -16,6 +16,7 @@ from libeasel.random cimport ESL_RANDOMNESS
 from libeasel.sq cimport ESL_SQ
 from libeasel.sqio cimport ESL_SQFILE
 from libeasel.ssi cimport ESL_SSI, ESL_NEWSSI
+from libeasel cimport ESL_DSQ
 
 
 # --- Alphabet ---------------------------------------------------------------
@@ -30,7 +31,8 @@ cdef class Alphabet:
     cpdef bint is_rna(self)
     cpdef bint is_amino(self)
     cpdef bint is_nucleotide(self)
-
+    cpdef VectorU8 encode(self, str sequence)
+    cpdef str decode(self, const ESL_DSQ[::1] sequence)
 
 # --- Bitfield ---------------------------------------------------------------
 

@@ -55,3 +55,21 @@ class TestAlphabet(unittest.TestCase):
         abc2 = pickle.loads(p)
         self.assertIsNot(abc2, abc)
         self.assertEqual(abc, abc)
+
+    def test_encode_decode(self):
+        abc = easel.Alphabet.dna()
+        seq = "ATGCCCTGACTACA"
+        encoded = abc.encode(seq)
+        self.assertEqual(len(seq), len(encoded))
+        decoded = abc.decode(encoded)
+        self.assertEqual(decoded, seq)
+
+    def test_decode_error(self):
+        abc = easel.Alphabet.dna()
+        seq = bytearray([100, 200])
+        self.assertRaises(ValueError, abc.decode, seq)
+
+    def test_encode_error(self):
+        abc = easel.Alphabet.dna()
+        seq = "123"
+        self.assertRaises(ValueError, abc.encode, seq)
