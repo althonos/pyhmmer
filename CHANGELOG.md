@@ -6,7 +6,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.6.3...HEAD
+
+
+## [v0.6.3] - 2022-09-09
+[v0.6.3]: https://github.com/althonos/pyhmmer/compare/v0.6.2...v0.6.3
+
+### Fixed
+- Error not being raised on alphabet detection failure in `SequenceFile` or `MSAFile`.
+- Add check in `DigitalSequence` constructor to make sure encoded characters are in valid range ([#25](https://github.com/althonos/pyhmmer/issues/25)).
+
+### Added
+- `SequenceFile.guess_alphabet` and `MSAFile.guess_alphabet` to guess the alphabet from an open file.
+- `Alphabet.encode` and `Alphabet.decode` to convert raw sequences between digital and text format.
 
 
 ## [v0.6.2] - 2022-08-12
