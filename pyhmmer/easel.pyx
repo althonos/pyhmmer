@@ -3541,10 +3541,11 @@ cdef class DigitalMSA(MSA):
            Allow creating an alignment from an iterable of `DigitalSequence`.
 
         """
-        cdef list    seqs  = [] if sequences is None else list(sequences)
-        cdef set     names = { seq.name for seq in seqs }
-        cdef int64_t alen  = len(seqs[0]) if seqs else -1
-        cdef int     nseq  = len(seqs) if seqs else 1
+        cdef DigitalSequence seq
+        cdef list            seqs  = [] if sequences is None else list(sequences)
+        cdef set             names = { seq.name for seq in seqs }
+        cdef int64_t         alen  = len(seqs[0]) if seqs else -1
+        cdef int             nseq  = len(seqs) if seqs else 1
 
         if len(names) != len(seqs):
             raise ValueError("duplicate names in alignment sequences")
@@ -3573,7 +3574,7 @@ cdef class DigitalMSA(MSA):
         if author is not None:
             self.author = author
         for i, seq in enumerate(seqs):
-            self._set_sequence(i, (<DigitalSequence> seq)._sq)
+            self._set_sequence(i, seq._sq)
 
 
     # --- Properties ---------------------------------------------------------
@@ -4663,6 +4664,7 @@ cdef class DigitalSequence(Sequence):
 
         """
         cdef int     status
+        cdef int64_t i
         cdef int64_t n
 
         # create an empty digital sequence
@@ -4678,8 +4680,12 @@ cdef class DigitalSequence(Sequence):
         if sequence is not None:
             # we can release the GIL while copying memory
             with nogil:
-                # grow the sequence buffer so it can hold `n` residues
                 n = sequence.shape[0]
+                # check the sequence encoding is compatible with the alphabet
+                for i in range(n):
+                    if not libeasel.alphabet.esl_abc_XIsValid(alphabet._abc, sequence[i]):
+                        raise ValueError(f"Invalid alphabet character in digital sequence: {sequence[i]}")
+                # grow the sequence buffer so it can hold `n` residues
                 status = libeasel.sq.esl_sq_GrowTo(self._sq, n)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "esl_sq_GrowTo")

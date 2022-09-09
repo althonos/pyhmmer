@@ -138,6 +138,9 @@ class TestDigitalSequence(_TestSequenceBase, unittest.TestCase):
         self.assertRaises(ValueError, seq.reverse_complement)
         self.assertRaises(ValueError, seq.reverse_complement, inplace=True)
 
+    def test_invalid_characters(self):
+        self.assertRaises(ValueError, easel.DigitalSequence, self.abc, name=b"TEST", sequence=b"test")
+
 
 class TestTextSequence(_TestSequenceBase, unittest.TestCase):
 
