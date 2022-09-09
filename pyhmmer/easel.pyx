@@ -22,7 +22,7 @@ ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
 cimport cython
 from cpython cimport Py_buffer
 from cpython.buffer cimport PyBUF_FORMAT, PyBUF_READ
-from cpython.bytes cimport PyBytes_FromString, PyBytes_FromStringAndSize
+from cpython.bytes cimport PyBytes_FromString, PyBytes_FromStringAndSize, PyBytes_AsString
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.memoryview cimport PyMemoryView_FromMemory
 from cpython.ref cimport Py_INCREF
@@ -414,19 +414,38 @@ cdef class Alphabet:
         cdef libeasel.ESL_DSQ x
         cdef size_t           i
         cdef size_t           length  = sequence.shape[0]
-        cdef str              decoded = PyUnicode_New(length, 0x7F)
-        cdef int              kind    = PyUnicode_KIND(decoded)
-        cdef void*            data    = PyUnicode_DATA(decoded)
 
-        with nogil:
-            for i in range(length):
-                x = sequence[i]
-                if libeasel.alphabet.esl_abc_XIsValid(self._abc, x):
-                    PyUnicode_WRITE(kind, data, i, self._abc.sym[x])
-                else:
-                    raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
+        # NB(@althonos): Compatibility code for PyPy 3.6, which does
+        #                not support directly writing to a string. Remove
+        #                when Python 3.6 support is dropped.
+        IF SYS_VERSION_INFO_MAJOR <= 3 and SYS_VERSION_INFO_MINOR <= 7 and SYS_IMPLEMENTATION_NAME == "pypy":
+            cdef bytes decoded = PyBytes_FromStringAndSize(NULL, length)
+            cdef char* data    = PyBytes_AsString(decoded)
 
-        return decoded
+            with nogil:
+                for i in range(length):
+                    x = sequence[i]
+                    if libeasel.alphabet.esl_abc_XIsValid(self._abc, x):
+                        data[i] = self._abc.sym[x]
+                    else:
+                        raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
+
+            return decoded.decode('ascii')
+
+        ELSE:
+            cdef str   decoded = PyUnicode_New(length, 0x7F)
+            cdef int   kind    = PyUnicode_KIND(decoded)
+            cdef void* data    = PyUnicode_DATA(decoded)
+
+            with nogil:
+                for i in range(length):
+                    x = sequence[i]
+                    if libeasel.alphabet.esl_abc_XIsValid(self._abc, x):
+                        PyUnicode_WRITE(kind, data, i, self._abc.sym[x])
+                    else:
+                        raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
+
+            return decoded
 
 
 # --- Bitfield ---------------------------------------------------------------
