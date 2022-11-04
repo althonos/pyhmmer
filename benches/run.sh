@@ -2,13 +2,19 @@
 
 N=$(nproc)
 
-cp tests/data/seqs/CP040672.1.genes_100.fna /tmp/CP040672.1.genes_100.fna
-cp tests/data/seqs/CP000560.2.fna /tmp/CP000560.2.fna
-cp tests/data/seqs/938293.PRJEB85.HG003687.faa /tmp/938293.PRJEB85.HG003687.faa
+cp pyhmmer/tests/data/seqs/CP040672.1.genes_100.fna /tmp/CP040672.1.genes_100.fna
+cp pyhmmer/tests/data/seqs/CP000560.2.fna /tmp/CP000560.2.fna
+cp pyhmmer/tests/data/seqs/938293.PRJEB85.HG003687.faa /tmp/938293.PRJEB85.HG003687.faa
 
-wget "http://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam33.1/Pfam-A.hmm.gz" -O- | gunzip > /tmp/Pfam.v33-1.pressed.hmm
-hmmpress /tmp/Pfam.v33-1.pressed.hmm
-ln -s /tmp/Pfam.v33-1.pressed.hmm /tmp/Pfam.v33-1.hmm
+if [ ! -e "/tmp/Pfam.v33-1.pressed.hmm" ]; then
+	wget "http://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam33.1/Pfam-A.hmm.gz" -O- | gunzip > /tmp/Pfam.v33-1.pressed.hmm
+fi
+if [ ! -e "/tmp/Pfam.v33-1.pressed.hmm.h3i" ]; then
+	hmmpress /tmp/Pfam.v33-1.pressed.hmm
+fi
+if [ ! -e "/tmp/Pfam.v33-1.hmm" ]; then
+	ln -s /tmp/Pfam.v33-1.pressed.hmm /tmp/Pfam.v33-1.hmm
+fi
 
 hyperfine -P threads 1 $N \
     'python -m pyhmmer.hmmer --jobs {threads} hmmsearch /tmp/Pfam.v33-1.hmm /tmp/938293.PRJEB85.HG003687.faa' \
