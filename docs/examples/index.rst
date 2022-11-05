@@ -16,8 +16,8 @@ examples, and running with the latest version of the PyHMMER interface.
    Run an iterative search to build a HMM for rhodopsins <iterative_search>
 
 
-Code
-----
+Code & Data
+-----------
 
 This section shows more practical tutorials about how you can use the
 PyHMMER API in combination with Python and other Python libraries:
@@ -25,7 +25,7 @@ PyHMMER API in combination with Python and other Python libraries:
 .. toctree::
     :maxdepth: 2
 
-    Embed HMMs in a Python package <embed_hmms>
+    Create a Python package with embedded HMMs <embed_hmms>
 
 
 Dependent projects
