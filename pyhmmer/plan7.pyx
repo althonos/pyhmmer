@@ -5470,8 +5470,6 @@ cdef class LongTargetsPipeline(Pipeline):
         self.B1 = B1
         self.B2 = B2
         self.B3 = B3
-        # create a temporary sequence to use to store the current window
-        self._tmpsq = DigitalSequence(alphabet)
 
     # --- Properties ---------------------------------------------------------
 
@@ -5725,7 +5723,6 @@ cdef class LongTargetsPipeline(Pipeline):
                 search_targets._refs,
                 hits._th,
                 scoredata._sd,
-                self._tmpsq._sq
             )
 
             # threshold with user-provided Z if any
@@ -5844,7 +5841,6 @@ cdef class LongTargetsPipeline(Pipeline):
         const ESL_SQ**      sq,
               P7_TOPHITS*   th,
               P7_SCOREDATA* scoredata,
-              ESL_SQ*       tmpsq,
     ) nogil except 1:
         cdef int      status
         cdef int      nres
@@ -5951,6 +5947,9 @@ cdef class LongTargetsPipeline(Pipeline):
             libeasel.sq.esl_sq_Reuse(tmpsq)
             pli.nseqs += 1
             sq += 1
+
+        # Free temporary data
+        libeasel.sq.esl_sq_Destroy(tmpsq)
 
         # Return 0 to indicate success
         return 0
