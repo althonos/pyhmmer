@@ -31,7 +31,7 @@ from cpython.unicode cimport PyUnicode_DecodeASCII
 from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t
 from libc.stdio cimport fclose
 from libc.stdlib cimport calloc, malloc, realloc, free
-from libc.string cimport memcmp, memcpy, memmove, strdup, strlen, strncpy
+from libc.string cimport memcmp, memcpy, memmove, memset, strdup, strlen, strncpy
 from posix.types cimport off_t
 from unicode cimport PyUnicode_New, PyUnicode_DATA, PyUnicode_KIND, PyUnicode_WRITE, PyUnicode_READY, PyUnicode_READ, Py_UCS4
 
@@ -473,6 +473,36 @@ cdef class Bitfield:
 
     """
 
+    # --- Class methods ------------------------------------------------------
+
+    @classmethod
+    def zeros(cls, size_t n):
+        """zeros(cls, n, /)\n--
+
+        Create a new bitfield of size ``n`` with all elements set to `False`.
+
+        """
+        if n <= 0:
+            raise ValueError("Cannot create an empty `Bitfield`")
+        cdef Bitfield bitfield = Bitfield.__new__(Bitfield)
+        bitfield._shape[0] = (n + 63) // 64
+        bitfield._b = libeasel.bitfield.esl_bitfield_Create(n)
+        if not bitfield._b:
+            raise AllocationError("ESL_BITFIELD", sizeof(ESL_BITFIELD))
+        return bitfield
+
+    @classmethod
+    def ones(cls, size_t n):
+        """ones(cls, n, /)\n--
+
+        Create a new bitfield of size ``n`` with all elements set to `True`.
+
+        """
+        cdef Bitfield bitfield = cls.zeros(n)
+        with nogil:
+            memset(bitfield._b.b, 0xFF, bitfield._shape[0]*sizeof(uint64_t))
+        return bitfield
+
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
@@ -482,28 +512,33 @@ cdef class Bitfield:
     def __dealloc__(self):
         libeasel.bitfield.esl_bitfield_Destroy(self._b)
 
-    def __init__(self, size_t length):
-        """__init__(self, length)\n--
+    def __init__(self, object iterable):
+        """__init__(self, iterable)\n--
 
-        Create a new bitfield with the given ``length``.
+        Create a new bitfield from an iterable of objects.
+
+        Objects yielded by the iterable can be of any type and will be 
+        tested for truth before setting the corresponding field.
 
         Raises:
-            `ValueError`: When given a zero `length`.
+            `ValueError`: When given an empty iterable.
 
         """
-        if length == 0:
+        if not isinstance(iterable, collections.abc.Sized):
+            iterable = list(iterable)
+    
+        cdef size_t n = len(iterable)
+        if n <= 0:
             raise ValueError("Cannot create an empty `Bitfield`")
-        else:
-            self._shape[0] = (length + 63) // 64
 
-        # NB: checking whether `self._b` is not NULL before allocating allows
-        #     calling __init__ more than once without causing a memory leak.
-        if self._b != NULL:
-            libeasel.bitfield.esl_bitfield_Destroy(self._b)
-        with nogil:
-            self._b = libeasel.bitfield.esl_bitfield_Create(length)
+        self._shape[0] = (n + 63) // 64
+        self._b = libeasel.bitfield.esl_bitfield_Create(n)
         if not self._b:
             raise AllocationError("ESL_BITFIELD", sizeof(ESL_BITFIELD))
+        
+        for i, item in enumerate(iterable):
+            if item:
+                libeasel.bitfield.esl_bitfield_Set(self._b, i)
 
     def __len__(self):
         assert self._b != NULL
@@ -544,6 +579,10 @@ cdef class Bitfield:
 
         return NotImplemented
 
+    def __reduce_ex__(self, int protocol):
+        assert self._b != NULL
+        return self.zeros, (len(self),), self.__getstate__()
+
     def __getstate__(self):
         assert self._b != NULL
 
@@ -556,12 +595,19 @@ cdef class Bitfield:
         return {"nb": self._b.nb, "b": b}
 
     def __setstate__(self, state):
-        self.__init__(state["nb"])
-
-        cdef size_t        nu = (self._b.nb // 64) + (self._b.nb % 64 != 0)
+        cdef size_t        nb = state["nb"]
+        cdef size_t        nu = (nb // 64) + (nb % 64 != 0)
         cdef uint64_t[::1] b  = state["b"]
 
-        assert b.shape[0] <= <ssize_t> nu
+        if nb <= 0:
+            raise ValueError("Cannot create an empty `Bitfield`")
+
+        if self._b == NULL:
+            self._b = libeasel.bitfield.esl_bitfield_Create(nb)
+        else:
+            self._b.nb = nb
+            self._b.b  = <uint64_t*> realloc(self._b.b, nu * sizeof(uint64_t))
+
         with nogil:
             memcpy(self._b.b, &b[0], nu * sizeof(uint64_t))
 
