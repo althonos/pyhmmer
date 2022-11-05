@@ -2,7 +2,6 @@ Create a Python package with embedded HMMs
 ==========================================
 
 
-
 Overview
 --------
 
@@ -12,14 +11,23 @@ where PyHMMER is used to identify thioredoxin domains. We want to
 distribute the package and all the required HMMs so that the end users 
 can simply use the functions without having to download additional data.
 
-For this example, we will be using pre-made HMMs downloaded from 
-`InterPro <https://www.ebi.ac.uk/interpro>`_, but this would work 
-similarly if we were to use custom-made hmms.
-
 .. hint::
     
     If you're new to developing Python packages, you may want to have a look
     at the `Python Packaging User Guide <https://packaging.python.org/en/latest/>`_.
+
+For this example, we will be using pre-made HMMs downloaded from 
+`InterPro <https://www.ebi.ac.uk/interpro>`_, but this would work 
+similarly if we were to use custom-made hmms.
+
+.. caution::
+
+    Make sure that you have the permission to redistribute the HMMs along 
+    with your code! For instance, `Pfam <https://pfam.xfam.org/>`_ is licensed under
+    `Creative Commons Zero <https://creativecommons.org/publicdomain/zero/1.0/>`_
+    which places the data in the public domain, but `SMART <http://smart.embl-heidelberg.de>`_ 
+    is licensed by `EMBLEM <https://software.embl-em.de/software/18>`_ and 
+    does not allow redistribution.
 
 
 Folder structure
@@ -113,8 +121,8 @@ internal HMM for finding hits:
     code above will work even if the HMM file contains more than one HMM.
 
 
-Package Data
-------------
+Distributing data
+-----------------
 
 Now that the data is ready and that the Python code knows how to load it,
 all that is left is to make sure the data files are actually picked up by
@@ -140,3 +148,5 @@ installed, the HMMs will be installed next to the code.
     use this method a relatively large number of HMMs (up to a few thousands),
     but you won't be able to upload a large HMM database such as Pfam in
     its entirety.
+
+    
