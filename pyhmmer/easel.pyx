@@ -999,8 +999,8 @@ cdef class Vector:
             free(self._data)
         self._data = NULL
 
-    def __init__(self, object iterable = None):
-        """__init__(self, iterable=None)\n--
+    def __init__(self, object iterable = ()):
+        """__init__(self, iterable=())\n--
 
         Create a new vector from the given iterable of values.
 
@@ -1250,7 +1250,7 @@ cdef class VectorF(Vector):
 
     # --- Magic methods ------------------------------------------------------
 
-    def __init__(self, object iterable = None):
+    def __init__(self, object iterable = ()):
         cdef int        n
         cdef size_t     i
         cdef float      item
@@ -1258,12 +1258,10 @@ cdef class VectorF(Vector):
         cdef int        n_alloc
         cdef float*     data
 
-        # allow creating a new empty vector without arguments
-        if iterable is None:
-            iterable = ()
-            n = 0
-        else:
-            n = len(iterable)
+        # collect iterable if it's not a `Sized` object
+        if not isinstance(iterable, collections.abc.Sized):
+            iterable = array.array("f", iterable)
+        n = len(iterable)
 
         # make sure __init__ is only called once
         if self._data != NULL:
@@ -1685,7 +1683,7 @@ cdef class VectorU8(Vector):
 
     # --- Magic methods ------------------------------------------------------
 
-    def __init__(self, object iterable = None):
+    def __init__(self, object iterable = ()):
         cdef int          n
         cdef size_t       i
         cdef uint8_t      item
@@ -1693,12 +1691,10 @@ cdef class VectorU8(Vector):
         cdef int          n_alloc
         cdef uint8_t*     data
 
-        # allow creating a new empty vector without arguments
-        if iterable is None:
-            iterable = ()
-            n = 0
-        else:
-            n = len(iterable)
+        # collect iterable if it's not a `Sized` object
+        if not isinstance(iterable, collections.abc.Sized):
+            iterable = array.array("B", iterable)
+        n = len(iterable)
 
         # make sure __init__ is only called once
         if self._data != NULL:
@@ -2148,7 +2144,7 @@ cdef class Matrix:
             free(self._data)
         self._data = NULL
 
-    def __init__(self, object iterable = None):
+    def __init__(self, object iterable = ()):
         raise TypeError("Can't instantiate abstract class 'Matrix'")
 
     def __bool__(self):
@@ -2366,13 +2362,17 @@ cdef class MatrixF(Matrix):
 
     # --- Magic methods ------------------------------------------------------
 
-    def __init__(self, object iterable):
+    def __init__(self, object iterable = ()):
         cdef size_t  i
         cdef size_t  j
         cdef object  row
         cdef float   val
         cdef object  peeking = peekable(iterable)
         cdef float** data    = NULL
+
+        # collect iterable if it's not a `Sized` object
+        if not isinstance(iterable, collections.abc.Sized):
+            iterable = [list(row) for row in iterable]
 
         # make sure __init__ is only called once
         if self._data != NULL:
@@ -2617,7 +2617,7 @@ cdef class MatrixU8(Matrix):
 
     # --- Magic methods ------------------------------------------------------
 
-    def __init__(self, object iterable):
+    def __init__(self, object iterable = ()):
         cdef int       i
         cdef int       j
         cdef object    row
@@ -2625,6 +2625,10 @@ cdef class MatrixU8(Matrix):
         cdef uint8_t** data    = NULL
         cdef object    peeking = peekable(iterable)
         cdef int       m_alloc
+
+        # collect iterable if it's not a `Sized` object
+        if not isinstance(iterable, collections.abc.Sized):
+            iterable = [list(row) for row in iterable]
 
         # make sure __init__ is only called once
         if self._data != NULL:
