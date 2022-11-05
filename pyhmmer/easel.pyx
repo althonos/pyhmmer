@@ -453,14 +453,24 @@ cdef class Alphabet:
 cdef class Bitfield:
     """A statically sized sequence of booleans stored as a packed bitfield.
 
-    A bitfield is instantiated with a fixed length, and all booleans are set
-    to `False` by default::
+    A bitfield is instantiated with an iterable, and each object will be 
+    tested for truth:
 
-        >>> bitfield = Bitfield(8)
+        >>> bitfield = Bitfield([True, False, False])
         >>> len(bitfield)
-        8
+        3
         >>> bitfield[0]
+        True
+        >>> bitfield[1]
         False
+
+    Use `Bitfield.zeros` and `Bitfield.ones` to initialize a bitfield of 
+    a given length with all fields set to ``0`` or ``1``::
+
+        >>> Bitfield.zeros(4)
+        pyhmmer.easel.Bitfield([False, False, False, False])
+        >>> Bitfield.ones(4)
+        pyhmmer.easel.Bitfield([True, True, True, True])
 
     Use indexing to access and edit individual bits::
 
@@ -579,6 +589,12 @@ cdef class Bitfield:
 
         return NotImplemented
 
+    def __repr__(self):
+        cdef type ty   = type(self)
+        cdef str  name = ty.__name__
+        cdef str  mod  = ty.__module__
+        return f"{mod}.{name}({list(self)!r})"
+    
     def __reduce_ex__(self, int protocol):
         assert self._b != NULL
         return self.zeros, (len(self),), self.__getstate__()
@@ -653,7 +669,7 @@ cdef class Bitfield:
         If no argument is given, counts the number of `True` occurences.
 
         Example:
-            >>> bitfield = Bitfield(8)
+            >>> bitfield = Bitfield.zeros(8)
             >>> bitfield.count(False)
             8
             >>> bitfield[0] = bitfield[1] = True
@@ -673,7 +689,7 @@ cdef class Bitfield:
         Switch the value of one single bit.
 
         Example:
-            >>> bitfield = Bitfield(8)
+            >>> bitfield = Bitfield.zeros(8)
             >>> bitfield[0]
             False
             >>> bitfield.toggle(0)
