@@ -16,6 +16,18 @@ examples, and running with the latest version of the PyHMMER interface.
    Run an iterative search to build a HMM for rhodopsins <iterative_search>
 
 
+Code
+----
+
+This section shows more practical tutorials about how you can use the
+PyHMMER API in combination with Python and other Python libraries:
+
+.. toctree::
+    :maxdepth: 2
+
+    Embed HMMs in a Python package <embed_hmms>
+
+
 Dependent projects
 ------------------
 
@@ -35,7 +47,7 @@ PyHMMER is being used in several projects, including:
 - `BUSCOlite <https://github.com/nextgenusfs/buscolite>`_, a package for
   running simplified `BUSCO <https://busco.ezlab.org/>`_ analysis for gene
   prediction, uses PyHMMER to discover Conserved Orthologous Genes.
-- `FastAAI <https://github.com/KGerhardt/FastAAI>`_, a package providing
+- `FastAAI <https://github.com/cruizperez/FastAAI>`_, a package providing
   fast estimation of Average Amino Acid Identities (AAI) for bacterial and
   viral genomes, uses PyHMMER to detect bacterial and archaeal domains.
 - `SADIE <https://github.com/jwillis0720/sadie>`_, the Sequencing Analysis and
@@ -44,7 +56,7 @@ PyHMMER is being used in several projects, including:
 - `GSub <https://github.com/FlorianCHA/Gsub>`_, a GUI for submitting viral
   sequences to `GenBank <https://www.ncbi.nlm.nih.gov/genbank/>`_, uses
   PyHMMER to detect potential polymerase-encoding ORFs.
-
+-
 
 .. hint::
 
