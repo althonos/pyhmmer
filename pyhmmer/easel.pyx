@@ -468,7 +468,7 @@ cdef class Alphabet:
 cdef class Bitfield:
     """A statically sized sequence of booleans stored as a packed bitfield.
 
-    A bitfield is instantiated with an iterable, and each object will be 
+    A bitfield is instantiated with an iterable, and each object will be
     tested for truth:
 
         >>> bitfield = Bitfield([True, False, False])
@@ -479,7 +479,7 @@ cdef class Bitfield:
         >>> bitfield[1]
         False
 
-    Use `Bitfield.zeros` and `Bitfield.ones` to initialize a bitfield of 
+    Use `Bitfield.zeros` and `Bitfield.ones` to initialize a bitfield of
     a given length with all fields set to ``0`` or ``1``::
 
         >>> Bitfield.zeros(4)
@@ -542,7 +542,7 @@ cdef class Bitfield:
 
         Create a new bitfield from an iterable of objects.
 
-        Objects yielded by the iterable can be of any type and will be 
+        Objects yielded by the iterable can be of any type and will be
         tested for truth before setting the corresponding field.
 
         Raises:
@@ -551,7 +551,7 @@ cdef class Bitfield:
         """
         if not isinstance(iterable, collections.abc.Sized):
             iterable = list(iterable)
-    
+
         cdef size_t n = len(iterable)
         if n <= 0:
             raise ValueError("Cannot create an empty `Bitfield`")
@@ -560,7 +560,7 @@ cdef class Bitfield:
         self._b = libeasel.bitfield.esl_bitfield_Create(n)
         if not self._b:
             raise AllocationError("ESL_BITFIELD", sizeof(ESL_BITFIELD))
-        
+
         for i, item in enumerate(iterable):
             if item:
                 libeasel.bitfield.esl_bitfield_Set(self._b, i)
@@ -609,7 +609,7 @@ cdef class Bitfield:
         cdef str  name = ty.__name__
         cdef str  mod  = ty.__module__
         return f"{mod}.{name}({list(self)!r})"
-    
+
     def __reduce_ex__(self, int protocol):
         assert self._b != NULL
         return self.zeros, (len(self),), self.__getstate__()
@@ -5038,22 +5038,22 @@ cdef class SequenceBlock:
     sequence (this gave a huge performance boost in v0.4.5). However,
     there was no way to reuse this between different queries; some memory
     recycling was done, but the target sequences had to be indexed for
-    every query. This class allows synchronizing a Python `list` of 
-    `Sequence` objects with an internal C-contiguous buffer of pointers 
+    every query. This class allows synchronizing a Python `list` of
+    `Sequence` objects with an internal C-contiguous buffer of pointers
     to ``ESL_SQ`` structs that can be used in the HMMER search loop.
 
     .. versionadded:: 0.7.0
 
     """
-    
-    # NOTE(@althonos): This implementation of a sequence block doesn't 
+
+    # NOTE(@althonos): This implementation of a sequence block doesn't
     #                  actually use an `ESL_SQ_BLOCK` because `ESL_SQ_BLOCK`
     #                  uses a contiguous array to store sequence data, which
-    #                  is unpractical for `Sequence` objects that may be 
-    #                  held from elsewhere with reference counting. An array 
+    #                  is unpractical for `Sequence` objects that may be
+    #                  held from elsewhere with reference counting. An array
     #                  of pointers is easier to work with in that particular
     #                  case.
-    
+
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
@@ -5061,7 +5061,7 @@ cdef class SequenceBlock:
         self._length = 0
         self._capacity = 0
         self._storage = []
-        self._max_len = -1
+        self._largest = -1
         self._owner = None
 
     def __init__(self):
@@ -5083,6 +5083,8 @@ cdef class SequenceBlock:
         cdef size_t   i
         cdef Sequence sequence
 
+        self._on_modification()
+
         if isinstance(index, slice):
             del self._storage[index]
             self._length = len(self._storage)
@@ -5096,7 +5098,7 @@ cdef class SequenceBlock:
         return type(self), (), None, iter(self)
 
     # --- C methods ----------------------------------------------------------
- 
+
     cdef void _allocate(self, size_t n) except *:
         """_allocate(self, n, /)\n--
 
@@ -5114,7 +5116,9 @@ cdef class SequenceBlock:
             self._capacity = capacity
         for i in range(self._length, self._capacity):
             self._refs[i] = NULL
-    
+
+    cdef void _on_modification(self) except *:
+        self._largest = -1 # invalidate cache
 
     # --- Python methods -----------------------------------------------------
 
@@ -5124,6 +5128,7 @@ cdef class SequenceBlock:
         self._storage.append(sequence)
         self._refs[self._length] = sequence._sq
         self._length += 1
+        self._on_modification()
         assert self._refs[self._length] == NULL
 
     cpdef void clear(self) except *:
@@ -5137,6 +5142,7 @@ cdef class SequenceBlock:
             self._refs[i] = NULL
         self._storage.clear()
         self._length = 0
+        self._on_modification()
 
     cpdef void extend(self, object iterable) except *:
         """extend(self, iterable, /)\n--
@@ -5147,6 +5153,7 @@ cdef class SequenceBlock:
         cdef size_t hint = operator.length_hint(iterable)
         if self._length + hint > self._capacity:
             self._allocate(self._length + hint + 1)
+        self._on_modification()
         for sequence in iterable:
             self.append(sequence)
 
@@ -5166,8 +5173,9 @@ cdef class SequenceBlock:
         self._length -= 1
         if <size_t> index_ < self._length:
             memmove(&self._refs[index_], &self._refs[index_ + 1], (self._length - index_)*sizeof(ESL_SQ*))
-        
+
         self._refs[self._length] = NULL
+        self._on_modification()
         return item
 
     cdef void _insert(self, ssize_t index, Sequence sequence) except *:
@@ -5185,12 +5193,13 @@ cdef class SequenceBlock:
         self._storage.insert(index, sequence)
         self._refs[index] = sequence._sq
         self._length += 1
+        self._on_modification()
         assert self._refs[self._length] == NULL
 
     cdef size_t _index(self, Sequence sequence, ssize_t start=0, ssize_t stop=sys.maxsize) except *:
-        cdef size_t i     
-        cdef size_t start_ 
-        cdef size_t stop_ 
+        cdef size_t i
+        cdef size_t start_
+        cdef size_t stop_
         cdef int    status
 
         # wrap once is negative indices are used
@@ -5198,7 +5207,7 @@ cdef class SequenceBlock:
             start += <ssize_t> self._length
         if stop < 0:
             stop += <ssize_t> self._length
-        
+
         # wrap a second time if indices are still negative or out of bounds
         stop_ = min(stop, self._length)
         start_ = max(start, 0)
@@ -5215,10 +5224,10 @@ cdef class SequenceBlock:
                 raise ValueError(f"sequence {sequence.name!r} not in block")
 
         return i
-    
+
     cdef void _remove(self, Sequence sequence) except *:
         self.pop(self._index(sequence))
-      
+
     cpdef Sequence largest(self):
         """largest(self)\n--
 
@@ -5226,15 +5235,16 @@ cdef class SequenceBlock:
 
         """
         cdef size_t i
-        cdef size_t largest = 0
 
         if self._length == 0:
             raise ValueError("block is empty")
-        for i in range(self._length):
-            if self._refs[i].L > self._refs[largest].L:
-                largest = i
+        if self._largest == -1:
+            self._largest = 0
+            for i in range(1, self._length):
+                if self._refs[i].L > self._refs[self._largest].L:
+                    self._largest = i
 
-        return self._storage[largest]
+        return self._storage[self._largest]
 
 
 cdef class TextSequenceBlock(SequenceBlock):
@@ -5243,7 +5253,7 @@ cdef class TextSequenceBlock(SequenceBlock):
     .. versionadded:: 0.7.0
 
     """
-    
+
     # --- Magic methods ------------------------------------------------------
 
     def __init__(self, object iterable = ()):
@@ -5255,13 +5265,13 @@ cdef class TextSequenceBlock(SequenceBlock):
         return f"{ty}({list(self)!r})"
 
     def __setitem__(self, object index, object sequences):
-        cdef size_t       i 
+        cdef size_t       i
         cdef TextSequence sequence
 
         if isinstance(index, slice):
             self._storage[index] = sequences
             self._length = len(self._storage)
-            self._allocate(self._length + 1) 
+            self._allocate(self._length + 1)
             for i, sequence in enumerate(self._storage):
                 self._refs[i] = sequence._sq
             self._refs[self._length] = NULL
@@ -5287,7 +5297,7 @@ cdef class TextSequenceBlock(SequenceBlock):
 
         """
         self._append(sequence)
-    
+
     cpdef TextSequence pop(self, ssize_t index=-1):
         """pop(self, index=-1)\n--
 
@@ -5314,7 +5324,7 @@ cdef class TextSequenceBlock(SequenceBlock):
 
         """
         return self._index(sequence, start, stop)
-    
+
     cpdef void remove(self, TextSequence sequence) except *:
         """remove(self, sequence)\n--
 
@@ -5352,7 +5362,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
     .. versionadded:: 0.7.0
 
     """
-    
+
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self, Alphabet alphabet, *args, **kwargs):
@@ -5368,7 +5378,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
                 collection of digital sequences to add to the block.
 
         Raises:
-            `~pyhmmer.easel.AlphabetMismatch`: When the alphabet of one of the 
+            `~pyhmmer.easel.AlphabetMismatch`: When the alphabet of one of the
                 sequences does not match ``alphabet``.
 
         """
@@ -5380,15 +5390,15 @@ cdef class DigitalSequenceBlock(SequenceBlock):
         return f"{ty}({self.alphabet!r}, {list(self)!r})"
     def __reduce__(self):
         return type(self), (self.alphabet,), None, iter(self)
-    
+
     def __setitem__(self, object index, object sequences):
-        cdef size_t          i 
+        cdef size_t          i
         cdef DigitalSequence sequence
 
         if isinstance(index, slice):
             self._storage[index] = sequences
             self._length = len(self._storage)
-            self._allocate(self._length + 1) 
+            self._allocate(self._length + 1)
             for i, sequence in enumerate(self._storage):
                 if sequence.alphabet != self.alphabet:
                     raise AlphabetMismatch(self.alphabet, sequence.alphabet)
@@ -5420,7 +5430,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
         if sequence.alphabet != self.alphabet:
             raise AlphabetMismatch(self.alphabet, sequence.alphabet)
         self._append(sequence)
-    
+
     cpdef DigitalSequence pop(self, ssize_t index=-1):
         """pop(self, index=-1)\n--
 
@@ -5451,7 +5461,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
         if sequence.alphabet != self.alphabet:
             raise AlphabetMismatch(self.alphabet, sequence.alphabet)
         return self._index(sequence, start, stop)
-    
+
     cpdef void remove(self, DigitalSequence sequence) except *:
         """remove(self, sequence)\n--
 

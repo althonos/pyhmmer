@@ -214,6 +214,9 @@ class _TestSequenceBlock(abc.ABC):
         block = self._new_block([seq1, seq2])
         self.assertIs(block.largest(), seq2)
 
+        block.pop(1)
+        self.assertIs(block.largest(), seq1)
+
         with self.assertRaises(ValueError):
             block = self._new_block([])
             block.largest()

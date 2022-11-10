@@ -205,8 +205,10 @@ cdef class SequenceBlock:
     cdef          size_t     _capacity # the total number of sequences that can be stored
     cdef          ESL_SQ**   _refs     # the array to pass the sequence references
     cdef          list       _storage  # the actual Python list where `Sequence` objects are stored
-    cdef          ssize_t    _max_len  # the length of the largest sequence in the array
     cdef          object     _owner    # the owner, if the object is just a shallow copy
+    cdef          ssize_t    _largest  # the index of the largest sequence, or -1
+
+    cdef void _on_modification(self) except *
 
     cdef void _allocate(self, size_t n) except *
     cdef void _append(self, Sequence sequence) except *
