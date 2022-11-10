@@ -5032,6 +5032,16 @@ cdef class DigitalSequence(Sequence):
 cdef class SequenceBlock:
     """An abstract storage for storing `Sequence` objects.
 
+    To pass the target sequences efficiently in `Pipeline.search_hmm`,
+    an array is allocated so that the inner loop can iterate over the
+    target sequences without having to acquire the GIL for each new
+    sequence (this gave a huge performance boost in v0.4.5). However,
+    there was no way to reuse this between different queries; some memory
+    recycling was done, but the target sequences had to be indexed for
+    every query. This class allows synchronizing a Python `list` of 
+    `Sequence` objects with an internal C-contiguous buffer of pointers 
+    to ``ESL_SQ`` structs that can be used in the HMMER search loop.
+
     .. versionadded:: 0.7.0
 
     """
@@ -5209,6 +5219,23 @@ cdef class SequenceBlock:
     cdef void _remove(self, Sequence sequence) except *:
         self.pop(self._index(sequence))
       
+    cpdef Sequence largest(self):
+        """largest(self)\n--
+
+        Return the largest sequence in the block.
+
+        """
+        cdef size_t i
+        cdef size_t largest = 0
+
+        if self._length == 0:
+            raise ValueError("block is empty")
+        for i in range(self._length):
+            if self._refs[i].L > self._refs[largest].L:
+                largest = i
+
+        return self._storage[largest]
+
 
 cdef class TextSequenceBlock(SequenceBlock):
     """An abstract storage for storing `TextSequence` objects.
@@ -5312,8 +5339,15 @@ cdef class TextSequenceBlock(SequenceBlock):
 
         return block
 
+    cpdef TextSequence largest(self):
+        return SequenceBlock.largest(self)
+
 cdef class DigitalSequenceBlock(SequenceBlock):
     """An abstract storage for storing `DigitalSequence` objects.
+
+    Attributes:
+        alphabet (`Alphabet`, *readonly*): The biological alphabet shared by
+            all sequences in the collection.
 
     .. versionadded:: 0.7.0
 
@@ -5443,6 +5477,9 @@ cdef class DigitalSequenceBlock(SequenceBlock):
                 libeasel.sq.esl_sq_Copy(self._refs[i], block._refs[i])
 
         return block
+
+    cpdef DigitalSequence largest(self):
+        return SequenceBlock.largest(self)
 
 # --- Sequence File ----------------------------------------------------------
 

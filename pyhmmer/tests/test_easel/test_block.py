@@ -206,6 +206,18 @@ class _TestSequenceBlock(abc.ABC):
         self.assertNotIn(42, block)
         self.assertNotIn(object(), block)
 
+    def test_largest(self):
+        seq1 = self._new_sequence(b"seq1", "ATGC")
+        seq2 = self._new_sequence(b"seq2", "ATGCA")
+        seq3 = self._new_sequence(b"seq3", "TTGA")
+
+        block = self._new_block([seq1, seq2])
+        self.assertIs(block.largest(), seq2)
+
+        with self.assertRaises(ValueError):
+            block = self._new_block([])
+            block.largest()
+
 
 class TestTextSequenceBlock(_TestSequenceBlock, unittest.TestCase):
 

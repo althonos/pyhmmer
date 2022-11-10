@@ -217,6 +217,7 @@ cdef class SequenceBlock:
 
     cpdef void extend(self, object iterable) except *
     cpdef void clear(self) except *
+    cpdef Sequence largest(self)
 
 
 cdef class TextSequenceBlock(SequenceBlock):
@@ -227,7 +228,7 @@ cdef class TextSequenceBlock(SequenceBlock):
     cpdef void remove(self, TextSequence sequence) except *
 
     cpdef DigitalSequenceBlock digitize(self, Alphabet alphabet)
-
+    cpdef TextSequence largest(self)
 
 cdef class DigitalSequenceBlock(SequenceBlock):
     cdef readonly Alphabet   alphabet
@@ -239,7 +240,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
     cpdef void remove(self, DigitalSequence sequence) except *
 
     cpdef TextSequenceBlock textize(self)
-
+    cpdef DigitalSequence largest(self)
 
 # --- Sequence File ----------------------------------------------------------
 
