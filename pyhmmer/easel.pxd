@@ -13,7 +13,7 @@ from libeasel.keyhash cimport ESL_KEYHASH
 from libeasel.msa cimport ESL_MSA
 from libeasel.msafile cimport ESL_MSAFILE
 from libeasel.random cimport ESL_RANDOMNESS
-from libeasel.sq cimport ESL_SQ
+from libeasel.sq cimport ESL_SQ, ESL_SQ_BLOCK
 from libeasel.sqio cimport ESL_SQFILE
 from libeasel.ssi cimport ESL_SSI, ESL_NEWSSI
 from libeasel cimport ESL_DSQ
@@ -196,6 +196,44 @@ cdef class DigitalSequence(Sequence):
     cpdef DigitalSequence copy(self)
     cpdef TextSequence textize(self)
     cpdef DigitalSequence reverse_complement(self, bint inplace=*)
+
+
+# --- Sequence Block ---------------------------------------------------------
+
+cdef class SequenceBlock:
+    cdef          size_t     _length   # the number of sequences in the block
+    cdef          size_t     _capacity # the total number of sequences that can be stored
+    cdef          ESL_SQ**   _refs     # the array to pass the sequence references
+    cdef          list       _storage  # the actual Python list where `Sequence` objects are stored
+    cdef          ssize_t    _max_len  # the length of the largest sequence in the array
+    cdef          object     _owner    # the owner, if the object is just a shallow copy
+
+    cdef void _allocate(self, size_t n) except *
+    cdef void _append(self, Sequence sequence) except *
+    cdef Sequence _pop(self, ssize_t index=*)
+    cdef void _insert(self, ssize_t index, Sequence sequence) except *
+    cdef size_t _index(self, Sequence sequence, ssize_t start=*, ssize_t stop=*) except *
+    cdef void _remove(self, Sequence sequence) except *
+
+    cpdef void extend(self, object iterable) except *
+    cpdef void clear(self) except *
+
+
+cdef class TextSequenceBlock(SequenceBlock):
+    cpdef void append(self, TextSequence sequence) except *
+    cpdef TextSequence pop(self, ssize_t index=*)
+    cpdef void insert(self, ssize_t index, TextSequence sequence) except *
+    cpdef size_t index(self, TextSequence sequence, ssize_t start=*, ssize_t stop=*) except *
+    cpdef void remove(self, TextSequence sequence) except *
+
+cdef class DigitalSequenceBlock(SequenceBlock):
+    cdef readonly Alphabet   alphabet
+
+    cpdef void append(self, DigitalSequence sequence) except *
+    cpdef DigitalSequence pop(self, ssize_t index=*)
+    cpdef void insert(self, ssize_t index, DigitalSequence sequence) except *
+    cpdef size_t index(self, DigitalSequence sequence, ssize_t start=*, ssize_t stop=*) except *
+    cpdef void remove(self, DigitalSequence sequence) except *
 
 
 # --- Sequence File ----------------------------------------------------------

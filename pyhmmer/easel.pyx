@@ -93,6 +93,7 @@ import abc
 import array
 import io
 import os
+import operator
 import collections
 import pickle
 import sys
@@ -136,6 +137,20 @@ cdef dict SEQUENCE_FILE_FORMATS = {
 cdef dict SEQUENCE_FILE_FORMATS_INDEX = {
     v:k for k,v in SEQUENCE_FILE_FORMATS.items()
 }
+
+cdef inline size_t new_capacity(size_t capacity, size_t length) nogil:
+    """new_capacity(capacity, length)\n--
+
+    Compute a new capacity for a buffer reallocation.
+
+    This is how CPython computes the allocation sizes for the array storing
+    the references for a `list` object.
+
+    """
+    cdef size_t new_cap = (<size_t> capacity + (capacity >> 3) + 6) & ~(<size_t> 3)
+    if (capacity - length) > (new_cap - capacity):
+        new_cap = (<size_t> capacity + 3) & ~(<size_t> 3)
+    return new_cap
 
 # --- Alphabet ---------------------------------------------------------------
 
@@ -5011,6 +5026,391 @@ cdef class DigitalSequence(Sequence):
 
         return None if inplace else rc
 
+
+# --- Sequence Block ---------------------------------------------------------
+
+cdef class SequenceBlock:
+    """An abstract storage for storing `Sequence` objects.
+
+    .. versionadded:: 0.7.0
+
+    """
+    
+    # NOTE(@althonos): This implementation of a sequence block doesn't 
+    #                  actually use an `ESL_SQ_BLOCK` because `ESL_SQ_BLOCK`
+    #                  uses a contiguous array to store sequence data, which
+    #                  is unpractical for `Sequence` objects that may be 
+    #                  held from elsewhere with reference counting. An array 
+    #                  of pointers is easier to work with in that particular
+    #                  case.
+    
+    # --- Magic methods ------------------------------------------------------
+
+    def __cinit__(self):
+        self._refs = NULL
+        self._length = 0
+        self._capacity = 0
+        self._storage = []
+        self._max_len = -1
+        self._owner = None
+
+    def __init__(self):
+        raise TypeError("Can't instantiate abstract class 'SequenceBlock'")
+
+    def __dealloc__(self):
+        free(self._refs)
+
+    def __len__(self):
+        return self._length
+
+    def __getitem__(self, object index):
+        if isinstance(index, slice):
+            return type(self)(self._storage[index])
+        else:
+            return self._storage[index]
+
+    def __delitem__(self, object index):
+        cdef size_t   i
+        cdef Sequence sequence
+
+        if isinstance(index, slice):
+            del self._storage[index]
+            self._length = len(self._storage)
+            self._allocate(self._length)
+            for i, sequence in enumerate(self._storage):
+                self._refs[i] = sequence._sq
+        else:
+            self.pop(index)
+
+    def __reduce__(self):
+        return type(self), (), None, iter(self)
+
+    # --- C methods ----------------------------------------------------------
+ 
+    cdef void _allocate(self, size_t n) except *:
+        """_allocate(self, n, /)\n--
+
+        Allocate enough storage for at least ``n`` items.
+
+        """
+        cdef size_t i
+        cdef size_t capacity = new_capacity(n, self._length)
+        with nogil:
+            self._refs = <ESL_SQ**> realloc(self._refs, capacity * sizeof(ESL_SQ*))
+        if self._refs == NULL:
+            self._capacity = 0
+            raise AllocationError("ESL_SQ*", sizeof(ESL_SQ*), capacity)
+        else:
+            self._capacity = capacity
+        for i in range(self._length, self._capacity):
+            self._refs[i] = NULL
+    
+
+    # --- Python methods -----------------------------------------------------
+
+    cdef void _append(self, Sequence sequence) except *:
+        if self._capacity == 0 or self._length == self._capacity - 1:
+            self._allocate(self._capacity + 2)
+        self._storage.append(sequence)
+        self._refs[self._length] = sequence._sq
+        self._length += 1
+        assert self._refs[self._length] == NULL
+
+    cpdef void clear(self) except *:
+        """clear(self)\n--
+
+        Remove all sequences from the block.
+
+        """
+        cdef size_t i
+        for i in range(self._length):
+            self._refs[i] = NULL
+        self._storage.clear()
+        self._length = 0
+
+    cpdef void extend(self, object iterable) except *:
+        """extend(self, iterable, /)\n--
+
+        Extend block by appending sequences from the iterable.
+
+        """
+        cdef size_t hint = operator.length_hint(iterable)
+        if self._length + hint > self._capacity:
+            self._allocate(self._length + hint + 1)
+        for sequence in iterable:
+            self.append(sequence)
+
+    cdef Sequence _pop(self, ssize_t index=-1):
+        cdef ssize_t index_ = index
+        if self._length == 0:
+            raise IndexError("pop from empty block")
+        if index_ < 0:
+            index_ += self._length
+        if index_ < 0 or <size_t> index_ >= self._length:
+            raise IndexError(index)
+
+        # remove item from storage
+        item = self._storage.pop(index_)
+
+        # update pointers in the reference array
+        self._length -= 1
+        if <size_t> index_ < self._length:
+            memmove(&self._refs[index_], &self._refs[index_ + 1], (self._length - index_)*sizeof(ESL_SQ*))
+        
+        self._refs[self._length] = NULL
+        return item
+
+    cdef void _insert(self, ssize_t index, Sequence sequence) except *:
+        if index < 0:
+            index = 0
+        elif <size_t> index > self._length:
+            index = self._length
+
+        if self._length == self._capacity - 1:
+            self._allocate(self._capacity + 1)
+
+        if <size_t> index != self._length:
+            memmove(&self._refs[index + 1], &self._refs[index], (self._length - index)*sizeof(ESL_SQ*))
+
+        self._storage.insert(index, sequence)
+        self._refs[index] = sequence._sq
+        self._length += 1
+        assert self._refs[self._length] == NULL
+
+    cdef size_t _index(self, Sequence sequence, ssize_t start=0, ssize_t stop=sys.maxsize) except *:
+        cdef size_t i     
+        cdef size_t start_ 
+        cdef size_t stop_ 
+        cdef int    status
+
+        # wrap once is negative indices are used
+        if start < 0:
+            start += <ssize_t> self._length
+        if stop < 0:
+            stop += <ssize_t> self._length
+        
+        # wrap a second time if indices are still negative or out of bounds
+        stop_ = min(stop, self._length)
+        start_ = max(start, 0)
+
+        # scan to locate the sequence
+        with nogil:
+            for i in range(start_, stop_):
+                status = libeasel.sq.esl_sq_Compare(sequence._sq, self._refs[i])
+                if status == libeasel.eslOK:
+                    break
+                elif status != libeasel.eslFAIL:
+                    raise UnexpectedError(status, "esl_sq_Compare")
+            else:
+                raise ValueError(f"sequence {sequence.name!r} not in block")
+
+        return i
+    
+    cdef void _remove(self, Sequence sequence) except *:
+        self.pop(self._index(sequence))
+      
+
+cdef class TextSequenceBlock(SequenceBlock):
+    """An abstract storage for storing `TextSequence` objects.
+
+    .. versionadded:: 0.7.0
+
+    """
+    
+    # --- Magic methods ------------------------------------------------------
+
+    def __init__(self, object iterable = ()):
+        self.clear()
+        self.extend(iterable)
+
+    def __repr__(self):
+        cdef str ty = type(self).__name__
+        return f"{ty}({list(self)!r})"
+
+    def __setitem__(self, object index, object sequences):
+        cdef size_t       i 
+        cdef TextSequence sequence
+
+        if isinstance(index, slice):
+            self._storage[index] = sequences
+            self._length = len(self._storage)
+            self._allocate(self._length + 1) 
+            for i, sequence in enumerate(self._storage):
+                self._refs[i] = sequence._sq
+            self._refs[self._length] = NULL
+        else:
+            sequence = sequences
+            self._storage[index] = sequence
+            self._refs[index] = sequence._sq
+
+    def __contains__(self, object sequence):
+        if isinstance(sequence, TextSequence):
+            try:
+                return self._index(sequence) >= 0
+            except ValueError:
+                return False
+        return False
+
+    # --- Python methods -----------------------------------------------------
+
+    cpdef void append(self, TextSequence sequence) except *:
+        """append(self, sequence)\n--
+
+        Append ``sequence`` at the end of the block.
+
+        """
+        self._append(sequence)
+    
+    cpdef TextSequence pop(self, ssize_t index=-1):
+        """pop(self, index=-1)\n--
+
+        Remove and return a sequence from the block (the last one by default).
+
+        """
+        return self._pop(index)
+
+    cpdef void insert(self, ssize_t index, TextSequence sequence) except *:
+        """insert(self, index, sequence)\n--
+
+        Insert a new sequence in the block before ``index``.
+
+        """
+        self._insert(index, sequence)
+
+    cpdef size_t index(self, TextSequence sequence, ssize_t start=0, ssize_t stop=sys.maxsize) except *:
+        """index(self, sequence, start=0, stop=sys.maxsize)\n--
+
+        Return the index of the first occurence of ``sequence``.
+
+        Raises:
+            `ValueError`: When the block does not contain ``sequence``.
+
+        """
+        return self._index(sequence, start, stop)
+    
+    cpdef void remove(self, TextSequence sequence) except *:
+        """remove(self, sequence)\n--
+
+        Remove the first occurence of the given sequence.
+
+        """
+        self._remove(sequence)
+
+cdef class DigitalSequenceBlock(SequenceBlock):
+    """An abstract storage for storing `DigitalSequence` objects.
+
+    .. versionadded:: 0.7.0
+
+    """
+    
+    # --- Magic methods ------------------------------------------------------
+
+    def __cinit__(self, Alphabet alphabet, *args, **kwargs):
+        self.alphabet = alphabet
+
+    def __init__(self, Alphabet alphabet not None, object iterable = ()):
+        """Create a new digital sequence block with the given alphabet.
+
+        Arguments:
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet to use for all
+                the sequences in the block.
+            iterable (iterable of `~pyhmmer.easel.DigitalSequence`): An initial
+                collection of digital sequences to add to the block.
+
+        Raises:
+            `~pyhmmer.easel.AlphabetMismatch`: When the alphabet of one of the 
+                sequences does not match ``alphabet``.
+
+        """
+        self.clear()
+        self.extend(iterable)
+
+    def __repr__(self):
+        cdef str ty = type(self).__name__
+        return f"{ty}({self.alphabet!r}, {list(self)!r})"
+    def __reduce__(self):
+        return type(self), (self.alphabet,), None, iter(self)
+    
+    def __setitem__(self, object index, object sequences):
+        cdef size_t          i 
+        cdef DigitalSequence sequence
+
+        if isinstance(index, slice):
+            self._storage[index] = sequences
+            self._length = len(self._storage)
+            self._allocate(self._length + 1) 
+            for i, sequence in enumerate(self._storage):
+                if sequence.alphabet != self.alphabet:
+                    raise AlphabetMismatch(self.alphabet, sequence.alphabet)
+                self._refs[i] = sequence._sq
+            self._refs[self._length] = NULL
+        else:
+            sequence = sequences
+            if sequence.alphabet != self.alphabet:
+                raise AlphabetMismatch(self.alphabet, sequence.alphabet)
+            self._storage[index] = sequence
+            self._refs[index] = sequence._sq
+
+    def __contains__(self, object sequence):
+        if isinstance(sequence, DigitalSequence):
+            try:
+                return self._index(sequence) >= 0
+            except ValueError:
+                return False
+        return False
+
+    # --- Python methods -----------------------------------------------------
+
+    cpdef void append(self, DigitalSequence sequence) except *:
+        """append(self, sequence)\n--
+
+        Append ``sequence`` at the end of the block.
+
+        """
+        if sequence.alphabet != self.alphabet:
+            raise AlphabetMismatch(self.alphabet, sequence.alphabet)
+        self._append(sequence)
+    
+    cpdef DigitalSequence pop(self, ssize_t index=-1):
+        """pop(self, index=-1)\n--
+
+        Remove and return a sequence from the block (the last one by default).
+
+        """
+        return self._pop(index)
+
+    cpdef void insert(self, ssize_t index, DigitalSequence sequence) except *:
+        """insert(self, index, sequence)\n--
+
+        Insert a new sequence in the block before ``index``.
+
+        """
+        if sequence.alphabet != self.alphabet:
+            raise AlphabetMismatch(self.alphabet, sequence.alphabet)
+        self._insert(index, sequence)
+
+    cpdef size_t index(self, DigitalSequence sequence, ssize_t start=0, ssize_t stop=sys.maxsize) except *:
+        """index(self, sequence, start=0, stop=sys.maxsize)\n--
+
+        Return the index of the first occurence of ``sequence``.
+
+        Raises:
+            `ValueError`: When the block does not contain ``sequence``.
+
+        """
+        if sequence.alphabet != self.alphabet:
+            raise AlphabetMismatch(self.alphabet, sequence.alphabet)
+        return self._index(sequence, start, stop)
+    
+    cpdef void remove(self, DigitalSequence sequence) except *:
+        """remove(self, sequence)\n--
+
+        Remove the first occurence of the given sequence.
+
+        """
+        if sequence.alphabet != self.alphabet:
+            raise AlphabetMismatch(self.alphabet, sequence.alphabet)
+        self._remove(sequence)
 
 # --- Sequence File ----------------------------------------------------------
 

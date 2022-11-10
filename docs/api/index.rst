@@ -43,6 +43,7 @@ API Reference
        pyhmmer.easel.Bitfield
        pyhmmer.easel.KeyHash
 
+
     Sequences
     ^^^^^^^^^
 
@@ -52,6 +53,25 @@ API Reference
        pyhmmer.easel.Sequence
        pyhmmer.easel.TextSequence
        pyhmmer.easel.DigitalSequence
+
+
+    Sequence Blocks
+    ^^^^^^^^^^^^^^^
+
+    .. autosummary::
+       :nosignatures:
+
+       pyhmmer.easel.SequenceBlock
+       pyhmmer.easel.TextSequenceBlock
+       pyhmmer.easel.DigitalSequenceBlock
+
+
+    Sequence File
+    ^^^^^^^^^^^^^
+
+    .. autosummary::
+       :nosignatures:
+
        pyhmmer.easel.SequenceFile
 
 
@@ -64,6 +84,14 @@ API Reference
        pyhmmer.easel.MSA
        pyhmmer.easel.TextMSA
        pyhmmer.easel.DigitalMSA
+
+
+    Alignment File
+    ^^^^^^^^^^^^^^
+
+    .. autosummary::
+       :nosignatures:
+
        pyhmmer.easel.MSAFile
 
 
