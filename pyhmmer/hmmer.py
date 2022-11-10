@@ -25,8 +25,8 @@ import typing
 
 import psutil
 
-from .easel import Alphabet, DigitalSequence, DigitalMSA, MSA, MSAFile, TextSequence, SequenceFile, SSIWriter
-from .plan7 import Builder, Background, Pipeline, PipelineSearchTargets, LongTargetsPipeline, TopHits, HMM, HMMFile, Profile, TraceAligner, OptimizedProfile
+from .easel import Alphabet, DigitalSequence, DigitalMSA, MSA, MSAFile, TextSequence, SequenceFile, SSIWriter, DigitalSequenceBlock
+from .plan7 import Builder, Background, Pipeline, LongTargetsPipeline, TopHits, HMM, HMMFile, Profile, TraceAligner, OptimizedProfile
 from .utils import peekable
 
 # the query type for the pipeline
@@ -105,7 +105,7 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
     """A generic worker thread to parallelize a pipelined search.
 
     Attributes:
-        sequence (`pyhmmer.plan7.PipelineSearchTargets`): The target
+        sequences (`pyhmmer.easel.DigitalSequenceBlock`): The target
             sequences to search for hits.
         query_queue (`queue.Queue`): The queue used to pass queries
             between threads. It contains the query, its index so that the
@@ -135,7 +135,7 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
 
     def __init__(
         self,
-        sequences: PipelineSearchTargets,
+        sequences: DigitalSequenceBlock,
         query_available: threading.Semaphore,
         query_queue: "queue.Queue[typing.Optional[_Chore[_Q]]]",
         query_count: multiprocessing.Value,  # type: ignore
@@ -198,7 +198,7 @@ class _ModelPipelineThread(typing.Generic[_M], _PipelineThread[_M]):
 class _SequencePipelineThread(_PipelineThread[DigitalSequence]):
     def __init__(
         self,
-        sequences: PipelineSearchTargets,
+        sequences: DigitalSequenceBlock,
         query_available: threading.Semaphore,
         query_queue: "queue.Queue[typing.Optional[_Chore[DigitalSequence]]]",
         query_count: multiprocessing.Value,  # type: ignore
@@ -229,7 +229,7 @@ class _SequencePipelineThread(_PipelineThread[DigitalSequence]):
 class _MSAPipelineThread(_PipelineThread[DigitalMSA]):
     def __init__(
         self,
-        sequences: PipelineSearchTargets,
+        sequences: DigitalSequenceBlock,
         query_available: threading.Semaphore,
         query_queue: "queue.Queue[typing.Optional[_Chore[DigitalMSA]]]",
         query_count: multiprocessing.Value,  # type: ignore
@@ -278,10 +278,10 @@ class _Search(typing.Generic[_Q], abc.ABC):
         self.alphabet = alphabet
 
         # build an efficient collection to handle the search targets
-        if isinstance(sequences, PipelineSearchTargets):
+        if isinstance(sequences, DigitalSequenceBlock):
             self.sequences = sequences
         else:
-            self.sequences = PipelineSearchTargets(sequences)
+            self.sequences = DigitalSequenceBlock(alphabet, sequences)
 
         # make sure a positive number of CPUs is requested
         if cpus <= 0:

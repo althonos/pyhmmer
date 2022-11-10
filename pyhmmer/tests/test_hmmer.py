@@ -316,7 +316,7 @@ class TestNhmmer(unittest.TestCase):
         return io.TextIOWrapper(bin_stream)
 
     def test_no_queries(self):
-        alphabet = Alphabet.amino()
+        alphabet = Alphabet.dna()
         path = pkg_resources.resource_filename(__name__, "data/seqs/BGC0001090.gbk")
         with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
             seqs = list(seqs_file)

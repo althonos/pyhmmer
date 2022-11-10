@@ -25,7 +25,17 @@ IF HMMER_IMPL == "VMX":
 ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
-from .easel cimport Alphabet, DigitalSequence, DigitalMSA, KeyHash, MSA, Randomness, VectorF, VectorU8
+from .easel cimport (
+    Alphabet, 
+    DigitalSequence, 
+    DigitalSequenceBlock, 
+    DigitalMSA, 
+    KeyHash, 
+    MSA, 
+    Randomness, 
+    VectorF, 
+    VectorU8,
+)
 
 
 cdef extern from "hmmer.h" nogil:
@@ -177,16 +187,16 @@ cdef class IterationResult:
 
 
 cdef class IterativeSearch:
-    cdef readonly object                query
-    cdef readonly Pipeline              pipeline
-    cdef readonly Background            background
-    cdef readonly Builder               builder
-    cdef readonly bint                  converged
-    cdef readonly PipelineSearchTargets targets
-    cdef readonly KeyHash               ranking
-    cdef readonly size_t                iteration
-    cdef          DigitalMSA            msa
-    cdef          object                select_hits
+    cdef readonly object               query
+    cdef readonly Pipeline             pipeline
+    cdef readonly Background           background
+    cdef readonly Builder              builder
+    cdef readonly bint                 converged
+    cdef readonly DigitalSequenceBlock targets
+    cdef readonly KeyHash              ranking
+    cdef readonly size_t               iteration
+    cdef          DigitalMSA           msa
+    cdef          object               select_hits
 
     cpdef TopHits _search_hmm(self, HMM hmm)
 
@@ -210,13 +220,13 @@ cdef class Offsets:
     cdef off_t[p7_NOFFSETS]* _offs
 
 
-cdef class PipelineSearchTargets:
-    cdef const    ESL_SQ**   _refs         # the array to pass the sequence references to the C code
-    cdef          size_t     _nref         # the total size of `self._refs`
-    cdef          list       _storage      # the actual Python list where `Sequence` objects are stored
-    cdef          ssize_t    _max_len      # the length of the largest sequence in the array
-    cdef          object     _owner        # the owner, if the object is just a shallow copy
-    cdef readonly Alphabet   alphabet      # the target alphabets
+# cdef class PipelineSearchTargets:
+#     cdef const    ESL_SQ**   _refs         # the array to pass the sequence references to the C code
+#     cdef          size_t     _nref         # the total size of `self._refs`
+#     cdef          list       _storage      # the actual Python list where `Sequence` objects are stored
+#     cdef          ssize_t    _max_len      # the length of the largest sequence in the array
+#     cdef          object     _owner        # the owner, if the object is just a shallow copy
+#     cdef readonly Alphabet   alphabet      # the target alphabets
 
 
 cdef class Pipeline:

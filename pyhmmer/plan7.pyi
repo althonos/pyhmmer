@@ -14,6 +14,7 @@ from .easel import (
     Alphabet,
     Sequence,
     DigitalSequence,
+    DigitalSequenceBlock,
     KeyHash,
     MSA,
     DigitalMSA,
@@ -388,7 +389,7 @@ class IterativeSearch(typing.Iterator[IterationResult]):
     builder: Builder
     query: typing.Union[DigitalSequence, HMM]
     converged: bool
-    targets: PipelineSearchTargets
+    targets: DigitalSequenceBlock
     ranking: KeyHash
     iteration: int
     def __init__(
@@ -396,7 +397,7 @@ class IterativeSearch(typing.Iterator[IterationResult]):
         pipeline: Pipeline,
         builder: Builder,
         query: typing.Union[DigitalSequence, HMM],
-        targets: PipelineSearchTargets,
+        targets: DigitalSequenceBlock,
         select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
     ) -> None: ...
     def __iter__(self) -> IterativeSearch: ...
@@ -468,15 +469,6 @@ class Offsets(object):
     def profile(self) -> typing.Optional[int]: ...
     @profile.setter
     def profile(self, profile: typing.Optional[int]) -> None: ...
-
-class PipelineSearchTargets(typing.Sequence[DigitalSequence]):
-    def __init__(self, sequences: typing.Iterable[DigitalSequence]) -> None: ...
-    def __iter__(self) -> typing.Iterator[DigitalSequence]: ...
-    def __len__(self) -> int: ...
-    @typing.overload
-    def __getitem__(self, index: int) -> DigitalSequence: ...
-    @typing.overload
-    def __getitem__(self, index: slice) -> PipelineSearchTargets: ...
 
 class Pipeline(object):
     M_HINT: typing.ClassVar[int] = 100
