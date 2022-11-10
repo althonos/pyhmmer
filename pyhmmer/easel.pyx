@@ -5296,6 +5296,22 @@ cdef class TextSequenceBlock(SequenceBlock):
         """
         self._remove(sequence)
 
+    cpdef DigitalSequenceBlock digitize(self, Alphabet alphabet):
+        """digitize(self, alphabet)\n--
+
+        Create a block containing sequences from this block in digital mode.
+
+        """
+        cdef size_t               i
+        cdef list                 seqs  = [ DigitalSequence(alphabet) for _ in range(self._length) ]
+        cdef DigitalSequenceBlock block = DigitalSequenceBlock(alphabet, seqs)
+
+        with nogil:
+            for i in range(self._length):
+                libeasel.sq.esl_sq_Copy(self._refs[i], block._refs[i])
+
+        return block
+
 cdef class DigitalSequenceBlock(SequenceBlock):
     """An abstract storage for storing `DigitalSequence` objects.
 
@@ -5411,6 +5427,22 @@ cdef class DigitalSequenceBlock(SequenceBlock):
         if sequence.alphabet != self.alphabet:
             raise AlphabetMismatch(self.alphabet, sequence.alphabet)
         self._remove(sequence)
+
+    cpdef TextSequenceBlock textize(self):
+        """textize(self, alphabet)\n--
+
+        Create a block containing sequences from this block in text mode.
+
+        """
+        cdef size_t            i
+        cdef list              seqs  = [ TextSequence() for _ in range(self._length) ]
+        cdef TextSequenceBlock block = TextSequenceBlock(seqs)
+
+        with nogil:
+            for i in range(self._length):
+                libeasel.sq.esl_sq_Copy(self._refs[i], block._refs[i])
+
+        return block
 
 # --- Sequence File ----------------------------------------------------------
 

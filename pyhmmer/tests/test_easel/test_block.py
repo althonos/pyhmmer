@@ -215,6 +215,20 @@ class TestTextSequenceBlock(_TestSequenceBlock, unittest.TestCase):
     def _new_block(self, sequences=()):
         return TextSequenceBlock(sequences)
 
+    def test_digitize(self):
+        alphabet = Alphabet.dna()
+        
+        seq1 = self._new_sequence(b"seq1", "ATGC")
+        seq2 = self._new_sequence(b"seq2", "ATGCA")
+
+        block = self._new_block([seq1, seq2])
+        self.assertEqual(len(block), 2)
+
+        dblock = block.digitize(alphabet)
+        self.assertEqual(len(dblock), 2)
+        self.assertEqual(dblock[0], seq1.digitize(alphabet))
+        self.assertEqual(dblock[1], seq2.digitize(alphabet))
+
 
 class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
 
@@ -227,3 +241,15 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
 
     def _new_block(self, sequences=()):
         return DigitalSequenceBlock(self.alphabet, sequences)
+
+    def test_textize(self):
+        seq1 = self._new_sequence(b"seq1", "ATGC")
+        seq2 = self._new_sequence(b"seq2", "ATGCA")
+
+        block = self._new_block([seq1, seq2])
+        self.assertEqual(len(block), 2)
+
+        tblock = block.textize(alphabet)
+        self.assertEqual(len(dblock), 2)
+        self.assertEqual(dblock[0], seq1.textize())
+        self.assertEqual(dblock[1], seq2.textize())

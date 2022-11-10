@@ -226,6 +226,9 @@ cdef class TextSequenceBlock(SequenceBlock):
     cpdef size_t index(self, TextSequence sequence, ssize_t start=*, ssize_t stop=*) except *
     cpdef void remove(self, TextSequence sequence) except *
 
+    cpdef DigitalSequenceBlock digitize(self, Alphabet alphabet)
+
+
 cdef class DigitalSequenceBlock(SequenceBlock):
     cdef readonly Alphabet   alphabet
 
@@ -234,6 +237,8 @@ cdef class DigitalSequenceBlock(SequenceBlock):
     cpdef void insert(self, ssize_t index, DigitalSequence sequence) except *
     cpdef size_t index(self, DigitalSequence sequence, ssize_t start=*, ssize_t stop=*) except *
     cpdef void remove(self, DigitalSequence sequence) except *
+
+    cpdef TextSequenceBlock textize(self)
 
 
 # --- Sequence File ----------------------------------------------------------
