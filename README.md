@@ -23,10 +23,10 @@
 ## 🗺️ Overview
 
 HMMER is a biological sequence analysis tool that uses profile hidden Markov
-models to search for sequence homologs. HMMER3 is maintained by members of the
+models to search for sequence homologs. HMMER3 is developed and maintained by
 the [Eddy/Rivas Laboratory](http://eddylab.org/) at Harvard University.
 
-`pyhmmer` is a Python module, implemented using the [Cython](https://cython.org/)
+`pyhmmer` is a Python package, implemented using the [Cython](https://cython.org/)
 language, that provides bindings to HMMER3. It directly interacts with the
 HMMER internals, which has the following advantages over CLI wrappers
 (like [`hmmer-py`](https://pypi.org/project/hmmer/)):
@@ -111,11 +111,12 @@ object is yielded for every [`HMM`] passed in the input iterable.
 ```python
 import pyhmmer
 
-with pyhmmer.easel.SequenceFile("tests/data/seqs/938293.PRJEB85.HG003687.faa", digital=True) as seq_file:
+with pyhmmer.easel.SequenceFile("pyhmmer/tests/data/seqs/938293.PRJEB85.HG003687.faa", digital=True) as seq_file:
     sequences = list(seq_file)
 
-with pyhmmer.plan7.HMMFile("tests/data/hmms/txt/t2pks.hmm") as hmm_file:
-    all_hits = list(pyhmmer.hmmsearch(hmm_file, sequences_file, cpus=4))
+with pyhmmer.plan7.HMMFile("pyhmmer/tests/data/hmms/txt/t2pks.hmm") as hmm_file:
+    for hits in pyhmmer.hmmsearch(hmm_file, sequences, cpus=4):
+      print(f"HMM {hits.query_name.decode()} found {len(hits)} hits in the target sequences")
 ```
 
 Have a look at more in-depth examples such as [building a HMM from an alignment](https://pyhmmer.readthedocs.io/en/stable/examples/msa_to_hmm.html),
