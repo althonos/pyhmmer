@@ -6197,7 +6197,7 @@ cdef class SequenceFile:
                 ...     block = sf.read_block(residues=1000)
                 >>> len(block)
                 3
-                >>> sum(map(len, block))
+                >>> sum(len(seq) for seq in block)
                 1444
 
             Note that the last sequence will not be truncated, so the block
