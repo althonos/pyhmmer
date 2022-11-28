@@ -154,7 +154,6 @@ API Reference
         :nosignatures:
 
         pyhmmer.plan7.Pipeline
-        pyhmmer.plan7.LongTargetsPipeline
         pyhmmer.plan7.Builder
 
 
@@ -201,7 +200,6 @@ API Reference
         pyhmmer.plan7.Cutoffs
         pyhmmer.plan7.EvalueParameters
         pyhmmer.plan7.Offsets
-        pyhmmer.plan7.PipelineSearchTargets
 
 
     Daemon
