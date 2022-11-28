@@ -28,7 +28,7 @@ from cpython.memoryview cimport PyMemoryView_FromMemory
 from cpython.ref cimport Py_INCREF
 from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 from cpython.unicode cimport PyUnicode_DecodeASCII
-from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t
+from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t, SIZE_MAX
 from libc.stdio cimport fclose
 from libc.stdlib cimport calloc, malloc, realloc, free
 from libc.string cimport memcmp, memcpy, memmove, memset, strdup, strlen, strncpy
@@ -92,6 +92,7 @@ from .reexports.esl_sqio_ascii cimport (
 import abc
 import array
 import io
+import itertools
 import os
 import operator
 import collections
@@ -5507,7 +5508,7 @@ cdef class SequenceFile:
         sequences will be read sequentially, removing the gap characters::
 
             >>> with SequenceFile("tests/data/msa/LuxC.sto") as sf:
-            ...     sequences = list(sf)
+            ...     sequences = sf.read_block()
             >>> print(sequences[0].name[:6], sequences[0].sequence[:30])
             b'Q9KV99' LANQPLEAILGLINEARKSWSSTPELDPYR
             >>> print(sequences[1].name[:6], sequences[1].sequence[:30])
@@ -6158,6 +6159,78 @@ cdef class SequenceFile:
             raise ValueError("Could not parse file: {}".format(msg))
         else:
             raise UnexpectedError(status, funcname)
+
+    cpdef SequenceBlock read_block(self, object sequences=None, object residues=None):
+        """read_block(self, max_sequences=None, max_residues=None)\n--
+
+        Read several sequences into a sequence block.
+
+        Arguments:
+            sequences (`int`, *optional*): The maximum number of sequences
+                to read before returning a block. Leave as `None` to read all
+                remaining sequences from the file.
+            residues (`int`, *optional*): The number of residues to read 
+                before returning the block. Leave as `None` to keep reading 
+                sequences without a residue limit.
+
+        Returns:
+            `~pyhmmer.easel.SequenceBlock`: A sequence block object, which may
+            be empty if there are no sequences to read anymore. The concrete
+            type depends on whether the `SequenceFile` was opened in text or 
+            digital mode.
+
+        Raises:
+            `ValueError`: When attempting to read a sequence from a closed
+                file, or when the file could not be parsed.
+
+        Example:
+            Read a block of at most 4 sequences from a file::
+
+                >>> with SequenceFile("tests/data/seqs/LuxC.faa") as sf:
+                ...     block = sf.read_block(sequences=4)
+                >>> len(block)
+                4
+            
+            Read sequences until the block contains at least 1000 residues:
+
+                >>> with SequenceFile("tests/data/seqs/LuxC.faa") as sf:
+                ...     block = sf.read_block(residues=1000)
+                >>> len(block)
+                3
+                >>> sum(map(len, block))
+                1444
+
+            Note that the last sequence will not be truncated, so the block
+            will always contain more than ``max_residues`` unless the end of
+            the file was reached. 
+
+        .. versionadded:: 0.7.0
+
+        """
+        cdef SequenceBlock block
+        cdef object        iterator
+        cdef size_t        n_residues    = 0
+        cdef size_t        n_sequences   = 0
+        cdef size_t        max_sequences = SIZE_MAX if sequences is None else sequences
+        cdef size_t        max_residues  = SIZE_MAX if residues is None else residues
+
+        if self.alphabet is None:
+            block = TextSequenceBlock()
+        else:
+            block = DigitalSequenceBlock(self.alphabet)
+        if sequences is not None:
+            block._allocate(sequences)
+
+        while n_sequences < max_sequences and n_residues < max_residues:
+            sequence = self.read()
+            if sequence is None:
+                break
+            else:
+                n_residues += len(sequence)
+                n_sequences += 1
+                block.append(sequence)
+
+        return block
 
 
 # --- Sequence/Subsequence Index ---------------------------------------------

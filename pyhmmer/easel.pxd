@@ -258,7 +258,7 @@ cdef class SequenceFile:
     cpdef Alphabet guess_alphabet(self)
     cpdef Sequence read(self, bint skip_info=*, bint skip_sequence=*)
     cpdef Sequence readinto(self, Sequence, bint skip_info=*, bint skip_sequence=*)
-
+    cpdef SequenceBlock read_block(self, object sequences=*, object residues=*)
 
 # --- Sequence/Subsequence Index ---------------------------------------------
 
