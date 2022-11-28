@@ -13,9 +13,6 @@ jobs:
     strategy:
       matrix:
         include:
-        - python-version: 3.6
-          pyo3-python: /opt/python/cp36-cp36m/bin/python
-          manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
         - python-version: 3.7
           pyo3-python: /opt/python/cp37-cp37m/bin/python
           manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
@@ -31,9 +28,6 @@ jobs:
         - python-version: '3.11'
           pyo3-python: /opt/python/cp311-cp311/bin/python
           manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
-        - python-version: pypy-3.6
-          pyo3-python: /opt/pypy/pypy3.6-7.3.3/bin/python
-          manylinux-img: pypywheels/manylinux2010-pypy_x86_64
         - python-version: pypy-3.7
           pyo3-python: /opt/python/pp37-pypy37_pp73/bin/python
           manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
@@ -72,7 +66,6 @@ jobs:
     strategy:
       matrix:
         python-version:
-        - 3.6
         - 3.7
         - 3.8
         - 3.9
@@ -103,7 +96,6 @@ jobs:
     strategy:
       matrix:
         python-version:
-        - 3.6
         - 3.7
         - 3.8
         - 3.9
@@ -153,7 +145,6 @@ jobs:
     strategy:
       matrix:
         python-version:
-        - 3.6
         - 3.7
         - 3.8
         - 3.9

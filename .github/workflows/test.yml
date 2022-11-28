@@ -14,9 +14,6 @@ jobs:
     strategy:
       matrix:
         include:
-        - python-version: 3.6
-          python-release: v3.6
-          python-impl: CPython
         - python-version: 3.7
           python-release: v3.7
           python-impl: CPython
@@ -32,9 +29,6 @@ jobs:
         - python-version: '3.11'
           python-release: 'v3.11'
           python-impl: CPython
-        - python-version: pypy-3.6
-          python-release: v3.6
-          python-impl: PyPy
         - python-version: pypy-3.7
           python-release: v3.7
           python-impl: PyPy
@@ -94,9 +88,6 @@ jobs:
     strategy:
       matrix:
         include:
-        - python-version: 3.6
-          python-release: v3.6
-          python-impl: CPython
         - python-version: 3.7
           python-release: v3.7
           python-impl: CPython
