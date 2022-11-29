@@ -5098,6 +5098,37 @@ cdef class SequenceBlock:
     def __reduce__(self):
         return type(self), (), None, iter(self)
 
+    def __copy__(self):
+        return self.copy()
+
+    def __eq__(self, object other):
+        cdef size_t         i
+        cdef SequenceBlock  other_
+        cdef const ESL_SQ** r1
+        cdef const ESL_SQ** r2
+        cdef bint           equal  = True
+
+        if not isinstance(other, SequenceBlock):
+            return NotImplemented
+
+        other_ = other
+        if self._length != other_._length:
+            return False
+
+        with nogil:
+            for i in range(self._length):
+                status = libeasel.sq.esl_sq_Compare(self._refs[i], other_._refs[i])
+                if status == libeasel.eslOK:
+                    continue
+                elif status == libeasel.eslFAIL:
+                    equal = False
+                    break
+                else:
+                    raise UnexpectedError(status, "esl_sq_Compare")
+
+        return equal
+
+
     # --- C methods ----------------------------------------------------------
 
     cdef void _allocate(self, size_t n) except *:
@@ -5247,6 +5278,19 @@ cdef class SequenceBlock:
 
         return self._storage[self._largest]
 
+    cpdef SequenceBlock copy(self):
+        """copy(self)\n--
+
+        Return a copy of the sequence block.
+
+        Note:
+            The sequence internally refered to by this collection are not 
+            copied. Use `copy.deepcopy` is you also want to duplicate the 
+            internal storage of each sequence.
+
+        """
+        return self[:]
+
 
 cdef class TextSequenceBlock(SequenceBlock):
     """An abstract storage for storing `TextSequence` objects.
@@ -5362,6 +5406,17 @@ cdef class TextSequenceBlock(SequenceBlock):
     cpdef TextSequence largest(self):
         return SequenceBlock.largest(self)
 
+    cpdef TextSequenceBlock copy(self):
+        cdef TextSequenceBlock new = TextSequenceBlock.__new__(TextSequenceBlock)
+        new._storage = self._storage.copy()
+        new._length = self._length
+        new._largest = self._largest
+        new._owner = self._owner
+        new._allocate(self._length)
+        memcpy(new._refs, self._refs, self._length * sizeof(ESL_SQ*))
+        return new
+
+
 cdef class DigitalSequenceBlock(SequenceBlock):
     """An abstract storage for storing `DigitalSequence` objects.
 
@@ -5404,7 +5459,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
 
     def __getitem__(self, object index):
         if isinstance(index, slice):
-            return type(self)(self._storage[index])
+            return type(self)(self.alphabet, self._storage[index])
         else:
             return self._storage[index]
 
@@ -5510,6 +5565,17 @@ cdef class DigitalSequenceBlock(SequenceBlock):
 
     cpdef DigitalSequence largest(self):
         return SequenceBlock.largest(self)
+
+    cpdef DigitalSequenceBlock copy(self):
+        cdef DigitalSequenceBlock new = DigitalSequenceBlock.__new__(DigitalSequenceBlock, self.alphabet)
+        new._storage = self._storage.copy()
+        new._length = self._length
+        new._largest = self._largest
+        new._owner = self._owner
+        new._allocate(self._length)
+        memcpy(new._refs, self._refs, self._length * sizeof(ESL_SQ*))
+        return new
+
 
 # --- Sequence File ----------------------------------------------------------
 
