@@ -501,7 +501,7 @@ class _NHMMERDispatcher(_BaseDispatcher[_NHMMERQueryType]):
 # --- hmmsearch --------------------------------------------------------------
 
 def hmmsearch(
-    queries: typing.Iterable[_SEARCHQueryType],
+    queries: typing.Union[_SEARCHQueryType, typing.Iterable[_SEARCHQueryType]],
     sequences: typing.Iterable[DigitalSequence],
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_SEARCHQueryType, int], None]] = None,
@@ -511,7 +511,8 @@ def hmmsearch(
 
     Arguments:
         queries (iterable of `HMM`, `Profile` or `OptimizedProfile`): The
-            query HMMs or profiles to search for in the database.
+            query HMMs or profiles to search for in the database. Note that
+            passing a single object is supported.
         sequences (collection of `~pyhmmer.easel.DigitalSequence`): A
             database of sequences to query. If you plan on using the
             same sequences several times, consider storing them into
@@ -538,7 +539,7 @@ def hmmsearch(
         For instance, to run a ``hmmsearch`` using a bitscore cutoffs of
         5 instead of the default E-value cutoff, use::
 
-            >>> hits = next(hmmsearch([thioesterase], proteins, T=5))
+            >>> hits = next(hmmsearch(thioesterase, proteins, T=5))
             >>> hits[0].score
             8.601...
 
@@ -548,12 +549,15 @@ def hmmsearch(
        Allow using `Profile` and `OptimizedProfile` queries.
 
     .. versionchanged:: 0.7.0
-        Queries may now be an iterable of different types.
+        Queries may now be an iterable of different types, or a single object.
 
     """
     _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count() or 1
-    queries = peekable(queries)
 
+    if not isinstance(queries, collections.abc.Iterable):
+        queries = (queries,)
+
+    queries = peekable(queries)
     if not isinstance(sequences, DigitalSequenceBlock):
         try:
             _alphabet = queries.peek().alphabet
@@ -577,7 +581,7 @@ def hmmsearch(
 # --- phmmer -----------------------------------------------------------------
 
 def phmmer(
-    queries: typing.Iterable[_PHMMERQueryType],
+    queries: typing.Union[_PHMMERQueryType, typing.Iterable[_PHMMERQueryType]],
     sequences: typing.Iterable[DigitalSequence],
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_PHMMERQueryType, int], None]] = None,
@@ -588,7 +592,8 @@ def phmmer(
 
     Arguments:
         queries (iterable of `DigitalSequence` or `DigitalMSA`): The
-            query sequences to search for in the sequence database.
+            query sequences to search for in the sequence database. Note
+            that passing a single object is supported.
         sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A
             database of sequences to query. If you plan on using the
             same sequences several times, consider storing them into
@@ -619,13 +624,15 @@ def phmmer(
        Allow using `DigitalMSA` queries.
 
     .. versionchanged:: 0.7.0
-        Queries may now be an iterable of different types.
+        Queries may now be an iterable of different types, or a single object.
 
     """
     _alphabet = Alphabet.amino()
     _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count() or 1
     _builder = Builder(_alphabet) if builder is None else builder
 
+    if not isinstance(queries, collections.abc.Iterable):
+        queries = (queries,)
     if not isinstance(sequences, DigitalSequenceBlock):
         sequences = DigitalSequenceBlock(_alphabet, sequences)
 
@@ -645,7 +652,7 @@ def phmmer(
 # --- nhmmer -----------------------------------------------------------------
 
 def nhmmer(
-    queries: typing.Iterable[_NHMMERQueryType],
+    queries: typing.Union[_NHMMERQueryType, typing.Iterable[_NHMMERQueryType]],
     sequences: typing.Iterable[DigitalSequence],
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_NHMMERQueryType, int], None]] = None,
@@ -657,7 +664,7 @@ def nhmmer(
     Arguments:
         queries (iterable of `DigitalSequence`, `DigitalMSA`, `HMM`): The
             query sequences or profiles to search for in the sequence
-            database.
+            database. Note that passing a single object is supported.
         sequences (collection of `~pyhmmer.easel.DigitalSequence`): A
             database of sequences to query. If you plan on using the
             same sequences several times, consider storing them into
@@ -697,13 +704,15 @@ def nhmmer(
        Allow using `Profile` and `OptimizedProfile` queries.
 
     .. versionchanged:: 0.7.0
-        Queries may now be an iterable of different types.
+        Queries may now be an iterable of different types, or a single object.
 
     """
     _alphabet = Alphabet.dna()
     _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count() or 1
     _builder = Builder(_alphabet) if builder is None else builder
 
+    if not isinstance(queries, collections.abc.Iterable):
+        queries = (queries,)
     if not isinstance(sequences, DigitalSequenceBlock):
         sequences = DigitalSequenceBlock(_alphabet, sequences)
 
