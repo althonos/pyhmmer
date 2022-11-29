@@ -12,6 +12,7 @@ Note:
 import abc
 import contextlib
 import collections
+import copy
 import ctypes
 import itertools
 import io
@@ -25,16 +26,38 @@ import typing
 
 import psutil
 
-from .easel import Alphabet, DigitalSequence, DigitalMSA, MSA, MSAFile, TextSequence, SequenceFile, SSIWriter, DigitalSequenceBlock
-from .plan7 import Builder, Background, Pipeline, LongTargetsPipeline, TopHits, HMM, HMMFile, Profile, TraceAligner, OptimizedProfile
-from .utils import peekable
+from .easel import (
+    Alphabet,
+    DigitalSequence,
+    DigitalMSA,
+    MSA,
+    MSAFile,
+    TextSequence,
+    SequenceFile,
+    SSIWriter,
+    DigitalSequenceBlock,
+)
+from .plan7 import (
+    Builder,
+    Background,
+    Pipeline,
+    LongTargetsPipeline,
+    TopHits,
+    HMM,
+    HMMFile,
+    Profile,
+    TraceAligner,
+    OptimizedProfile,
+)
+from .utils import peekable, singledispatchmethod
 
 # the query type for the pipeline
-_Q = typing.TypeVar("_Q", HMM, Profile, OptimizedProfile, DigitalSequence, DigitalMSA)
-# the model type for the pipeline
-_M = typing.TypeVar("_M", HMM, Profile, OptimizedProfile)
-# the sequence type for the pipeline
-_S = typing.TypeVar("_S", DigitalSequence, DigitalMSA)
+_Q = typing.TypeVar("_Q")
+
+# the query types for the different tasks
+_PHMMERQueryType = typing.Union[DigitalSequence, DigitalMSA]
+_SEARCHQueryType = typing.Union[HMM, Profile, OptimizedProfile]
+_NHMMERQueryType = typing.Union[_PHMMERQueryType, _SEARCHQueryType]
 
 # --- Result class -----------------------------------------------------------
 
@@ -61,47 +84,41 @@ class _Chore(typing.Generic[_Q]):
     __slots__ = ("query", "event", "hits", "exception")
 
     def __init__(self, query: _Q) -> None:
-        """Create a new chore from the given query.
-        """
+        """Create a new chore from the given query."""
         self.query = query
         self.event = threading.Event()
         self.hits = None
         self.exception = None
 
     def available(self) -> bool:
-        """Return whether the chore is done and results are available.
-        """
+        """Return whether the chore is done and results are available."""
         return self.event.is_set()
 
     def wait(self, timeout: typing.Optional[float] = None) -> bool:
-        """Wait for the chore to be done.
-        """
+        """Wait for the chore to be done."""
         return self.event.wait(timeout)
 
     def get(self) -> TopHits:
-        """Get the results of the chore, blocking if the chore was not done.
-        """
+        """Get the results of the chore, blocking if the chore was not done."""
         self.event.wait()
         if self.exception is not None:
             raise self.exception
         return typing.cast(TopHits, self.hits)
 
     def complete(self, hits: TopHits) -> None:
-        """Mark the chore as done and record ``hits`` as the results.
-        """
+        """Mark the chore as done and record ``hits`` as the results."""
         self.hits = hits
         self.event.set()
 
     def fail(self, exception: BaseException) -> None:
-        """Mark the chore as done and record ``exception`` as the error.
-        """
+        """Mark the chore as done and record ``exception`` as the error."""
         self.exception = exception
         self.event.set()
 
 
 # --- Pipeline threads -------------------------------------------------------
 
-class _PipelineThread(typing.Generic[_Q], threading.Thread):
+class _BaseWorker(typing.Generic[_Q], threading.Thread):
     """A generic worker thread to parallelize a pipelined search.
 
     Attributes:
@@ -126,6 +143,9 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
         pipeline_class (`type`): The pipeline class to use to search for
             hits. Use `~plan7.LongTargetsPipeline` for `nhmmer`, and
             `~plan7.Pipeline` everywhere else.
+        builder (`~pyhmmer.plan7.Builder`, *optional*): The builder to use
+            for translating sequence or alignment queries into `HMM` objects.
+            May be `None` if the queries are expected to be `HMM` only.
 
     """
 
@@ -144,6 +164,7 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
         options: typing.Dict[str, typing.Any],
         pipeline_class: typing.Type[Pipeline],
         alphabet: Alphabet,
+        builder: typing.Optional[Builder] = None,
     ) -> None:
         super().__init__()
         self.options = options
@@ -152,8 +173,11 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
         self.query_available: threading.Semaphore = query_available
         self.query_queue: "queue.Queue[typing.Optional[_Chore[_Q]]]" = query_queue
         self.query_count = query_count
-        self.callback: typing.Optional[typing.Callable[[_Q, int], None]] = callback or self._none_callback
+        self.callback: typing.Optional[typing.Callable[[_Q, int], None]] = (
+            callback or self._none_callback
+        )
         self.kill_switch = kill_switch
+        self.builder = builder
 
     def run(self) -> None:
         while not self.kill_switch.is_set():
@@ -177,9 +201,11 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
                 chore.fail(exc)
 
     def kill(self) -> None:
+        """Set the synchronized kill switch for all threads."""
         self.kill_switch.set()
 
     def process(self, query: _Q) -> TopHits:
+        """Process a single query and return the resulting hits."""
         hits = self.search(query)
         self.callback(query, self.query_count.value)  # type: ignore
         self.pipeline.clear()
@@ -187,95 +213,96 @@ class _PipelineThread(typing.Generic[_Q], threading.Thread):
 
     @abc.abstractmethod
     def search(self, query: _Q) -> TopHits:
+        """Search the target database for a single query."""
         return NotImplemented
 
 
-class _ModelPipelineThread(typing.Generic[_M], _PipelineThread[_M]):
-    def search(self, query: _M) -> TopHits:
+class _SEARCHWorker(_BaseWorker[_SEARCHQueryType]):
+    @singledispatchmethod
+    def search(self, query) -> TopHits:  # type: ignore
+        raise TypeError("Unsupported query type: {}".format(type(query).__name__))
+
+    # NOTE(@althonos): `Union` types is unsupported with `singledispatch`
+    #                  until Python 3.11, so we must manually register the
+    #                  3 different implementations
+
+    @search.register
+    def _(self, query: HMM) -> TopHits:  # type: ignore
+        return self.pipeline.search_hmm(query, self.sequences)
+
+    @search.register
+    def _(self, query: Profile) -> TopHits:  # type: ignore
+        return self.pipeline.search_hmm(query, self.sequences)
+
+    @search.register
+    def _(self, query: OptimizedProfile) -> TopHits:  # type: ignore
         return self.pipeline.search_hmm(query, self.sequences)
 
 
-class _SequencePipelineThread(_PipelineThread[DigitalSequence]):
-    def __init__(
-        self,
-        sequences: DigitalSequenceBlock,
-        query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[DigitalSequence]]]",
-        query_count: multiprocessing.Value,  # type: ignore
-        kill_switch: threading.Event,
-        callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]],
-        options: typing.Dict[str, typing.Any],
-        pipeline_class: typing.Type[Pipeline],
-        alphabet: Alphabet,
-        builder: Builder,
-    ) -> None:
-        super().__init__(
-            sequences,
-            query_available,
-            query_queue,
-            query_count,
-            kill_switch,
-            callback,
-            options,
-            pipeline_class,
-            alphabet,
-        )
-        self.builder = builder
+class _PHMMERWorker(_BaseWorker[_PHMMERQueryType]):
+    @singledispatchmethod
+    def search(self, query) -> TopHits:  # type: ignore
+        raise TypeError("Unsupported query type: {}".format(type(query).__name__))
 
-    def search(self, query: DigitalSequence) -> TopHits:
+    @search.register
+    def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
         return self.pipeline.search_seq(query, self.sequences, self.builder)
 
-
-class _MSAPipelineThread(_PipelineThread[DigitalMSA]):
-    def __init__(
-        self,
-        sequences: DigitalSequenceBlock,
-        query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[DigitalMSA]]]",
-        query_count: multiprocessing.Value,  # type: ignore
-        kill_switch: threading.Event,
-        callback: typing.Optional[typing.Callable[[DigitalMSA, int], None]],
-        options: typing.Dict[str, typing.Any],
-        pipeline_class: typing.Type[Pipeline],
-        alphabet: Alphabet,
-        builder: Builder,
-    ) -> None:
-        super().__init__(
-            sequences,
-            query_available,
-            query_queue,
-            query_count,
-            kill_switch,
-            callback,
-            options,
-            pipeline_class,
-            alphabet,
-        )
-        self.builder = builder
-
-    def search(self, query: DigitalMSA) -> TopHits:
+    @search.register
+    def _(self, query: DigitalMSA) -> TopHits:  # type: ignore
         return self.pipeline.search_msa(query, self.sequences, self.builder)
+
+
+class _NHMMERWorker(_BaseWorker[_NHMMERQueryType]):
+    @singledispatchmethod
+    def search(self, query) -> TopHits:  # type: ignore
+        raise TypeError("Unsupported query type: {}".format(type(query).__name__))
+
+    @search.register
+    def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
+        return self.pipeline.search_seq(query, self.sequences, self.builder)
+
+    @search.register
+    def _(self, query: DigitalMSA) -> TopHits:  # type: ignore
+        return self.pipeline.search_msa(query, self.sequences, self.builder)
+
+    # NOTE(@althonos): `Union` types is unsupported with `singledispatch`
+    #                  until Python 3.11, so we must manually register the
+    #                  3 different implementations
+
+    @search.register
+    def _(self, query: HMM) -> TopHits:  # type: ignore
+        return self.pipeline.search_hmm(query, self.sequences)
+
+    @search.register
+    def _(self, query: Profile) -> TopHits:  # type: ignore
+        return self.pipeline.search_hmm(query, self.sequences)
+
+    @search.register
+    def _(self, query: OptimizedProfile) -> TopHits:  # type: ignore
+        return self.pipeline.search_hmm(query, self.sequences)
 
 
 # --- Search runners ---------------------------------------------------------
 
-class _Search(typing.Generic[_Q], abc.ABC):
-
+class _BaseDispatcher(typing.Generic[_Q], abc.ABC):
     def __init__(
         self,
         queries: typing.Iterable[_Q],
-        sequences: typing.Iterable[DigitalSequence],
+        sequences: DigitalSequenceBlock,
         cpus: int = 0,
         callback: typing.Optional[typing.Callable[[_Q, int], None]] = None,
         pipeline_class: typing.Type[Pipeline] = Pipeline,
         alphabet: Alphabet = Alphabet.amino(),
-        **options # type: object
+        builder: typing.Optional[Builder] = None,
+        **options,  # type: object
     ) -> None:
         self.queries: typing.Iterable[_Q] = queries
         self.callback: typing.Optional[typing.Callable[[_Q, int], None]] = callback
         self.options = options
         self.pipeline_class = pipeline_class
         self.alphabet = alphabet
+        self.builder = builder
 
         # build an efficient collection to handle the search targets
         if isinstance(sequences, DigitalSequenceBlock):
@@ -299,7 +326,7 @@ class _Search(typing.Generic[_Q], abc.ABC):
         query_queue: "queue.Queue[typing.Optional[_Chore[_Q]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
-    ) -> _PipelineThread[_Q]:
+    ) -> _BaseWorker[_Q]:
         return NotImplemented
 
     def _single_threaded(self) -> typing.Iterator[TopHits]:
@@ -311,7 +338,9 @@ class _Search(typing.Generic[_Q], abc.ABC):
         kill_switch = threading.Event()
 
         # create the thread (to recycle code)
-        thread = self._new_thread(query_available, query_queue, query_count, kill_switch)
+        thread = self._new_thread(
+            query_available, query_queue, query_count, kill_switch
+        )
 
         # process each HMM iteratively and yield the result
         # immediately so that the user can iterate over the
@@ -334,7 +363,9 @@ class _Search(typing.Generic[_Q], abc.ABC):
         # create and launch one pipeline thread per CPU
         threads = []
         for _ in range(self.cpus):
-            thread = self._new_thread(query_available, query_queue, query_count, kill_switch)
+            thread = self._new_thread(
+                query_available, query_queue, query_count, kill_switch
+            )
             thread.start()
             threads.append(thread)
 
@@ -348,7 +379,7 @@ class _Search(typing.Generic[_Q], abc.ABC):
                 # get the next query and add it to the query queue
                 query_count.value += 1
                 chore = _Chore(query)
-                query_queue.put(chore) # <-- blocks if too many chores in queue
+                query_queue.put(chore)  # <-- blocks if too many chores in queue
                 query_available.release()
                 results.append(chore)
                 # aggressively wait for the result with a very short
@@ -363,7 +394,7 @@ class _Search(typing.Generic[_Q], abc.ABC):
                 query_available.release()
             # yield all remaining results, in order
             while results:
-                yield results[0].get() # <-- blocks until result is available
+                yield results[0].get()  # <-- blocks until result is available
                 results.popleft()
         except BaseException:
             # make sure threads are killed to avoid being stuck,
@@ -378,16 +409,15 @@ class _Search(typing.Generic[_Q], abc.ABC):
             return self._multi_threaded()
 
 
-class _ModelSearch(typing.Generic[_M], _Search[_M]):
-
+class _SEARCHDispatcher(_BaseDispatcher[_SEARCHQueryType]):
     def _new_thread(
         self,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_M]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_SEARCHQueryType]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
-    ) -> _ModelPipelineThread[_M]:
-        return _ModelPipelineThread(
+    ) -> _SEARCHWorker:
+        return _SEARCHWorker(
             self.sequences,
             query_available,
             query_queue,
@@ -400,30 +430,15 @@ class _ModelSearch(typing.Generic[_M], _Search[_M]):
         )
 
 
-class _SequenceSearch(_Search[DigitalSequence]):
-
-    def __init__(
-        self,
-        builder: Builder,
-        queries: typing.Iterable[DigitalSequence],
-        sequences: typing.Iterable[DigitalSequence],
-        cpus: int = 0,
-        callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
-        pipeline_class: typing.Type[Pipeline] = Pipeline,
-        alphabet: Alphabet = Alphabet.amino(),
-        **options, # type: typing.Dict[str, object]
-    ) -> None:
-        super().__init__(queries, sequences, cpus, callback, pipeline_class, alphabet, **options)
-        self.builder = builder
-
+class _PHMMERDispatcher(_BaseDispatcher[_PHMMERQueryType]):
     def _new_thread(
         self,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[DigitalSequence]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_PHMMERQueryType]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
-    ) -> _SequencePipelineThread:
-        return _SequencePipelineThread(
+    ) -> _PHMMERWorker:
+        return _PHMMERWorker(
             self.sequences,
             query_available,
             query_queue,
@@ -433,34 +448,43 @@ class _SequenceSearch(_Search[DigitalSequence]):
             self.options,
             self.pipeline_class,
             self.alphabet,
-            self.builder.copy(),
+            copy.copy(self.builder),
         )
 
 
-class _MSASearch(_Search[DigitalMSA]):
-
+class _NHMMERDispatcher(_BaseDispatcher[_NHMMERQueryType]):
     def __init__(
         self,
-        builder: Builder,
-        queries: typing.Iterable[DigitalMSA],
-        sequences: typing.Iterable[DigitalSequence],
+        queries: typing.Iterable[_NHMMERQueryType],
+        sequences: DigitalSequenceBlock,
         cpus: int = 0,
-        callback: typing.Optional[typing.Callable[[DigitalMSA, int], None]] = None,
-        pipeline_class: typing.Type[Pipeline] = Pipeline,
-        alphabet: Alphabet = Alphabet.amino(),
-        **options, # type: typing.Dict[str, object]
+        callback: typing.Optional[
+            typing.Callable[[_NHMMERQueryType, int], None]
+        ] = None,
+        pipeline_class: typing.Type[Pipeline] = LongTargetsPipeline,
+        alphabet: Alphabet = Alphabet.dna(),
+        builder: Builder = None,
+        **options,  # type: typing.Dict[str, object]
     ) -> None:
-        super().__init__(queries, sequences, cpus, callback, pipeline_class, alphabet, **options)
-        self.builder = builder
+        super().__init__(
+            queries,
+            sequences,
+            cpus,
+            callback,
+            pipeline_class,
+            alphabet,
+            builder,
+            **options,
+        )
 
     def _new_thread(
         self,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[DigitalMSA]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_NHMMERQueryType]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
-    ) -> _MSAPipelineThread:
-        return _MSAPipelineThread(
+    ) -> _NHMMERWorker:
+        return _NHMMERWorker(
             self.sequences,
             query_available,
             query_queue,
@@ -470,17 +494,17 @@ class _MSASearch(_Search[DigitalMSA]):
             self.options,
             self.pipeline_class,
             self.alphabet,
-            self.builder.copy(),
+            copy.copy(self.builder),
         )
 
 
 # --- hmmsearch --------------------------------------------------------------
 
 def hmmsearch(
-    queries: typing.Iterable[_M],
+    queries: typing.Iterable[_SEARCHQueryType],
     sequences: typing.Iterable[DigitalSequence],
     cpus: int = 0,
-    callback: typing.Optional[typing.Callable[[_M, int], None]] = None,
+    callback: typing.Optional[typing.Callable[[_SEARCHQueryType, int], None]] = None,
     **options,  # type: typing.Dict[str, object]
 ) -> typing.Iterator[TopHits]:
     """Search HMM profiles against a sequence database.
@@ -489,7 +513,9 @@ def hmmsearch(
         queries (iterable of `HMM`, `Profile` or `OptimizedProfile`): The
             query HMMs or profiles to search for in the database.
         sequences (collection of `~pyhmmer.easel.DigitalSequence`): A
-            database of sequences to query.
+            database of sequences to query. If you plan on using the
+            same sequences several times, consider storing them into
+            a `~pyhmmer.easel.DigitalSequenceBlock` directly.
         cpus (`int`): The number of threads to run in parallel. Pass ``1``
             to run everything in the main thread, ``0`` to automatically
             select a suitable number (using `psutil.cpu_count`), or any
@@ -521,30 +547,52 @@ def hmmsearch(
     .. versionchanged:: 0.4.9
        Allow using `Profile` and `OptimizedProfile` queries.
 
+    .. versionchanged:: 0.7.0
+        Queries may now be an iterable of different types.
+
     """
-    # count the number of CPUs to use
     _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count() or 1
-    runner: _ModelSearch[_M] = _ModelSearch(queries, sequences, _cpus, callback, **options) # type: ignore
-    return runner.run()
+    queries = peekable(queries)
+
+    if not isinstance(sequences, DigitalSequenceBlock):
+        try:
+            _alphabet = queries.peek().alphabet
+            sequences = DigitalSequenceBlock(_alphabet, sequences)
+        except StopIteration:
+            sequences = DigitalSequenceBlock(Alphabet.amino())
+
+    dispatcher = _SEARCHDispatcher(
+        queries=queries,
+        sequences=sequences,
+        cpus=_cpus,
+        callback=callback,
+        alphabet=sequences.alphabet,
+        builder=None,
+        pipeline_class=Pipeline,
+        **options,
+    )
+    return dispatcher.run()
 
 
 # --- phmmer -----------------------------------------------------------------
 
 def phmmer(
-    queries: typing.Iterable[_S],
+    queries: typing.Iterable[_PHMMERQueryType],
     sequences: typing.Iterable[DigitalSequence],
     cpus: int = 0,
-    callback: typing.Optional[typing.Callable[[_S, int], None]] = None,
+    callback: typing.Optional[typing.Callable[[_PHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
-    **options, # type: typing.Dict[str, object]
+    **options,  # type: typing.Dict[str, object]
 ) -> typing.Iterator[TopHits]:
     """Search protein sequences against a sequence database.
 
     Arguments:
         queries (iterable of `DigitalSequence` or `DigitalMSA`): The
             query sequences to search for in the sequence database.
-        sequences (collection of `~pyhmmer.easel.DigitalSequence`): A
-            database of sequences to query.
+        sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A
+            database of sequences to query. If you plan on using the
+            same sequences several times, consider storing them into
+            a `~pyhmmer.easel.DigitalSequenceBlock` directly.
         cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
             run everything in the main thread, ``0`` to automatically
             select a suitable number (using `psutil.cpu_count`), or any
@@ -570,48 +618,39 @@ def phmmer(
     .. versionchanged:: 0.3.0
        Allow using `DigitalMSA` queries.
 
+    .. versionchanged:: 0.7.0
+        Queries may now be an iterable of different types.
+
     """
+    _alphabet = Alphabet.amino()
     _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count() or 1
-    _builder = Builder(Alphabet.amino()) if builder is None else builder
+    _builder = Builder(_alphabet) if builder is None else builder
 
-    try:
-        _queries: peekable[typing.Union[DigitalSequence, DigitalMSA, HMM]] = peekable(queries)
-        _item: typing.Union[DigitalSequence, DigitalMSA, HMM, None] = _queries.peek()
-    except StopIteration:
-        _item = None
+    if not isinstance(sequences, DigitalSequenceBlock):
+        sequences = DigitalSequenceBlock(_alphabet, sequences)
 
-    runner: typing.Union[_SequenceSearch, _MSASearch]
-    if _item is None or isinstance(_item, DigitalSequence):
-        runner = _SequenceSearch(
-            _builder,
-            typing.cast(peekable[DigitalSequence], _queries),
-            sequences,
-            _cpus,
-            callback,  # type: ignore
-            pipeline_class=Pipeline,
-            alphabet=Alphabet.amino(),
-            **options
-        )
-    elif isinstance(_item, DigitalMSA):
-        runner = _MSASearch(
-            _builder, _queries, sequences, _cpus, callback, pipeline_class=Pipeline, alphabet=Alphabet.amino(), **options   # type: ignore
-        )
-    else:
-        name = type(_item).__name__
-        raise TypeError(f"Expected iterable of DigitalSequence or DigitalMSA, found {name}")
-
-    return runner.run()
+    dispatcher = _PHMMERDispatcher(
+        queries=queries,
+        sequences=sequences,
+        cpus=_cpus,
+        callback=callback,
+        pipeline_class=Pipeline,
+        alphabet=sequences.alphabet,
+        builder=_builder,
+        **options,
+    )
+    return dispatcher.run()
 
 
 # --- nhmmer -----------------------------------------------------------------
 
 def nhmmer(
-    queries: typing.Iterable[_Q],
+    queries: typing.Iterable[_NHMMERQueryType],
     sequences: typing.Iterable[DigitalSequence],
     cpus: int = 0,
-    callback: typing.Optional[typing.Callable[[_Q, int], None]] = None,
+    callback: typing.Optional[typing.Callable[[_NHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
-    **options, # type: typing.Dict[str, object]
+    **options,  # type: typing.Dict[str, object]
 ) -> typing.Iterator[TopHits]:
     """Search nucleotide sequences against a sequence database.
 
@@ -620,7 +659,9 @@ def nhmmer(
             query sequences or profiles to search for in the sequence
             database.
         sequences (collection of `~pyhmmer.easel.DigitalSequence`): A
-            database of sequences to query.
+            database of sequences to query. If you plan on using the
+            same sequences several times, consider storing them into
+            a `~pyhmmer.easel.DigitalSequenceBlock` directly.
         cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
             run everything in the main thread, ``0`` to automatically
             select a suitable number (using `psutil.cpu_count`), or any
@@ -655,59 +696,35 @@ def nhmmer(
     .. versionchanged:: 0.4.9
        Allow using `Profile` and `OptimizedProfile` queries.
 
+    .. versionchanged:: 0.7.0
+        Queries may now be an iterable of different types.
+
     """
+    _alphabet = Alphabet.dna()
     _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count() or 1
-    _builder = Builder(Alphabet.dna()) if builder is None else builder
+    _builder = Builder(_alphabet) if builder is None else builder
 
-    try:
-        _queries: peekable[_Q] = peekable(queries)
-        _item: typing.Optional[_Q] = _queries.peek()
-    except StopIteration:
-        _item = None
+    if not isinstance(sequences, DigitalSequenceBlock):
+        sequences = DigitalSequenceBlock(_alphabet, sequences)
 
-    runner: typing.Union[_SequenceSearch, _MSASearch, _ModelSearch[HMM]]
-    if _item is None or isinstance(_item, DigitalSequence):
-        runner = _SequenceSearch(
-            _builder,
-            typing.cast(peekable[DigitalSequence], _queries),
-            sequences,
-            _cpus,
-            callback,  # type: ignore
-            pipeline_class=LongTargetsPipeline,
-            alphabet=_item.alphabet if _item is not None else Alphabet.dna(),  # type: ignore
-            **options,
-        )
-    elif isinstance(_item, DigitalMSA):
-        runner = _MSASearch(
-            _builder,
-            typing.cast(peekable[DigitalMSA], _queries),
-            sequences,
-            _cpus,
-            callback,
-            pipeline_class=LongTargetsPipeline,
-            alphabet=_item.alphabet,
-            **options,
-        )
-    elif isinstance(_item, (HMM, Profile, OptimizedProfile)):
-        runner = _ModelSearch(
-            typing.cast(peekable[HMM], _queries),
-            sequences,
-            _cpus,
-            callback,  # type: ignore
-            pipeline_class=LongTargetsPipeline,
-            alphabet=_item.alphabet,
-            **options,
-        )
-    else:
-        name = type(_item).__name__
-        raise TypeError(f"Expected iterable of DigitalSequence, DigitalMSA, HMM, Profile or OptimizedProfile, found {name}")
-    return runner.run()
+    dispatcher = _NHMMERDispatcher(
+        queries=queries,
+        sequences=sequences,
+        cpus=_cpus,
+        callback=callback,
+        pipeline_class=LongTargetsPipeline,
+        alphabet=sequences.alphabet,
+        builder=_builder,
+        **options,
+    )
+    return dispatcher.run()
 
 
 # --- hmmpress ---------------------------------------------------------------
 
 def hmmpress(
-    hmms: typing.Iterable[HMM], output: typing.Union[str, "os.PathLike[str]"],
+    hmms: typing.Iterable[HMM],
+    output: typing.Union[str, "os.PathLike[str]"],
 ) -> int:
     """Press several HMMs into a database.
 
@@ -814,7 +831,7 @@ def hmmalign(
         traces,
         trim=trim,
         digitize=digitize,
-        all_consensus_cols=all_consensus_cols
+        all_consensus_cols=all_consensus_cols,
     )
 
 
@@ -968,10 +985,7 @@ if __name__ == "__main__":
 
     parser_hmmalign = subparsers.add_parser("hmmalign")
     parser_hmmalign.set_defaults(call=_hmmalign)
-    parser_hmmalign.add_argument(
-        "hmmfile",
-        metavar="<hmmfile>"
-    )
+    parser_hmmalign.add_argument("hmmfile", metavar="<hmmfile>")
     parser_hmmalign.add_argument(
         "seqfile",
         metavar="<seqfile>",
@@ -982,12 +996,12 @@ if __name__ == "__main__":
         action="store",
         default="-",
         metavar="<f>",
-        help="output alignment to file <f>, not stdout"
+        help="output alignment to file <f>, not stdout",
     )
     parser_hmmalign.add_argument(
         "--trim",
         action="store_true",
-        help="trim terminal tails of nonaligned residues from alignment"
+        help="trim terminal tails of nonaligned residues from alignment",
     )
     parser_hmmalign.add_argument(
         "--informat",
