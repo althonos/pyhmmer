@@ -5285,7 +5285,7 @@ cdef class SequenceBlock:
 
         Note:
             The sequence internally refered to by this collection are not 
-            copied. Use `copy.deepcopy` is you also want to duplicate the 
+            copied. Use `copy.deepcopy` if you also want to duplicate the 
             internal storage of each sequence.
 
         """

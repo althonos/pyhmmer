@@ -19,6 +19,9 @@ cdef extern from "impl_sse/impl_sse.h" nogil:
         int listSize
         P7_OPROFILE** list
 
+    P7_OM_BLOCK *p7_oprofile_CreateBlock(int size)
+    void p7_oprofile_DestroyBlock(P7_OM_BLOCK *block)
+
     ctypedef p7_omx_s P7_OMX
     ctypedef struct p7_omx_s:
         int       M
