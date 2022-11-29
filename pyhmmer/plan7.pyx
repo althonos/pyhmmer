@@ -7696,7 +7696,7 @@ cdef class TraceAligner:
 
     # --- Methods ------------------------------------------------------------
 
-    cpdef Traces compute_traces(self, HMM hmm, object sequences):
+    cpdef Traces compute_traces(self, HMM hmm, DigitalSequenceBlock sequences):
         """compute_traces(self, hmm, sequences)\n--
 
         Compute traces for a collection of sequences relative to an HMM.
@@ -7704,7 +7704,7 @@ cdef class TraceAligner:
         Arguments:
             hmm (`~pyhmmer.plan7.HMM`): The reference HMM to use for the
                 alignment.
-            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target
                 sequences to align to the HMM.
 
         Returns:
@@ -7714,20 +7714,24 @@ cdef class TraceAligner:
             `~pyhmmer.errors.AlphabetMismatch`: when the alphabet of any
                 of the sequences does not correspond to the HMM alphabet.
 
-        """
-        # TODO(@althonos): Rewrite to require a `DigitalSequenceBlock`.
+        .. versionchanged:: 0.7.0
+            Targets must now be inside a `~pyhmmer.easel.DigitalSequenceBlock`.
 
+        """
         cdef int             status
         cdef ssize_t         i
-        cdef DigitalSequence seq
         cdef Trace           trace
-        cdef Traces          traces    = Traces()
-        cdef ssize_t         nseq      = len(sequences)
+        cdef Traces          traces = Traces()
+        cdef ssize_t         nseq   = len(sequences)
 
         if nseq < 0:
             raise ValueError("Cannot compute traces for a negative number of sequences")
         elif nseq == 0:
             return traces
+
+        # check alphabet
+        if not hmm.alphabet._eq(sequences.alphabet):
+            raise AlphabetMismatch(hmm.alphabet, sequences.alphabet)
 
         # allocate the return array of traces and create empty traces
         traces._ntraces = nseq
@@ -7739,42 +7743,26 @@ cdef class TraceAligner:
             if traces._traces[i] == NULL:
                 raise AllocationError("P7_TRACE", sizeof(P7_TRACE))
 
-        # reallocate the array of sequence pointers if needed
-        if <size_t> nseq > self._nseq:
-            self._nseq = nseq
-            self._seqs = <ESL_SQ**> realloc(self._seqs, nseq * sizeof(ESL_SQ*))
-            if self._seqs == NULL:
-                raise AllocationError("ESL_SQ*", sizeof(ESL_SQ*), nseq)
-        # store sequence pointers and check alphabets
-        for i, seq in enumerate(sequences):
-            if seq.alphabet != hmm.alphabet:
-                raise AlphabetMismatch(hmm.alphabet, seq.alphabet)
-            self._seqs[i] = seq._sq
-
         # compute the traces
         with nogil:
             status = libhmmer.tracealign.p7_tracealign_computeTraces(
                 hmm._hmm,
-                self._seqs,
+                sequences._refs,
                 0,
                 nseq,
                 traces._traces
             )
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tracealign_computeTraces")
-
-        # clear the array of sequences (but not the pointers, they are owned
-        # by the DigitalSequence objects) and return the array of traces
-        memset(self._seqs, 0, self._nseq * sizeof(ESL_SQ*))
         return traces
 
     cpdef MSA align_traces(
         self,
         HMM hmm,
-        object sequences,
+        DigitalSequenceBlock sequences,
         Traces traces,
-        bint trim=False,
         bint digitize=False,
+        bint trim=False,
         bint all_consensus_cols=False
     ):
         """align_traces(self, hmm, sequences, traces, trim=False, digitize=False, all_consensus_cols=False)\n--
@@ -7784,16 +7772,16 @@ cdef class TraceAligner:
         Arguments:
             hmm (`~pyhmmer.plan7.HMM`): The reference HMM to use for the
                 alignment.
-            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target
                 sequences to align to the HMM.
             traces (`~pyhmmer.plan7.Traces`): The traces corresponding to the
                 alignment of ``sequences`` to ``hmm``, obtained by a previous
                 call to `~pyhmmer.plan7.TraceAligner.compute_traces`.
+            digitize (`bool`): If set to `True`, returns a `DigitalMSA`
+                instead of a `TextMSA`.
             trim (`bool`): Trim off any residues that get assigned to
                 flanking :math:`N` and :math:`C` states (in profile traces)
                 or :math:`I_0` and :math:`I_m` (in core traces).
-            digitize (`bool`): If set to `True`, returns a `DigitalMSA`
-                instead of a `TextMSA`.
             all_consensus_cols (`bool`): Force a column to be created for
                 every consensus column in the model, even if it means having
                 all gap character in a column. *Note that this is enabled by
@@ -7809,14 +7797,16 @@ cdef class TraceAligner:
             `~pyhmmer.errors.AlphabetMismatch`: when the alphabet of any
                 of the sequences does not correspond to the HMM alphabet.
 
+        .. versionchanged:: 0.7.0
+            Targets must now be inside a `~pyhmmer.easel.DigitalSequenceBlock`.
+
         """
         cdef int             status
         cdef size_t          i
-        cdef DigitalSequence seq
         cdef MSA             msa
-        cdef ssize_t         nseq      = len(sequences)
-        cdef ssize_t         ntr       = len(traces)
-        cdef int             flags     = 0
+        cdef ssize_t         nseq   = len(sequences)
+        cdef ssize_t         ntr    = len(traces)
+        cdef int             flags  = 0
 
         # check optional flags and prepare the returned MSA
         if trim:
@@ -7829,30 +7819,22 @@ cdef class TraceAligner:
         else:
             msa = TextMSA.__new__(TextMSA)
 
-        # checm
+        # check number of sequences
         if nseq < 0:
-            raise ValueError("align compute traces for a negative number of sequences")
+            raise ValueError("Cannot align traces for a negative number of sequences")
         elif nseq != ntr:
             raise ValueError(f"Sequences and traces lengths mismatch ({nseq} sequences, {ntr} traces)")
         elif nseq == 0:
             return msa
 
-        # reallocate the array of sequence pointers if needed
-        if <size_t> nseq > self._nseq:
-            self._nseq = nseq
-            self._seqs = <ESL_SQ**> realloc(self._seqs, nseq * sizeof(ESL_SQ*))
-            if self._seqs == NULL:
-                raise AllocationError("ESL_SQ*", sizeof(ESL_SQ*), nseq)
-        # store sequence pointers and check alphabets
-        for i, seq in enumerate(sequences):
-            if seq.alphabet != hmm.alphabet:
-                raise AlphabetMismatch(hmm.alphabet, seq.alphabet)
-            self._seqs[i] = seq._sq
+        # check alphabet
+        if not hmm.alphabet._eq(sequences.alphabet):
+            raise AlphabetMismatch(hmm.alphabet, sequences.alphabet)
 
         # make the alignments
         with nogil:
             status = libhmmer.tracealign.p7_tracealign_Seqs(
-                self._seqs,
+                sequences._refs,
                 traces._traces,
                 nseq,
                 hmm._hmm.M,
@@ -7862,10 +7844,6 @@ cdef class TraceAligner:
             )
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tracealign_Seqs")
-
-        # free the array of sequences (but not the pointers, they are owned
-        # by the DigitalSequence objects) and return the MSA
-        memset(self._seqs, 0, self._nseq * sizeof(ESL_SQ*))
         return msa
 
 

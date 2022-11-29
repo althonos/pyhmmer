@@ -2,6 +2,7 @@
 import collections.abc
 import datetime
 import os
+import sys
 import types
 import typing
 
@@ -844,14 +845,35 @@ class TraceAligner(object):
     def compute_traces(
         self,
         hmm: HMM,
-        sequences: typing.Iterable[DigitalSequence],
+        sequences: DigitalSequenceBlock,
     ) -> Traces: ...
+    @typing.overload
     def align_traces(
         self,
         hmm: HMM,
-        sequences: typing.Iterable[DigitalSequence],
+        sequences: DigitalSequenceBlock,
         traces: Traces,
+        digitize: Literal[True],
         trim: bool = False,
+        all_consensus_cols: bool = False,
+    ) -> DigitalMSA: ...
+    @typing.overload
+    def align_traces(
+        self,
+        hmm: HMM,
+        sequences: DigitalSequenceBlock,
+        traces: Traces,
+        digitize: Literal[False],
+        trim: bool = False,
+        all_consensus_cols: bool = False,
+    ) -> TextMSA: ...
+    @typing.overload
+    def align_traces(
+        self,
+        hmm: HMM,
+        sequences: DigitalSequenceBlock,
+        traces: Traces,
         digitize: bool = False,
+        trim: bool = False,
         all_consensus_cols: bool = False,
     ) -> MSA: ...

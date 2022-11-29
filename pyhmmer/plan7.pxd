@@ -369,13 +369,13 @@ cdef class TraceAligner:
     cdef ESL_SQ** _seqs
     cdef size_t   _nseq
 
-    cpdef Traces compute_traces(self, HMM hmm, object sequences)
+    cpdef Traces compute_traces(self, HMM hmm, DigitalSequenceBlock sequences)
     cpdef MSA align_traces(
         self,
         HMM hmm,
-        object sequences,
+        DigitalSequenceBlock sequences,
         Traces traces,
-        bint trim=*,
         bint digitize=*,
+        bint trim=*,
         bint all_consensus_cols=*
     )

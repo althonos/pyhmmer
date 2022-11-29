@@ -9,7 +9,7 @@ import pkg_resources
 
 import pyhmmer
 from pyhmmer.errors import EaselError, AlphabetMismatch
-from pyhmmer.easel import Alphabet, SequenceFile, DigitalMSA, TextMSA
+from pyhmmer.easel import Alphabet, SequenceFile, DigitalMSA, TextMSA, DigitalSequenceBlock
 from pyhmmer.plan7 import HMM, HMMFile, TraceAligner, Traces
 
 class TestTraceAligner(unittest.TestCase):
@@ -21,7 +21,7 @@ class TestTraceAligner(unittest.TestCase):
         with HMMFile(hmm_path) as hmm_file:
             self.hmm = next(hmm_file)
         with SequenceFile(seqs_path, digital=True, alphabet=self.hmm.alphabet) as seqs_file:
-            self.seqs = list(seqs_file)
+            self.seqs = seqs_file.read_block()
 
     def test_align_traces(self):
         # hmmalign tests/data/hmms/txt/LuxC.hmm tests/data/seqs/LuxC.faa
@@ -49,7 +49,7 @@ class TestTraceAligner(unittest.TestCase):
     def test_align_traces_msa_type(self):
         aligner = TraceAligner()
         traces = Traces()
-        seqs = []
+        seqs = DigitalSequenceBlock(self.hmm.alphabet)
         msa = aligner.align_traces(self.hmm, seqs, traces)
         self.assertIsInstance(msa, TextMSA)
         msa_d = aligner.align_traces(self.hmm, seqs, traces, digitize=True)

@@ -503,6 +503,7 @@ class _NHMMERDispatcher(_BaseDispatcher[_NHMMERQueryType]):
 def hmmsearch(
     queries: typing.Union[_SEARCHQueryType, typing.Iterable[_SEARCHQueryType]],
     sequences: typing.Iterable[DigitalSequence],
+    *,
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_SEARCHQueryType, int], None]] = None,
     **options,  # type: typing.Dict[str, object]
@@ -583,6 +584,7 @@ def hmmsearch(
 def phmmer(
     queries: typing.Union[_PHMMERQueryType, typing.Iterable[_PHMMERQueryType]],
     sequences: typing.Iterable[DigitalSequence],
+    *,
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_PHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
@@ -654,6 +656,7 @@ def phmmer(
 def nhmmer(
     queries: typing.Union[_NHMMERQueryType, typing.Iterable[_NHMMERQueryType]],
     sequences: typing.Iterable[DigitalSequence],
+    *,
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_NHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
@@ -798,9 +801,10 @@ def hmmpress(
 
 def hmmalign(
     hmm: HMM,
-    sequences: typing.Collection[DigitalSequence],
-    trim: bool = False,
+    sequences: typing.Iterable[DigitalSequence],
+    *,
     digitize: bool = False,
+    trim: bool = False,
     all_consensus_cols: bool = True,
 ) -> MSA:
     """Align several sequences to a reference HMM, and return the MSA.
@@ -808,8 +812,10 @@ def hmmalign(
     Arguments:
         hmm (`~pyhmmer.plan7.HMM`): The reference HMM to use for the
             alignment.
-        sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
-            sequences to align to the HMM.
+        sequences (iterable of `~pyhmmer.easel.DigitalSequence`): The
+            sequences to align to the HMM. If you plan on using the
+            same sequences several times, consider storing them into
+            a `~pyhmmer.easel.DigitalSequenceBlock` directly.
         trim (`bool`): Trim off any residues that get assigned to
             flanking :math:`N` and :math:`C` states (in profile traces)
             or :math:`I_0` and :math:`I_m` (in core traces).
@@ -833,6 +839,8 @@ def hmmalign(
 
     """
     aligner = TraceAligner()
+    if not isinstance(sequences, DigitalSequenceBlock):
+        sequences = DigitalSequenceBlock(hmm.alphabet, sequences)
     traces = aligner.compute_traces(hmm, sequences)
     return aligner.align_traces(
         hmm,

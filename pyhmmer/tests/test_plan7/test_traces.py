@@ -21,7 +21,7 @@ class TestTraces(unittest.TestCase):
         with HMMFile(hmm_path) as hmm_file:
             self.hmm = next(hmm_file)
         with SequenceFile(seqs_path, digital=True, alphabet=self.hmm.alphabet) as seqs_file:
-            self.seqs = list(seqs_file)
+            self.seqs = seqs_file.read_block()
 
         self.aligner = TraceAligner()
         self.traces = self.aligner.compute_traces(self.hmm, self.seqs)
