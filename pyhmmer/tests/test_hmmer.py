@@ -58,9 +58,9 @@ class _TestSearch(metaclass=abc.ABCMeta):
         #   938293.PRJEB85.HG003687_113 115 GHSMGGSVAVAIAHE 129
         #                                   9************96 PP
         with self.hmm_file("Thioesterase") as hmm_file:
-            hmm = next(hmm_file)
+            hmm = hmm_file.read()
         with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
-            seqs = list(seqs_file)
+            seqs = seqs_file.read_block()
 
         hits = self.get_hits(hmm, seqs)
         self.assertEqual(len(hits), 1)
@@ -93,7 +93,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
         with self.hmm_file("PF02826") as hmm_file:
             hmm = next(hmm_file)
         with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
-            seqs = list(seqs_file)
+            seqs = seqs_file.read_block()
 
         hits = self.get_hits(hmm, seqs)
         self.assertEqual(len(hits), 22)
@@ -117,7 +117,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
 
     def test_t2pks(self):
         with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
-            seqs = list(seqs_file)
+            seqs = seqs_file.read_block()
 
         with self.hmm_file("t2pks") as hmm_file:
             all_hits = [ self.get_hits(hmm, seqs) for hmm in hmm_file ]
@@ -160,7 +160,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
             profile = pyhmmer.plan7.Profile(hmm.M, hmm.alphabet)
             profile.configure(hmm, bg, 100)
         with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
-            seqs = list(seqs_file)
+            seqs = seqs_file.read_block()
 
         hits_hmm = self.get_hits(hmm, seqs)
         self.assertEqual(len(hits_hmm), 22)
@@ -266,17 +266,17 @@ class TestPhmmer(unittest.TestCase):
         alphabet = Alphabet.amino()
         path = pkg_resources.resource_filename(__name__, "data/seqs/PKSI.faa")
         with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
-            seqs = list(seqs_file)
-            hits = pyhmmer.phmmer([], seqs, cpus=1)
-            self.assertIs(None, next(hits, None))
+            seqs = seqs_file.read_block()
+        hits = pyhmmer.phmmer([], seqs, cpus=1)
+        self.assertIs(None, next(hits, None))
 
     def test_pksi(self):
         alphabet = Alphabet.amino()
         path = pkg_resources.resource_filename(__name__, "data/seqs/PKSI.faa")
         with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
-            seqs = list(seqs_file)
-            hits = next(pyhmmer.phmmer(seqs[-1:], seqs, cpus=1))
-            hits.sort()
+            seqs = seqs_file.read_block()
+        hits = next(pyhmmer.phmmer(seqs[-1:], seqs, cpus=1))
+        hits.sort()
 
         with self.table("A0A089QRB9.domtbl") as table:
             lines = iter(filter(lambda line: not line.startswith("#"), table))
@@ -319,9 +319,9 @@ class TestNhmmer(unittest.TestCase):
         alphabet = Alphabet.dna()
         path = pkg_resources.resource_filename(__name__, "data/seqs/BGC0001090.gbk")
         with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
-            seqs = list(seqs_file)
-            hits = pyhmmer.nhmmer([], seqs, cpus=1)
-            self.assertIs(None, next(hits, None))
+            seqs = seqs_file.read_block()
+        hits = pyhmmer.nhmmer([], seqs, cpus=1)
+        self.assertIs(None, next(hits, None))
 
     def test_bmyd_seq_bgc(self):
         alphabet = Alphabet.dna()
@@ -332,7 +332,7 @@ class TestNhmmer(unittest.TestCase):
 
         path = pkg_resources.resource_filename(__name__, "data/seqs/BGC0001090.gbk")
         with SequenceFile(path, "genbank", digital=True, alphabet=alphabet) as seqs_file:
-            seqs = list(seqs_file)
+            seqs = seqs_file.read_block()
 
         hits = next(pyhmmer.nhmmer([query], seqs, cpus=1))
         hits.sort()
@@ -357,7 +357,7 @@ class TestNhmmer(unittest.TestCase):
 
         path = pkg_resources.resource_filename(__name__, "data/seqs/BGC0001090.gbk")
         with SequenceFile(path, "genbank", digital=True, alphabet=alphabet) as seqs_file:
-            seqs = list(seqs_file)
+            seqs = seqs_file.read_block()
 
         hits = next(pyhmmer.nhmmer([self.bmyD], seqs, cpus=1))
         hits.sort()
@@ -382,7 +382,7 @@ class TestNhmmer(unittest.TestCase):
 
         path = pkg_resources.resource_filename(__name__, "data/seqs/CP000560.2.fna")
         with SequenceFile(path, "fasta", digital=True, alphabet=alphabet) as seqs_file:
-            seqs = list(seqs_file)
+            seqs = seqs_file.read_block()
 
         hits = next(pyhmmer.nhmmer([self.bmyD], seqs, cpus=1))
         hits.sort()
@@ -410,11 +410,11 @@ class TestHmmalign(unittest.TestCase):
         ref_path = pkg_resources.resource_filename("pyhmmer.tests", "data/msa/LuxC.hmmalign.sto")
 
         with HMMFile(hmm_path) as hmm_file:
-            hmm = next(hmm_file)
+            hmm = hmm_file.read()
         with SequenceFile(seqs_path, digital=True, alphabet=hmm.alphabet) as seqs_file:
-            seqs = list(seqs_file)
+            seqs = seqs_file.read_block()
         with MSAFile(ref_path) as ref_file:
-            ref = next(ref_file)
+            ref = ref_file.read()
 
         msa = pyhmmer.hmmalign(hmm, seqs, trim=True)
         self.assertEqual(msa, ref)

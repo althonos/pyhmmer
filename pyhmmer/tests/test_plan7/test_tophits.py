@@ -86,9 +86,9 @@ class TestTopHits(unittest.TestCase):
         seqs_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/938293.PRJEB85.HG003687.faa")
 
         with HMMFile(hmm_path) as hmm_file:
-            self.hmm = next(hmm_file)
+            self.hmm = hmm_file.read()
         with SequenceFile(seqs_path, digital=True, alphabet=self.hmm.alphabet) as seqs_file:
-            self.seqs = list(seqs_file)
+            self.seqs = seqs_file.read_block()
 
         self.pipeline = Pipeline(alphabet=self.hmm.alphabet)
         self.hits = self.pipeline.search_hmm(self.hmm, self.seqs)

@@ -21,11 +21,11 @@ class TestSearchPipeline(unittest.TestCase):
 
         seq_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/938293.PRJEB85.HG003687.faa")
         with SequenceFile(seq_path, digital=True, alphabet=cls.alphabet) as f:
-            cls.references = list(f)
+            cls.references = f.read_block()
 
         msa_path = pkg_resources.resource_filename("pyhmmer.tests", "data/msa/LuxC.sto")
         with MSAFile(msa_path, digital=True, alphabet=cls.alphabet) as msa_f:
-            cls.msa = next(msa_f)
+            cls.msa = msa_f.read()
 
     def test_search_seq_alphabet_mismatch(self):
         pipeline = Pipeline(alphabet=Alphabet.dna())
@@ -37,12 +37,6 @@ class TestSearchPipeline(unittest.TestCase):
         # mismatch between pipeline alphabet and query alphabet
         dsq2 = TextSequence(sequence="IRGIY").digitize(self.alphabet)
         self.assertRaises(AlphabetMismatch, pipeline.search_seq, dsq2, self.references)
-
-        # check that all ref sequences are checked, not just the first one
-        references = self.references.copy()
-        references.append(TextSequence(sequence="ATGC").digitize(Alphabet.dna()))
-        pipeline = Pipeline(alphabet=self.alphabet)
-        self.assertRaises(AlphabetMismatch, pipeline.search_seq, dsq2, references)
 
     def test_search_msa_alphabet_mismatch(self):
         pipeline = Pipeline(alphabet=Alphabet.dna())
@@ -124,7 +118,7 @@ class TestScanPipeline(unittest.TestCase):
 
         seq_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/938293.PRJEB85.HG003687.faa")
         with SequenceFile(seq_path, digital=True, alphabet=cls.alphabet) as f:
-            cls.references = list(f)
+            cls.references = f.read_block()
 
         hmm_file = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/t2pks.hmm")
         with HMMFile(hmm_file) as f:
@@ -156,7 +150,7 @@ class TestIteratePipeline(unittest.TestCase):
 
         seq_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/938293.PRJEB85.HG003687.faa")
         with SequenceFile(seq_path, digital=True, alphabet=cls.alphabet) as f:
-            cls.references = list(f)
+            cls.references = f.read_block()
 
         query_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/LuxC.faa")
         with SequenceFile(query_path, digital=True, alphabet=cls.alphabet) as f:

@@ -24,7 +24,7 @@ class _TestBuilderBase(object):
         cls.testdata = os.path.join(HMMER_FOLDER, "testsuite")
 
         cls.faa_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/PKSI.faa")
-        with SequenceFile(cls.faa_path) as seqf:
+        with SequenceFile(cls.faa_path, digital=True) as seqf:
             cls.proteins = list(seqf)
 
         if os.path.exists(cls.testdata):
@@ -83,13 +83,13 @@ class TestBuilderSingle(_TestBuilderBase, unittest.TestCase):
         builder = Builder(alphabet=abc)
         bg = Background(alphabet=abc)
 
-        seq = self.proteins[0].digitize(amino)
+        seq = self.proteins[0]
         self.assertRaises(AlphabetMismatch, builder.build, seq, bg)
 
     def test_command_line(self):
         abc = Alphabet.amino()
         builder = Builder(alphabet=abc)
-        seq = self.proteins[1].digitize(abc)
+        seq = self.proteins[1]
 
         argv = ["mycommand", "--param", "1"]
         with mock.patch.object(sys, "argv", argv):
@@ -99,7 +99,7 @@ class TestBuilderSingle(_TestBuilderBase, unittest.TestCase):
     def test_creation_time(self):
         abc = Alphabet.amino()
         builder = Builder(alphabet=abc)
-        seq = self.proteins[1].digitize(abc)
+        seq = self.proteins[1]
 
         hmm, profile, opt = builder.build(seq, Background(abc))
         self.assertIsInstance(hmm.creation_time, datetime.datetime)
@@ -107,7 +107,7 @@ class TestBuilderSingle(_TestBuilderBase, unittest.TestCase):
     def test_protein(self):
         abc = Alphabet.amino()
         builder = Builder(alphabet=abc)
-        seq = self.proteins[1].digitize(abc)
+        seq = self.proteins[1]
         hmm, profile, opt = builder.build(seq, Background(abc))
         self.assertEqual(hmm.name, seq.name)
         self.assertEqual(hmm.alphabet, abc)
@@ -130,7 +130,7 @@ class TestBuilderSingle(_TestBuilderBase, unittest.TestCase):
         abc = Alphabet.amino()
         bg = Background(abc)
         builder = Builder(alphabet=abc)
-        seq = self.proteins[1].digitize(abc)
+        seq = self.proteins[1]
         # build first HMM with mx=BLOSUM62, popen=0.02, pextend=0.4
         self.assertEqual(builder.score_matrix, "BLOSUM62")
         hmm1, _, _ = builder.build(seq, bg)

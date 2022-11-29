@@ -249,9 +249,9 @@ cdef class Pipeline:
     cdef P7_OPROFILE* _get_om_from_query(self, object query, int L = *) except NULL
     cpdef list    arguments(self)
     cpdef void    clear(self)
-    cpdef TopHits search_hmm(self, object query, object seqs)
-    cpdef TopHits search_msa(self, DigitalMSA query, object seqs, Builder builder = ?)
-    cpdef TopHits search_seq(self, DigitalSequence query, object seqs, Builder builder = ?)
+    cpdef TopHits search_hmm(self, object query, DigitalSequenceBlock seqs)
+    cpdef TopHits search_msa(self, DigitalMSA query, DigitalSequenceBlock seqs, Builder builder = ?)
+    cpdef TopHits search_seq(self, DigitalSequence query, DigitalSequenceBlock seqs, Builder builder = ?)
     @staticmethod
     cdef  int  _search_loop(
               P7_PIPELINE* pli,

@@ -4677,7 +4677,7 @@ cdef class Pipeline:
     cpdef TopHits search_hmm(
         self,
         object query,
-        object sequences
+        DigitalSequenceBlock sequences
     ):
         """search_hmm(self, query, sequences)\n--
 
@@ -4686,10 +4686,8 @@ cdef class Pipeline:
         Arguments:
             query (`HMM`, `Profile` or `OptimizedProfile`): The object to use
                 to query the sequence database.
-            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
-                sequences to query with the HMM. If the same sequences are being
-                queried several times with different queries, consider storing 
-                them in a `~pyhmmer.easel.DigitalSequenceBlock` collection.
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The sequences 
+                to query with the HMM. 
 
         Returns:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
@@ -4709,39 +4707,33 @@ cdef class Pipeline:
         .. versionadded:: 0.2.0
 
         .. versionchanged:: 0.4.9
-           Query can now be a `Profile` or an `OptimizedProfile`.
+            Query can now be a `Profile` or an `OptimizedProfile`.
+
+        .. versionchanged:: 0.7.0
+            References must now be `~pyhmmer.easel.DigitalSequenceBlock`.
 
         """
         assert self._pli != NULL
 
-        cdef size_t               L
-        cdef str                  ty
-        cdef int                  status
-        cdef int                  allocM
-        cdef P7_OPROFILE*         om
-        cdef DigitalSequenceBlock search_targets
-        cdef TopHits              hits           = TopHits()
+        cdef size_t       L
+        cdef str          ty
+        cdef P7_OPROFILE* om
+        cdef int          status
+        cdef int          allocM
+        cdef TopHits      hits   = TopHits()
 
-        # check the pipeline was configured with the same alphabet
+        # check that all alphabets are consistent
         if not self.alphabet._eq(query.alphabet):
             raise AlphabetMismatch(self.alphabet, query.alphabet)
-
-        # collect sequences into an optimized struct if needed
-        if not isinstance(sequences, DigitalSequenceBlock):
-            search_targets = DigitalSequenceBlock(self.alphabet, sequences)
-        else:
-            search_targets = sequences
-        # check that the largest sequence is not too large for HMMER
-        if search_targets and len(search_targets.largest()) > 100000:
+        if not self.alphabet._eq(sequences.alphabet):
+            raise AlphabetMismatch(self.alphabet, sequences.alphabet)
+        # check that the largest sequence is not too large for the HMMER pipeline
+        if sequences and len(sequences.largest()) > 100000:
             raise ValueError("sequence length over comparison pipeline limit (100,000)")
-        # check that the alphabet of the sequences is the same as
-        # the alphabet of the pipeline
-        if not self.alphabet._eq(search_targets.alphabet):
-            raise AlphabetMismatch(self.alphabet, search_targets.alphabet)
 
         # convert the query to an optimized profile, using the
         # length of the first sequence as a hint
-        L = self.L_HINT if not search_targets else search_targets._refs[0].L
+        L = self.L_HINT if not sequences else sequences._refs[0].L
         om = self._get_om_from_query(query, L=L)
 
         with nogil:
@@ -4753,7 +4745,7 @@ cdef class Pipeline:
                 self._pli,
                 om,
                 self.background._bg,
-                <const ESL_SQ**> search_targets._refs,
+                <const ESL_SQ**> sequences._refs,
                 hits._th,
             )
             # sort hits and set bookkeeping attributes
@@ -4771,7 +4763,7 @@ cdef class Pipeline:
     cpdef TopHits search_msa(
         self,
         DigitalMSA query,
-        object sequences,
+        DigitalSequenceBlock sequences,
         Builder builder = None,
     ):
         """search_msa(self, query, sequences, builder=None)\n--
@@ -4781,10 +4773,8 @@ cdef class Pipeline:
         Arguments:
             query (`~pyhmmer.easel.DigitalMSA`): The multiple sequence
                 alignment to use to query the sequence database.
-            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
-                sequences to query. If the same sequences are being queried 
-                several times with different queries, consider storing them 
-                in a `~pyhmmer.easel.DigitalSequenceBlock` collection.
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The sequences 
+                to query with the HMM. 
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query to a `~pyhmmer.plan7.HMM`. If
                 `None` is given, it will use a default one.
@@ -4813,12 +4803,15 @@ cdef class Pipeline:
 
         .. versionadded:: 0.3.0
 
+        .. versionchanged:: 0.7.0
+            References must now be `~pyhmmer.easel.DigitalSequenceBlock`.
+
         """
         assert self._pli != NULL
 
-        cdef Profile          profile
         cdef HMM              hmm
         cdef OptimizedProfile opt
+        cdef Profile          profile
 
         # check the pipeline was configured with the same alphabet
         if not self.alphabet._eq(query.alphabet):
@@ -4832,7 +4825,7 @@ cdef class Pipeline:
     cpdef TopHits search_seq(
         self,
         DigitalSequence query,
-        object sequences,
+        DigitalSequenceBlock sequences,
         Builder builder = None,
     ):
         """search_seq(self, query, sequences, builder=None)\n--
@@ -4842,10 +4835,8 @@ cdef class Pipeline:
         Arguments:
             query (`~pyhmmer.easel.DigitalSequence`): The sequence object to
                 use to query the sequence database.
-            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
-                sequences to query. If the same sequences are being queried 
-                several times with different queries, consider storing them 
-                in a `~pyhmmer.easel.DigitalSequenceBlock` collection.
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The sequences 
+                to query with the HMM. 
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query to a `~pyhmmer.plan7.HMM`. If
                 `None` is given, it will use a default one.
@@ -4866,12 +4857,15 @@ cdef class Pipeline:
 
         .. versionadded:: 0.2.0
 
+        .. versionchanged:: 0.7.0
+            References must now be `~pyhmmer.easel.DigitalSequenceBlock`.
+
         """
         assert self._pli != NULL
 
-        cdef Profile              profile
-        cdef HMM                  hmm
-        cdef OptimizedProfile     opt
+        cdef HMM              hmm
+        cdef OptimizedProfile opt
+        cdef Profile          profile
 
         # check the pipeline was configure with the same alphabet
         if not self.alphabet._eq(query.alphabet):
@@ -4892,6 +4886,23 @@ cdef class Pipeline:
         const ESL_SQ**     sq,
               P7_TOPHITS*  th,
     ) nogil except 1:
+        """_search_loop(pli, om, bg, sq, th)\n--
+
+        Run the low-level search loop while the GIL is released.        
+
+        Arguments:
+            pli (``P7_PIPELINE*``): A raw pointer to the pipeline underlying 
+                the `Pipeline` object running the search.
+            om (``P7_OPROFILE*``): A raw pointer to the optimized profile 
+                being used to query the pipeline.
+            bg (``P7_BG*``): A raw pointer to the background model used to 
+                compute the p-value and E-value for each alignment.
+            sq (``ESL_SQ**``): An array of pointers to the target sequences
+                being queried.
+            th (``P7_TOPHITS*``): A raw pointer to the hits underlying the
+                `TopHits` object storing the results.
+
+        """
         cdef int status
 
         # configure the pipeline for the current HMM
@@ -5560,7 +5571,7 @@ cdef class LongTargetsPipeline(Pipeline):
     cpdef TopHits search_hmm(
         self,
         object query,
-        object sequences
+        DigitalSequenceBlock sequences
     ):
         """search_hmm(self, query, sequences)\n--
 
@@ -5569,8 +5580,8 @@ cdef class LongTargetsPipeline(Pipeline):
         Arguments:
             query (`HMM`, `Profile` or `OptimizedProfile`): The object to use
                 to query the sequence database.
-            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
-                sequences to query with the HMM.
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The sequences 
+                to query with the HMM. 
 
         Returns:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
@@ -5587,6 +5598,9 @@ cdef class LongTargetsPipeline(Pipeline):
             This method corresponds to running ``nhmmer`` with the
             ``query`` HMM against the ``sequences`` database.
 
+        .. versionchanged:: 0.7.0
+            References must now be `~pyhmmer.easel.DigitalSequenceBlock`.
+
         """
         assert self._pli != NULL
 
@@ -5596,7 +5610,6 @@ cdef class LongTargetsPipeline(Pipeline):
         cdef int                  status
         cdef int64_t              res_count
         cdef int                  allocM
-        cdef DigitalSequenceBlock search_targets
         cdef ScoreData            scoredata      = ScoreData.__new__(ScoreData)
         cdef TopHits              hits           = TopHits()
         cdef P7_HIT*              hit            = NULL
@@ -5605,19 +5618,11 @@ cdef class LongTargetsPipeline(Pipeline):
         # check the pipeline was configured with the same alphabet
         if not self.alphabet._eq(query.alphabet):
             raise AlphabetMismatch(self.alphabet, query.alphabet)
-
-        # collect sequences into an optimized struct if needed
-        if not isinstance(sequences, DigitalSequenceBlock):
-            search_targets = DigitalSequenceBlock(self.alphabet, sequences)
-        else:
-            search_targets = sequences
-        # check that the alphabet of the sequences is the same as
-        # the alphabet of the pipeline
-        if not self.alphabet._eq(search_targets.alphabet):
-            raise AlphabetMismatch(self.alphabet, search_targets.alphabet)
+        if not self.alphabet._eq(sequences.alphabet):
+            raise AlphabetMismatch(self.alphabet, sequences.alphabet)
 
         # convert the query to an optimized profile
-        L = self.L_HINT if not search_targets else search_targets._refs[0].L
+        L = self.L_HINT if not sequences else sequences._refs[0].L
         om = self._get_om_from_query(query, L=L)
 
         with nogil:
@@ -5633,7 +5638,7 @@ cdef class LongTargetsPipeline(Pipeline):
                 self._pli,
                 om,
                 self.background._bg,
-                <const ESL_SQ**> search_targets._refs,
+                <const ESL_SQ**> sequences._refs,
                 hits._th,
                 scoredata._sd,
             )
@@ -5650,7 +5655,7 @@ cdef class LongTargetsPipeline(Pipeline):
             hits._sort_by_seqidx()
             for j in range(hits._th.N):
                 hit = hits._th.hit[j]
-                hit.dcl[0].ad.L = search_targets._refs[hit.seqidx].n
+                hit.dcl[0].ad.L = sequences._refs[hit.seqidx].n
             libhmmer.p7_tophits.p7_tophits_RemoveDuplicates(hits._th, self._pli.use_bit_cutoffs)
             # sort hits
             hits._sort_by_key()
@@ -5667,7 +5672,7 @@ cdef class LongTargetsPipeline(Pipeline):
     cpdef TopHits search_seq(
         self,
         DigitalSequence query,
-        object sequences,
+        DigitalSequenceBlock sequences,
         Builder builder = None,
     ):
         """search_seq(self, query, sequences, builder=None)\n--
@@ -5677,8 +5682,8 @@ cdef class LongTargetsPipeline(Pipeline):
         Arguments:
             query (`~pyhmmer.easel.DigitalSequence`): The sequence object to
                 use to query the sequence database.
-            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
-                sequences to query.
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The sequences 
+                to query with the HMM. 
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query to a `~pyhmmer.plan7.HMM`. If
                 `None` is given, it will use a default one.
@@ -5695,6 +5700,9 @@ cdef class LongTargetsPipeline(Pipeline):
             This method corresponds to running ``nhmmer`` with the
             ``query`` sequence against the ``sequences`` database.
 
+        .. versionchanged:: 0.7.0
+            References must now be `~pyhmmer.easel.DigitalSequenceBlock`.
+
         """
         assert self._pli != NULL
         if not self.alphabet._eq(query.alphabet):
@@ -5707,7 +5715,7 @@ cdef class LongTargetsPipeline(Pipeline):
     cpdef TopHits search_msa(
         self,
         DigitalMSA query,
-        object sequences,
+        DigitalSequenceBlock sequences,
         Builder builder = None,
     ):
         """search_msa(self, query, sequences, builder=None)\n--
@@ -5717,8 +5725,8 @@ cdef class LongTargetsPipeline(Pipeline):
         Arguments:
             query (`~pyhmmer.easel.DigitalMSA`): The multiple sequence
                 alignment to use to query the sequence database.
-            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
-                sequences to query.
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The sequences 
+                to query with the HMM. 
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query to a `~pyhmmer.plan7.HMM`. If
                 `None` is given, it will use a default one.

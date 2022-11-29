@@ -574,18 +574,18 @@ class Pipeline(object):
     def search_hmm(
         self,
         query: typing.Union[HMM, Profile, OptimizedProfile],
-        sequences: typing.Iterable[DigitalSequence],
+        sequences: DigitalSequenceBlock,
     ) -> TopHits: ...
     def search_msa(
         self,
         query: DigitalMSA,
-        sequences: typing.Iterable[DigitalSequence],
+        sequences: DigitalSequenceBlock,
         builder: typing.Optional[Builder] = None,
     ) -> TopHits: ...
     def search_seq(
         self,
         query: DigitalSequence,
-        sequences: typing.Iterable[DigitalSequence],
+        sequences: DigitalSequenceBlock,
         builder: typing.Optional[Builder] = None,
     ) -> TopHits: ...
     def scan_hmm(
