@@ -5031,7 +5031,7 @@ cdef class DigitalSequence(Sequence):
 # --- Sequence Block ---------------------------------------------------------
 
 cdef class SequenceBlock:
-    """An abstract storage for storing `Sequence` objects.
+    """An abstract container for storing `Sequence` objects.
 
     To pass the target sequences efficiently in `Pipeline.search_hmm`,
     an array is allocated so that the inner loop can iterate over the
@@ -5293,7 +5293,7 @@ cdef class SequenceBlock:
 
 
 cdef class TextSequenceBlock(SequenceBlock):
-    """An abstract storage for storing `TextSequence` objects.
+    """A container for storing `TextSequence` objects.
 
     .. versionadded:: 0.7.0
 
@@ -5407,6 +5407,16 @@ cdef class TextSequenceBlock(SequenceBlock):
         return SequenceBlock.largest(self)
 
     cpdef TextSequenceBlock copy(self):
+        """copy(self)\n--
+
+        Return a copy of the text sequence block.
+
+        Note:
+            The sequence internally refered to by this collection are not 
+            copied. Use `copy.deepcopy` is you also want to duplicate the 
+            internal storage of each sequence.
+
+        """
         cdef TextSequenceBlock new = TextSequenceBlock.__new__(TextSequenceBlock)
         new._storage = self._storage.copy()
         new._length = self._length
@@ -5418,7 +5428,7 @@ cdef class TextSequenceBlock(SequenceBlock):
 
 
 cdef class DigitalSequenceBlock(SequenceBlock):
-    """An abstract storage for storing `DigitalSequence` objects.
+    """A container for storing `DigitalSequence` objects.
 
     Attributes:
         alphabet (`Alphabet`, *readonly*): The biological alphabet shared by
@@ -5567,6 +5577,16 @@ cdef class DigitalSequenceBlock(SequenceBlock):
         return SequenceBlock.largest(self)
 
     cpdef DigitalSequenceBlock copy(self):
+        """copy(self)\n--
+
+        Return a copy of the digital sequence block.
+
+        Note:
+            The sequence internally refered to by this collection are not 
+            copied. Use `copy.deepcopy` is you also want to duplicate the 
+            internal storage of each sequence.
+
+        """
         cdef DigitalSequenceBlock new = DigitalSequenceBlock.__new__(DigitalSequenceBlock, self.alphabet)
         new._storage = self._storage.copy()
         new._length = self._length
