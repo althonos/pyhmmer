@@ -218,8 +218,9 @@ cdef class OptimizedProfile:
 
 
 cdef class OptimizedProfileBlock:
-    cdef P7_OM_BLOCK* _block
-    cdef list         _storage
+    cdef          P7_OM_BLOCK* _block
+    cdef          list         _storage
+    cdef readonly Alphabet     alphabet
 
     cdef void _allocate(self, size_t n) except *
 
@@ -269,17 +270,15 @@ cdef class Pipeline:
         const ESL_SQ**     sq,
               P7_TOPHITS*  th,
     ) nogil except 1
-    cpdef TopHits scan_seq(self, DigitalSequence query, object hmms)
+    cpdef TopHits scan_seq(self, DigitalSequence query, OptimizedProfileBlock hmms)
+    @staticmethod
     cdef int _scan_loop(
-                           self,
-              P7_PIPELINE* pli,
-              ESL_SQ*      sq,
-              P7_BG*       bg,
-              P7_HMM*      hm,
-              P7_TOPHITS*  th,
-              object       hmm_iter,
-              Alphabet     hmm_alphabet
-    ) except 1
+              P7_PIPELINE*  pli,
+        const ESL_SQ*       sq,
+              P7_BG*        bg,
+              P7_OPROFILE** om,
+              P7_TOPHITS*   th,
+    ) nogil except 1
     cpdef IterativeSearch iterate_hmm(
         self,
         DigitalSequence query,

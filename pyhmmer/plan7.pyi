@@ -633,10 +633,10 @@ class Pipeline(object):
         sequences: DigitalSequenceBlock,
         builder: typing.Optional[Builder] = None,
     ) -> TopHits: ...
-    def scan_hmm(
+    def scan_seq(
         self,
         query: DigitalSequence,
-        hmms: typing.Iterable[HMM],
+        optimized_profiles: OptimizedProfileBlock,
     ) -> TopHits: ...
     def iterate_seq(
         self,

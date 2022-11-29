@@ -8,7 +8,7 @@ import threading
 import pkg_resources
 
 import pyhmmer
-from pyhmmer.plan7 import Background, Builder, Pipeline, HMMFile, TopHits
+from pyhmmer.plan7 import Background, Builder, Pipeline, HMMFile, TopHits, OptimizedProfileBlock, Profile
 from pyhmmer.easel import Alphabet, SequenceFile, DigitalSequence, TextSequence, MSAFile, DigitalMSA
 from pyhmmer.errors import AlphabetMismatch
 
@@ -129,16 +129,26 @@ class TestScanPipeline(unittest.TestCase):
 
         # mismatch between pipeline alphabet and query alphabet
         dsq = TextSequence(sequence="IRGIY").digitize(self.alphabet)
-        self.assertRaises(AlphabetMismatch, pipeline.scan_seq, dsq, self.hmms)
+        oprofiles = OptimizedProfileBlock(pipeline.alphabet)
+        self.assertRaises(AlphabetMismatch, pipeline.scan_seq, dsq, oprofiles)
 
         # mismatch between pipeline alphabet and database alphabet
         dsq = TextSequence(sequence="ATGC").digitize(pipeline.alphabet)
-        self.assertRaises(AlphabetMismatch, pipeline.scan_seq, dsq, self.hmms)
+        oprofiles = OptimizedProfileBlock(self.alphabet)
+        self.assertRaises(AlphabetMismatch, pipeline.scan_seq, dsq, oprofiles)
 
     def test_scan_seq(self):
         seq = next(x for x in self.references if x.name == b"938293.PRJEB85.HG003687_188")
+
+        oprofiles = OptimizedProfileBlock(seq.alphabet) 
+        background = Background(seq.alphabet)
+        for hmm in self.hmms:
+            profile = Profile(hmm.M, hmm.alphabet)
+            profile.configure(hmm, background)
+            oprofiles.append(profile.optimized())
+
         pipeline = Pipeline(alphabet=self.alphabet)
-        hits = pipeline.scan_seq(seq, self.hmms)
+        hits = pipeline.scan_seq(seq, oprofiles)
         self.assertEqual(len(hits), 6)  # number found with `hmmscan`
 
 
