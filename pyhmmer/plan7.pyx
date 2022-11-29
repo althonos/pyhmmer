@@ -3966,6 +3966,7 @@ cdef class OptimizedProfileBlock:
 
     def __cinit__(self):
         self._block = NULL
+        self._storage = list()
 
     def __init__(self, object iterable = ()):
         if self._block == NULL:
@@ -3984,11 +3985,32 @@ cdef class OptimizedProfileBlock:
         assert self._block != NULL
         return self._block.count
 
+    def __contains__(self, object item):
+        if not isinstance(item, OptimizedProfile):
+            return False
+        return item in self._storage
+
     def __getitem__(self, object index):
         if isinstance(index, slice):
             return type(self)(self._storage[index])
         else:
             return self._storage[index]
+
+    def __setitem__(self, object index, object optimized_profiles):
+        cdef size_t           i
+        cdef OptimizedProfile optimized_profile
+
+        if isinstance(index, slice):
+            self._storage[index] = optimized_profiles
+            self._block.count = len(self._storage)
+            self._allocate(self._block.count + 1)
+            for i, optimized_profile in enumerate(self._storage):
+                self._block.list[i] = optimized_profile._om
+            self._block.list[self._block.count] = NULL
+        else:
+            optimized_profile = optimized_profiles
+            self._storage[index] = optimized_profile
+            self._block.list[index] = optimized_profile._om
 
     def __delitem__(self, object index):
         cdef size_t           i
@@ -4031,8 +4053,8 @@ cdef class OptimizedProfileBlock:
         """
         assert self._block != NULL
 
-        cdef size_t i
-        cdef size_t capacity = new_capacity(n, self._block.count)
+        cdef ssize_t i
+        cdef size_t  capacity = new_capacity(n, self._block.count)
 
         with nogil:
             self._block.list = <P7_OPROFILE**> realloc(self._block.list, capacity * sizeof(P7_OPROFILE*))
@@ -4067,7 +4089,7 @@ cdef class OptimizedProfileBlock:
 
         """
         assert self._block != NULL
-        cdef size_t i
+        cdef ssize_t i
         self._storage.clear()
         for i in range(self._block.count):
             self._block.list[i] = NULL
@@ -4080,7 +4102,7 @@ cdef class OptimizedProfileBlock:
 
         """
         assert self._block != NULL
-        cdef size_t hint = operator.length_hint(iterable)
+        cdef ssize_t hint = operator.length_hint(iterable)
         if self._block.count + hint > self._block.listSize:
             self._allocate(self._block.count + hint + 1)
         for optimized_profile in iterable:
@@ -4095,9 +4117,9 @@ cdef class OptimizedProfileBlock:
             `ValueError`: When the block does not contain ``optimized_profile``.
 
         """
-        return self._storage.index(optimized_profile)
+        return self._storage.index(optimized_profile, start, stop)
 
-    cdef void insert(self, ssize_t index, OptimizedProfile optimized_profile) except *:
+    cpdef void insert(self, ssize_t index, OptimizedProfile optimized_profile) except *:
         """insert(self, index, optimized_profile)\n--
 
         Insert a new optimized profile in the block before ``index``.
@@ -4107,13 +4129,13 @@ cdef class OptimizedProfileBlock:
 
         if index < 0:
             index = 0
-        elif <size_t> index > self._block.count:
+        elif index > self._block.count:
             index = self._block.count
 
         if self._block.count == self._block.listSize - 1:
             self._allocate(self._block.listSize + 1)
 
-        if <size_t> index != self._block.count:
+        if index != self._block.count:
             memmove(&self._block.list[index + 1], &self._block.list[index], (self._block.count - index)*sizeof(P7_OPROFILE*))
 
         self._storage.insert(index, optimized_profile)
@@ -4121,7 +4143,7 @@ cdef class OptimizedProfileBlock:
         self._block.count += 1
         assert self._block.list[self._block.count] == NULL
 
-    cdef OptimizedProfile pop(self, ssize_t index=-1):
+    cpdef OptimizedProfile pop(self, ssize_t index=-1):
         """pop(self, index=-1)\n--
 
         Remove and return an optimized profile from the block.
@@ -4134,7 +4156,7 @@ cdef class OptimizedProfileBlock:
             raise IndexError("pop from empty block")
         if index_ < 0:
             index_ += self._block.count
-        if index_ < 0 or <size_t> index_ >= self._block.count:
+        if index_ < 0 or index_ >= self._block.count:
             raise IndexError(index)
 
         # remove item from storage
@@ -4142,12 +4164,12 @@ cdef class OptimizedProfileBlock:
 
         # update pointers in the reference array
         self._block.count -= 1
-        if <size_t> index_ < self._length:
+        if index_ < self._block.count:
             memmove(&self._block.list[index_], &self._block.list[index_ + 1], (self._block.count - index_)*sizeof(P7_OPROFILE*))
         self._block.list[self._block.count] = NULL
         return item
 
-    cdef void remove(self, OptimizedProfile optimized_profile) except *:
+    cpdef void remove(self, OptimizedProfile optimized_profile) except *:
         """remove(self, sequence)\n--
 
         Remove the first occurence of the given optimized profile.
@@ -4155,7 +4177,7 @@ cdef class OptimizedProfileBlock:
         """
         self.pop(self.index(optimized_profile))
 
-    cdef OptimizedProfileBlock copy(self):
+    cpdef OptimizedProfileBlock copy(self):
         """copy(self)\n--
 
         Return a copy of the optimized profile block.
@@ -4170,9 +4192,11 @@ cdef class OptimizedProfileBlock:
         cdef OptimizedProfileBlock new = OptimizedProfileBlock.__new__(OptimizedProfileBlock)
         new._storage = self._storage.copy()
         new._block = p7_oprofile_CreateBlock(self._block.count + 1)
-        new._block.count = self._block.count
+        if new._block == NULL:
+            raise AllocationError("P7_OM_BLOCK", sizeof(P7_OM_BLOCK))
         memcpy(new._block.list, self._block.list, self._block.count * sizeof(ESL_SQ*))
-        assert self._block.list[self._block.count] == NULL
+        new._block.count = self._block.count
+        new._block.list[new._block.count] = NULL
         return new
 
 

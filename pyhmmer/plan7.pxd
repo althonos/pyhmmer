@@ -227,24 +227,15 @@ cdef class OptimizedProfileBlock:
     cpdef void clear(self) except *
     cpdef void extend(self, object iterable) except *
     cpdef size_t index(self, OptimizedProfile optimized_profile, ssize_t start=*, ssize_t stop=*) except *
-    cdef void insert(self, ssize_t index, OptimizedProfile optimized_profile) except *
-    cdef OptimizedProfile pop(self, ssize_t index=*)
-    cdef void remove(self, OptimizedProfile optimized_profile) except *
-    cdef OptimizedProfileBlock copy(self)
+    cpdef void insert(self, ssize_t index, OptimizedProfile optimized_profile) except *
+    cpdef OptimizedProfile pop(self, ssize_t index=*)
+    cpdef void remove(self, OptimizedProfile optimized_profile) except *
+    cpdef OptimizedProfileBlock copy(self)
 
 
 cdef class Offsets:
     cdef object              _owner
     cdef off_t[p7_NOFFSETS]* _offs
-
-
-# cdef class PipelineSearchTargets:
-#     cdef const    ESL_SQ**   _refs         # the array to pass the sequence references to the C code
-#     cdef          size_t     _nref         # the total size of `self._refs`
-#     cdef          list       _storage      # the actual Python list where `Sequence` objects are stored
-#     cdef          ssize_t    _max_len      # the length of the largest sequence in the array
-#     cdef          object     _owner        # the owner, if the object is just a shallow copy
-#     cdef readonly Alphabet   alphabet      # the target alphabets
 
 
 cdef class Pipeline:

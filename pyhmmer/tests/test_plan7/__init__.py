@@ -1,5 +1,6 @@
 from . import (
     test_background,
+    test_block,
     test_builder,
     test_hit,
     test_hmm,
@@ -14,6 +15,7 @@ from . import (
 
 def load_tests(loader, suite, pattern):
     suite.addTests(loader.loadTestsFromModule(test_background))
+    suite.addTests(loader.loadTestsFromModule(test_block))
     suite.addTests(loader.loadTestsFromModule(test_builder))
     suite.addTests(loader.loadTestsFromModule(test_hit))
     suite.addTests(loader.loadTestsFromModule(test_hmm))
