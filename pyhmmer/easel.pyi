@@ -504,9 +504,7 @@ class Sequence(typing.Sized, abc.ABC):
     @typing.overload
     def reverse_complement(self, inplace: Literal[True]) -> None: ...
     @typing.overload
-    def reverse_complement(
-        self, inplace: Literal[False] = False
-    ) -> Sequence: ...
+    def reverse_complement(self, inplace: Literal[False] = False) -> Sequence: ...
 
 class TextSequence(Sequence):
     def __init__(
@@ -524,9 +522,7 @@ class TextSequence(Sequence):
     @typing.overload
     def reverse_complement(self, inplace: Literal[True]) -> None: ...
     @typing.overload
-    def reverse_complement(
-        self, inplace: Literal[False] = False
-    ) -> TextSequence: ...
+    def reverse_complement(self, inplace: Literal[False] = False) -> TextSequence: ...
 
 class DigitalSequence(Sequence):
     alphabet: Alphabet
@@ -549,7 +545,6 @@ class DigitalSequence(Sequence):
     def reverse_complement(
         self, inplace: Literal[False] = False
     ) -> DigitalSequence: ...
-
 
 # --- Sequence block ---------------------------------------------------------
 
@@ -589,9 +584,10 @@ class TextSequenceBlock(SequenceBlock[TextSequence]):
 
 class DigitalSequenceBlock(SequenceBlock[DigitalSequence]):
     alphabet: Alphabet
-    def __init__(self, alphabet: Alphabet, iterable: typing.Iterable[DigitalSequence] = ()) -> None: ...
+    def __init__(
+        self, alphabet: Alphabet, iterable: typing.Iterable[DigitalSequence] = ()
+    ) -> None: ...
     def textize(self) -> TextSequenceBlock: ...
-
 
 # --- Sequence File ----------------------------------------------------------
 
@@ -636,7 +632,9 @@ class SequenceFile(typing.ContextManager[SequenceFile], typing.Iterator[Sequence
         self, seq: Sequence, skip_info: bool = False, skip_sequence: bool = False
     ) -> typing.Optional[Sequence]: ...
     def read_block(
-        self, sequences: typing.Optional[int] = None, residues: typing.Optional[int] = None,
+        self,
+        sequences: typing.Optional[int] = None,
+        residues: typing.Optional[int] = None,
     ) -> SequenceBlock[Sequence]: ...
     def close(self) -> None: ...
     def guess_alphabet(self) -> typing.Optional[Alphabet]: ...

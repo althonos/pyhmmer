@@ -116,6 +116,7 @@ from .easel cimport (
     VectorU8,
     MatrixF,
     MatrixU8,
+    Randomness,
 )
 from .reexports.p7_tophits cimport p7_tophits_Reuse
 from .reexports.p7_hmmfile cimport (
@@ -1908,6 +1909,79 @@ cdef class HMM:
        Added the `~HMM.evalue_parameters` and `~HMM.cutoffs` attributes.
 
     """
+
+    @classmethod
+    def sample(
+        cls, 
+        int M, 
+        Alphabet alphabet, 
+        Randomness randomness,
+        bint ungapped=False,
+        bint enumerable=False,
+    ):
+        """sample(cls, M, alphabet, randomness)\n--
+
+        Sample an HMM of length ``M`` at random.
+
+        Arguments:
+            M (`int`): The length of the model to generate (i.e. the 
+                number of nodes).
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
+            randomness (`~pyhmmer.easel.Randomness`): The random number 
+                generator to use for sampling.
+            ungapped (`bool`): Set to `True` to build an ungapped HMM, i.e.
+                an HMM where the :math:`M_n \to M_{n+1}` are all one and the 
+                remaining transitions are zero. Ignored when ``enumerable`` 
+                is `True`.
+            enumerable (`bool`): Set to `True` to build a random HMM with no
+                nonzero insertion transitions.
+
+        Returns:
+            `~pyhmmer.plan7.HMM`: A new HMM generated at random.
+
+        .. versionadded:: 0.7.0
+
+        """
+        cdef str fname
+        cdef int status
+        cdef HMM hmm    = cls.__new__(cls)
+
+        if enumerable:
+            fname = "p7_hmm_SampleEnumerable"
+            status = libhmmer.p7_hmm.p7_hmm_SampleEnumerable(
+                randomness._rng,
+                M,
+                alphabet._abc,
+                &hmm._hmm
+            )
+        elif ungapped:
+            fname = "p7_hmm_SampleUngapped"
+            status = libhmmer.p7_hmm.p7_hmm_SampleUngapped(
+                randomness._rng,
+                M,
+                alphabet._abc,
+                &hmm._hmm
+            )
+        else:
+            fname = "p7_hmm_Sample"
+            status = libhmmer.p7_hmm.p7_hmm_Sample(
+                randomness._rng,
+                M,
+                alphabet._abc,
+                &hmm._hmm
+            )
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, fname)
+        
+        # FIXME(@althonos): Remove following block when
+        # https://github.com/EddyRivasLab/hmmer/pull/236
+        # is merged and released in a new HMMER version
+        status = libhmmer.p7_hmm.p7_hmm_SetConsensus(hmm._hmm, NULL)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_hmm_SetConsensus")
+        hmm._hmm.flags &= ~libhmmer.p7_hmm.p7H_CONS
+        return hmm
+
 
     # --- Magic methods ------------------------------------------------------
 
