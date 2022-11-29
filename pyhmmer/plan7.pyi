@@ -682,7 +682,7 @@ class Profile(object):
         self,
         hmm: HMM,
         background: Background,
-        L: int,
+        L: int = 400,
         multihit: bool = True,
         local: bool = True,
     ) -> None: ...

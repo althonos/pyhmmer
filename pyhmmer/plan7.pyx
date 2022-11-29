@@ -4668,7 +4668,7 @@ cdef class Pipeline:
         self._pli.pos_past_msv    = 0
         self._pli.pos_past_bias   = 0
         self._pli.pos_past_vit    = 0
-        self._pli.pos_past_fwd    = 0;
+        self._pli.pos_past_fwd    = 0
         self._pli.pos_output      = 0
         self._pli.W               = 0
         self._pli.hfp             = NULL
@@ -6089,8 +6089,8 @@ cdef class Profile:
 
         return 0
 
-    def configure(self, HMM hmm, Background background, int L, bint multihit=True, bint local=True):
-        """configure(self, hmm, background, L, multihit=True, local=True)\n--
+    def configure(self, HMM hmm, Background background, int L=400, bint multihit=True, bint local=True):
+        """configure(self, hmm, background, L=400, multihit=True, local=True)\n--
 
         Configure a search profile using the given models.
 
