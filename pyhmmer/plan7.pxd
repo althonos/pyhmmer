@@ -271,6 +271,20 @@ cdef class Pipeline:
               object       hmm_iter,
               Alphabet     hmm_alphabet
     ) except 1
+    cpdef IterativeSearch iterate_hmm(
+        self,
+        DigitalSequence query,
+        DigitalSequenceBlock sequences,
+        Builder builder = ?,
+        object select_hits = ?,
+    )
+    cpdef IterativeSearch iterate_seq(
+        self,
+        DigitalSequence query,
+        DigitalSequenceBlock sequences,
+        Builder builder = ?,
+        object select_hits = ?,
+    )
 
 
 cdef class LongTargetsPipeline(Pipeline):

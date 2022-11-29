@@ -4686,8 +4686,8 @@ cdef class Pipeline:
         Arguments:
             query (`HMM`, `Profile` or `OptimizedProfile`): The object to use
                 to query the sequence database.
-            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The sequences 
-                to query with the HMM. 
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target 
+                sequences to query with the HMM. 
 
         Returns:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
@@ -4710,7 +4710,7 @@ cdef class Pipeline:
             Query can now be a `Profile` or an `OptimizedProfile`.
 
         .. versionchanged:: 0.7.0
-            References must now be `~pyhmmer.easel.DigitalSequenceBlock`.
+            Targets must now be inside a `~pyhmmer.easel.DigitalSequenceBlock`.
 
         """
         assert self._pli != NULL
@@ -4773,8 +4773,8 @@ cdef class Pipeline:
         Arguments:
             query (`~pyhmmer.easel.DigitalMSA`): The multiple sequence
                 alignment to use to query the sequence database.
-            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The sequences 
-                to query with the HMM. 
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target 
+                sequences to query with the query alignment. 
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query to a `~pyhmmer.plan7.HMM`. If
                 `None` is given, it will use a default one.
@@ -4804,7 +4804,7 @@ cdef class Pipeline:
         .. versionadded:: 0.3.0
 
         .. versionchanged:: 0.7.0
-            References must now be `~pyhmmer.easel.DigitalSequenceBlock`.
+            Targets must now be inside a `~pyhmmer.easel.DigitalSequenceBlock`.
 
         """
         assert self._pli != NULL
@@ -4835,8 +4835,8 @@ cdef class Pipeline:
         Arguments:
             query (`~pyhmmer.easel.DigitalSequence`): The sequence object to
                 use to query the sequence database.
-            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The sequences 
-                to query with the HMM. 
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target 
+                sequences to query with the query sequence. 
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query to a `~pyhmmer.plan7.HMM`. If
                 `None` is given, it will use a default one.
@@ -4858,7 +4858,7 @@ cdef class Pipeline:
         .. versionadded:: 0.2.0
 
         .. versionchanged:: 0.7.0
-            References must now be `~pyhmmer.easel.DigitalSequenceBlock`.
+            Targets must now be inside a `~pyhmmer.easel.DigitalSequenceBlock`.
 
         """
         assert self._pli != NULL
@@ -5120,10 +5120,10 @@ cdef class Pipeline:
         # Return 0 to indicate success
         return 0
 
-    def iterate_hmm(
+    cpdef IterativeSearch iterate_hmm(
         self,
         DigitalSequence query,
-        object sequences,
+        DigitalSequenceBlock sequences,
         Builder builder = None,
         object select_hits = None,
     ):
@@ -5134,10 +5134,8 @@ cdef class Pipeline:
         Arguments:
             query (`~pyhmmer.plan7.HMM`): The sequence object to use to
                 query the sequence database.
-            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
-                sequences to query. If the same sequences are being queried
-                several times with different queries, consider storing them 
-                in a `~pyhmmer.easel.DigitalSequenceBlock` collection.
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target 
+                sequences to query with the HMM.
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query and subsequent alignments to a
                 `~pyhmmer.plan7.HMM`. If `None` is given, this method will
@@ -5172,30 +5170,27 @@ cdef class Pipeline:
             a query sequence instead of a query HMM, and contains more
             details and examples.
 
+        .. versionchanged:: 0.7.0
+            Targets must now be inside a `~pyhmmer.easel.DigitalSequenceBlock`.
+
         """
-        # collect target sequences into an optimized structure
-        cdef DigitalSequenceBlock targets
-        if not isinstance(sequences, DigitalSequenceBlock):
-            targets = DigitalSequenceBlock(self.alphabet, sequences)
-        else:
-            targets = sequences
         # check that alphabets are consistent
         if not self.alphabet._eq(query.alphabet):
             raise AlphabetMismatch(self.alphabet, query.alphabet)
-        if not self.alphabet._eq(targets.alphabet):
-            raise AlphabetMismatch(self.alphabet, targets.alphabet)
+        if not self.alphabet._eq(sequences.alphabet):
+            raise AlphabetMismatch(self.alphabet, sequences.alphabet)
         # check that builder is in hand architecture, not fast
         if builder is None:
             builder = Builder(self.alphabet, seed=self.seed, architecture="hand")
         elif builder.architecture != "hand":
             raise ValueError("`iterate_seq` only supports a builder with 'hand' architecture")
         # return the iterator
-        return IterativeSearch(self, builder, query, targets, select_hits)
+        return IterativeSearch(self, builder, query, sequences, select_hits)
 
-    def iterate_seq(
+    cpdef IterativeSearch iterate_seq(
         self,
         DigitalSequence query,
-        object sequences,
+        DigitalSequenceBlock sequences,
         Builder builder = None,
         object select_hits = None,
     ):
@@ -5217,10 +5212,8 @@ cdef class Pipeline:
         Arguments:
             query (`~pyhmmer.easel.DigitalSequence`): The sequence object to
                 use to query the sequence database.
-            sequences (collection of `~pyhmmer.easel.DigitalSequence`): The
-                sequences to query. If the same sequences are being queried 
-                several times with different queries, consider storing them 
-                in a `~pyhmmer.easel.DigitalSequenceBlock` collection.
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target
+                sequences to query with the query sequence.
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query and subsequent alignments to a
                 `~pyhmmer.plan7.HMM`. If `None` is given, this method will
@@ -5281,25 +5274,22 @@ cdef class Pipeline:
 
         .. versionadded:: 0.6.0
 
+        .. versionchanged:: 0.7.0
+            Targets must now be inside a `~pyhmmer.easel.DigitalSequenceBlock`.
+
         """
-        # collect target sequences into an optimized structure
-        cdef DigitalSequenceBlock targets
-        if not isinstance(sequences, DigitalSequenceBlock):
-            targets = DigitalSequenceBlock(self.alphabet, sequences)
-        else:
-            targets = sequences
         # check that alphabets are consistent
         if not self.alphabet._eq(query.alphabet):
             raise AlphabetMismatch(self.alphabet, query.alphabet)
-        if not self.alphabet._eq(targets.alphabet):
-            raise AlphabetMismatch(self.alphabet, targets.alphabet)
+        if not self.alphabet._eq(sequences.alphabet):
+            raise AlphabetMismatch(self.alphabet, sequences.alphabet)
         # check that builder is in hand architecture, not fast
         if builder is None:
             builder = Builder(self.alphabet, seed=self.seed, architecture="hand")
         elif builder.architecture != "hand":
             raise ValueError("`iterate_seq` only supports a builder with 'hand' architecture")
         # return the iterator
-        return IterativeSearch(self, builder, query, targets, select_hits)
+        return IterativeSearch(self, builder, query, sequences, select_hits)
 
 
 cdef class LongTargetsPipeline(Pipeline):
@@ -5580,8 +5570,8 @@ cdef class LongTargetsPipeline(Pipeline):
         Arguments:
             query (`HMM`, `Profile` or `OptimizedProfile`): The object to use
                 to query the sequence database.
-            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The sequences 
-                to query with the HMM. 
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target
+                sequences to query with the HMM. 
 
         Returns:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
@@ -5599,7 +5589,7 @@ cdef class LongTargetsPipeline(Pipeline):
             ``query`` HMM against the ``sequences`` database.
 
         .. versionchanged:: 0.7.0
-            References must now be `~pyhmmer.easel.DigitalSequenceBlock`.
+            Targets must now be inside a `~pyhmmer.easel.DigitalSequenceBlock`.
 
         """
         assert self._pli != NULL
@@ -5682,8 +5672,8 @@ cdef class LongTargetsPipeline(Pipeline):
         Arguments:
             query (`~pyhmmer.easel.DigitalSequence`): The sequence object to
                 use to query the sequence database.
-            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The sequences 
-                to query with the HMM. 
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target
+                sequences to query with the query sequence. 
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query to a `~pyhmmer.plan7.HMM`. If
                 `None` is given, it will use a default one.
@@ -5701,7 +5691,7 @@ cdef class LongTargetsPipeline(Pipeline):
             ``query`` sequence against the ``sequences`` database.
 
         .. versionchanged:: 0.7.0
-            References must now be `~pyhmmer.easel.DigitalSequenceBlock`.
+            Targets must now be inside a `~pyhmmer.easel.DigitalSequenceBlock`.
 
         """
         assert self._pli != NULL
@@ -5725,8 +5715,8 @@ cdef class LongTargetsPipeline(Pipeline):
         Arguments:
             query (`~pyhmmer.easel.DigitalMSA`): The multiple sequence
                 alignment to use to query the sequence database.
-            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The sequences 
-                to query with the HMM. 
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target 
+                sequences to query with the query alignment. 
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query to a `~pyhmmer.plan7.HMM`. If
                 `None` is given, it will use a default one.
@@ -5743,6 +5733,9 @@ cdef class LongTargetsPipeline(Pipeline):
             This method corresponds to running ``nhmmer`` with the
             ``query`` multiple sequence alignment against the ``sequences``
             database.
+
+        .. versionchanged:: 0.7.0
+            Targets must now be inside a `~pyhmmer.easel.DigitalSequenceBlock`.
 
         """
         assert self._pli != NULL
