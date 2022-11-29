@@ -21,8 +21,10 @@ from libhmmer.p7_tophits cimport P7_TOPHITS
 from libhmmer.p7_trace cimport P7_TRACE
 
 IF HMMER_IMPL == "VMX":
+    from libhmmer.impl_vmx.p7_omx cimport P7_OM_BLOCK
     from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
 ELIF HMMER_IMPL == "SSE":
+    from libhmmer.impl_sse.p7_omx cimport P7_OM_BLOCK
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
 from .easel cimport (
@@ -213,6 +215,22 @@ cdef class OptimizedProfile:
     cdef int _convert(self, P7_PROFILE* gm) nogil except 1
 
     cpdef object ssv_filter(self, DigitalSequence seq)
+
+
+cdef class OptimizedProfileBlock:
+    cdef P7_OM_BLOCK* _block
+    cdef list         _storage
+
+    cdef void _allocate(self, size_t n) except *
+
+    cpdef void append(self, OptimizedProfile optimized_profile) except *
+    cpdef void clear(self) except *
+    cpdef void extend(self, object iterable) except *
+    cpdef size_t index(self, OptimizedProfile optimized_profile, ssize_t start=*, ssize_t stop=*) except *
+    cdef void insert(self, ssize_t index, OptimizedProfile optimized_profile) except *
+    cdef OptimizedProfile pop(self, ssize_t index=*)
+    cdef void remove(self, OptimizedProfile optimized_profile) except *
+    cdef OptimizedProfileBlock copy(self)
 
 
 cdef class Offsets:

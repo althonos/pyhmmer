@@ -75,6 +75,11 @@ from libhmmer.p7_trace cimport P7_TRACE, p7t_statetype_e
 IF HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init
     from libhmmer.impl_vmx.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
+    from libhmmer.impl_vmx.p7_omx cimport (
+        P7_OM_BLOCK,
+        p7_oprofile_CreateBlock,
+        p7_oprofile_DestroyBlock,
+    )
     from libhmmer.impl_vmx.p7_oprofile cimport (
         P7_OPROFILE,
         p7O_NQB,
@@ -85,6 +90,11 @@ IF HMMER_IMPL == "VMX":
 ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7O_EXTRA_SB
     from libhmmer.impl_sse.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
+    from libhmmer.impl_sse.p7_omx cimport (
+        P7_OM_BLOCK,
+        p7_oprofile_CreateBlock,
+        p7_oprofile_DestroyBlock,
+    )
     from libhmmer.impl_sse.p7_oprofile cimport (
         P7_OPROFILE,
         p7O_NQB,
@@ -120,6 +130,8 @@ from .reexports.p7_hmmfile cimport (
     v3f_magic
 )
 
+include "capacity.pxi"
+
 IF UNAME_SYSNAME == "Linux":
     include "fileobj/linux.pxi"
 ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
@@ -134,6 +146,7 @@ import errno
 import math
 import io
 import itertools
+import operator
 import os
 import sys
 import warnings
@@ -3869,6 +3882,230 @@ cdef class OptimizedProfile:
                 raise UnexpectedError(status, "p7_SSVFilter")
         ELSE:
             raise NotImplementedError(f"p7_SSVFilter is not available on {HMMER_IMPL} platforms")
+
+cdef class OptimizedProfileBlock:
+    """A container for storing `OptimizedProfile` objects.
+
+    This collections allows the scan loop of `Pipeline` objects to scan
+    several target profiles without having to acquire the GIL for each 
+    new model. It does so by synchronizing a Python `list` storing 
+    `OptimizedProfile` objects with a C-contiguous array of pointers to the
+    underlying struct of each object.
+
+    .. versionadded:: 0.7.0
+
+    """
+
+    def __cinit__(self):
+        self._block = NULL
+
+    def __init__(self, object iterable = ()):
+        if self._block == NULL:
+            self._block = p7_oprofile_CreateBlock(8)
+            if self._block == NULL:
+                raise AllocationError("P7_OM_BLOCK", sizeof(P7_OM_BLOCK))
+        self.clear()
+        self.extend(iterable)
+
+    def __dealloc__(self):
+        if self._block != NULL:
+            self.clear() # avoid a double free of the sequence contents
+            p7_oprofile_DestroyBlock(self._block)
+
+    def __len__(self):
+        assert self._block != NULL
+        return self._block.count
+
+    def __getitem__(self, object index):
+        if isinstance(index, slice):
+            return type(self)(self._storage[index])
+        else:
+            return self._storage[index]
+
+    def __delitem__(self, object index):
+        cdef size_t           i
+        cdef OptimizedProfile optimized_profile
+
+        if isinstance(index, slice):
+            del self._storage[index]
+            self._block.count = len(self._storage)
+            self._allocate(self._block.count)
+            for i, optimized_profile in enumerate(self._storage):
+                self._block.list[i] = optimized_profile._om
+            assert self._block.list[self._block.count] == NULL
+        else:
+            self.pop(index)
+    
+    def __reduce__(self):
+        return type(self), (), None, iter(self)
+
+    def __copy__(self):
+        return self.copy()
+
+    def __repr__(self):
+        cdef str ty = type(self).__name__
+        return f"{ty}({self._storage!r})"
+
+    def __eq__(self, object other):
+        cdef OptimizedProfileBlock other_
+        if not isinstance(other, OptimizedProfileBlock):
+            return NotImplemented
+        other_ = other
+        return self._storage == other_._storage
+
+    # --- C methods ----------------------------------------------------------
+
+    cdef void _allocate(self, size_t n) except *:
+        """_allocate(self, n, /)\n--
+
+        Allocate enough storage for at least ``n`` items.
+
+        """
+        assert self._block != NULL
+
+        cdef size_t i
+        cdef size_t capacity = new_capacity(n, self._block.count)
+
+        with nogil:
+            self._block.list = <P7_OPROFILE**> realloc(self._block.list, capacity * sizeof(P7_OPROFILE*))
+        if self._block.list == NULL:
+            self._block.listSize = 0
+            raise AllocationError("P7_OPROFILE*", sizeof(P7_OPROFILE*), capacity)
+        else:
+            self._block.listSize = capacity
+        for i in range(self._block.count, self._block.listSize):
+            self._block.list[i] = NULL
+
+    # --- Python methods -----------------------------------------------------
+
+    cpdef void append(self, OptimizedProfile optimized_profile) except *:
+        """append(self, optimized_profile)\n--
+
+        Append an optimized profile at the end of the block.
+
+        """
+        assert self._block != NULL
+        if self._block.count == self._block.listSize - 1:
+            self._allocate(self._block.listSize + 2)
+        self._storage.append(optimized_profile)
+        self._block.list[self._block.count] = optimized_profile._om
+        self._block.count += 1
+        assert self._block.list[self._block.count] == NULL
+    
+    cpdef void clear(self) except *:
+        """clear(self)\n--
+
+        Remove all optimized profiles from the block.
+
+        """
+        assert self._block != NULL
+        cdef size_t i
+        self._storage.clear()
+        for i in range(self._block.count):
+            self._block.list[i] = NULL
+        self._block.count = 0
+
+    cpdef void extend(self, object iterable) except *:
+        """extend(self, iterable, /)\n--
+
+        Extend block by appending optimized profiles from the iterable.
+
+        """
+        assert self._block != NULL
+        cdef size_t hint = operator.length_hint(iterable)
+        if self._block.count + hint > self._block.listSize:
+            self._allocate(self._block.count + hint + 1)
+        for optimized_profile in iterable:
+            self.append(optimized_profile)
+
+    cpdef size_t index(self, OptimizedProfile optimized_profile, ssize_t start=0, ssize_t stop=sys.maxsize) except *:
+        """index(self, optimized_profile, start=0, stop=sys.maxsize)\n--
+
+        Return the index of the first occurence of ``optimized_profile``.
+
+        Raises:
+            `ValueError`: When the block does not contain ``optimized_profile``.
+
+        """
+        return self._storage.index(optimized_profile)
+
+    cdef void insert(self, ssize_t index, OptimizedProfile optimized_profile) except *:
+        """insert(self, index, optimized_profile)\n--
+
+        Insert a new optimized profile in the block before ``index``.
+
+        """
+        assert self._block != NULL
+
+        if index < 0:
+            index = 0
+        elif <size_t> index > self._block.count:
+            index = self._block.count
+
+        if self._block.count == self._block.listSize - 1:
+            self._allocate(self._block.listSize + 1)
+
+        if <size_t> index != self._block.count:
+            memmove(&self._block.list[index + 1], &self._block.list[index], (self._block.count - index)*sizeof(P7_OPROFILE*))
+
+        self._storage.insert(index, optimized_profile)
+        self._block.list[index] = optimized_profile._om
+        self._block.count += 1
+        assert self._block.list[self._block.count] == NULL
+
+    cdef OptimizedProfile pop(self, ssize_t index=-1):
+        """pop(self, index=-1)\n--
+
+        Remove and return an optimized profile from the block.
+
+        """
+        assert self._block != NULL
+        cdef ssize_t index_ = index
+        
+        if self._block.count == 0:
+            raise IndexError("pop from empty block")
+        if index_ < 0:
+            index_ += self._block.count
+        if index_ < 0 or <size_t> index_ >= self._block.count:
+            raise IndexError(index)
+
+        # remove item from storage
+        item = self._storage.pop(index_)
+
+        # update pointers in the reference array
+        self._block.count -= 1
+        if <size_t> index_ < self._length:
+            memmove(&self._block.list[index_], &self._block.list[index_ + 1], (self._block.count - index_)*sizeof(P7_OPROFILE*))
+        self._block.list[self._block.count] = NULL
+        return item
+
+    cdef void remove(self, OptimizedProfile optimized_profile) except *:
+        """remove(self, sequence)\n--
+
+        Remove the first occurence of the given optimized profile.
+
+        """
+        self.pop(self.index(optimized_profile))
+
+    cdef OptimizedProfileBlock copy(self):
+        """copy(self)\n--
+
+        Return a copy of the optimized profile block.
+
+        Note:
+            The optimized profiles internally refered to by this collection 
+            are not copied. Use `copy.deepcopy` if you also want to duplicate
+            the internal storage of each optimized profile.
+
+        """
+        assert self._block != NULL
+        cdef OptimizedProfileBlock new = OptimizedProfileBlock.__new__(OptimizedProfileBlock)
+        new._storage = self._storage.copy()
+        new._block = p7_oprofile_CreateBlock(self._block.count + 1)
+        new._block.count = self._block.count
+        memcpy(new._block.list, self._block.list, self._block.count * sizeof(ESL_SQ*))
+        assert self._block.list[self._block.count] == NULL
+        return new
 
 
 @cython.freelist(8)
