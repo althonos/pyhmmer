@@ -4753,7 +4753,7 @@ cdef class Pipeline:
                 self._pli,
                 om,
                 self.background._bg,
-                search_targets._refs,
+                <const ESL_SQ**> search_targets._refs,
                 hits._th,
             )
             # sort hits and set bookkeeping attributes
@@ -5633,7 +5633,7 @@ cdef class LongTargetsPipeline(Pipeline):
                 self._pli,
                 om,
                 self.background._bg,
-                search_targets._refs,
+                <const ESL_SQ**> search_targets._refs,
                 hits._th,
                 scoredata._sd,
             )
