@@ -5307,7 +5307,7 @@ cdef class TextSequenceBlock(SequenceBlock):
 
     def __repr__(self):
         cdef str ty = type(self).__name__
-        return f"{ty}({list(self)!r})"
+        return f"{ty}({self._storage!r})"
 
     def __len__(self):
         return self._length
@@ -5462,7 +5462,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
 
     def __repr__(self):
         cdef str ty = type(self).__name__
-        return f"{ty}({self.alphabet!r}, {list(self)!r})"
+        return f"{ty}({self.alphabet!r}, {self._storage!r})"
 
     def __len__(self):
         return self._length
