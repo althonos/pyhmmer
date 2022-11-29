@@ -9,7 +9,7 @@ import pkg_resources
 
 import pyhmmer
 from pyhmmer.errors import EaselError, AlphabetMismatch
-from pyhmmer.easel import Alphabet, SequenceFile
+from pyhmmer.easel import Alphabet, SequenceFile, Randomness
 from pyhmmer.plan7 import HMM, HMMFile, Profile, Background
 
 
@@ -17,10 +17,12 @@ class TestProfile(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/db/Thioesterase.hmm")
-        with HMMFile(cls.hmm_path) as hmm_file:
-            cls.hmm = next(hmm_file)
-        cls.alphabet = cls.hmm.alphabet
+        rng = Randomness(seed=0)
+        cls.alphabet = Alphabet.amino()
+        cls.hmm = HMM.sample(100, cls.alphabet, rng)
+        cls.hmm.name = b"hmm_one"
+        cls.hmm.accession = b"HMM1"
+        cls.hmm.description = b"first HMM"
         cls.background = Background(cls.alphabet)
         cls.profile = Profile(cls.hmm.M, cls.alphabet)
         cls.profile.configure(cls.hmm, cls.background, 200)

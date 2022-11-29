@@ -1973,13 +1973,7 @@ cdef class HMM:
         if status != libeasel.eslOK:
             raise UnexpectedError(status, fname)
         
-        # FIXME(@althonos): Remove following block when
-        # https://github.com/EddyRivasLab/hmmer/pull/236
-        # is merged and released in a new HMMER version
-        status = libhmmer.p7_hmm.p7_hmm_SetConsensus(hmm._hmm, NULL)
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "p7_hmm_SetConsensus")
-        hmm._hmm.flags &= ~libhmmer.p7_hmm.p7H_CONS
+        hmm.alphabet = alphabet
         return hmm
 
 
@@ -7697,6 +7691,8 @@ cdef class TraceAligner:
                 of the sequences does not correspond to the HMM alphabet.
 
         """
+        # TODO(@althonos): Rewrite to require a `DigitalSequenceBlock`.
+
         cdef int             status
         cdef ssize_t         i
         cdef DigitalSequence seq

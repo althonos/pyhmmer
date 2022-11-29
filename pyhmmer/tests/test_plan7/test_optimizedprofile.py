@@ -9,7 +9,7 @@ import pkg_resources
 
 import pyhmmer
 from pyhmmer.errors import EaselError, AlphabetMismatch
-from pyhmmer.easel import Alphabet, SequenceFile
+from pyhmmer.easel import Alphabet, SequenceFile, Randomness
 from pyhmmer.plan7 import HMM, HMMFile, Profile, Background
 
 
@@ -17,57 +17,95 @@ class TestOptimizedProfile(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/db/Thioesterase.hmm")
-        with HMMFile(cls.hmm_path) as hmm_file:
-            cls.hmm = next(hmm_file)
-        cls.alphabet = cls.hmm.alphabet
+        cls.rng = Randomness(seed=0)
+        cls.alphabet = Alphabet.amino()
         cls.background = Background(cls.alphabet)
-        cls.profile = Profile(cls.hmm.M, cls.alphabet)
-        cls.profile.configure(cls.hmm, cls.background, 200)
-        cls.optimized_profile = cls.profile.optimized()
+
+    @classmethod
+    def _random_hmm(cls, name, M=100):
+        hmm = HMM.sample(M, cls.alphabet, cls.rng)
+        hmm.name = name
+        return hmm
+
+    @classmethod
+    def _random_profile(cls, name, M=100):
+        hmm = cls._random_hmm(name, M=M)
+        profile = Profile(hmm.M, hmm.alphabet)
+        profile.configure(hmm, cls.background, 200)
+        return profile
+
+    @classmethod
+    def _random_optimized_profile(cls, name, M=100):
+        return cls._random_profile(name, M=M).optimized()
 
     def test_eq(self):
-        optimized_profile2 = self.profile.optimized()
-        self.assertEqual(self.optimized_profile, optimized_profile2)
-        self.assertNotEqual(self.optimized_profile, 1)
+        profile1 = self._random_profile(b"profile1")
+        om1 = profile1.optimized()
+        om2 = profile1.optimized()
+        self.assertEqual(om1, om2)
+        profile2 = self._random_profile(b"profile2")
+        om3 = profile2.optimized()
+        self.assertNotEqual(om1, om3)
 
     def test_copy(self):
-        optimized_profile2 = copy.copy(self.optimized_profile)
-        self.assertEqual(self.optimized_profile, optimized_profile2)
+        om1 = self._random_optimized_profile(b"profile1")
+        om2 = copy.copy(om1)
+        self.assertEqual(om1, om2)
+        self.assertIsNot(om1, om2)
 
     def test_M(self):
-        self.assertEqual(self.optimized_profile.M, self.hmm.M)
+        om = self._random_optimized_profile(b"profile1", 200)
+        self.assertEqual(om.M, 200)
 
     def test_L(self):
-        profile = Profile(self.hmm.M, self.alphabet)
-        profile.configure(self.hmm, self.background, 200)
-        optimized_profile = profile.optimized()
-        self.assertEqual(optimized_profile.L, 200)
-        optimized_profile.L = 300
-        self.assertEqual(optimized_profile.L, 300)
+        hmm = self._random_hmm(b"profile1")
+        profile = Profile(hmm.M, hmm.alphabet)
+        profile.configure(hmm, self.background, 200)
+        om = profile.optimized()
+        self.assertEqual(om.L, 200)
+        om.L = 300
+        self.assertEqual(om.L, 300)
 
     def test_accession(self):
-        self.assertEqual(self.optimized_profile.accession, self.hmm.accession)
+        hmm = self._random_hmm(b"profile1")
+        hmm.accession = b"TST001"
+        profile = Profile(hmm.M, hmm.alphabet)
+        profile.configure(hmm, self.background, 200)
+        om = profile.optimized()
+        self.assertEqual(om.accession, hmm.accession)
 
     def test_description(self):
-        self.assertEqual(self.optimized_profile.description, self.hmm.description)
+        hmm = self._random_hmm(b"profile1")
+        hmm.description = b"test profile one"
+        profile = Profile(hmm.M, hmm.alphabet)
+        profile.configure(hmm, self.background, 200)
+        om = profile.optimized()
+        self.assertEqual(om.description, hmm.description)
 
     def test_name(self):
-        self.assertEqual(self.optimized_profile.name, self.hmm.name)
+        hmm = self._random_hmm(b"profile1")
+        profile = Profile(hmm.M, hmm.alphabet)
+        profile.configure(hmm, self.background, 200)
+        om = profile.optimized()
+        self.assertEqual(om.name, hmm.name)
 
     def test_consensus(self):
-        self.assertEqual(self.optimized_profile.consensus, self.hmm.consensus)
-        profile = Profile(self.hmm.M, self.alphabet)
-        optimized_profile = profile.optimized()
-        self.assertIs(optimized_profile.consensus, None)
+        hmm = self._random_hmm(b"profile1")
+        profile = Profile(hmm.M, hmm.alphabet)
+        profile.configure(hmm, self.background, 200)
+        om1 = profile.optimized()
+        self.assertEqual(om1.consensus, hmm.consensus)
+        profile = Profile(hmm.M, hmm.alphabet)
+        om2 = profile.optimized()
+        self.assertIs(om2.consensus, None)
 
     def test_consensus_structure(self):
-        self.assertEqual(self.optimized_profile.consensus, self.hmm.consensus)
-        profile = Profile(self.hmm.M, self.alphabet)
-        optimized_profile = profile.optimized()
-        self.assertIs(optimized_profile.consensus, None)
+        profile = Profile(100, self.alphabet)
+        om = profile.optimized()
+        self.assertIs(om.consensus_structure, None)
 
     def test_offsets(self):
-        self.assertIs(self.optimized_profile.offsets.model, None)
-        self.assertIs(self.optimized_profile.offsets.profile, None)
-        self.assertIs(self.optimized_profile.offsets.filter, None)
+        om = self._random_optimized_profile(b"profile1")
+        self.assertIs(om.offsets.model, None)
+        self.assertIs(om.offsets.profile, None)
+        self.assertIs(om.offsets.filter, None)
