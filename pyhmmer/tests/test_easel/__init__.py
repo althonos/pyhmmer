@@ -1,6 +1,7 @@
 from . import (
     test_alphabet,
     test_bitfield,
+    test_block,
     test_keyhash,
     test_matrix,
     test_msa,
@@ -15,6 +16,7 @@ from . import (
 def load_tests(loader, suite, pattern):
     suite.addTests(loader.loadTestsFromModule(test_alphabet))
     suite.addTests(loader.loadTestsFromModule(test_bitfield))
+    suite.addTests(loader.loadTestsFromModule(test_block))
     suite.addTests(loader.loadTestsFromModule(test_keyhash))
     suite.addTests(loader.loadTestsFromModule(test_matrix))
     suite.addTests(loader.loadTestsFromModule(test_msa))

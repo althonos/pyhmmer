@@ -221,6 +221,25 @@ class _TestSequenceBlock(abc.ABC):
             block = self._new_block([])
             block.largest()
 
+    def test_copy(self):
+        seq1 = self._new_sequence(b"seq1", "ATGC")
+        seq2 = self._new_sequence(b"seq2", "ATGCA")
+        seq3 = self._new_sequence(b"seq3", "TTGA")
+
+        block = self._new_block([seq1, seq2, seq3])
+        block_copy = block.copy()
+
+        self.assertEqual(len(block), len(block_copy))
+        self.assertEqual(block, block_copy)
+
+        self.assertIs(block[0], block_copy[0])
+        self.assertIs(block[1], block_copy[1])
+        self.assertIs(block[2], block_copy[2])
+
+        block.remove(seq3)
+        self.assertEqual(len(block), 2)
+        self.assertEqual(len(block_copy), 3)
+
 
 class TestTextSequenceBlock(_TestSequenceBlock, unittest.TestCase):
 
@@ -264,7 +283,7 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
         block = self._new_block([seq1, seq2])
         self.assertEqual(len(block), 2)
 
-        tblock = block.textize(alphabet)
-        self.assertEqual(len(dblock), 2)
-        self.assertEqual(dblock[0], seq1.textize())
-        self.assertEqual(dblock[1], seq2.textize())
+        tblock = block.textize()
+        self.assertEqual(len(tblock), 2)
+        self.assertEqual(tblock[0], seq1.textize())
+        self.assertEqual(tblock[1], seq2.textize())
