@@ -5265,6 +5265,15 @@ cdef class TextSequenceBlock(SequenceBlock):
         cdef str ty = type(self).__name__
         return f"{ty}({list(self)!r})"
 
+    def __len__(self):
+        return self._length
+
+    def __getitem__(self, object index):
+        if isinstance(index, slice):
+            return type(self)(self._storage[index])
+        else:
+            return self._storage[index]
+
     def __setitem__(self, object index, object sequences):
         cdef size_t       i
         cdef TextSequence sequence
@@ -5389,6 +5398,16 @@ cdef class DigitalSequenceBlock(SequenceBlock):
     def __repr__(self):
         cdef str ty = type(self).__name__
         return f"{ty}({self.alphabet!r}, {list(self)!r})"
+
+    def __len__(self):
+        return self._length
+
+    def __getitem__(self, object index):
+        if isinstance(index, slice):
+            return type(self)(self._storage[index])
+        else:
+            return self._storage[index]
+
     def __reduce__(self):
         return type(self), (self.alphabet,), None, iter(self)
 
@@ -6184,7 +6203,7 @@ cdef class SequenceFile:
                 file, or when the file could not be parsed.
 
         Example:
-            Read a block of at most 4 sequences from a file::
+            Read a block of at most 4 sequences from a sequence file::
 
                 >>> with SequenceFile("tests/data/seqs/LuxC.faa") as sf:
                 ...     block = sf.read_block(sequences=4)
@@ -6197,7 +6216,7 @@ cdef class SequenceFile:
                 ...     block = sf.read_block(residues=1000)
                 >>> len(block)
                 3
-                >>> sum(len(seq) for seq in block)
+                >>> len(block[0]) + len(block[1]) + len(block[2])
                 1444
 
             Note that the last sequence will not be truncated, so the block
