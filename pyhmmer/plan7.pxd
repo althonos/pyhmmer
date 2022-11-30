@@ -5,6 +5,7 @@
 
 from libc.stdint cimport uint8_t, uint32_t
 from posix.types cimport off_t
+from semaphore cimport sem_t
 
 from libeasel.sq cimport ESL_SQ
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
@@ -218,6 +219,7 @@ cdef class OptimizedProfile:
 
 
 cdef class OptimizedProfileBlock:
+    cdef          sem_t*       _locks
     cdef          P7_OM_BLOCK* _block
     cdef          list         _storage
     cdef readonly Alphabet     alphabet
@@ -278,6 +280,7 @@ cdef class Pipeline:
               P7_BG*        bg,
               P7_OPROFILE** om,
               P7_TOPHITS*   th,
+              sem_t*        locks,
     ) nogil except 1
     cpdef IterativeSearch iterate_hmm(
         self,

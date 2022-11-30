@@ -27,6 +27,7 @@ from libc.stdio cimport fprintf, FILE, stdout, fclose
 from libc.string cimport memset, memcpy, memmove, strdup, strndup, strlen, strcmp, strncpy
 from libc.time cimport ctime, strftime, time, time_t, tm, localtime_r
 from unicode cimport PyUnicode_DATA, PyUnicode_KIND, PyUnicode_READ, PyUnicode_READY, PyUnicode_GET_LENGTH
+from semaphore cimport sem_t, sem_init, sem_destroy, sem_wait, sem_post
 
 cimport libeasel
 cimport libeasel.sq
@@ -1912,9 +1913,9 @@ cdef class HMM:
 
     @classmethod
     def sample(
-        cls, 
-        int M, 
-        Alphabet alphabet, 
+        cls,
+        int M,
+        Alphabet alphabet,
         Randomness randomness,
         bint ungapped=False,
         bint enumerable=False,
@@ -1924,14 +1925,14 @@ cdef class HMM:
         Sample an HMM of length ``M`` at random.
 
         Arguments:
-            M (`int`): The length of the model to generate (i.e. the 
+            M (`int`): The length of the model to generate (i.e. the
                 number of nodes).
             alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
-            randomness (`~pyhmmer.easel.Randomness`): The random number 
+            randomness (`~pyhmmer.easel.Randomness`): The random number
                 generator to use for sampling.
             ungapped (`bool`): Set to `True` to build an ungapped HMM, i.e.
-                an HMM where the :math:`M_n \to M_{n+1}` are all one and the 
-                remaining transitions are zero. Ignored when ``enumerable`` 
+                an HMM where the :math:`M_n \to M_{n+1}` are all one and the
+                remaining transitions are zero. Ignored when ``enumerable``
                 is `True`.
             enumerable (`bool`): Set to `True` to build a random HMM with no
                 nonzero insertion transitions.
@@ -1972,7 +1973,7 @@ cdef class HMM:
             )
         if status != libeasel.eslOK:
             raise UnexpectedError(status, fname)
-        
+
         hmm.alphabet = alphabet
         return hmm
 
@@ -3955,8 +3956,8 @@ cdef class OptimizedProfileBlock:
     """A container for storing `OptimizedProfile` objects.
 
     This collections allows the scan loop of `Pipeline` objects to scan
-    several target profiles without having to acquire the GIL for each 
-    new model. It does so by synchronizing a Python `list` storing 
+    several target profiles without having to acquire the GIL for each
+    new model. It does so by synchronizing a Python `list` storing
     `OptimizedProfile` objects with a C-contiguous array of pointers to the
     underlying struct of each object.
 
@@ -3965,6 +3966,7 @@ cdef class OptimizedProfileBlock:
     """
 
     def __cinit__(self, Alphabet alphabet, *args, **kwargs):
+        self._locks = NULL
         self._block = NULL
         self._storage = list()
         self.alphabet = alphabet
@@ -3974,10 +3976,18 @@ cdef class OptimizedProfileBlock:
             self._block = p7_oprofile_CreateBlock(8)
             if self._block == NULL:
                 raise AllocationError("P7_OM_BLOCK", sizeof(P7_OM_BLOCK))
+        if self._locks == NULL:
+            self._locks = <sem_t*> calloc(8, sizeof(sem_t))
+            if self._locks == NULL:
+                raise AllocationError("sem_t", sizeof(sem_t), 8)
         self.clear()
         self.extend(iterable)
 
     def __dealloc__(self):
+        if self._locks != NULL:
+            for i in range(self._block.count):
+                sem_destroy(&self._locks[i])
+            free(self._locks)
         if self._block != NULL:
             self.clear() # avoid a double free of the sequence contents
             p7_oprofile_DestroyBlock(self._block)
@@ -4032,7 +4042,7 @@ cdef class OptimizedProfileBlock:
             assert self._block.list[self._block.count] == NULL
         else:
             self.pop(index)
-    
+
     def __reduce__(self):
         return type(self), (self.alphabet,), None, iter(self)
 
@@ -4065,13 +4075,17 @@ cdef class OptimizedProfileBlock:
 
         with nogil:
             self._block.list = <P7_OPROFILE**> realloc(self._block.list, capacity * sizeof(P7_OPROFILE*))
+            self._locks = <sem_t*> realloc(self._locks, capacity * sizeof(sem_t))
         if self._block.list == NULL:
             self._block.listSize = 0
             raise AllocationError("P7_OPROFILE*", sizeof(P7_OPROFILE*), capacity)
         else:
             self._block.listSize = capacity
+        if self._locks == NULL:
+            raise AllocationError("sem_t", sizeof(sem_t), capacity)
         for i in range(self._block.count, self._block.listSize):
             self._block.list[i] = NULL
+
 
     # --- Python methods -----------------------------------------------------
 
@@ -4086,11 +4100,13 @@ cdef class OptimizedProfileBlock:
             raise AlphabetMismatch(self.alphabet, optimized_profile.alphabet)
         if self._block.count == self._block.listSize - 1:
             self._allocate(self._block.listSize + 2)
+        if sem_init(&self._locks[self._block.count], False, 1) == -1:
+            raise RuntimeError("Failed to initialize semaphore")
         self._storage.append(optimized_profile)
         self._block.list[self._block.count] = optimized_profile._om
         self._block.count += 1
         assert self._block.list[self._block.count] == NULL
-    
+
     cpdef void clear(self) except *:
         """clear(self)\n--
 
@@ -4163,7 +4179,7 @@ cdef class OptimizedProfileBlock:
         """
         assert self._block != NULL
         cdef ssize_t index_ = index
-        
+
         if self._block.count == 0:
             raise IndexError("pop from empty block")
         if index_ < 0:
@@ -4195,7 +4211,7 @@ cdef class OptimizedProfileBlock:
         Return a copy of the optimized profile block.
 
         Note:
-            The optimized profiles internally refered to by this collection 
+            The optimized profiles internally refered to by this collection
             are not copied. Use `copy.deepcopy` if you also want to duplicate
             the internal storage of each optimized profile.
 
@@ -4209,6 +4225,12 @@ cdef class OptimizedProfileBlock:
         memcpy(new._block.list, self._block.list, self._block.count * sizeof(ESL_SQ*))
         new._block.count = self._block.count
         new._block.list[new._block.count] = NULL
+        new._locks = <sem_t*> calloc(self._block.count + 1, sizeof(sem_t))
+        if new._locks == NULL:
+            raise AllocationError("sem_t", sizeof(sem_t), new._block.count + 1)
+        for i in range(new._block.count):
+            if sem_init(&new._locks[i], False, 1) == -1:
+                raise RuntimeError("Failed to initialize semaphore")
         return new
 
 
@@ -5027,8 +5049,8 @@ cdef class Pipeline:
         Arguments:
             query (`HMM`, `Profile` or `OptimizedProfile`): The object to use
                 to query the sequence database.
-            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target 
-                sequences to query with the HMM. 
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target
+                sequences to query with the HMM.
 
         Returns:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
@@ -5114,8 +5136,8 @@ cdef class Pipeline:
         Arguments:
             query (`~pyhmmer.easel.DigitalMSA`): The multiple sequence
                 alignment to use to query the sequence database.
-            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target 
-                sequences to query with the query alignment. 
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target
+                sequences to query with the query alignment.
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query to a `~pyhmmer.plan7.HMM`. If
                 `None` is given, it will use a default one.
@@ -5176,8 +5198,8 @@ cdef class Pipeline:
         Arguments:
             query (`~pyhmmer.easel.DigitalSequence`): The sequence object to
                 use to query the sequence database.
-            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target 
-                sequences to query with the query sequence. 
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target
+                sequences to query with the query sequence.
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query to a `~pyhmmer.plan7.HMM`. If
                 `None` is given, it will use a default one.
@@ -5229,14 +5251,14 @@ cdef class Pipeline:
     ) nogil except 1:
         """_search_loop(pli, om, bg, sq, th)\n--
 
-        Run the low-level search loop while the GIL is released.        
+        Run the low-level search loop while the GIL is released.
 
         Arguments:
-            pli (``P7_PIPELINE*``): A raw pointer to the pipeline underlying 
+            pli (``P7_PIPELINE*``): A raw pointer to the pipeline underlying
                 the `Pipeline` object running the search.
-            om (``P7_OPROFILE*``): A raw pointer to the optimized profile 
+            om (``P7_OPROFILE*``): A raw pointer to the optimized profile
                 being used to query the pipeline.
-            bg (``P7_BG*``): A raw pointer to the background model used to 
+            bg (``P7_BG*``): A raw pointer to the background model used to
                 compute the p-value and E-value for each alignment.
             sq (``ESL_SQ**``): An array of pointers to the target sequences
                 being queried.
@@ -5297,7 +5319,7 @@ cdef class Pipeline:
             query (`~pyhmmer.easel.DigitalSequence`): The sequence object to
                 use to query the profile database.
             optimized_profiles (`~pyhmmer.plan7.OptimizedProfileBlock`): The
-                optimized profiles to query. 
+                optimized profiles to query.
 
         Returns:
             `~pyhmmer.plan7.TopHits`: the hits found in the profile database.
@@ -5345,13 +5367,15 @@ cdef class Pipeline:
         self._pli.nmodels = 0
 
         # run the search loop on all database sequences while recycling memory
-        Pipeline._scan_loop(
-            self._pli,
-            query._sq,
-            self.background._bg,
-            optimized_profiles._block.list,
-            hits._th,
-        )
+        with nogil:
+            Pipeline._scan_loop(
+                self._pli,
+                query._sq,
+                self.background._bg,
+                optimized_profiles._block.list,
+                hits._th,
+                optimized_profiles._locks,
+            )
 
         # record the query name
         if query._sq.name != NULL:
@@ -5373,8 +5397,10 @@ cdef class Pipeline:
               P7_BG*        bg,
               P7_OPROFILE** om,
               P7_TOPHITS*   th,
+              sem_t*        locks,
     ) nogil except 1:
-        cdef int              status
+        cdef int    status
+        cdef size_t i      = 0
 
         # configure the pipeline for the current sequence
         status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq)
@@ -5382,35 +5408,40 @@ cdef class Pipeline:
             raise UnexpectedError(status, "p7_pli_NewSeq")
 
         # run the inner loop on all HMMs
-        while om[0] != NULL:
-            # configure the profile, background and pipeline for the new optimized profile
-            status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om[0], bg)
+        while om[i] != NULL:
+            # configure the background and pipeline for the new optimized profile
+            status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om[i], bg)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_pli_NewModel")
             status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq.n)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_bg_SetLength")
-            # FIXME(@althonos): use a lock to make sure this doesn't cause
-            #                   a data race when the same optimized profile
-            #                   is modified across several threads
-            status = p7_oprofile.p7_oprofile_ReconfigLength(om[0], sq.n)
-            if status != libeasel.eslOK:
-                raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
 
-            # run the pipeline on the query sequence
-            status = libhmmer.p7_pipeline.p7_Pipeline(pli, om[0], bg, sq, NULL, th)
-            if status == libeasel.eslEINVAL:
-                raise ValueError("model does not have bit score thresholds expected by the pipeline")
-            elif status == libeasel.eslERANGE:
-                raise OverflowError("numerical overflow in the optimized vector implementation")
-            elif status != libeasel.eslOK:
-                raise UnexpectedError(status, "p7_Pipeline")
+            # use a critical section here because `p7_oprofile_ReconfigLength`
+            # will modify the optimized profile, so there is a risk of data race
+            # if the scan loop is run in parallel on the same target profiles.
+            try:
+                # configure the profile
+                sem_wait(&locks[i])
+                status = p7_oprofile.p7_oprofile_ReconfigLength(om[i], sq.n)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
+                # run the pipeline on the query sequence
+                status = libhmmer.p7_pipeline.p7_Pipeline(pli, om[i], bg, sq, NULL, th)
+                if status == libeasel.eslEINVAL:
+                    raise ValueError("model does not have bit score thresholds expected by the pipeline")
+                elif status == libeasel.eslERANGE:
+                    raise OverflowError("numerical overflow in the optimized vector implementation")
+                elif status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_Pipeline")
+            finally:
+                sem_post(&locks[i])
 
             # clear pipeline for reuse for next target
             libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
 
             # advance to the next optimized profile
-            om += 1
+            i += 1
 
         # Return 0 to indicate success
         return 0
@@ -5429,7 +5460,7 @@ cdef class Pipeline:
         Arguments:
             query (`~pyhmmer.plan7.HMM`): The sequence object to use to
                 query the sequence database.
-            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target 
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target
                 sequences to query with the HMM.
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query and subsequent alignments to a
@@ -5866,7 +5897,7 @@ cdef class LongTargetsPipeline(Pipeline):
             query (`HMM`, `Profile` or `OptimizedProfile`): The object to use
                 to query the sequence database.
             sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target
-                sequences to query with the HMM. 
+                sequences to query with the HMM.
 
         Returns:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
@@ -5968,7 +5999,7 @@ cdef class LongTargetsPipeline(Pipeline):
             query (`~pyhmmer.easel.DigitalSequence`): The sequence object to
                 use to query the sequence database.
             sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target
-                sequences to query with the query sequence. 
+                sequences to query with the query sequence.
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query to a `~pyhmmer.plan7.HMM`. If
                 `None` is given, it will use a default one.
@@ -6010,8 +6041,8 @@ cdef class LongTargetsPipeline(Pipeline):
         Arguments:
             query (`~pyhmmer.easel.DigitalMSA`): The multiple sequence
                 alignment to use to query the sequence database.
-            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target 
-                sequences to query with the query alignment. 
+            sequences (`~pyhmmer.easel.DigitalSequenceBlock`): The target
+                sequences to query with the query alignment.
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query to a `~pyhmmer.plan7.HMM`. If
                 `None` is given, it will use a default one.
