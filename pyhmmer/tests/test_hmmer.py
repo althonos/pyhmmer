@@ -484,7 +484,6 @@ class TestHMMScan(unittest.TestCase):
             lines = filter(lambda line: not line.startswith("#"), table)
             for query_name, query_lines in itertools.groupby(lines, key=lambda line: line.strip().split()[2]):
                 expected[query_name] = list(query_lines)
-                print(query_name)
 
         # scan with the sequences and check the hits are equal, using the file
         # to read the profiles from (the files will be rewinded before each query)
