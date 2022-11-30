@@ -13,6 +13,9 @@ jobs:
     strategy:
       matrix:
         include:
+        - python-version: 3.6
+          pyo3-python: /opt/python/cp36-cp36m/bin/python
+          manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
         - python-version: 3.7
           pyo3-python: /opt/python/cp37-cp37m/bin/python
           manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
