@@ -305,8 +305,8 @@ class _BaseDispatcher(typing.Generic[_Q, _T], abc.ABC):
 
         # reduce the number of threads if there are less queries (at best
         # use one thread by query)
-        hint = operator.length_hint(queries)
-        self.cpus = min(cpus, hint) if hint > 0 else cpus
+        hint = operator.length_hint(queries, -1)
+        self.cpus = 1 if hint == 0 else min(cpus, hint) if hint > 0 else cpus
 
     @abc.abstractmethod
     def _new_thread(
@@ -387,7 +387,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T], abc.ABC):
                 results.popleft()
         except BaseException:
             # make sure threads are killed to avoid being stuck,
-            # e.g. after a KeyboardInterrupt
+            # e.g. after a KeyboardInterrupt, then re-raise
             kill_switch.set()
             raise
 
