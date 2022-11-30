@@ -66,6 +66,11 @@ class _TestHMMFileobj:
             buffer = io.BytesIO(f.read())
         return HMMFile(buffer)
 
+    def test_name(self):
+        path = os.path.join(self.hmms_folder, "db", "{}.hmm".format(self.ID))
+        with self.open_hmm(path) as f:
+            self.assertIs(f.name, None)
+
 
 class _TestHMMPath:
 
@@ -98,6 +103,13 @@ class _TestHMMPath:
             om2 = profiles.read()
             self.assertIsNot(om1, om2)
             self.assertEqual(om1.name, om2.name)
+
+    def test_name(self):
+        path = os.path.join(self.hmms_folder, "db", "{}.hmm".format(self.ID))
+        with self.open_hmm(path) as f:
+            self.assertEqual(f.name, path)
+            self.assertEqual(f.optimized_profiles().name, path)
+
 
 class _TestThioesterase(_TestHMMFile):
     ID = "Thioesterase"

@@ -3114,6 +3114,7 @@ cdef class HMMFile:
     def __cinit__(self):
         self._alphabet = None
         self._hfp = NULL
+        self._name = None
 
     def __init__(self, object file, bint db = True):
         """__init__(self, file, db=True)\n--
@@ -3134,6 +3135,7 @@ cdef class HMMFile:
 
         try:
             fspath = os.fsencode(file)
+            self._name = os.fsdecode(fspath)
             if db:
                 function = "p7_hmmfile_OpenE"
                 status = libhmmer.p7_hmmfile.p7_hmmfile_OpenE(fspath, NULL, &self._hfp, errbuf)
@@ -3191,6 +3193,12 @@ cdef class HMMFile:
         """`bool`: Whether the `HMMFile` is closed or not.
         """
         return self._hfp == NULL
+
+    @property
+    def name(self):
+        """`str` or `None`: The path to the HMM file, if known.
+        """
+        return self._name
 
     # --- Python Methods -----------------------------------------------------
 
@@ -3365,6 +3373,20 @@ cdef class HMMPressedFile:
         if om is None:
             raise StopIteration()
         return om
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def closed(self):
+        """`bool`: Whether the `HMMPressedFile` is closed or not.
+        """
+        return self._hmmfile.closed
+
+    @property
+    def name(self):
+        """`str` or `None`: The path to the HMM file, if known.
+        """
+        return self._hmmfile.name
 
     # --- Methods ------------------------------------------------------------
 

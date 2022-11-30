@@ -167,6 +167,7 @@ cdef class HMM:
 
 
 cdef class HMMFile:
+    cdef str         _name
     cdef P7_HMMFILE* _hfp
     cdef Alphabet    _alphabet
     cdef object      _file
@@ -183,8 +184,8 @@ cdef class HMMFile:
 
 cdef class HMMPressedFile:
     cdef P7_HMMFILE* _hfp
-    cdef Alphabet _alphabet
-    cdef HMMFile _hmmfile
+    cdef Alphabet    _alphabet
+    cdef HMMFile     _hmmfile
 
     cpdef void rewind(self) except *
     cpdef OptimizedProfile read(self)
