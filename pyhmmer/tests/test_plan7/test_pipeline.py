@@ -3,13 +3,14 @@ import io
 import itertools
 import os
 import unittest
+import random
 import tempfile
 import threading
 import pkg_resources
 
 import pyhmmer
-from pyhmmer.plan7 import Background, Builder, Pipeline, HMMFile, TopHits, OptimizedProfileBlock, Profile
-from pyhmmer.easel import Alphabet, SequenceFile, DigitalSequence, TextSequence, MSAFile, DigitalMSA
+from pyhmmer.easel import Alphabet, SequenceFile, DigitalSequence, DigitalSequenceBlock, TextSequence, TextSequenceBlock, MSAFile, DigitalMSA
+from pyhmmer.plan7 import Background, Builder, Pipeline, HMMFile, TopHits, OptimizedProfileBlock, Profile, LongTargetsPipeline
 from pyhmmer.errors import AlphabetMismatch
 
 
@@ -26,6 +27,18 @@ class TestSearchPipeline(unittest.TestCase):
         msa_path = pkg_resources.resource_filename("pyhmmer.tests", "data/msa/LuxC.sto")
         with MSAFile(msa_path, digital=True, alphabet=cls.alphabet) as msa_f:
             cls.msa = msa_f.read()
+
+    def test_search_hmm_alphabet_mismatch(self):
+        rng = pyhmmer.easel.Randomness(0)
+        pipeline = Pipeline(alphabet=Alphabet.dna())
+
+        # mismatch between pipeline alphabet and database alphabet
+        hmm1 = pyhmmer.plan7.HMM.sample(100, pipeline.alphabet, rng)
+        self.assertRaises(AlphabetMismatch, pipeline.search_hmm, hmm1, self.references)
+
+        # mismatch between pipeline alphabet and query alphabet
+        hmm2 = pyhmmer.plan7.HMM.sample(100, self.alphabet, rng)
+        self.assertRaises(AlphabetMismatch, pipeline.search_hmm, hmm2, self.references)
 
     def test_search_seq_alphabet_mismatch(self):
         pipeline = Pipeline(alphabet=Alphabet.dna())
@@ -50,21 +63,42 @@ class TestSearchPipeline(unittest.TestCase):
         self.assertRaises(AlphabetMismatch, pipeline.search_msa, msa, self.references)
 
     def test_search_hmm(self):
-        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT")
+        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name=b"seq1")
         bg = Background(self.alphabet)
         hmm, _, _ = Builder(self.alphabet).build(seq.digitize(self.alphabet), bg)
         pipeline = Pipeline(alphabet=self.alphabet)
         hits = pipeline.search_hmm(hmm, self.references)
         self.assertEqual(len(hits), 1)
+        self.assertEqual(hits.query_name, hmm.name)
+        self.assertEqual(hits.query_accession, hmm.accession)
+
+    def test_search_hmm_unnamed(self):
+        # make sure `Pipeline.search_hmm` doesn't crash when given an HMM with no name
+        rng = pyhmmer.easel.Randomness()
+        hmm = pyhmmer.plan7.HMM.sample(100, self.alphabet, rng)
+        hmm.name = hmm.accession = None
+        pipeline = Pipeline(alphabet=self.alphabet)
+        hits = pipeline.search_hmm(hmm, self.references)
+        self.assertIs(hits.query_name, None)
+        self.assertIs(hits.query_accession, None)
 
     def test_search_seq(self):
-        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT")
+        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name=b"seq1", accession=b"SQ001")
         pipeline = Pipeline(alphabet=self.alphabet)
         hits = pipeline.search_seq(seq.digitize(self.alphabet), self.references)
         self.assertEqual(len(hits), 1)
+        self.assertEqual(hits.query_name, seq.name)
+        # self.assertEqual(hits.query_accession, seq.accession) # NOTE: p7_SingleBuilder doesn't copy the accession...
+
+    def test_search_msa(self):
+        pipeline = Pipeline(alphabet=self.alphabet)
+        hits = pipeline.search_msa(self.msa, self.references)
+        self.assertEqual(len(hits), 1)
+        self.assertEqual(hits.query_name, self.msa.name)
+        self.assertEqual(hits.query_accession, self.msa.accession)
 
     def test_Z(self):
-        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT")
+        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name=b"seq1")
         bg = Background(self.alphabet)
         hmm, _, _ = Builder(self.alphabet).build(seq.digitize(self.alphabet), bg)
 
@@ -124,7 +158,7 @@ class TestScanPipeline(unittest.TestCase):
         with HMMFile(hmm_file) as f:
             cls.hmms = list(f)
 
-    def test_alphabet_mismatch(self):
+    def test_scan_seq_alphabet_mismatch(self):
         pipeline = Pipeline(alphabet=Alphabet.dna())
 
         # mismatch between pipeline alphabet and query alphabet
@@ -140,7 +174,7 @@ class TestScanPipeline(unittest.TestCase):
     def test_scan_seq(self):
         seq = next(x for x in self.references if x.name == b"938293.PRJEB85.HG003687_188")
 
-        oprofiles = OptimizedProfileBlock(seq.alphabet) 
+        oprofiles = OptimizedProfileBlock(seq.alphabet)
         background = Background(seq.alphabet)
         for hmm in self.hmms:
             profile = Profile(hmm.M, hmm.alphabet)
@@ -194,3 +228,50 @@ class TestIteratePipeline(unittest.TestCase):
 
         self.assertEqual(iteration.iteration, 3)
         self.assertTrue(iteration.converged)
+
+
+class TestLongTargetsPipeline(unittest.TestCase):
+
+    @staticmethod
+    def _random_sequence(alphabet, name, length=5000):
+        symbols = alphabet.symbols[:alphabet.K]
+        return TextSequence(
+            name=name,
+            sequence="".join(random.sample(symbols, 1)[0] for i in range(length))
+        ).digitize(alphabet)
+
+    def test_search_hmm(self):
+        dna = Alphabet.dna()
+        rng = pyhmmer.easel.Randomness(0)
+
+        targets = DigitalSequenceBlock(dna, [
+            self._random_sequence(dna, b"seq1"),
+            self._random_sequence(dna, b"seq2"),
+        ])
+
+        hmm = pyhmmer.plan7.HMM.sample(100, dna, rng)
+        hmm.name = b"test_one"
+        hmm.accession = b"TST001"
+
+        pipeline = LongTargetsPipeline(alphabet=dna)
+        hits = pipeline.search_hmm(hmm, targets)
+        self.assertEqual(hits.query_name, hmm.name)
+        self.assertEqual(hits.query_accession, hmm.accession)
+
+
+    def test_search_hmm_alphabet_mismatch(self):
+        dna = Alphabet.dna()
+        amino = Alphabet.amino()
+        rng = pyhmmer.easel.Randomness(0)
+
+        # mismatch between pipeline alphabet and database alphabet
+        pipeline = LongTargetsPipeline(alphabet=dna)
+        targets = DigitalSequenceBlock(amino)
+        hmm = pyhmmer.plan7.HMM.sample(100, dna, rng)
+        self.assertRaises(AlphabetMismatch, pipeline.search_hmm, hmm, targets)
+
+        # mismatch between pipeline alphabet and query alphabet
+        pipeline = LongTargetsPipeline(alphabet=dna)
+        targets = DigitalSequenceBlock(dna)
+        hmm = pyhmmer.plan7.HMM.sample(100, amino, rng)
+        self.assertRaises(AlphabetMismatch, pipeline.search_hmm, hmm, targets)
