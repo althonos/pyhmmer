@@ -1975,6 +1975,7 @@ cdef class HMM:
             raise UnexpectedError(status, fname)
 
         hmm.alphabet = alphabet
+        hmm._hmm.max_length = M*4 if alphabet.is_nucleotide() else -1
         return hmm
 
 
