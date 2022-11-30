@@ -87,6 +87,10 @@ from .reexports.esl_sqio_ascii cimport (
     fileheader_hmmpgmd,
 )
 
+include "capacity.pxi"
+include "exceptions.pxi"
+
+
 # --- Python imports ---------------------------------------------------------
 
 import abc
@@ -138,20 +142,6 @@ cdef dict SEQUENCE_FILE_FORMATS = {
 cdef dict SEQUENCE_FILE_FORMATS_INDEX = {
     v:k for k,v in SEQUENCE_FILE_FORMATS.items()
 }
-
-cdef inline size_t new_capacity(size_t capacity, size_t length) nogil:
-    """new_capacity(capacity, length)\n--
-
-    Compute a new capacity for a buffer reallocation.
-
-    This is how CPython computes the allocation sizes for the array storing
-    the references for a `list` object.
-
-    """
-    cdef size_t new_cap = (<size_t> capacity + (capacity >> 3) + 6) & ~(<size_t> 3)
-    if (capacity - length) > (new_cap - capacity):
-        new_cap = (<size_t> capacity + 3) & ~(<size_t> 3)
-    return new_cap
 
 # --- Alphabet ---------------------------------------------------------------
 
@@ -6604,8 +6594,3 @@ cdef class SSIWriter:
 
             libeasel.ssi.esl_newssi_Close(self._newssi)
             self._newssi = NULL
-
-
-# --- Module init code -------------------------------------------------------
-
-include "exceptions.pxi"
