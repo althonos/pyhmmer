@@ -1,0 +1,69 @@
+#                                                               --- full sequence ---- --- best 1 domain ---- --- domain number estimation ----
+# target name        accession  query name           accession    E-value  score  bias   E-value  score  bias   exp reg clu  ov env dom rep inc description of target
+#------------------- ---------- -------------------- ---------- --------- ------ ----- --------- ------ -----   --- --- --- --- --- --- --- --- ---------------------
+AT                   -          sp|Q9Y8A5|LOVB_ASPTE -            2.8e-31  100.1   0.3   2.8e-31  100.1   0.3   1.9   2   0   0   2   2   2   1 -
+KS                   -          sp|Q9Y8A5|LOVB_ASPTE -              1e-25   81.8   0.3     1e-25   81.8   0.3   1.8   2   0   0   2   2   2   1 -
+CLF                  -          sp|Q9Y8A5|LOVB_ASPTE -              1e-20   65.4   4.7   1.9e-20   64.5   4.7   1.3   1   0   0   1   1   1   1 -
+CLF_8|9              -          sp|Q9Y8A5|LOVB_ASPTE -            5.6e-14   43.0   3.1   1.1e-13   42.1   3.1   1.3   1   0   0   1   1   1   1 -
+CLF_11|12            -          sp|Q9Y8A5|LOVB_ASPTE -            7.4e-10   29.4   2.7   1.4e-09   28.4   2.7   1.4   1   0   0   1   1   1   1 -
+CLF_7                -          sp|Q9Y8A5|LOVB_ASPTE -            5.3e-09   26.6   3.0     1e-08   25.7   3.0   1.3   1   0   0   1   1   1   1 -
+MET                  -          sp|Q9Y8A5|LOVB_ASPTE -            1.9e-07   21.8   0.4   5.2e-07   20.4   0.0   1.9   2   0   0   2   2   2   1 -
+KR                   -          sp|Q9Y8A5|LOVB_ASPTE -            4.7e-06   17.9   0.1   0.00014   13.0   0.0   2.7   3   0   0   3   3   3   1 -
+KR_C11               -          sp|Q9Y8A5|LOVB_ASPTE -            0.00076   10.4   0.0    0.0023    8.8   0.0   1.8   1   1   0   1   1   1   1 -
+KSIII                -          sp|Q8LDM2|PKSB_ARATH -            2.6e-12   37.8   0.0   2.4e-11   34.6   0.0   2.1   1   1   0   1   1   1   1 -
+KSIII                -          sp|P9WPF1|PKS18_MYCTU -            1.6e-14   45.1   4.5   2.4e-09   28.1   1.8   2.3   2   0   0   2   2   2   2 -
+KSIII                -          sp|O23674|PKSA_ARATH -            9.5e-08   22.8   0.0   1.4e-06   18.9   0.0   2.3   1   1   0   1   1   1   1 -
+AT                   -          sp|Q9ZGI2|PIKA4_STRVZ -              2e-48  156.5  12.7   6.2e-47  151.6   7.3   2.6   2   0   0   2   2   2   2 -
+KS                   -          sp|Q9ZGI2|PIKA4_STRVZ -            1.7e-37  120.6   5.1     5e-37  119.0   2.0   2.7   2   1   0   2   2   2   1 -
+CLF                  -          sp|Q9ZGI2|PIKA4_STRVZ -            3.6e-35  113.0  14.3   3.6e-35  113.0  14.3   2.0   2   0   0   2   2   2   1 -
+CLF_8|9              -          sp|Q9ZGI2|PIKA4_STRVZ -            1.1e-26   84.8  11.9   1.1e-26   84.8  11.9   2.1   2   0   0   2   2   2   1 -
+CLF_11|12            -          sp|Q9ZGI2|PIKA4_STRVZ -            1.7e-23   74.3   9.3   1.7e-23   74.3   9.3   2.1   2   0   0   2   2   2   1 -
+CLF_7                -          sp|Q9ZGI2|PIKA4_STRVZ -            3.9e-18   56.7  12.3   3.9e-18   56.7  12.3   2.2   3   0   0   3   3   3   1 -
+ACP                  -          sp|Q9ZGI2|PIKA4_STRVZ -            7.5e-07   20.7   0.0   2.2e-06   19.1   0.0   1.8   1   0   0   1   1   1   1 -
+KSIII                -          sp|Q9ZGI2|PIKA4_STRVZ -                  1   -0.3  11.5      0.38    1.0   5.9   2.8   2   1   0   2   2   2   0 -
+KSIII                -          sp|Q4K418|PHLD_PSEF5 -            5.7e-15   46.5   3.9     2e-12   38.1   3.9   2.0   1   1   0   1   1   1   1 -
+KS                   -          sp|Q54FI3|STLB_DICDI -            3.3e-31   99.9   0.0   6.4e-30   95.6   0.0   2.4   1   1   0   1   1   1   1 -
+AT                   -          sp|Q54FI3|STLB_DICDI -            5.5e-24   76.1   0.0   9.1e-24   75.4   0.0   1.2   1   0   0   1   1   1   1 -
+CLF                  -          sp|Q54FI3|STLB_DICDI -            4.6e-21   66.5   0.0   8.2e-21   65.7   0.0   1.3   1   0   0   1   1   1   1 -
+CLF_7                -          sp|Q54FI3|STLB_DICDI -            6.9e-14   42.7   0.0   1.2e-13   42.0   0.0   1.2   1   0   0   1   1   1   1 -
+CLF_8|9              -          sp|Q54FI3|STLB_DICDI -            4.6e-13   40.0   0.0   7.6e-13   39.3   0.0   1.3   1   0   0   1   1   1   1 -
+CLF_11|12            -          sp|Q54FI3|STLB_DICDI -              7e-12   36.0   0.0   1.2e-11   35.3   0.0   1.3   1   0   0   1   1   1   1 -
+ACP                  -          sp|Q54FI3|STLB_DICDI -            1.3e-05   16.7   0.2   2.8e-05   15.6   0.2   1.5   1   0   0   1   1   1   1 -
+AT                   -          sp|Q9ZGI5|PIKA1_STRVZ -           2.1e-139  455.8  63.1   9.3e-56  180.6  19.1   3.8   3   0   0   3   3   3   3 -
+KS                   -          sp|Q9ZGI5|PIKA1_STRVZ -           3.9e-124  406.0  12.2     1e-43  141.0   0.2   4.9   3   1   0   3   3   3   3 -
+CLF                  -          sp|Q9ZGI5|PIKA1_STRVZ -           1.2e-101  331.9  61.6   2.3e-37  120.2   9.6   4.9   5   0   0   5   5   5   3 -
+CLF_8|9              -          sp|Q9ZGI5|PIKA1_STRVZ -            2.8e-77  251.5  42.2   3.6e-28   89.8   9.7   4.1   3   0   0   3   3   3   3 -
+CLF_11|12            -          sp|Q9ZGI5|PIKA1_STRVZ -            2.4e-61  198.9  45.9   1.3e-23   74.7   8.4   4.3   4   0   0   4   4   4   3 -
+CLF_7                -          sp|Q9ZGI5|PIKA1_STRVZ -            1.1e-53  173.7  54.1   5.6e-23   72.6  10.9   4.7   4   0   0   4   4   4   3 -
+ACP                  -          sp|Q9ZGI5|PIKA1_STRVZ -            1.6e-17   54.9   0.5     2e-08   25.7   0.1   3.8   3   0   0   3   3   3   3 -
+KR_C11               -          sp|Q9ZGI5|PIKA1_STRVZ -            2.1e-15   48.2  22.0     8e-10   30.0   2.4   4.2   4   0   0   4   4   4   2 -
+KR                   -          sp|Q9ZGI5|PIKA1_STRVZ -            3.9e-15   47.6  23.5   5.1e-11   34.1   8.0   5.5   7   0   0   7   7   2   2 -
+KR_C19               -          sp|Q9ZGI5|PIKA1_STRVZ -            1.5e-14   45.6  17.1   5.1e-11   34.0   0.7   3.6   4   0   0   4   4   4   2 -
+KR_C9                -          sp|Q9ZGI5|PIKA1_STRVZ -            1.8e-13   41.9   0.8   2.1e-07   22.0   0.1   2.6   2   0   0   2   2   2   2 -
+KR_C17               -          sp|Q9ZGI5|PIKA1_STRVZ -            2.6e-06   18.0  14.4    0.0001   12.7   1.1   2.9   2   0   0   2   2   2   2 -
+DIMER                -          sp|Q9ZGI5|PIKA1_STRVZ -              0.001    9.8  18.3   0.00023   12.0   1.7   3.3   3   0   0   3   3   3   2 -
+KR_C15               -          sp|Q9ZGI5|PIKA1_STRVZ -               0.29    1.5  10.3      0.12    2.8   2.1   2.7   2   0   0   2   2   2   0 -
+KSIII                -          sp|Q9ZGI5|PIKA1_STRVZ -               0.41    1.0  15.9     0.077    3.3   1.4   4.9   3   2   0   3   3   3   0 -
+CLF                  -          sp|A0A089QRB9|MSL3_MYCTU -            2.3e-43  139.9   8.3   7.4e-43  138.3   8.3   1.9   1   1   0   1   1   1   1 -
+AT                   -          sp|A0A089QRB9|MSL3_MYCTU -            4.3e-39  125.8  11.2   4.3e-39  125.8  11.2   2.3   2   0   0   2   2   2   1 -
+KS                   -          sp|A0A089QRB9|MSL3_MYCTU -            7.4e-37  118.5   0.6   7.4e-37  118.5   0.6   2.7   2   1   0   2   2   2   1 -
+CLF_8|9              -          sp|A0A089QRB9|MSL3_MYCTU -            1.8e-35  113.8   5.7   4.3e-35  112.5   5.7   1.6   1   0   0   1   1   1   1 -
+CLF_7                -          sp|A0A089QRB9|MSL3_MYCTU -            3.9e-31   99.5   8.6   8.7e-31   98.4   8.6   1.6   1   0   0   1   1   1   1 -
+CLF_11|12            -          sp|A0A089QRB9|MSL3_MYCTU -            4.3e-30   96.0   8.1   1.5e-29   94.3   8.1   1.9   1   1   0   1   1   1   1 -
+KR                   -          sp|A0A089QRB9|MSL3_MYCTU -            1.3e-08   26.2   7.0   1.3e-08   26.2   7.0   2.9   3   0   0   3   3   3   1 -
+KR_C11               -          sp|A0A089QRB9|MSL3_MYCTU -            3.9e-07   21.2   1.5   3.9e-07   21.2   1.5   3.0   3   0   0   3   3   3   1 -
+KR_C9                -          sp|A0A089QRB9|MSL3_MYCTU -            4.5e-07   20.9   0.3   4.5e-07   20.9   0.3   2.6   3   0   0   3   3   3   1 -
+KR_C19               -          sp|A0A089QRB9|MSL3_MYCTU -            7.7e-07   20.3   3.6   5.1e-06   17.6   0.2   2.6   2   0   0   2   2   2   1 -
+ACP                  -          sp|A0A089QRB9|MSL3_MYCTU -            3.4e-06   18.6   0.1   1.6e-05   16.4   0.0   2.2   2   0   0   2   2   2   1 -
+CYC                  -          sp|A0A089QRB9|MSL3_MYCTU -             0.0067    7.3   3.7     0.012    6.5   0.3   3.1   3   0   0   3   3   3   1 -
+GT                   -          sp|A0A089QRB9|MSL3_MYCTU -                4.7   -2.1  12.8     0.016    6.0   0.8   3.0   3   0   0   3   3   3   0 -
+#
+# Program:         hmmscan
+# Version:         3.3.2 (Nov 2020)
+# Pipeline mode:   SCAN
+# Query file:      pyhmmer/tests/data/seqs/PKSI.faa
+# Target file:     pyhmmer/tests/data/hmms/db/t2pks.hmm
+# Option settings: hmmscan --tblout pyhmmer/tests/data/tables/t2pks.scan.tbl --domtblout pyhmmer/tests/data/tables/t2pks.scan.domtbl pyhmmer/tests/data/hmms/db/t2pks.hmm pyhmmer/tests/data/seqs/PKSI.faa 
+# Current dir:     /home/althonos/Code/pyhmmer
+# Date:            Wed Nov 30 23:09:31 2022
+# [ok]

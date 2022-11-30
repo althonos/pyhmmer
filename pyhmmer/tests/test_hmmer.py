@@ -9,7 +9,7 @@ import threading
 import pkg_resources
 
 import pyhmmer
-from pyhmmer.plan7 import Pipeline, HMMFile, TopHits, Hit
+from pyhmmer.plan7 import Pipeline, HMMFile, HMMPressedFile, TopHits, Hit
 from pyhmmer.easel import Alphabet, MSAFile, SequenceFile, TextSequence
 
 
@@ -404,10 +404,13 @@ class TestHmmalign(unittest.TestCase):
     def setUp(self):
         self.tmpout = tempfile.NamedTemporaryFile(suffix=".hmm", delete=False).name
 
+    def tearDown(self):
+        os.remove(self.tmpout)
+
     def test_luxc(self):
-        hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/LuxC.hmm")
-        seqs_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/LuxC.faa")
-        ref_path = pkg_resources.resource_filename("pyhmmer.tests", "data/msa/LuxC.hmmalign.sto")
+        hmm_path = pkg_resources.resource_filename(__name__, "data/hmms/txt/LuxC.hmm")
+        seqs_path = pkg_resources.resource_filename(__name__, "data/seqs/LuxC.faa")
+        ref_path = pkg_resources.resource_filename(__name__, "data/msa/LuxC.hmmalign.sto")
 
         with HMMFile(hmm_path) as hmm_file:
             hmm = hmm_file.read()
@@ -418,3 +421,85 @@ class TestHmmalign(unittest.TestCase):
 
         msa = pyhmmer.hmmalign(hmm, seqs, trim=True)
         self.assertEqual(msa, ref)
+
+
+class TestHMMScan(unittest.TestCase):
+
+    @staticmethod
+    def table(name):
+        bin_stream = pkg_resources.resource_stream(__name__, "data/tables/{}".format(name))
+        return io.TextIOWrapper(bin_stream)
+
+    @staticmethod
+    def hmm_file(name):
+        path = pkg_resources.resource_filename(__name__, "data/hmms/db/{}.hmm".format(name))
+        return HMMFile(path)
+
+    @staticmethod
+    def seqs_file(name, digital=False):
+        seqs_path = pkg_resources.resource_filename(__name__, "data/seqs/{}.faa".format(name))
+
+    def test_t2pks_block(self):
+        # get paths to resources
+        table_path = pkg_resources.resource_filename(__name__, "data/tables/t2pks.scan.tbl")
+        db_path = pkg_resources.resource_filename(__name__, "data/hmms/db/t2pks.hmm")
+        seqs_path = pkg_resources.resource_filename(__name__, "data/seqs/PKSI.faa")
+
+        # load expected results from the hmmscan table
+        expected = {}
+        with open(table_path) as table:
+            lines = filter(lambda line: not line.startswith("#"), table)
+            for query_name, query_lines in itertools.groupby(lines, key=lambda line: line.strip().split()[2]):
+                expected[query_name] = list(query_lines)
+
+        # pre-load the profile database so that `hmmscan` will create a profile block
+        with HMMFile(db_path) as hmm_file:
+            hmms = list(hmm_file)
+
+        # scan with the sequences and check the hits are equal
+        with SequenceFile(seqs_path, digital=True, alphabet=hmms[0].alphabet) as seqs_file:
+            for hits in pyhmmer.hmmer.hmmscan(seqs_file, hmms, cpus=1):
+                expected_lines = expected.get(hits.query_name.decode())
+                if expected_lines is None:
+                    self.assertEqual(len(hits), 0)
+                    continue
+                for line, hit in itertools.zip_longest(expected_lines, hits):
+                    self.assertIsNot(line, None)
+                    self.assertIsNot(hit, None)
+                    fields = list(filter(None, line.strip().split(" ")))
+                    self.assertEqual(hit.name.decode(), fields[0])
+                    self.assertAlmostEqual(hit.score, float(fields[5]), delta=0.1)
+                    self.assertAlmostEqual(hit.bias, float(fields[6]), delta=0.1)
+                    self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
+
+    def test_t2pks_file(self):
+        # get paths to resources
+        table_path = pkg_resources.resource_filename(__name__, "data/tables/t2pks.scan.tbl")
+        db_path = pkg_resources.resource_filename(__name__, "data/hmms/db/t2pks.hmm")
+        seqs_path = pkg_resources.resource_filename(__name__, "data/seqs/PKSI.faa")
+
+        # load expected results from the hmmscan table
+        expected = {}
+        with open(table_path) as table:
+            lines = filter(lambda line: not line.startswith("#"), table)
+            for query_name, query_lines in itertools.groupby(lines, key=lambda line: line.strip().split()[2]):
+                expected[query_name] = list(query_lines)
+                print(query_name)
+
+        # scan with the sequences and check the hits are equal, using the file
+        # to read the profiles from (the files will be rewinded before each query)
+        with SequenceFile(seqs_path, digital=True) as seqs_file:
+            with HMMPressedFile(db_path) as pressed_file:
+                for hits in pyhmmer.hmmer.hmmscan(seqs_file, pressed_file, cpus=1):
+                    expected_lines = expected.get(hits.query_name.decode())
+                    if expected_lines is None:
+                        self.assertEqual(len(hits), 0)
+                        continue
+                    for line, hit in itertools.zip_longest(expected_lines, hits):
+                        self.assertIsNot(line, None)
+                        self.assertIsNot(hit, None)
+                        fields = list(filter(None, line.strip().split(" ")))
+                        self.assertEqual(hit.name.decode(), fields[0])
+                        self.assertAlmostEqual(hit.score, float(fields[5]), delta=0.1)
+                        self.assertAlmostEqual(hit.bias, float(fields[6]), delta=0.1)
+                        self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
