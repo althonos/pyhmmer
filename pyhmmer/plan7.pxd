@@ -5,7 +5,7 @@
 
 from libc.stdint cimport uint8_t, uint32_t
 from posix.types cimport off_t
-from semaphore cimport sem_t
+from pthread_mutex cimport pthread_mutex_t
 
 from libeasel.sq cimport ESL_SQ
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
@@ -219,10 +219,10 @@ cdef class OptimizedProfile:
 
 
 cdef class OptimizedProfileBlock:
-    cdef          sem_t*       _locks
-    cdef          P7_OM_BLOCK* _block
-    cdef          list         _storage
-    cdef readonly Alphabet     alphabet
+    cdef          pthread_mutex_t* _locks
+    cdef          P7_OM_BLOCK*     _block
+    cdef          list             _storage
+    cdef readonly Alphabet         alphabet
 
     cdef void _allocate(self, size_t n) except *
 
@@ -275,12 +275,12 @@ cdef class Pipeline:
     cpdef TopHits scan_seq(self, DigitalSequence query, OptimizedProfileBlock hmms)
     @staticmethod
     cdef int _scan_loop(
-              P7_PIPELINE*  pli,
-        const ESL_SQ*       sq,
-              P7_BG*        bg,
-              P7_OPROFILE** om,
-              P7_TOPHITS*   th,
-              sem_t*        locks,
+              P7_PIPELINE*     pli,
+        const ESL_SQ*          sq,
+              P7_BG*           bg,
+              P7_OPROFILE**    om,
+              P7_TOPHITS*      th,
+              pthread_mutex_t* locks,
     ) nogil except 1
     cpdef IterativeSearch iterate_hmm(
         self,

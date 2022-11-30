@@ -27,7 +27,7 @@ from libc.stdio cimport fprintf, FILE, stdout, fclose
 from libc.string cimport memset, memcpy, memmove, strdup, strndup, strlen, strcmp, strncpy
 from libc.time cimport ctime, strftime, time, time_t, tm, localtime_r
 from unicode cimport PyUnicode_DATA, PyUnicode_KIND, PyUnicode_READ, PyUnicode_READY, PyUnicode_GET_LENGTH
-from semaphore cimport sem_t, sem_init, sem_destroy, sem_wait, sem_post
+from pthread_mutex cimport pthread_mutex_t, pthread_mutex_lock, pthread_mutex_unlock, pthread_mutex_destroy, pthread_mutex_init
 
 cimport libeasel
 cimport libeasel.sq
@@ -3977,16 +3977,16 @@ cdef class OptimizedProfileBlock:
             if self._block == NULL:
                 raise AllocationError("P7_OM_BLOCK", sizeof(P7_OM_BLOCK))
         if self._locks == NULL:
-            self._locks = <sem_t*> calloc(8, sizeof(sem_t))
+            self._locks = <pthread_mutex_t*> calloc(8, sizeof(pthread_mutex_t))
             if self._locks == NULL:
-                raise AllocationError("sem_t", sizeof(sem_t), 8)
+                raise AllocationError("pthread_mutex_t", sizeof(pthread_mutex_t), 8)
         self.clear()
         self.extend(iterable)
 
     def __dealloc__(self):
         if self._locks != NULL:
             for i in range(self._block.count):
-                sem_destroy(&self._locks[i])
+                pthread_mutex_destroy(&self._locks[i])
             free(self._locks)
         if self._block != NULL:
             self.clear() # avoid a double free of the sequence contents
@@ -4075,14 +4075,14 @@ cdef class OptimizedProfileBlock:
 
         with nogil:
             self._block.list = <P7_OPROFILE**> realloc(self._block.list, capacity * sizeof(P7_OPROFILE*))
-            self._locks = <sem_t*> realloc(self._locks, capacity * sizeof(sem_t))
+            self._locks = <pthread_mutex_t*> realloc(self._locks, capacity * sizeof(pthread_mutex_t))
         if self._block.list == NULL:
             self._block.listSize = 0
             raise AllocationError("P7_OPROFILE*", sizeof(P7_OPROFILE*), capacity)
         else:
             self._block.listSize = capacity
         if self._locks == NULL:
-            raise AllocationError("sem_t", sizeof(sem_t), capacity)
+            raise AllocationError("pthread_mutex_t", sizeof(pthread_mutex_t), capacity)
         for i in range(self._block.count, self._block.listSize):
             self._block.list[i] = NULL
 
@@ -4100,8 +4100,7 @@ cdef class OptimizedProfileBlock:
             raise AlphabetMismatch(self.alphabet, optimized_profile.alphabet)
         if self._block.count == self._block.listSize - 1:
             self._allocate(self._block.listSize + 2)
-        if sem_init(&self._locks[self._block.count], False, 1) == -1:
-            raise RuntimeError("Failed to initialize semaphore")
+        pthread_mutex_init(&self._locks[self._block.count], NULL)
         self._storage.append(optimized_profile)
         self._block.list[self._block.count] = optimized_profile._om
         self._block.count += 1
@@ -4225,12 +4224,11 @@ cdef class OptimizedProfileBlock:
         memcpy(new._block.list, self._block.list, self._block.count * sizeof(ESL_SQ*))
         new._block.count = self._block.count
         new._block.list[new._block.count] = NULL
-        new._locks = <sem_t*> calloc(self._block.count + 1, sizeof(sem_t))
+        new._locks = <pthread_mutex_t*> calloc(self._block.count + 1, sizeof(pthread_mutex_t))
         if new._locks == NULL:
-            raise AllocationError("sem_t", sizeof(sem_t), new._block.count + 1)
+            raise AllocationError("pthread_mutex_t", sizeof(pthread_mutex_t), new._block.count + 1)
         for i in range(new._block.count):
-            if sem_init(&new._locks[i], False, 1) == -1:
-                raise RuntimeError("Failed to initialize semaphore")
+            pthread_mutex_init(&new._locks[i], NULL)
         return new
 
 
@@ -5392,12 +5390,12 @@ cdef class Pipeline:
 
     @staticmethod
     cdef int _scan_loop(
-              P7_PIPELINE*  pli,
-        const ESL_SQ*       sq,
-              P7_BG*        bg,
-              P7_OPROFILE** om,
-              P7_TOPHITS*   th,
-              sem_t*        locks,
+              P7_PIPELINE*     pli,
+        const ESL_SQ*          sq,
+              P7_BG*           bg,
+              P7_OPROFILE**    om,
+              P7_TOPHITS*      th,
+              pthread_mutex_t* locks,
     ) nogil except 1:
         cdef int    status
         cdef size_t i      = 0
@@ -5422,7 +5420,7 @@ cdef class Pipeline:
             # if the scan loop is run in parallel on the same target profiles.
             try:
                 # configure the profile
-                sem_wait(&locks[i])
+                pthread_mutex_lock(&locks[i])
                 status = p7_oprofile.p7_oprofile_ReconfigLength(om[i], sq.n)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
@@ -5435,7 +5433,7 @@ cdef class Pipeline:
                 elif status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_Pipeline")
             finally:
-                sem_post(&locks[i])
+                pthread_mutex_unlock(&locks[i])
 
             # clear pipeline for reuse for next target
             libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
