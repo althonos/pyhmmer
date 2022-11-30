@@ -20,7 +20,7 @@ from cpython.exc cimport PyErr_Clear
 from cpython.unicode cimport PyUnicode_DecodeASCII
 from libc.math cimport exp, ceil
 from libc.stddef cimport ptrdiff_t
-from libc.stdio cimport printf
+from libc.stdio cimport printf, rewind
 from libc.stdlib cimport calloc, malloc, realloc, free
 from libc.stdint cimport uint8_t, uint32_t, int64_t
 from libc.stdio cimport fprintf, FILE, stdout, fclose
@@ -3190,7 +3190,24 @@ cdef class HMMFile:
         """
         return self._hfp == NULL
 
-    # --- Methods ------------------------------------------------------------
+    # --- Python Methods -----------------------------------------------------
+
+    cpdef void rewind(self) except *:
+        """rewind(self)\n--
+
+        Rewind the file back to the beginning.
+
+        """
+        cdef int status
+        if self._hfp == NULL:
+            raise ValueError("I/O operation on closed file.")
+        status = libhmmer.p7_hmmfile.p7_hmmfile_Position(self._hfp, 0)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_hmmfile_Position")
+        # Manually rewind the MSV readers as well, if the file is pressed
+        if self._hfp.is_pressed:
+            rewind(self._hfp.ffp)   
+            rewind(self._hfp.pfp)
 
     cpdef HMM read(self):
         """read(self)\n--
@@ -3217,7 +3234,7 @@ cdef class HMMFile:
         if self._hfp == NULL:
             raise ValueError("I/O operation on closed file.")
 
-        # with nogil:
+        # don't run in *nogil* because the file may call a file-like handle
         status = libhmmer.p7_hmmfile.p7_hmmfile_Read(self._hfp, &self._alphabet._abc, &hmm)
 
         if status == libeasel.eslOK:
@@ -3239,9 +3256,7 @@ cdef class HMMFile:
         else:
             raise UnexpectedError(status, "p7_hmmfile_Read")
 
-    # --- Utils --------------------------------------------------------------
-
-    cpdef void close(self):
+    cpdef void close(self) except *:
         """close(self)\n--
 
         Close the HMM file and free resources.
@@ -3257,7 +3272,7 @@ cdef class HMMFile:
             libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
             self._hfp = NULL
 
-    cpdef bint is_pressed(self):
+    cpdef bint is_pressed(self) except *:
         """is_pressed(self)\n--
 
         Check whether the HMM file is a pressed HMM database.
@@ -3350,6 +3365,14 @@ cdef class HMMPressedFile:
         return om
 
     # --- Methods ------------------------------------------------------------
+
+    cpdef void rewind(self) except *:
+        """rewind(self)\n--
+
+        Rewind the file back to the beginning.
+
+        """
+        self._hmmfile.rewind()
 
     cpdef OptimizedProfile read(self):
         """read(self)\n--

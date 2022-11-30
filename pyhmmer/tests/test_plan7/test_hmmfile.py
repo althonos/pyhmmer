@@ -39,7 +39,7 @@ class _TestHMMFile:
             self.assertRaises(EOFError, self.open_hmm, empty.name)
 
     def test_read_hmmpressed(self):
-        path = os.path.join(self.hmms_folder, "db", "{}.hmm.h3m".format(self.ID))
+        path = os.path.join(self.hmms_folder, "db", "{}.hmm".format(self.ID))
         with self.open_hmm(path) as f:
             self.check_hmmfile(f)
 
@@ -80,6 +80,24 @@ class _TestHMMPath:
         with self.open_hmm(path) as f:
             self.check_hmmfile(f.optimized_profiles())
 
+    def test_rewind(self):
+        path = os.path.join(self.hmms_folder, "txt", "{}.hmm".format(self.ID))
+        with self.open_hmm(path) as f:
+            hmm1 = f.read()
+            f.rewind()
+            hmm2 = f.read()
+            self.assertIsNot(hmm1, hmm2)
+            self.assertEqual(hmm1.name, hmm2.name)
+
+    def test_rewind_optimized_profiles(self):
+        path = os.path.join(self.hmms_folder, "db", "{}.hmm".format(self.ID))
+        with self.open_hmm(path) as f:
+            profiles = f.optimized_profiles()
+            om1 = profiles.read()
+            profiles.rewind()
+            om2 = profiles.read()
+            self.assertIsNot(om1, om2)
+            self.assertEqual(om1.name, om2.name)
 
 class _TestThioesterase(_TestHMMFile):
     ID = "Thioesterase"
