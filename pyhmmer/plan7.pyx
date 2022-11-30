@@ -5129,7 +5129,8 @@ cdef class Pipeline:
             hits._threshold(self)
 
         # record the query name and accession
-        hits._qname = PyBytes_FromString(om.name)
+        if om.name != NULL:
+            hits._qname = PyBytes_FromString(om.name)
         if om.acc != NULL:
             hits._qacc = PyBytes_FromString(om.acc)
 
@@ -5987,6 +5988,12 @@ cdef class LongTargetsPipeline(Pipeline):
             # printf("\n")
             # libhmmer.p7_tophits.p7_tophits_TabularTargets(stdout, b"name", b"acc", hits._th, self._pli, True)
             # libhmmer.p7_pipeline.p7_pli_Statistics(stdout, self._pli, NULL)
+
+        # record the query name and accession
+        if om.name != NULL:
+            hits._qname = PyBytes_FromString(om.name)
+        if om.acc != NULL:
+            hits._qacc = PyBytes_FromString(om.acc)
 
         # return the hits
         return hits
