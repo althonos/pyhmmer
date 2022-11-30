@@ -143,6 +143,7 @@ ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
 
 import array
 import collections.abc
+import copy
 import datetime
 import errno
 import math
@@ -205,7 +206,6 @@ cdef dict PIPELINE_BIT_CUTOFFS = {
 }
 
 # --- Cython classes ---------------------------------------------------------
-
 
 cdef class Alignment:
     """An alignment of a sequence to a profile.
@@ -2034,6 +2034,14 @@ cdef class HMM:
     def __copy__(self):
         return self.copy()
 
+    def __deepcopy__(self, memo):
+        cdef HMM new
+        if id(self) not in memo:
+            new = memo[id(self)] = self.copy()
+            new.alphabet = copy.deepcopy(self.alphabet, memo=memo)
+            new._hmm.abc = new.alphabet._abc
+        return memo[id(self)]
+
     def __sizeof__(self):
         assert self._hmm != NULL
         assert self.alphabet is not None
@@ -3598,6 +3606,14 @@ cdef class OptimizedProfile:
     def __copy__(self):
         return self.copy()
 
+    def __deepcopy__(self, memo):
+        cdef OptimizedProfile new
+        if id(self) not in memo:
+            new = memo[id(self)] = self.copy()
+            new.alphabet = copy.deepcopy(self.alphabet, memo=memo)
+            new._om.abc = new.alphabet._abc
+        return memo[id(self)]
+
     def __eq__(self, object other):
         assert self._om != NULL
 
@@ -3828,6 +3844,10 @@ cdef class OptimizedProfile:
         """copy(self)\n--
 
         Create an exact copy of the optimized profile.
+
+        Note:
+            The `Alphabet` referenced to by this object is not copied, use 
+            `copy.deepcopy` if this is the intended behaviour.
 
         """
         assert self._om != NULL
@@ -6225,6 +6245,14 @@ cdef class Profile:
     def __copy__(self):
         return self.copy()
 
+    def __deepcopy__(self, memo):
+        cdef Profile new
+        if id(self) not in memo:
+            new = memo[id(self)] = self.copy()
+            new.alphabet = copy.deepcopy(self.alphabet, memo=memo)
+            new._gm.abc = new.alphabet._abc
+        return memo[id(self)]
+
     def __eq__(self, object other):
         assert self._gm != NULL
 
@@ -6598,6 +6626,11 @@ cdef class TopHits:
 
     def __copy__(self):
         return self.copy()
+
+    def __deepcopy__(self, memo):
+        if id(self) not in memo:
+            memo[id(self)] = self.copy()
+        return memo[id(self)]
 
     def __add__(TopHits self, TopHits other):
         return self.merge(other)
@@ -7671,12 +7704,9 @@ cdef class TraceAligner:
 
     # --- Magic methods ------------------------------------------------------
 
-    def __cinit__(self):
-        self._seqs = NULL
-        self._nseq = 0
-
-    def __dealloc__(self):
-        free(self._seqs)
+    def __repr__(self):
+        cdef str ty = type(self).__name__
+        return f"{ty}()"
 
     # --- Methods ------------------------------------------------------------
 
