@@ -45,6 +45,7 @@ from .plan7 import (
     TopHits,
     HMM,
     HMMFile,
+    HMMPressedFile,
     Profile,
     TraceAligner,
     OptimizedProfile,
@@ -55,7 +56,7 @@ from .utils import peekable, singledispatchmethod
 # the query type for the pipeline
 _Q = typing.TypeVar("_Q")
 # the target type for the pipeline
-_T = typing.TypeVar("_T", DigitalSequenceBlock, OptimizedProfileBlock)
+_T = typing.TypeVar("_T")
 
 # the query types for the different tasks
 _PHMMERQueryType = typing.Union[DigitalSequence, DigitalMSA]
@@ -125,7 +126,7 @@ class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
     """A generic worker thread to parallelize a pipelined search.
 
     Attributes:
-        targets (`DigitalSequenceBlock` or `OptimizedProfileBlock`): The 
+        targets (`DigitalSequenceBlock` or `OptimizedProfileBlock`): The
             target to search for hits, either a digital sequence block while
             in search mode, or an optimized profile block while in scan mode.
         query_queue (`queue.Queue`): The queue used to pass queries
@@ -267,13 +268,15 @@ class _NHMMERWorker(_BaseWorker[_NHMMERQueryType, DigitalSequenceBlock]):
         return self.pipeline.search_hmm(query, self.targets)
 
 
-class _SCANWorker(_BaseWorker[DigitalSequence, OptimizedProfileBlock]):
+class _SCANWorker(_BaseWorker[DigitalSequence, typing.Union[OptimizedProfileBlock, HMMPressedFile]]):
     @singledispatchmethod
     def query(self, query) -> TopHits:  # type: ignore
         raise TypeError("Unsupported query type for `hmmscan`: {}".format(type(query).__name__))
 
     @query.register(DigitalSequence)
     def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
+        if isinstance(self.targets, HMMPressedFile):
+            self.targets.rewind()
         return self.pipeline.scan_seq(query, self.targets)
 
 
@@ -487,7 +490,7 @@ class _NHMMERDispatcher(_BaseDispatcher[_NHMMERQueryType, DigitalSequenceBlock])
         )
 
 
-class _SCANDispatcher(_BaseDispatcher[DigitalSequence, OptimizedProfileBlock]):
+class _SCANDispatcher(_BaseDispatcher[DigitalSequence, typing.Union[OptimizedProfileBlock, HMMPressedFile]]):
     def _new_thread(
         self,
         query_available: threading.Semaphore,
@@ -495,8 +498,12 @@ class _SCANDispatcher(_BaseDispatcher[DigitalSequence, OptimizedProfileBlock]):
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _SCANWorker:
+        if isinstance(self.targets, HMMPressedFile):
+            targets = HMMPressedFile(self.targets.name)
+        else:
+            targets = self.targets
         return _SCANWorker(
-            self.targets,
+            targets,
             query_available,
             query_queue,
             query_count,
@@ -603,12 +610,12 @@ def phmmer(
     """Search protein sequences against a sequence database.
 
     Arguments:
-        queries (iterable of `DigitalSequence` or `DigitalMSA`): The query 
-            sequences to search for in the sequence database. Passing a 
+        queries (iterable of `DigitalSequence` or `DigitalMSA`): The query
+            sequences to search for in the sequence database. Passing a
             single object is supported.
-        sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A database 
-            of sequences to query. If you plan on using the same sequences 
-            several times, consider storing them into a 
+        sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A database
+            of sequences to query. If you plan on using the same sequences
+            several times, consider storing them into a
             `~pyhmmer.easel.DigitalSequenceBlock` directly.
         cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
             run everything in the main thread, ``0`` to automatically
@@ -875,6 +882,23 @@ def hmmscan(
 ) -> typing.Iterator[TopHits]:
     """Scan query sequences against a profile database.
 
+    In HMMER many-to-many comparisons, a *scan* is the operation of querying
+    with sequences a database of profile HMMs. It is necessary slower than 
+    a *search* because reconfiguring profiles between each queries has 
+    additional overhead, so it's recommended to use a *search* if the order
+    of the comparisons is not important.
+
+    The `hmmscan` function offers two ways of managing the database that will
+    be selected based on the type of the ``profiles`` argument. If 
+    ``profiles`` is an `HMMPressedFile` object, `hmmscan` will reopen the 
+    file in each thread, and load profiles *iteratively* to scan with the 
+    query. Otherwise, it will *pre-fetch* the optimized profiles into an
+    `OptimizedProfileBlock` collection, and share them across queries. The
+    *pre-fetching* gives much higher performance at the cost of extra 
+    startup time and much higher memory consumption. You may want to check
+    how much memory is available (for instance with `psutil.virtual_memory`)
+    before trying to load a whole pHMM database.
+
     Arguments:
         queries (iterable of `DigitalSequence`): The query sequences to scan
             with the database. Passing a single query is supported.
@@ -882,7 +906,8 @@ def hmmscan(
             database of profiles to query. If you plan on using the
             same targets several times, consider converting them into
             `OptimizedProfile` and storing them into an `OptimizedProfileBlock`
-            ahead of time.
+            ahead of time. If a `HMMPressedFile` is given, profiles will be
+            loaded iteratively from disk rather than prefetched.
         cpus (`int`): The number of threads to run in parallel. Pass ``1``
             to run everything in the main thread, ``0`` to automatically
             select a suitable number (using `psutil.cpu_count`), or any
@@ -890,6 +915,9 @@ def hmmscan(
         callback (callable): A callback that is called everytime a query is
             processed with two arguments: the query, and the total number
             of queries. This can be used to display progress in UI.
+        background (`pyhmmer.plan7.Background`, *optional*): A background
+            object to use for configuring the profiles. If `None` given,
+            create a default one.
 
     Yields:
         `~pyhmmer.plan7.TopHits`: An object reporting *top hits* for each
@@ -906,9 +934,8 @@ def hmmscan(
 
     Hint:
         If reading the profiles from a pressed HMM database, make sure to
-        use the `HMMFile.optimized_profiles` method to directly load
-        `OptimizedProfile` objects from the file rather than the plain HMMs
-        to avoid unneeded conversion::
+        use the `HMMFile.optimized_profiles` method so that profiles are 
+        read iteratively from the file during the scan loop::
 
             >>> with HMMFile("tests/data/hmms/db/t2pks.hmm") as hmm_file:
             ...     targets = hmm_file.optimized_profiles()
@@ -916,16 +943,9 @@ def hmmscan(
             >>> sum(len(hits) for hits in all_hits)
             26
 
-    Caution:
-        This function departs from the original ``hmmscan`` behaviour in that
-        it will load the entire target database into memory and then convert
-        it to optimized profiles only once to save some overhead when used 
-        with a large number of queries. However, this means that the memory 
-        footprint will be much larger, and there may be some latency before
-        the first results are returned unless ``profiles`` is already an
-        `OptimizedProfileBlock`. For Pfam v35.0 for instance, this means up 
-        to 1.0 GiB of extra memory allocated compared to an `hmmsearch` run.
-
+        Otherwise, passing ``hmm_file`` as the ``profiles`` argument of 
+        `hmmscan` would cause the entire HMM file to be loaded in memory
+        into an `OptimizedProfileBlock` otherwise.
 
     .. versionadded:: 0.7.0
 
@@ -933,10 +953,16 @@ def hmmscan(
     _alphabet = Alphabet.amino()
     _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count() or 1
     _background = Background(_alphabet) if background is None else background
+    options.setdefault("background", _background)
 
     if not isinstance(queries, collections.abc.Iterable):
         queries = (queries,)
-    if not isinstance(profiles, OptimizedProfileBlock):
+    if isinstance(profiles, HMMPressedFile):
+        alphabet = _alphabet # FIXME: try to detect from content instead?
+    elif isinstance(profiles, OptimizedProfileBlock):
+        alphabet = profiles.alphabet
+    else:
+        alphabet = _alphabet
         block = OptimizedProfileBlock(_alphabet)
         for item in profiles:
             if isinstance(item, HMM):
@@ -958,7 +984,7 @@ def hmmscan(
         cpus=_cpus,
         callback=callback,
         pipeline_class=Pipeline,
-        alphabet=profiles.alphabet,
+        alphabet=alphabet,
         builder=None,
         **options,
     )
@@ -1047,38 +1073,23 @@ if __name__ == "__main__":
         return 0
 
     def _hmmscan(args: argparse.Namespace) -> int:
-        try:
-            alphabet = Alphabet.amino()
-            with HMMFile(args.hmmdb) as hmms:
-                if hmms.is_pressed():
-                    optimized_profiles = OptimizedProfileBlock(alphabet, hmms.optimized_profiles())
-                else:
-                    background = Background(alphabet)
-                    optimized_profiles = OptimizedProfileBlock(alphabet)
-                    for hmm in hmms:
-                        profile = Profile(hmm.M, hmm.alphabet)
-                        profile.configure(hmm, background)
-                        optimized_profiles.append(profile.optimized())
-        except Exception as err:
-            print(err, file=sys.stderr)
-            return getattr(err, "errno", 1)
-
-        with SequenceFile(args.seqfile, digital=True) as seqfile:
-            hits_list = hmmscan(seqfile, optimized_profiles, cpus=args.jobs)  # type: ignore
-            for hits in hits_list:
-                for hit in hits:
-                    if hit.is_reported():
-                        print(
-                            hit.name.decode(),
-                            (hit.accession or b"-").decode(),
-                            hits.query_name.decode(),
-                            (hits.query_accession or b"-").decode(),
-                            hit.evalue,
-                            hit.score,
-                            hit.bias,
-                            sep="\t",
-                        )
-
+        with HMMFile(args.hmmdb) as hmms:
+            targets = hmms.optimized_profiles() if hmms.is_pressed() else hmms
+            with SequenceFile(args.seqfile, digital=True) as seqfile:
+                hits_list = hmmscan(seqfile, targets, cpus=args.jobs)  # type: ignore
+                for hits in hits_list:
+                    for hit in hits:
+                        if hit.is_reported():
+                            print(
+                                hit.name.decode(),
+                                (hit.accession or b"-").decode(),
+                                hits.query_name.decode(),
+                                (hits.query_accession or b"-").decode(),
+                                hit.evalue,
+                                hit.score,
+                                hit.bias,
+                                sep="\t",
+                            )
         return 0
 
     def _hmmpress(args: argparse.Namespace) -> int:
