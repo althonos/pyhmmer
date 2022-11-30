@@ -3989,7 +3989,9 @@ cdef class OptimizedProfileBlock:
                 pthread_mutex_destroy(&self._locks[i])
             free(self._locks)
         if self._block != NULL:
-            self.clear() # avoid a double free of the sequence contents
+            # avoid a double free of the sequence contents
+            for i in range(self._block.listSize):
+                self._block.list[i] = NULL
             p7_oprofile_DestroyBlock(self._block)
 
     def __len__(self):
@@ -4018,10 +4020,9 @@ cdef class OptimizedProfileBlock:
                     raise AlphabetMismatch(self.alphabet, optimized_profile.alphabet)
             self._storage[index] = optimized_profiles
             self._block.count = len(self._storage)
-            self._allocate(self._block.count + 1)
+            self._allocate(self._block.count)
             for i, optimized_profile in enumerate(self._storage):
                 self._block.list[i] = optimized_profile._om
-            self._block.list[self._block.count] = NULL
         else:
             optimized_profile = optimized_profiles
             if optimized_profile.alphabet != self.alphabet:
@@ -4039,7 +4040,6 @@ cdef class OptimizedProfileBlock:
             self._allocate(self._block.count)
             for i, optimized_profile in enumerate(self._storage):
                 self._block.list[i] = optimized_profile._om
-            assert self._block.list[self._block.count] == NULL
         else:
             self.pop(index)
 
@@ -4051,7 +4051,7 @@ cdef class OptimizedProfileBlock:
 
     def __repr__(self):
         cdef str ty = type(self).__name__
-        return f"{ty}({self._storage!r})"
+        return f"{ty}({self.alphabet!r}, {self._storage!r})"
 
     def __eq__(self, object other):
         cdef OptimizedProfileBlock other_
@@ -4083,8 +4083,8 @@ cdef class OptimizedProfileBlock:
             self._block.listSize = capacity
         if self._locks == NULL:
             raise AllocationError("pthread_mutex_t", sizeof(pthread_mutex_t), capacity)
-        for i in range(self._block.count, self._block.listSize):
-            self._block.list[i] = NULL
+        # for i in range(self._block.count, self._block.listSize):
+        #     self._block.list[i] = NULL
 
 
     # --- Python methods -----------------------------------------------------
@@ -4098,13 +4098,12 @@ cdef class OptimizedProfileBlock:
         assert self._block != NULL
         if self.alphabet != optimized_profile.alphabet:
             raise AlphabetMismatch(self.alphabet, optimized_profile.alphabet)
-        if self._block.count == self._block.listSize - 1:
-            self._allocate(self._block.listSize + 2)
+        if self._block.count == self._block.listSize:
+            self._allocate(self._block.count)
         pthread_mutex_init(&self._locks[self._block.count], NULL)
         self._storage.append(optimized_profile)
         self._block.list[self._block.count] = optimized_profile._om
         self._block.count += 1
-        assert self._block.list[self._block.count] == NULL
 
     cpdef void clear(self) except *:
         """clear(self)\n--
@@ -4115,8 +4114,6 @@ cdef class OptimizedProfileBlock:
         assert self._block != NULL
         cdef ssize_t i
         self._storage.clear()
-        for i in range(self._block.count):
-            self._block.list[i] = NULL
         self._block.count = 0
 
     cpdef void extend(self, object iterable) except *:
@@ -4128,7 +4125,7 @@ cdef class OptimizedProfileBlock:
         assert self._block != NULL
         cdef ssize_t hint = operator.length_hint(iterable)
         if self._block.count + hint > self._block.listSize:
-            self._allocate(self._block.count + hint + 1)
+            self._allocate(self._block.count + hint)
         for optimized_profile in iterable:
             self.append(optimized_profile)
 
@@ -4168,7 +4165,6 @@ cdef class OptimizedProfileBlock:
         self._storage.insert(index, optimized_profile)
         self._block.list[index] = optimized_profile._om
         self._block.count += 1
-        assert self._block.list[self._block.count] == NULL
 
     cpdef OptimizedProfile pop(self, ssize_t index=-1):
         """pop(self, index=-1)\n--
@@ -4193,7 +4189,6 @@ cdef class OptimizedProfileBlock:
         self._block.count -= 1
         if index_ < self._block.count:
             memmove(&self._block.list[index_], &self._block.list[index_ + 1], (self._block.count - index_)*sizeof(P7_OPROFILE*))
-        self._block.list[self._block.count] = NULL
         return item
 
     cpdef void remove(self, OptimizedProfile optimized_profile) except *:
@@ -4218,15 +4213,14 @@ cdef class OptimizedProfileBlock:
         assert self._block != NULL
         cdef OptimizedProfileBlock new = OptimizedProfileBlock.__new__(OptimizedProfileBlock, self.alphabet)
         new._storage = self._storage.copy()
-        new._block = p7_oprofile_CreateBlock(self._block.count + 1)
+        new._block = p7_oprofile_CreateBlock(self._block.count)
         if new._block == NULL:
             raise AllocationError("P7_OM_BLOCK", sizeof(P7_OM_BLOCK))
         memcpy(new._block.list, self._block.list, self._block.count * sizeof(ESL_SQ*))
         new._block.count = self._block.count
-        new._block.list[new._block.count] = NULL
-        new._locks = <pthread_mutex_t*> calloc(self._block.count + 1, sizeof(pthread_mutex_t))
+        new._locks = <pthread_mutex_t*> calloc(self._block.count, sizeof(pthread_mutex_t))
         if new._locks == NULL:
-            raise AllocationError("pthread_mutex_t", sizeof(pthread_mutex_t), new._block.count + 1)
+            raise AllocationError("pthread_mutex_t", sizeof(pthread_mutex_t), new._block.count)
         for i in range(new._block.count):
             pthread_mutex_init(&new._locks[i], NULL)
         return new

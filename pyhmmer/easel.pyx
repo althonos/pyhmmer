@@ -5146,8 +5146,8 @@ cdef class SequenceBlock:
             raise AllocationError("ESL_SQ*", sizeof(ESL_SQ*), capacity)
         else:
             self._capacity = capacity
-        for i in range(self._length, self._capacity):
-            self._refs[i] = NULL
+        # for i in range(self._length, self._capacity):
+        #     self._refs[i] = NULL
 
     cdef void _on_modification(self) except *:
         self._largest = -1 # invalidate cache
@@ -5155,13 +5155,12 @@ cdef class SequenceBlock:
     # --- Python methods -----------------------------------------------------
 
     cdef void _append(self, Sequence sequence) except *:
-        if self._capacity == 0 or self._length == self._capacity - 1:
-            self._allocate(self._capacity + 2)
+        if self._length == self._capacity:
+            self._allocate(self._length + 1)
         self._storage.append(sequence)
         self._refs[self._length] = sequence._sq
         self._length += 1
         self._on_modification()
-        assert self._refs[self._length] == NULL
 
     cpdef void clear(self) except *:
         """clear(self)\n--
@@ -5170,8 +5169,6 @@ cdef class SequenceBlock:
 
         """
         cdef size_t i
-        for i in range(self._length):
-            self._refs[i] = NULL
         self._storage.clear()
         self._length = 0
         self._on_modification()
@@ -5184,7 +5181,7 @@ cdef class SequenceBlock:
         """
         cdef size_t hint = operator.length_hint(iterable)
         if self._length + hint > self._capacity:
-            self._allocate(self._length + hint + 1)
+            self._allocate(self._length + hint)
         self._on_modification()
         for sequence in iterable:
             self.append(sequence)
@@ -5206,7 +5203,6 @@ cdef class SequenceBlock:
         if <size_t> index_ < self._length:
             memmove(&self._refs[index_], &self._refs[index_ + 1], (self._length - index_)*sizeof(ESL_SQ*))
 
-        self._refs[self._length] = NULL
         self._on_modification()
         return item
 
@@ -5226,7 +5222,6 @@ cdef class SequenceBlock:
         self._refs[index] = sequence._sq
         self._length += 1
         self._on_modification()
-        assert self._refs[self._length] == NULL
 
     cdef size_t _index(self, Sequence sequence, ssize_t start=0, ssize_t stop=sys.maxsize) except *:
         cdef size_t i
@@ -5241,7 +5236,7 @@ cdef class SequenceBlock:
             stop += <ssize_t> self._length
 
         # wrap a second time if indices are still negative or out of bounds
-        stop_ = min(stop, self._length)
+        stop_ = min(stop, <ssize_t> self._length)
         start_ = max(start, 0)
 
         # scan to locate the sequence
@@ -5325,10 +5320,9 @@ cdef class TextSequenceBlock(SequenceBlock):
         if isinstance(index, slice):
             self._storage[index] = sequences
             self._length = len(self._storage)
-            self._allocate(self._length + 1)
+            self._allocate(self._length)
             for i, sequence in enumerate(self._storage):
                 self._refs[i] = sequence._sq
-            self._refs[self._length] = NULL
         else:
             sequence = sequences
             self._storage[index] = sequence
@@ -5404,6 +5398,11 @@ cdef class TextSequenceBlock(SequenceBlock):
         return block
 
     cpdef TextSequence largest(self):
+        """largest(self)\n--
+
+        Return the largest sequence in the block.
+
+        """
         return SequenceBlock.largest(self)
 
     cpdef TextSequenceBlock copy(self):
@@ -5483,12 +5482,11 @@ cdef class DigitalSequenceBlock(SequenceBlock):
         if isinstance(index, slice):
             self._storage[index] = sequences
             self._length = len(self._storage)
-            self._allocate(self._length + 1)
+            self._allocate(self._length)
             for i, sequence in enumerate(self._storage):
                 if sequence.alphabet != self.alphabet:
                     raise AlphabetMismatch(self.alphabet, sequence.alphabet)
                 self._refs[i] = sequence._sq
-            self._refs[self._length] = NULL
         else:
             sequence = sequences
             if sequence.alphabet != self.alphabet:
