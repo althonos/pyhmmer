@@ -21,22 +21,23 @@ from . import easel
 from . import plan7
 from . import daemon
 
-from .hmmer import hmmalign, hmmsearch, hmmpress, nhmmer, phmmer
+from .hmmer import hmmalign, hmmsearch, hmmpress, nhmmer, hmmscan, phmmer
 
 
 __author__ = "Martin Larralde <martin.larralde@embl.de>"
 __license__ = "MIT"
 __version__ = "0.6.3"
 __all__ = [
-    errors.__name__,
-    easel.__name__,
-    plan7.__name__,
-    daemon.__name__,
-    hmmalign.__name__,
-    hmmsearch.__name__,
-    hmmpress.__name__,
-    phmmer.__name__,
-    nhmmer.__name__,
+    "errors",
+    "easel",
+    "plan7",
+    "daemon",
+    "hmmalign",
+    "hmmsearch",
+    "hmmscan",
+    "hmmpress",
+    "phmmer",
+    "nhmmer",
 ]
 
 # Small addition to the docstring: we want to show a link redirecting to the
@@ -56,9 +57,10 @@ _collections_abc.Iterator.register(plan7.HMMFile)
 _collections_abc.Mapping.register(easel.KeyHash)
 _collections_abc.Sized.register(plan7.Alignment)
 _collections_abc.Sequence.register(easel.Bitfield)
-_collections_abc.Sequence.register(easel.SequenceBlock)
 _collections_abc.Sequence.register(plan7.Domains)
 _collections_abc.Sequence.register(plan7.TopHits)
+_collections_abc.Sequence.register(easel.SequenceBlock)
+_collections_abc.Sequence.register(plan7.OptimizedProfile)
 
 if hasattr(_contextlib, "AbstractContextManager"):
     _contextlib.AbstractContextManager.register(easel.SequenceFile)

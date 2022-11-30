@@ -210,63 +210,63 @@ class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
 
     def process(self, query: _Q) -> TopHits:
         """Process a single query and return the resulting hits."""
-        hits = self.search(query)
+        hits = self.query(query)
         self.callback(query, self.query_count.value)  # type: ignore
         self.pipeline.clear()
         return hits
 
     @abc.abstractmethod
-    def search(self, query: _Q) -> TopHits:
-        """Search the target database for a single query."""
+    def query(self, query: _Q) -> TopHits:
+        """Run a single query against the target database."""
         return NotImplemented
 
 
 class _SEARCHWorker(_BaseWorker[_SEARCHQueryType, DigitalSequenceBlock]):
     @singledispatchmethod
-    def search(self, query) -> TopHits:  # type: ignore
+    def query(self, query) -> TopHits:  # type: ignore
         raise TypeError("Unsupported query type: {}".format(type(query).__name__))
 
     # NOTE(@althonos): `Union` types is unsupported with `singledispatch`
     #                  until Python 3.11, so we must manually register the
     #                  3 different implementations
 
-    @search.register
+    @query.register
     def _(self, query: HMM) -> TopHits:  # type: ignore
         return self.pipeline.search_hmm(query, self.targets)
 
-    @search.register
+    @query.register
     def _(self, query: Profile) -> TopHits:  # type: ignore
         return self.pipeline.search_hmm(query, self.targets)
 
-    @search.register
+    @query.register
     def _(self, query: OptimizedProfile) -> TopHits:  # type: ignore
         return self.pipeline.search_hmm(query, self.targets)
 
 
 class _PHMMERWorker(_BaseWorker[_PHMMERQueryType, DigitalSequenceBlock]):
     @singledispatchmethod
-    def search(self, query) -> TopHits:  # type: ignore
+    def query(self, query) -> TopHits:  # type: ignore
         raise TypeError("Unsupported query type: {}".format(type(query).__name__))
 
-    @search.register
+    @query.register
     def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
         return self.pipeline.search_seq(query, self.targets, self.builder)
 
-    @search.register
+    @query.register
     def _(self, query: DigitalMSA) -> TopHits:  # type: ignore
         return self.pipeline.search_msa(query, self.targets, self.builder)
 
 
 class _NHMMERWorker(_BaseWorker[_NHMMERQueryType, DigitalSequenceBlock]):
     @singledispatchmethod
-    def search(self, query) -> TopHits:  # type: ignore
+    def query(self, query) -> TopHits:  # type: ignore
         raise TypeError("Unsupported query type: {}".format(type(query).__name__))
 
-    @search.register
+    @query.register
     def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
         return self.pipeline.search_seq(query, self.targets, self.builder)
 
-    @search.register
+    @query.register
     def _(self, query: DigitalMSA) -> TopHits:  # type: ignore
         return self.pipeline.search_msa(query, self.targets, self.builder)
 
@@ -274,17 +274,27 @@ class _NHMMERWorker(_BaseWorker[_NHMMERQueryType, DigitalSequenceBlock]):
     #                  until Python 3.11, so we must manually register the
     #                  3 different implementations
 
-    @search.register
+    @query.register
     def _(self, query: HMM) -> TopHits:  # type: ignore
         return self.pipeline.search_hmm(query, self.targets)
 
-    @search.register
+    @query.register
     def _(self, query: Profile) -> TopHits:  # type: ignore
         return self.pipeline.search_hmm(query, self.targets)
 
-    @search.register
+    @query.register
     def _(self, query: OptimizedProfile) -> TopHits:  # type: ignore
         return self.pipeline.search_hmm(query, self.targets)
+
+
+class _SCANWorker(_BaseWorker[DigitalSequence, OptimizedProfileBlock]):
+    @singledispatchmethod
+    def query(self, query) -> TopHits:  # type: ignore
+        raise TypeError("Unsupported query type: {}".format(type(query).__name__))
+
+    @query.register
+    def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
+        return self.pipeline.scan_seq(query, self.targets)
 
 
 # --- Search runners ---------------------------------------------------------
@@ -497,6 +507,27 @@ class _NHMMERDispatcher(_BaseDispatcher[_NHMMERQueryType, DigitalSequenceBlock])
         )
 
 
+class _SCANDispatcher(_BaseDispatcher[DigitalSequence, OptimizedProfileBlock]):
+    def _new_thread(
+        self,
+        query_available: threading.Semaphore,
+        query_queue: "queue.Queue[typing.Optional[_Chore[DigitalSequence]]]",
+        query_count: "multiprocessing.Value[int]",  # type: ignore
+        kill_switch: threading.Event,
+    ) -> _SCANWorker:
+        return _SCANWorker(
+            self.targets,
+            query_available,
+            query_queue,
+            query_count,
+            kill_switch,
+            self.callback,
+            self.options,
+            self.pipeline_class,
+            self.alphabet,
+        )
+
+
 # --- hmmsearch --------------------------------------------------------------
 
 def hmmsearch(
@@ -533,7 +564,7 @@ def hmmsearch(
         `~pyhmmer.errors.AlphabetMismatch`: When any of the query HMMs
         and the sequences do not share the same alphabet.
 
-    Hint:
+    Note:
         Any additional arguments passed to the `hmmsearch` function will be
         passed transparently to the `~pyhmmer.plan7.Pipeline` to be created.
         For instance, to run a ``hmmsearch`` using a bitscore cutoffs of
@@ -592,13 +623,13 @@ def phmmer(
     """Search protein sequences against a sequence database.
 
     Arguments:
-        queries (iterable of `DigitalSequence` or `DigitalMSA`): The
-            query sequences to search for in the sequence database. Note
-            that passing a single object is supported.
-        sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A
-            database of sequences to query. If you plan on using the
-            same sequences several times, consider storing them into
-            a `~pyhmmer.easel.DigitalSequenceBlock` directly.
+        queries (iterable of `DigitalSequence` or `DigitalMSA`): The query 
+            sequences to search for in the sequence database. Passing a 
+            single object is supported.
+        sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A database 
+            of sequences to query. If you plan on using the same sequences 
+            several times, consider storing them into a 
+            `~pyhmmer.easel.DigitalSequenceBlock` directly.
         cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
             run everything in the main thread, ``0`` to automatically
             select a suitable number (using `psutil.cpu_count`), or any
@@ -614,7 +645,7 @@ def phmmer(
         `~pyhmmer.plan7.TopHits`: A *top hits* instance for each query,
         in the same order the queries were passed in the input.
 
-    Hint:
+    Note:
         Any additional keyword arguments passed to the `phmmer` function
         will be passed transparently to the `~pyhmmer.plan7.Pipeline` to
         be created in each worker thread.
@@ -666,8 +697,8 @@ def nhmmer(
     Arguments:
         queries (iterable of `DigitalSequence`, `DigitalMSA`, `HMM`): The
             query sequences or profiles to search for in the sequence
-            database. Note that passing a single object is supported.
-        sequences (collection of `~pyhmmer.easel.DigitalSequence`): A
+            database. Passing a single object is supported.
+        sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A
             database of sequences to query. If you plan on using the
             same sequences several times, consider storing them into
             a `~pyhmmer.easel.DigitalSequenceBlock` directly.
@@ -686,7 +717,7 @@ def nhmmer(
         `~pyhmmer.plan7.TopHits`: A *top hits* instance for each query,
         in the same order the queries were passed in the input.
 
-    Hint:
+    Note:
         Any additional keyword arguments passed to the `nhmmer` function
         will be passed to the `~pyhmmer.plan7.LongTargetsPipeline` created
         in each worker thread. The ``strand`` argument can be used to
@@ -851,6 +882,108 @@ def hmmalign(
     )
 
 
+# --- hmmscan ----------------------------------------------------------------
+
+def hmmscan(
+    queries: typing.Union[DigitalSequence, typing.Iterable[DigitalSequence]],
+    profiles: typing.Iterable[typing.Union[HMM, Profile, OptimizedProfile]],
+    *,
+    cpus: int = 0,
+    callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
+    background: typing.Optional[Background] = None,
+    **options,  # type: typing.Dict[str, object]
+) -> typing.Iterator[TopHits]:
+    """Scan query sequences against a profile database.
+
+    Arguments:
+        queries (iterable of `DigitalSequence`): The query sequences to scan
+            with the database. Passing a single query is supported.
+        profiles (iterable of `HMM`, `Profile` or `OptimizedProfile`): A
+            database of profiles to query. If you plan on using the
+            same targets several times, consider converting them into
+            `OptimizedProfile` and storing them into an `OptimizedProfileBlock`
+            ahead of time.
+        cpus (`int`): The number of threads to run in parallel. Pass ``1``
+            to run everything in the main thread, ``0`` to automatically
+            select a suitable number (using `psutil.cpu_count`), or any
+            positive number otherwise.
+        callback (callable): A callback that is called everytime a query is
+            processed with two arguments: the query, and the total number
+            of queries. This can be used to display progress in UI.
+
+    Yields:
+        `~pyhmmer.plan7.TopHits`: An object reporting *top hits* for each
+        query, in the same order the queries were passed in the input.
+
+    Raises:
+        `~pyhmmer.errors.AlphabetMismatch`: When any of the query sequence
+        and the profile do not share the same alphabet.
+
+    Note:
+        Any additional keyword arguments passed to the `phmmer` function
+        will be passed transparently to the `~pyhmmer.plan7.Pipeline` to
+        be created in each worker thread.
+
+    Hint:
+        If reading the profiles from a pressed HMM database, make sure to
+        use the `HMMFile.optimized_profiles` method to directly load
+        `OptimizedProfile` objects from the file rather than the plain HMMs
+        to avoid unneeded conversion::
+
+            >>> with HMMFile("tests/data/hmms/db/t2pks.hmm") as hmm_file:
+            ...     targets = hmm_file.optimized_profiles()
+            ...     all_hits = list(hmmscan(proteins, targets, E=1e-10))
+            >>> sum(len(hits) for hits in all_hits)
+            26
+
+    Caution:
+        This function departs from the original ``hmmscan`` behaviour in that
+        it will load the entire target database into memory and then convert
+        it to optimized profiles only once to save some overhead when used 
+        with a large number of queries. However, this means that the memory 
+        footprint will be much larger, and there may be some latency before
+        the first results are returned unless ``profiles`` is already an
+        `OptimizedProfileBlock`. For Pfam v35.0 for instance, this means up 
+        to 1.0 GiB of extra memory allocated compared to an `hmmsearch` run.
+
+
+    .. versionadded:: 0.7.0
+
+    """
+    _alphabet = Alphabet.amino()
+    _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count() or 1
+    _background = Background(_alphabet) if background is None else background
+
+    if not isinstance(queries, collections.abc.Iterable):
+        queries = (queries,)
+    if not isinstance(profiles, OptimizedProfileBlock):
+        block = OptimizedProfileBlock(_alphabet)
+        for item in profiles:
+            if isinstance(item, HMM):
+                profile = Profile(item.M, item.alphabet)
+                profile.configure(item, _background)
+                item = profile
+            if isinstance(item, Profile):
+                item = item.optimized()
+            if isinstance(item, OptimizedProfile):
+                block.append(item)
+            else:
+                ty = type(item).__name__
+                raise TypeError("Expected HMM, Profile or OptimizedProfile, found {}".format(ty))
+        profiles = block
+
+    dispatcher = _SCANDispatcher(
+        queries=queries,
+        targets=profiles,
+        cpus=_cpus,
+        callback=callback,
+        pipeline_class=Pipeline,
+        alphabet=profiles.alphabet,
+        builder=None,
+        **options,
+    )
+    return dispatcher.run()
+
 # add a very limited CLI so that this module can be invoked in a shell:
 #     $ python -m pyhmmer.hmmsearch <hmmfile> <seqdb>
 if __name__ == "__main__":
@@ -874,9 +1007,9 @@ if __name__ == "__main__":
                     if hit.is_reported():
                         print(
                             hit.name.decode(),
-                            "-",
-                            hit.best_domain.alignment.hmm_accession.decode(),
-                            hit.best_domain.alignment.hmm_name.decode(),
+                            (hit.accession or b"-").decode(),
+                            hits.query_name.decode(),
+                            (hits.query_accession or b"-").decode(),
                             hit.evalue,
                             hit.score,
                             hit.bias,
@@ -925,6 +1058,41 @@ if __name__ == "__main__":
                             "-",
                             hit.best_domain.alignment.hmm_accession.decode(),
                             hit.best_domain.alignment.hmm_name.decode(),
+                            hit.evalue,
+                            hit.score,
+                            hit.bias,
+                            sep="\t",
+                        )
+
+        return 0
+
+    def _hmmscan(args: argparse.Namespace) -> int:
+        try:
+            alphabet = Alphabet.amino()
+            with HMMFile(args.hmmdb) as hmms:
+                if hmms.is_pressed():
+                    optimized_profiles = OptimizedProfileBlock(alphabet, hmms.optimized_profiles())
+                else:
+                    background = Background(alphabet)
+                    optimized_profiles = OptimizedProfileBlock(alphabet)
+                    for hmm in hmms:
+                        profile = Profile(hmm.M, hmm.alphabet)
+                        profile.configure(hmm, background)
+                        optimized_profiles.append(profile.optimized())
+        except Exception as err:
+            print(err, file=sys.stderr)
+            return getattr(err, "errno", 1)
+
+        with SequenceFile(args.seqfile, digital=True) as seqfile:
+            hits_list = hmmscan(seqfile, optimized_profiles, cpus=args.jobs)  # type: ignore
+            for hits in hits_list:
+                for hit in hits:
+                    if hit.is_reported():
+                        print(
+                            hit.name.decode(),
+                            (hit.accession or b"-").decode(),
+                            hits.query_name.decode(),
+                            (hits.query_accession or b"-").decode(),
                             hit.evalue,
                             hit.score,
                             hit.bias,
@@ -993,6 +1161,11 @@ if __name__ == "__main__":
     parser_nhmmer.set_defaults(call=_nhmmer)
     parser_nhmmer.add_argument("seqfile")
     parser_nhmmer.add_argument("seqdb")
+
+    parser_hmmsearch = subparsers.add_parser("hmmscan")
+    parser_hmmsearch.set_defaults(call=_hmmscan)
+    parser_hmmsearch.add_argument("hmmdb")
+    parser_hmmsearch.add_argument("seqfile")
 
     parser_hmmpress = subparsers.add_parser("hmmpress")
     parser_hmmpress.set_defaults(call=_hmmpress)
