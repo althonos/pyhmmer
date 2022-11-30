@@ -224,35 +224,25 @@ class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
 class _SEARCHWorker(_BaseWorker[_SEARCHQueryType, DigitalSequenceBlock]):
     @singledispatchmethod
     def query(self, query) -> TopHits:  # type: ignore
-        raise TypeError("Unsupported query type: {}".format(type(query).__name__))
+        raise TypeError("Unsupported query type for `hmmsearch`: {}".format(type(query).__name__))
 
-    # NOTE(@althonos): `Union` types is unsupported with `singledispatch`
-    #                  until Python 3.11, so we must manually register the
-    #                  3 different implementations
-
-    @query.register
-    def _(self, query: HMM) -> TopHits:  # type: ignore
-        return self.pipeline.search_hmm(query, self.targets)
-
-    @query.register
-    def _(self, query: Profile) -> TopHits:  # type: ignore
-        return self.pipeline.search_hmm(query, self.targets)
-
-    @query.register
-    def _(self, query: OptimizedProfile) -> TopHits:  # type: ignore
+    @query.register(HMM)
+    @query.register(Profile)
+    @query.register(OptimizedProfile)
+    def _(self, query: typing.Union[HMM, Profile, OptimizedProfile]) -> TopHits:  # type: ignore
         return self.pipeline.search_hmm(query, self.targets)
 
 
 class _PHMMERWorker(_BaseWorker[_PHMMERQueryType, DigitalSequenceBlock]):
     @singledispatchmethod
     def query(self, query) -> TopHits:  # type: ignore
-        raise TypeError("Unsupported query type: {}".format(type(query).__name__))
+        raise TypeError("Unsupported query type for `phmmer`: {}".format(type(query).__name__))
 
-    @query.register
+    @query.register(DigitalSequence)
     def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
         return self.pipeline.search_seq(query, self.targets, self.builder)
 
-    @query.register
+    @query.register(DigitalMSA)
     def _(self, query: DigitalMSA) -> TopHits:  # type: ignore
         return self.pipeline.search_msa(query, self.targets, self.builder)
 
@@ -260,39 +250,29 @@ class _PHMMERWorker(_BaseWorker[_PHMMERQueryType, DigitalSequenceBlock]):
 class _NHMMERWorker(_BaseWorker[_NHMMERQueryType, DigitalSequenceBlock]):
     @singledispatchmethod
     def query(self, query) -> TopHits:  # type: ignore
-        raise TypeError("Unsupported query type: {}".format(type(query).__name__))
+        raise TypeError("Unsupported query type for `nhmmer`: {}".format(type(query).__name__))
 
-    @query.register
+    @query.register(DigitalSequence)
     def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
         return self.pipeline.search_seq(query, self.targets, self.builder)
 
-    @query.register
+    @query.register(DigitalMSA)
     def _(self, query: DigitalMSA) -> TopHits:  # type: ignore
         return self.pipeline.search_msa(query, self.targets, self.builder)
 
-    # NOTE(@althonos): `Union` types is unsupported with `singledispatch`
-    #                  until Python 3.11, so we must manually register the
-    #                  3 different implementations
-
-    @query.register
-    def _(self, query: HMM) -> TopHits:  # type: ignore
-        return self.pipeline.search_hmm(query, self.targets)
-
-    @query.register
-    def _(self, query: Profile) -> TopHits:  # type: ignore
-        return self.pipeline.search_hmm(query, self.targets)
-
-    @query.register
-    def _(self, query: OptimizedProfile) -> TopHits:  # type: ignore
+    @query.register(HMM)
+    @query.register(Profile)
+    @query.register(OptimizedProfile)
+    def _(self, query: typing.Union[HMM, Profile, OptimizedProfile]) -> TopHits:  # type: ignore
         return self.pipeline.search_hmm(query, self.targets)
 
 
 class _SCANWorker(_BaseWorker[DigitalSequence, OptimizedProfileBlock]):
     @singledispatchmethod
     def query(self, query) -> TopHits:  # type: ignore
-        raise TypeError("Unsupported query type: {}".format(type(query).__name__))
+        raise TypeError("Unsupported query type for `hmmscan`: {}".format(type(query).__name__))
 
-    @query.register
+    @query.register(DigitalSequence)
     def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
         return self.pipeline.scan_seq(query, self.targets)
 
