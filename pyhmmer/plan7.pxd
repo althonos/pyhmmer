@@ -270,6 +270,7 @@ cdef class Pipeline:
               P7_OPROFILE* om,
               P7_BG*       bg,
         const ESL_SQ**     sq,
+        const size_t       n_targets,
               P7_TOPHITS*  th,
     ) nogil except 1
     cpdef TopHits scan_seq(self, DigitalSequence query, OptimizedProfileBlock hmms)
@@ -279,6 +280,7 @@ cdef class Pipeline:
         const ESL_SQ*          sq,
               P7_BG*           bg,
               P7_OPROFILE**    om,
+        const size_t           n_targets,
               P7_TOPHITS*      th,
               pthread_mutex_t* locks,
     ) nogil except 1
@@ -305,6 +307,7 @@ cdef class LongTargetsPipeline(Pipeline):
               P7_OPROFILE*  om,
               P7_BG*        bg,
         const ESL_SQ**      sq,
+        const size_t        n_targets,
               P7_TOPHITS*   th,
               P7_SCOREDATA* scoredata,
     ) nogil except 1

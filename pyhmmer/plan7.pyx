@@ -5107,6 +5107,7 @@ cdef class Pipeline:
                 om,
                 self.background._bg,
                 <const ESL_SQ**> sequences._refs,
+                sequences._length,
                 hits._th,
             )
             # sort hits and set bookkeeping attributes
@@ -5245,6 +5246,7 @@ cdef class Pipeline:
               P7_OPROFILE* om,
               P7_BG*       bg,
         const ESL_SQ**     sq,
+        const size_t       n_targets,
               P7_TOPHITS*  th,
     ) nogil except 1:
         """_search_loop(pli, om, bg, sq, th)\n--
@@ -5264,7 +5266,8 @@ cdef class Pipeline:
                 `TopHits` object storing the results.
 
         """
-        cdef int status
+        cdef int    status
+        cdef size_t t
 
         # configure the pipeline for the current HMM
         status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
@@ -5274,32 +5277,27 @@ cdef class Pipeline:
             raise UnexpectedError(status, "p7_pli_NewModel")
 
         # run the inner loop on all sequences
-        while sq[0] != NULL:
+        for t in range(n_targets):
             # configure the profile, background and pipeline for the new sequence
-            status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq[0])
+            status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq[t])
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_pli_NewSeq")
-            status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq[0].n)
+            status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq[t].n)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_bg_SetLength")
-            status = p7_oprofile.p7_oprofile_ReconfigLength(om, sq[0].n)
+            status = p7_oprofile.p7_oprofile_ReconfigLength(om, sq[t].n)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
-
             # run the pipeline on the target sequence
-            status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, sq[0], NULL, th)
+            status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, sq[t], NULL, th)
             if status == libeasel.eslEINVAL:
                 raise ValueError("model does not have bit score thresholds expected by the pipeline")
             elif status == libeasel.eslERANGE:
                 raise OverflowError("numerical overflow in the optimized vector implementation")
             elif status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_Pipeline")
-
             # clear pipeline for reuse for next target
             libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
-
-            # advance to next sequence
-            sq += 1
 
         # Return 0 to indicate success
         return 0
@@ -5360,30 +5358,29 @@ cdef class Pipeline:
         if query._sq.n > 100000:
             raise ValueError("sequence length over comparison pipeline limit (100,000)")
 
-        # make sure the pipeline is set to scan mode and ready for a new sequence
-        self._pli.mode = p7_pipemodes_e.p7_SCAN_MODELS
-        self._pli.nmodels = 0
-
-        # run the search loop on all database sequences while recycling memory
         with nogil:
+            # make sure the pipeline is set to scan mode and ready for a new sequence
+            self._pli.mode = p7_pipemodes_e.p7_SCAN_MODELS
+            self._pli.nmodels = 0
+            # run the search loop on all database sequences while recycling memory
             Pipeline._scan_loop(
                 self._pli,
                 query._sq,
                 self.background._bg,
                 optimized_profiles._block.list,
+                optimized_profiles._block.count,
                 hits._th,
                 optimized_profiles._locks,
             )
+            # threshold hits
+            hits._sort_by_key()
+            hits._threshold(self)
 
         # record the query name
         if query._sq.name != NULL:
             hits._qname = PyBytes_FromString(query._sq.name)
         if query._sq.acc != NULL:
             hits._qacc = PyBytes_FromString(query._sq.acc)
-
-        # threshold hits
-        hits._sort_by_key()
-        hits._threshold(self)
 
         # return the hits
         return hits
@@ -5394,11 +5391,12 @@ cdef class Pipeline:
         const ESL_SQ*          sq,
               P7_BG*           bg,
               P7_OPROFILE**    om,
+        const size_t           n_targets,
               P7_TOPHITS*      th,
               pthread_mutex_t* locks,
     ) nogil except 1:
         cdef int    status
-        cdef size_t i      = 0
+        cdef size_t t
 
         # configure the pipeline for the current sequence
         status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq)
@@ -5406,26 +5404,25 @@ cdef class Pipeline:
             raise UnexpectedError(status, "p7_pli_NewSeq")
 
         # run the inner loop on all HMMs
-        while om[i] != NULL:
+        for t in range(n_targets):
             # configure the background and pipeline for the new optimized profile
-            status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om[i], bg)
+            status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om[t], bg)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_pli_NewModel")
             status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq.n)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_bg_SetLength")
-
             # use a critical section here because `p7_oprofile_ReconfigLength`
             # will modify the optimized profile, so there is a risk of data race
             # if the scan loop is run in parallel on the same target profiles.
             try:
                 # configure the profile
-                pthread_mutex_lock(&locks[i])
-                status = p7_oprofile.p7_oprofile_ReconfigLength(om[i], sq.n)
+                pthread_mutex_lock(&locks[t])
+                status = p7_oprofile.p7_oprofile_ReconfigLength(om[t], sq.n)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
                 # run the pipeline on the query sequence
-                status = libhmmer.p7_pipeline.p7_Pipeline(pli, om[i], bg, sq, NULL, th)
+                status = libhmmer.p7_pipeline.p7_Pipeline(pli, om[t], bg, sq, NULL, th)
                 if status == libeasel.eslEINVAL:
                     raise ValueError("model does not have bit score thresholds expected by the pipeline")
                 elif status == libeasel.eslERANGE:
@@ -5433,13 +5430,9 @@ cdef class Pipeline:
                 elif status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_Pipeline")
             finally:
-                pthread_mutex_unlock(&locks[i])
-
+                pthread_mutex_unlock(&locks[t])
             # clear pipeline for reuse for next target
             libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
-
-            # advance to the next optimized profile
-            i += 1
 
         # Return 0 to indicate success
         return 0
@@ -5953,6 +5946,7 @@ cdef class LongTargetsPipeline(Pipeline):
                 om,
                 self.background._bg,
                 <const ESL_SQ**> sequences._refs,
+                sequences._length,
                 hits._th,
                 scoredata._sd,
             )
@@ -6077,17 +6071,19 @@ cdef class LongTargetsPipeline(Pipeline):
               P7_OPROFILE*  om,
               P7_BG*        bg,
         const ESL_SQ**      sq,
+        const size_t        n_targets,
               P7_TOPHITS*   th,
               P7_SCOREDATA* scoredata,
     ) nogil except 1:
-        cdef int      status
-        cdef int      nres
-        cdef int64_t  index  = 0
-        cdef int64_t  j      = 0
-        cdef int64_t  rem    = 0
-        cdef int64_t i       = 0
-        cdef int64_t C       = om.max_length
-        cdef int64_t W       = pli.block_length
+        cdef int     status
+        cdef int     nres
+        cdef size_t  t
+        cdef int64_t index  = 0
+        cdef int64_t j      = 0
+        cdef int64_t rem    = 0
+        cdef int64_t i      = 0
+        cdef int64_t C      = om.max_length
+        cdef int64_t W      = pli.block_length
 
         if om.max_length <= 0:
             raise ValueError(f"invalid context size: {om.max_length!r}")
@@ -6110,29 +6106,29 @@ cdef class LongTargetsPipeline(Pipeline):
             raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
 
         # run the inner loop on all sequences
-        while sq[0] != NULL:
+        for t in range(n_targets):
             # initialize the sequence window storage
             tmpsq.idx = index
-            tmpsq.L = -1 #sq[0].n
-            libeasel.sq.esl_sq_SetAccession(tmpsq, sq[0].acc)
-            libeasel.sq.esl_sq_SetName(tmpsq, sq[0].name)
-            libeasel.sq.esl_sq_SetDesc(tmpsq, sq[0].desc)
-            libeasel.sq.esl_sq_SetSource(tmpsq, sq[0].name)
-            libeasel.sq.esl_sq_GrowTo(tmpsq, min(W+C, sq[0].n))
+            tmpsq.L = -1 #sq[t].n
+            libeasel.sq.esl_sq_SetAccession(tmpsq, sq[t].acc)
+            libeasel.sq.esl_sq_SetName(tmpsq, sq[t].name)
+            libeasel.sq.esl_sq_SetDesc(tmpsq, sq[t].desc)
+            libeasel.sq.esl_sq_SetSource(tmpsq, sq[t].name)
+            libeasel.sq.esl_sq_GrowTo(tmpsq, min(W+C, sq[t].n))
 
             # iterate over successive windows of width W, keeping C residues
             # from the previous iteration as context
             # NB: this is basically the PyRex equivalent for this:
             #     ```
-            #     for i in range(0, sq[0].n, W-C)
+            #     for i in range(0, sq[n].n, W-C)
             #     ```
             #     but Cython refuses to optimize that because it cannot be
             #     sure that W-C is strictly positive, even though we do check
             #     that it is.
-            for i from 0 <= i < sq[0].n by W - C:
+            for i from 0 <= i < sq[t].n by W - C:
                 # update window coordinates in the temporary sequence
-                tmpsq.C     = 0 if i == 0 else min(C, sq[0].n - i)
-                tmpsq.W     = min(W, sq[0].n - i - tmpsq.C)
+                tmpsq.C     = 0 if i == 0 else min(C, sq[t].n - i)
+                tmpsq.W     = min(W, sq[t].n - i - tmpsq.C)
                 tmpsq.n     = tmpsq.C + tmpsq.W
                 tmpsq.start = i + 1
                 tmpsq.end   = i + tmpsq.n
@@ -6140,7 +6136,7 @@ cdef class LongTargetsPipeline(Pipeline):
                 # printf("[i=%li] C=%li W=%li n=%li start=%li end=%li\n", i, tmpsq.C, tmpsq.W, tmpsq.n, tmpsq.start, tmpsq.end);
 
                 # copy sequence digits from the target sequence to the temporary sequence
-                memcpy(&tmpsq.dsq[1], &sq[0].dsq[i+1], tmpsq.n)
+                memcpy(&tmpsq.dsq[1], &sq[t].dsq[i+1], tmpsq.n)
                 tmpsq.dsq[0] = tmpsq.dsq[tmpsq.n+1] = libeasel.eslDSQ_SENTINEL
 
                 # configure the profile, background and pipeline for the new sequence
@@ -6184,7 +6180,6 @@ cdef class LongTargetsPipeline(Pipeline):
             # clear the allocated sequence and advance to next sequence
             libeasel.sq.esl_sq_Reuse(tmpsq)
             pli.nseqs += 1
-            sq += 1
 
         # Free temporary data
         libeasel.sq.esl_sq_Destroy(tmpsq)
