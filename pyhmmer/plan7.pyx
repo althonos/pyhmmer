@@ -135,6 +135,7 @@ from .reexports.p7_hmmfile cimport (
 )
 
 include "capacity.pxi"
+include "exceptions.pxi"
 
 IF UNAME_SYSNAME == "Linux":
     include "fileobj/linux.pxi"
@@ -3197,6 +3198,9 @@ cdef class HMMFile:
     @property
     def name(self):
         """`str` or `None`: The path to the HMM file, if known.
+
+        .. versionadded:: 0.7.0
+
         """
         return self._name
 
@@ -3352,6 +3356,9 @@ cdef class HMMPressedFile:
 
     .. versionadded:: 0.4.11
 
+    .. versionchanged:: 0.7.0
+        Allow instantiating an `HMMPressedFile` from a filename.
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -3361,9 +3368,21 @@ cdef class HMMPressedFile:
         self._hmmfile = None
         self._hfp = NULL
 
-    def __init__(self, *args, **kwargs):
-        cdef str ty = type(self).__name__
-        raise TypeError(f"cannot create {ty!r} instances")
+    def __init__(self, object file):
+        """__init__(self, file)\n--
+
+        Create a new pressed file from the given filename.
+
+        Arguments:
+            file (`str`, `bytes` or `os.PathLike`): The path to the pressed
+                HMM file containing the optimized profiles to read.
+
+        """
+        self._hmmfile = HMMFile(file, db=True)
+        self._hfp = self._hmmfile._hfp
+        if not self._hfp.is_pressed:
+            raise ValueError("HMM file does not contain optimized profiles.")
+        self._alphabet = self._hmmfile._alphabet
 
     def __iter__(self):
         return self
@@ -3374,19 +3393,41 @@ cdef class HMMPressedFile:
             raise StopIteration()
         return om
 
+    def __repr__(self):
+        cdef str ty = type(self).__name__
+        return f"{ty}({self.name!r})"
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
     # --- Properties ---------------------------------------------------------
 
     @property
     def closed(self):
         """`bool`: Whether the `HMMPressedFile` is closed or not.
+
+        .. versionadded:: 0.7.0
+
         """
         return self._hmmfile.closed
 
     @property
     def name(self):
-        """`str` or `None`: The path to the HMM file, if known.
+        """`str`: The path to the HMM file.
+
+        Note:
+            Unlike `HMMFile.name` this attribute can never be `None`, since a
+            `HMMPressedFile` object can only be created from a filename, and
+            not from a file-like object.
+
+        .. versionadded:: 0.7.0
+
         """
         return self._hmmfile.name
+
 
     # --- Methods ------------------------------------------------------------
 
@@ -3447,6 +3488,21 @@ cdef class HMMPressedFile:
         else:
             raise UnexpectedError(status, "p7_oprofile_ReadMSV")
 
+    cpdef void close(self) except *:
+        """close(self)\n--
+
+        Close the pressed file and free resources.
+
+        This method has no effect if the file is already closed. It is called
+        automatically if the `HMMFile` was used in a context::
+
+            >>> with HMMPressedFile("tests/data/hmms/db/PKSI-AT.hmm") as hmm_db:
+            ...     optimized_profile = hmm_db.read()
+
+        """
+        if self._hfp:
+            libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
+            self._hfp = self._hmmfile._hfp = NULL
 
 cdef class IterationResult:
     """The results of a single iteration from an `IterativeSearch`.
@@ -7988,5 +8044,3 @@ cdef class TraceAligner:
 
 impl_Init()
 p7_FLogsumInit()
-
-include "exceptions.pxi"

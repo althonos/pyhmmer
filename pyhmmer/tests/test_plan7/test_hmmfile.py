@@ -9,7 +9,7 @@ import pkg_resources
 import pyhmmer
 from pyhmmer.errors import EaselError
 from pyhmmer.easel import SequenceFile
-from pyhmmer.plan7 import HMMFile, Pipeline
+from pyhmmer.plan7 import HMMFile, HMMPressedFile, Pipeline
 
 
 # --- Mixins -------------------------------------------------------------------
@@ -77,6 +77,9 @@ class _TestHMMPath:
     def open_hmm(self, path):
         return HMMFile(path)
 
+    def open_pressed(self, path):
+        return HMMPressedFile(path)
+
     def test_filenotfound(self):
         self.assertRaises(FileNotFoundError, HMMFile, "path/to/missing/file")
 
@@ -96,11 +99,10 @@ class _TestHMMPath:
 
     def test_rewind_optimized_profiles(self):
         path = os.path.join(self.hmms_folder, "db", "{}.hmm".format(self.ID))
-        with self.open_hmm(path) as f:
-            profiles = f.optimized_profiles()
-            om1 = profiles.read()
-            profiles.rewind()
-            om2 = profiles.read()
+        with self.open_pressed(path) as f:
+            om1 = f.read()
+            f.rewind()
+            om2 = f.read()
             self.assertIsNot(om1, om2)
             self.assertEqual(om1.name, om2.name)
 

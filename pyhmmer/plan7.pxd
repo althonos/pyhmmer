@@ -172,9 +172,9 @@ cdef class HMMFile:
     cdef Alphabet    _alphabet
     cdef object      _file
 
+    cpdef void close(self) except *
     cpdef void rewind(self) except *
     cpdef HMM read(self)
-    cpdef void close(self) except *
     cpdef bint is_pressed(self) except *
     cpdef HMMPressedFile optimized_profiles(self)
 
@@ -187,6 +187,7 @@ cdef class HMMPressedFile:
     cdef Alphabet    _alphabet
     cdef HMMFile     _hmmfile
 
+    cpdef void close(self) except *
     cpdef void rewind(self) except *
     cpdef OptimizedProfile read(self)
 
