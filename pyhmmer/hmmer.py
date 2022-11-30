@@ -501,7 +501,7 @@ class _SCANDispatcher(_BaseDispatcher[DigitalSequence, typing.Union[OptimizedPro
         if isinstance(self.targets, HMMPressedFile):
             targets = HMMPressedFile(self.targets.name)
         else:
-            targets = self.targets
+            targets = self.targets  # type: ignore
         return _SCANWorker(
             targets,
             query_available,
@@ -953,14 +953,16 @@ def hmmscan(
     _alphabet = Alphabet.amino()
     _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count() or 1
     _background = Background(_alphabet) if background is None else background
-    options.setdefault("background", _background)
+    options.setdefault("background", _background)  # type: ignore
 
     if not isinstance(queries, collections.abc.Iterable):
         queries = (queries,)
     if isinstance(profiles, HMMPressedFile):
         alphabet = _alphabet # FIXME: try to detect from content instead?
+        targets = profiles
     elif isinstance(profiles, OptimizedProfileBlock):
         alphabet = profiles.alphabet
+        targets = profiles  # type: ignore
     else:
         alphabet = _alphabet
         block = OptimizedProfileBlock(_alphabet)
@@ -976,11 +978,11 @@ def hmmscan(
             else:
                 ty = type(item).__name__
                 raise TypeError("Expected HMM, Profile or OptimizedProfile, found {}".format(ty))
-        profiles = block
+        targets = block  # type: ignore
 
     dispatcher = _SCANDispatcher(
         queries=queries,
-        targets=profiles,
+        targets=targets,
         cpus=_cpus,
         callback=callback,
         pipeline_class=Pipeline,
@@ -1014,7 +1016,7 @@ if __name__ == "__main__":
                         print(
                             hit.name.decode(),
                             (hit.accession or b"-").decode(),
-                            hits.query_name.decode(),
+                            (hits.query_name or b"-").decode(),
                             (hits.query_accession or b"-").decode(),
                             hit.evalue,
                             hit.score,
@@ -1083,7 +1085,7 @@ if __name__ == "__main__":
                             print(
                                 hit.name.decode(),
                                 (hit.accession or b"-").decode(),
-                                hits.query_name.decode(),
+                                (hits.query_name or b"-").decode(),
                                 (hits.query_accession or b"-").decode(),
                                 hit.evalue,
                                 hit.score,

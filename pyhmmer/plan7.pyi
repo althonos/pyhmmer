@@ -659,7 +659,7 @@ class Pipeline(object):
     def scan_seq(
         self,
         query: DigitalSequence,
-        optimized_profiles: OptimizedProfileBlock,
+        optimized_profiles: typing.Union[OptimizedProfileBlock, HMMPressedFile],
     ) -> TopHits: ...
     def iterate_seq(
         self,
