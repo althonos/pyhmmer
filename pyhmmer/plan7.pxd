@@ -29,14 +29,14 @@ ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
 from .easel cimport (
-    Alphabet, 
-    DigitalSequence, 
-    DigitalSequenceBlock, 
-    DigitalMSA, 
-    KeyHash, 
-    MSA, 
-    Randomness, 
-    VectorF, 
+    Alphabet,
+    DigitalSequence,
+    DigitalSequenceBlock,
+    DigitalMSA,
+    KeyHash,
+    MSA,
+    Randomness,
+    VectorF,
     VectorU8,
 )
 
@@ -45,6 +45,13 @@ cdef extern from "hmmer.h" nogil:
     DEF p7_NOFFSETS = 3
     DEF p7_NEVPARAM = 6
     DEF p7_NCUTOFFS = 6
+
+
+# --- Constants --------------------------------------------------------------
+
+ctypedef fused ScanTargets:
+    HMMPressedFile
+    OptimizedProfileBlock
 
 
 # --- Cython classes ---------------------------------------------------------
@@ -275,7 +282,11 @@ cdef class Pipeline:
         const size_t       n_targets,
               P7_TOPHITS*  th,
     ) nogil except 1
-    cpdef TopHits scan_seq(self, DigitalSequence query, OptimizedProfileBlock hmms)
+    cpdef TopHits scan_seq(
+        self,
+        DigitalSequence query,
+        ScanTargets targets
+    )
     @staticmethod
     cdef int _scan_loop(
               P7_PIPELINE*     pli,
@@ -285,6 +296,14 @@ cdef class Pipeline:
         const size_t           n_targets,
               P7_TOPHITS*      th,
               pthread_mutex_t* locks,
+    ) nogil except 1
+    @staticmethod
+    cdef int _scan_loop_file(
+              P7_PIPELINE*     pli,
+        const ESL_SQ*          sq,
+              P7_BG*           bg,
+              P7_HMMFILE*      hfp,
+              P7_TOPHITS*      th,
     ) nogil except 1
     cpdef IterativeSearch iterate_hmm(
         self,
@@ -313,7 +332,11 @@ cdef class LongTargetsPipeline(Pipeline):
               P7_TOPHITS*   th,
               P7_SCOREDATA* scoredata,
     ) nogil except 1
-
+    cpdef TopHits scan_seq(
+        self,
+        DigitalSequence query,
+        ScanTargets targets
+    )
 
 cdef class Profile:
     cdef P7_PROFILE* _gm

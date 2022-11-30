@@ -87,6 +87,7 @@ IF HMMER_IMPL == "VMX":
         p7_oprofile_Compare,
         p7_oprofile_Dump,
         p7_oprofile_Sizeof,
+        p7_oprofile_Destroy,
     )
 ELIF HMMER_IMPL == "SSE":
     from libhmmer.impl_sse cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7O_EXTRA_SB
@@ -102,6 +103,7 @@ ELIF HMMER_IMPL == "SSE":
         p7_oprofile_Compare,
         p7_oprofile_Dump,
         p7_oprofile_Sizeof,
+        p7_oprofile_Destroy
     )
 
 from .easel cimport (
@@ -3206,7 +3208,7 @@ cdef class HMMFile:
             raise UnexpectedError(status, "p7_hmmfile_Position")
         # Manually rewind the MSV readers as well, if the file is pressed
         if self._hfp.is_pressed:
-            rewind(self._hfp.ffp)   
+            rewind(self._hfp.ffp)
             rewind(self._hfp.pfp)
 
     cpdef HMM read(self):
@@ -3870,7 +3872,7 @@ cdef class OptimizedProfile:
         Create an exact copy of the optimized profile.
 
         Note:
-            The `Alphabet` referenced to by this object is not copied, use 
+            The `Alphabet` referenced to by this object is not copied, use
             `copy.deepcopy` if this is the intended behaviour.
 
         """
@@ -5344,16 +5346,16 @@ cdef class Pipeline:
     cpdef TopHits scan_seq(
         self,
         DigitalSequence query,
-        OptimizedProfileBlock optimized_profiles,
+        ScanTargets targets,
     ):
-        """scan_seq(self, query, optimized_profiles)\n--
+        """scan_seq(self, query, targets)\n--
 
         Run the pipeline using a query sequence against a profile database.
 
         Arguments:
             query (`~pyhmmer.easel.DigitalSequence`): The sequence object to
                 use to query the profile database.
-            optimized_profiles (`~pyhmmer.plan7.OptimizedProfileBlock`): The
+            targets (`~pyhmmer.plan7.OptimizedProfileBlock`): The
                 optimized profiles to query.
 
         Returns:
@@ -5390,8 +5392,9 @@ cdef class Pipeline:
         # check the pipeline was configure with the same alphabet
         if not self.alphabet._eq(query.alphabet):
             raise AlphabetMismatch(self.alphabet, query.alphabet)
-        if not self.alphabet._eq(optimized_profiles.alphabet):
-            raise AlphabetMismatch(self.alphabet, optimized_profiles.alphabet)
+        if ScanTargets is OptimizedProfileBlock:
+            if not self.alphabet._eq(targets.alphabet):
+                raise AlphabetMismatch(self.alphabet, targets.alphabet)
 
         # verify the length
         if query._sq.n > 100000:
@@ -5402,15 +5405,24 @@ cdef class Pipeline:
             self._pli.mode = p7_pipemodes_e.p7_SCAN_MODELS
             self._pli.nmodels = 0
             # run the search loop on all database sequences while recycling memory
-            Pipeline._scan_loop(
-                self._pli,
-                query._sq,
-                self.background._bg,
-                optimized_profiles._block.list,
-                optimized_profiles._block.count,
-                hits._th,
-                optimized_profiles._locks,
-            )
+            if ScanTargets is OptimizedProfileBlock:
+                Pipeline._scan_loop(
+                    self._pli,
+                    query._sq,
+                    self.background._bg,
+                    targets._block.list,
+                    targets._block.count,
+                    hits._th,
+                    targets._locks,
+                )
+            else:
+                Pipeline._scan_loop_file(
+                    self._pli,
+                    query._sq,
+                    self.background._bg,
+                    targets._hfp,
+                    hits._th,
+                )
             # threshold hits
             hits._sort_by_key()
             hits._threshold(self)
@@ -5470,6 +5482,64 @@ cdef class Pipeline:
                     raise UnexpectedError(status, "p7_Pipeline")
             finally:
                 pthread_mutex_unlock(&locks[t])
+            # clear pipeline for reuse for next target
+            libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
+
+        # Return 0 to indicate success
+        return 0
+
+    @staticmethod
+    cdef int _scan_loop_file(
+              P7_PIPELINE*     pli,
+        const ESL_SQ*          sq,
+              P7_BG*           bg,
+              P7_HMMFILE*      hfp,
+              P7_TOPHITS*      th,
+    ) nogil except 1:
+        cdef int           status
+        cdef P7_OPROFILE*  om
+        cdef ESL_ALPHABET* abc    = NULL
+
+        # configure the pipeline for the current sequence
+        status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_pli_NewSeq")
+
+        # run the inner loop on all HMMs
+        while True:
+            # read the next profile from the file
+            status = p7_oprofile_ReadMSV(hfp, &abc, &om)
+            if status == libeasel.eslOK:
+                status = p7_oprofile_ReadRest(hfp, om)
+            if status == libeasel.eslEOF:
+                break
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "p7_oprofile_ReadMSV")
+            # make sure that the optimized profile memory is not leaked
+            try:
+                # configure the background and pipeline for the new optimized profile
+                status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_pli_NewModel")
+                status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq.n)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_bg_SetLength")
+                # configure the profile
+                status = p7_oprofile.p7_oprofile_ReconfigLength(om, sq.n)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
+                # run the pipeline on the query sequence
+                status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, sq, NULL, th)
+                if status == libeasel.eslEINVAL:
+                    raise ValueError("model does not have bit score thresholds expected by the pipeline")
+                elif status == libeasel.eslERANGE:
+                    raise OverflowError("numerical overflow in the optimized vector implementation")
+                elif status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_Pipeline")
+            finally:
+               p7_oprofile_Destroy(om)
+               om = NULL
+
             # clear pipeline for reuse for next target
             libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
 
@@ -5910,7 +5980,7 @@ cdef class LongTargetsPipeline(Pipeline):
     cpdef TopHits scan_seq(
         self,
         DigitalSequence query,
-        OptimizedProfileBlock optimized_profiles,
+        ScanTargets targets,
     ):
         raise NotImplementedError("Cannot run a database scan with the long target pipeline")
 

@@ -171,7 +171,7 @@ class TestScanPipeline(unittest.TestCase):
         oprofiles = OptimizedProfileBlock(self.alphabet)
         self.assertRaises(AlphabetMismatch, pipeline.scan_seq, dsq, oprofiles)
 
-    def test_scan_seq(self):
+    def test_scan_seq_block(self):
         seq = next(x for x in self.references if x.name == b"938293.PRJEB85.HG003687_188")
 
         oprofiles = OptimizedProfileBlock(seq.alphabet)
@@ -183,6 +183,16 @@ class TestScanPipeline(unittest.TestCase):
 
         pipeline = Pipeline(alphabet=self.alphabet)
         hits = pipeline.scan_seq(seq, oprofiles)
+        self.assertEqual(len(hits), 6)  # number found with `hmmscan`
+
+    def test_scan_seq_file(self):
+        seq = next(x for x in self.references if x.name == b"938293.PRJEB85.HG003687_188")
+
+        hmm_file = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/db/t2pks.hmm")
+        with HMMFile(hmm_file) as f:
+            pipeline = Pipeline(alphabet=self.alphabet)
+            hits = pipeline.scan_seq(seq, f.optimized_profiles())
+
         self.assertEqual(len(hits), 6)  # number found with `hmmscan`
 
 
