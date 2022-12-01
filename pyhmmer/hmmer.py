@@ -1199,7 +1199,7 @@ if __name__ == "__main__":
                 # pre-load profiles is they can fit into memory
                 targets = hmms.optimized_profiles() if hmms.is_pressed() else hmms
                 if hmms.is_pressed() and database_size < available_memory * MAX_MEMORY_LOAD:
-                    targets = OptimizedProfileBlock(seqfile.alphabet, targets)
+                    targets = OptimizedProfileBlock(seqfile.alphabet, targets)  # type: ignore
                 # load the query sequences iteratively
                 hits_list = hmmscan(seqfile, targets, cpus=args.jobs)  # type: ignore
                 for hits in hits_list:
