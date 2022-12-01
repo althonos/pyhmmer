@@ -199,8 +199,6 @@ class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
             # process the query, making sure to capture any exception
             # and then mark the hits as "found" using a `threading.Event`
             try:
-                if isinstance(self.targets, (HMMPressedFile, SequenceFile)):
-                    self.targets.rewind()
                 hits = self.process(chore.query)
                 chore.complete(hits)
             except BaseException as exc:
@@ -215,6 +213,8 @@ class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
 
     def process(self, query: _Q) -> TopHits:
         """Process a single query and return the resulting hits."""
+        if isinstance(self.targets, (HMMPressedFile, SequenceFile)):
+            self.targets.rewind()
         hits = self.query(query)
         self.callback(query, self.query_count.value)  # type: ignore
         self.pipeline.clear()
