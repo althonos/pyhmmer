@@ -8,6 +8,7 @@ from posix.types cimport off_t
 from pthread_mutex cimport pthread_mutex_t
 
 from libeasel.sq cimport ESL_SQ
+from libeasel.sqio cimport ESL_SQFILE
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_bg cimport P7_BG
 from libhmmer.p7_builder cimport P7_BUILDER
@@ -38,6 +39,7 @@ from .easel cimport (
     Randomness,
     VectorF,
     VectorU8,
+    SequenceFile,
 )
 
 
@@ -53,6 +55,9 @@ ctypedef fused ScanTargets:
     HMMPressedFile
     OptimizedProfileBlock
 
+ctypedef fused SearchTargets:
+    SequenceFile
+    DigitalSequenceBlock
 
 # --- Cython classes ---------------------------------------------------------
 
@@ -272,9 +277,24 @@ cdef class Pipeline:
     cdef P7_OPROFILE* _get_om_from_query(self, object query, int L = *) except NULL
     cpdef list    arguments(self)
     cpdef void    clear(self)
-    cpdef TopHits search_hmm(self, object query, DigitalSequenceBlock seqs)
-    cpdef TopHits search_msa(self, DigitalMSA query, DigitalSequenceBlock seqs, Builder builder = ?)
-    cpdef TopHits search_seq(self, DigitalSequence query, DigitalSequenceBlock seqs, Builder builder = ?)
+
+    cpdef TopHits search_hmm(
+        self,
+        object query,
+        SearchTargets sequences
+    )
+    cpdef TopHits search_msa(
+        self,
+        DigitalMSA query,
+        SearchTargets sequences,
+        Builder builder = ?
+    )
+    cpdef TopHits search_seq(
+        self,
+        DigitalSequence query,
+        SearchTargets sequences,
+        Builder builder = ?
+    )
     @staticmethod
     cdef  int  _search_loop(
               P7_PIPELINE* pli,
@@ -284,6 +304,15 @@ cdef class Pipeline:
         const size_t       n_targets,
               P7_TOPHITS*  th,
     ) nogil except 1
+    @staticmethod
+    cdef  int  _search_loop_file(
+              P7_PIPELINE* pli,
+              P7_OPROFILE* om,
+              P7_BG*       bg,
+              ESL_SQFILE*  sqfp,
+              P7_TOPHITS*  th,
+    ) nogil except 1
+
     cpdef TopHits scan_seq(
         self,
         DigitalSequence query,
@@ -307,6 +336,7 @@ cdef class Pipeline:
               P7_HMMFILE*      hfp,
               P7_TOPHITS*      th,
     ) nogil except 1
+
     cpdef IterativeSearch iterate_hmm(
         self,
         DigitalSequence query,
@@ -324,6 +354,23 @@ cdef class Pipeline:
 
 
 cdef class LongTargetsPipeline(Pipeline):
+    cpdef TopHits search_hmm(
+        self,
+        object query,
+        SearchTargets sequences
+    )
+    cpdef TopHits search_msa(
+        self,
+        DigitalMSA query,
+        SearchTargets sequences,
+        Builder builder = ?
+    )
+    cpdef TopHits search_seq(
+        self,
+        DigitalSequence query,
+        SearchTargets sequences,
+        Builder builder = ?
+    )
     @staticmethod
     cdef int _search_loop_longtargets(
               P7_PIPELINE*  pli,

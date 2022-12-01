@@ -20,12 +20,12 @@ class TestSearchPipeline(unittest.TestCase):
     def setUpClass(cls):
         cls.alphabet = Alphabet.amino()
 
-        seq_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/938293.PRJEB85.HG003687.faa")
-        with SequenceFile(seq_path, digital=True, alphabet=cls.alphabet) as f:
+        cls.reference_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/938293.PRJEB85.HG003687.faa")
+        with SequenceFile(cls.reference_path, digital=True, alphabet=cls.alphabet) as f:
             cls.references = f.read_block()
 
-        msa_path = pkg_resources.resource_filename("pyhmmer.tests", "data/msa/LuxC.sto")
-        with MSAFile(msa_path, digital=True, alphabet=cls.alphabet) as msa_f:
+        cls.msa_path = pkg_resources.resource_filename("pyhmmer.tests", "data/msa/LuxC.sto")
+        with MSAFile(cls.msa_path, digital=True, alphabet=cls.alphabet) as msa_f:
             cls.msa = msa_f.read()
 
     def test_search_hmm_alphabet_mismatch(self):
@@ -62,12 +62,23 @@ class TestSearchPipeline(unittest.TestCase):
         msa = DigitalMSA(pipeline.alphabet, sequences=[dsq], name=b"test")
         self.assertRaises(AlphabetMismatch, pipeline.search_msa, msa, self.references)
 
-    def test_search_hmm(self):
+    def test_search_hmm_block(self):
         seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name=b"seq1")
         bg = Background(self.alphabet)
         hmm, _, _ = Builder(self.alphabet).build(seq.digitize(self.alphabet), bg)
         pipeline = Pipeline(alphabet=self.alphabet)
         hits = pipeline.search_hmm(hmm, self.references)
+        self.assertEqual(len(hits), 1)
+        self.assertEqual(hits.query_name, hmm.name)
+        self.assertEqual(hits.query_accession, hmm.accession)
+
+    def test_search_hmm_file(self):
+        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name=b"seq1")
+        bg = Background(self.alphabet)
+        hmm, _, _ = Builder(self.alphabet).build(seq.digitize(self.alphabet), bg)
+        pipeline = Pipeline(alphabet=self.alphabet)
+        with SequenceFile(self.reference_path, digital=True, alphabet=self.alphabet) as seqs_file:
+            hits = pipeline.search_hmm(hmm, seqs_file)
         self.assertEqual(len(hits), 1)
         self.assertEqual(hits.query_name, hmm.name)
         self.assertEqual(hits.query_accession, hmm.accession)
@@ -82,7 +93,7 @@ class TestSearchPipeline(unittest.TestCase):
         self.assertIs(hits.query_name, None)
         self.assertIs(hits.query_accession, None)
 
-    def test_search_seq(self):
+    def test_search_seq_block(self):
         seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name=b"seq1", accession=b"SQ001")
         pipeline = Pipeline(alphabet=self.alphabet)
         hits = pipeline.search_seq(seq.digitize(self.alphabet), self.references)
@@ -90,9 +101,26 @@ class TestSearchPipeline(unittest.TestCase):
         self.assertEqual(hits.query_name, seq.name)
         # self.assertEqual(hits.query_accession, seq.accession) # NOTE: p7_SingleBuilder doesn't copy the accession...
 
-    def test_search_msa(self):
+    def test_search_seq_file(self):
+        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name=b"seq1", accession=b"SQ001")
+        pipeline = Pipeline(alphabet=self.alphabet)
+        with SequenceFile(self.reference_path, digital=True, alphabet=self.alphabet) as seqs_file:
+            hits = pipeline.search_seq(seq.digitize(self.alphabet), seqs_file)
+        self.assertEqual(len(hits), 1)
+        self.assertEqual(hits.query_name, seq.name)
+        # self.assertEqual(hits.query_accession, seq.accession) # NOTE: p7_SingleBuilder doesn't copy the accession...
+
+    def test_search_msa_block(self):
         pipeline = Pipeline(alphabet=self.alphabet)
         hits = pipeline.search_msa(self.msa, self.references)
+        self.assertEqual(len(hits), 1)
+        self.assertEqual(hits.query_name, self.msa.name)
+        self.assertEqual(hits.query_accession, self.msa.accession)
+
+    def test_search_msa_file(self):
+        pipeline = Pipeline(alphabet=self.alphabet)
+        with SequenceFile(self.reference_path, digital=True, alphabet=self.alphabet) as seqs_file:
+            hits = pipeline.search_msa(self.msa, seqs_file)
         self.assertEqual(len(hits), 1)
         self.assertEqual(hits.query_name, self.msa.name)
         self.assertEqual(hits.query_accession, self.msa.accession)

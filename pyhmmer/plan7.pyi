@@ -21,6 +21,7 @@ from .easel import (
     DigitalMSA,
     TextMSA,
     Randomness,
+    SequenceFile,
     VectorF,
     VectorU8,
     MatrixU8,
@@ -642,18 +643,18 @@ class Pipeline(object):
     def search_hmm(
         self,
         query: typing.Union[HMM, Profile, OptimizedProfile],
-        sequences: DigitalSequenceBlock,
+        sequences: typing.Union[DigitalSequenceBlock, SequenceFile],
     ) -> TopHits: ...
     def search_msa(
         self,
         query: DigitalMSA,
-        sequences: DigitalSequenceBlock,
+        sequences: typing.Union[DigitalSequenceBlock, SequenceFile],
         builder: typing.Optional[Builder] = None,
     ) -> TopHits: ...
     def search_seq(
         self,
         query: DigitalSequence,
-        sequences: DigitalSequenceBlock,
+        sequences: typing.Union[DigitalSequenceBlock, SequenceFile],
         builder: typing.Optional[Builder] = None,
     ) -> TopHits: ...
     def scan_seq(
@@ -664,14 +665,14 @@ class Pipeline(object):
     def iterate_seq(
         self,
         query: DigitalSequence,
-        sequences: typing.Iterable[DigitalSequence],
+        sequences: DigitalSequenceBlock,
         builder: typing.Optional[Builder] = None,
         select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
     ) -> typing.Iterator[typing.Tuple[DigitalMSA, HMM, TopHits, bool]]: ...
     def iterate_hmm(
         self,
         query: HMM,
-        sequences: typing.Iterable[DigitalSequence],
+        sequences: DigitalSequenceBlock,
         builder: typing.Optional[Builder] = None,
         select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
     ) -> typing.Iterator[typing.Tuple[DigitalMSA, HMM, TopHits, bool]]: ...
