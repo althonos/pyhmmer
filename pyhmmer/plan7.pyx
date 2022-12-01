@@ -5212,7 +5212,7 @@ cdef class Pipeline:
         # check that the sequence file is in digital mode
         if SearchTargets is SequenceFile:
             if not sequences.digital:
-                raise ValueError("target sequences file is not in digital")
+                raise ValueError("target sequences file is not in digital mode")
         # check that all alphabets are consistent
         if not self.alphabet._eq(query.alphabet):
             raise AlphabetMismatch(self.alphabet, query.alphabet)
