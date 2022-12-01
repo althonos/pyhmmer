@@ -703,7 +703,8 @@ def phmmer(
 
     Raises:
         `~pyhmmer.errors.AlphabetMismatch`: When any of the query sequence
-            and the profile do not share the same alphabet.
+            the profile or the optional builder do not share the same 
+            alphabet.
 
     Note:
         Any additional keyword arguments passed to the `phmmer` function
@@ -1103,16 +1104,18 @@ if __name__ == "__main__":
     import sys
 
     def _hmmsearch(args: argparse.Namespace) -> int:
-        # try:
-        #     with SequenceFile(args.seqdb, digital=True) as seqfile:
-        #         sequences: typing.List[DigitalSequence] = list(seqfile)  # type: ignore
-        # except EOFError as err:
-        #     print(err, file=sys.stderr)
-        #     return 1
+        # check the size of the target database and the amount of available memory
+        available_memory = psutil.virtual_memory().available
+        database_size = os.stat(args.seqdb).st_size
 
-        with SequenceFile(args.seqdb, digital=True) as seqfile:
-            sequences = seqfile.read_block() if args.prefetch else seqfile
+        with SequenceFile(args.seqdb, digital=True) as sequences:
+            # pre-load the database if it is small enough to fit in memory
+            if database_size < available_memory:
+                sequences = sequences.read_block()  # type: ignore
+            # load the query HMMs iteratively
             with HMMFile(args.hmmfile) as hmms:
+                if hmms.is_pressed():
+                    hmms = hmms.optimized_profiles()  # type: ignore
                 hits_list = hmmsearch(hmms, sequences, cpus=args.jobs)  # type: ignore
                 for hits in hits_list:
                     for hit in hits:
@@ -1133,25 +1136,30 @@ if __name__ == "__main__":
     def _phmmer(args: argparse.Namespace) -> int:
         alphabet = Alphabet.amino()
 
-        with SequenceFile(args.seqdb, digital=True, alphabet=alphabet) as seqfile:
-            sequences = list(seqfile)
+        # check the size of the target database and the amount of available memory
+        available_memory = psutil.virtual_memory().available
+        database_size = os.stat(args.seqdb).st_size
 
-        with SequenceFile(args.seqfile, digital=True, alphabet=alphabet) as queries:
-            hits_list = phmmer(queries, sequences, cpus=args.jobs)  # type: ignore
-
-            for hits in hits_list:
-                for hit in hits:
-                    if hit.is_reported():
-                        print(
-                            hit.name.decode(),
-                            "-",
-                            hit.best_domain.alignment.hmm_accession.decode(),
-                            hit.best_domain.alignment.hmm_name.decode(),
-                            hit.evalue,
-                            hit.score,
-                            hit.bias,
-                            sep="\t",
-                        )
+        with SequenceFile(args.seqdb, digital=True, alphabet=alphabet) as sequences:
+            # pre-load the database if it is small enough to fit in memory
+            if database_size < available_memory:
+                sequences = sequences.read_block()  # type: ignore
+            # load the query sequences iteratively
+            with SequenceFile(args.seqfile, digital=True, alphabet=alphabet) as queries:
+                hits_list = phmmer(queries, sequences, cpus=args.jobs)  # type: ignore
+                for hits in hits_list:
+                    for hit in hits:
+                        if hit.is_reported():
+                            print(
+                                hit.name.decode(),
+                                "-",
+                                hit.best_domain.alignment.hmm_accession.decode(),
+                                hit.best_domain.alignment.hmm_name.decode(),
+                                hit.evalue,
+                                hit.score,
+                                hit.bias,
+                                sep="\t",
+                            )
 
         return 0
 
@@ -1248,7 +1256,6 @@ if __name__ == "__main__":
     parser_hmmsearch.set_defaults(call=_hmmsearch)
     parser_hmmsearch.add_argument("hmmfile")
     parser_hmmsearch.add_argument("seqdb")
-    parser_hmmsearch.add_argument("--prefetch", action="store_true")
 
     parser_phmmer = subparsers.add_parser("phmmer")
     parser_phmmer.set_defaults(call=_phmmer)
