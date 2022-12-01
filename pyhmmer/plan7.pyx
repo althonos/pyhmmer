@@ -5268,7 +5268,7 @@ cdef class Pipeline:
     cpdef TopHits search_msa(
         self,
         DigitalMSA query,
-        SearchTargets sequences,
+        object sequences,
         Builder builder = None,
     ):
         """search_msa(self, query, sequences, builder=None)\n--
@@ -5327,12 +5327,18 @@ cdef class Pipeline:
         builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
         # build the HMM and the profile from the query MSA
         hmm, profile, opt = builder.build_msa(query, self.background)
-        return self.search_hmm(opt, sequences)
+        if isinstance(sequences, DigitalSequenceBlock):
+            return self.search_hmm[DigitalSequenceBlock](opt, sequences)
+        elif isinstance(sequences, SequenceFile):
+            return self.search_hmm[SequenceFile](opt, sequences)
+        else:
+            ty = type(sequences).__name__
+            raise TypeError(f"Expected DigitalSequenceBlock or SequenceFile, found {ty}")
 
     cpdef TopHits search_seq(
         self,
         DigitalSequence query,
-        SearchTargets sequences,
+        object sequences,
         Builder builder = None,
     ):
         """search_seq(self, query, sequences, builder=None)\n--
@@ -5386,7 +5392,13 @@ cdef class Pipeline:
         builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
         # build the HMM and the profile from the query sequence
         hmm, profile, opt = builder.build(query, self.background)
-        return self.search_hmm(opt, sequences)
+        if isinstance(sequences, DigitalSequenceBlock):
+            return self.search_hmm[DigitalSequenceBlock](opt, sequences)
+        elif isinstance(sequences, SequenceFile):
+            return self.search_hmm[SequenceFile](opt, sequences)
+        else:
+            ty = type(sequences).__name__
+            raise TypeError(f"Expected DigitalSequenceBlock or SequenceFile, found {ty}")
 
     @staticmethod
     cdef int _search_loop(
@@ -6284,7 +6296,7 @@ cdef class LongTargetsPipeline(Pipeline):
     cpdef TopHits search_seq(
         self,
         DigitalSequence query,
-        SearchTargets sequences,
+        object sequences,
         Builder builder = None,
     ):
         """search_seq(self, query, sequences, builder=None)\n--
@@ -6322,12 +6334,18 @@ cdef class LongTargetsPipeline(Pipeline):
         builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
         cdef HMM hmm = builder.build(query, self.background)[0]
         assert hmm._hmm.max_length != -1
-        return self.search_hmm(hmm, sequences)
+        if isinstance(sequences, DigitalSequenceBlock):
+            return self.search_hmm[DigitalSequenceBlock](hmm, sequences)
+        elif isinstance(sequences, SequenceFile):
+            return self.search_hmm[SequenceFile](hmm, sequences)
+        else:
+            ty = type(sequences).__name__
+            raise TypeError(f"Expected DigitalSequenceBlock or SequenceFile, found {ty}")
 
     cpdef TopHits search_msa(
         self,
         DigitalMSA query,
-        SearchTargets sequences,
+        object sequences,
         Builder builder = None,
     ):
         """search_msa(self, query, sequences, builder=None)\n--
@@ -6367,7 +6385,13 @@ cdef class LongTargetsPipeline(Pipeline):
         builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
         cdef HMM hmm = builder.build(query, self.background)[0]
         assert hmm._hmm.max_length != -1
-        return self.search_hmm(hmm, sequences)
+        if isinstance(sequences, DigitalSequenceBlock):
+            return self.search_hmm[DigitalSequenceBlock](hmm, sequences)
+        elif isinstance(sequences, SequenceFile):
+            return self.search_hmm[SequenceFile](hmm, sequences)
+        else:
+            ty = type(sequences).__name__
+            raise TypeError(f"Expected DigitalSequenceBlock or SequenceFile, found {ty}")
 
     @staticmethod
     cdef int _search_loop_longtargets(

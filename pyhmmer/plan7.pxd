@@ -286,13 +286,13 @@ cdef class Pipeline:
     cpdef TopHits search_msa(
         self,
         DigitalMSA query,
-        SearchTargets sequences,
+        object sequences,
         Builder builder = ?
     )
     cpdef TopHits search_seq(
         self,
         DigitalSequence query,
-        SearchTargets sequences,
+        object sequences,
         Builder builder = ?
     )
     @staticmethod
@@ -362,13 +362,13 @@ cdef class LongTargetsPipeline(Pipeline):
     cpdef TopHits search_msa(
         self,
         DigitalMSA query,
-        SearchTargets sequences,
+        object sequences,
         Builder builder = ?
     )
     cpdef TopHits search_seq(
         self,
         DigitalSequence query,
-        SearchTargets sequences,
+        object sequences,
         Builder builder = ?
     )
     @staticmethod
