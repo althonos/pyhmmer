@@ -148,7 +148,7 @@ cdef class DigitalMSA(MSA):
 
 cdef class MSAFile:
     cdef          ESL_MSAFILE* _msaf
-    cdef          object       _file
+    cdef readonly object       _file
     cdef readonly Alphabet     alphabet
 
     @staticmethod
@@ -251,7 +251,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
 
 cdef class SequenceFile:
     cdef          ESL_SQFILE* _sqfp
-    cdef          object      _file
+    cdef readonly object      _file
     cdef readonly Alphabet    alphabet
 
     @staticmethod
