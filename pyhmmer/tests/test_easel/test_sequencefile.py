@@ -206,7 +206,7 @@ class _TestReadFileObject(object):
         #        is currently unsupported, because Easel will just reopen the
         #        file
         if self.format in easel.MSAFile._FORMATS:
-            raise unittest.SkipTest("{!r} format doesn't support rewinding with file-like objects")
+            raise unittest.SkipTest("{!r} format doesn't support rewinding with file-like objects".format(self.format))
         # check reading a file while specifying the format works
         for filename, count, alphabet in zip_longest(self.filenames, self.counts, self.alphabet):
             if alphabet is None:

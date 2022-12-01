@@ -195,7 +195,7 @@ class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
             # check if arguments from the queue are a poison-pill (`None`),
             # in which case the thread will stop running
             if chore is None:
-                return
+                break
             # process the query, making sure to capture any exception
             # and then mark the hits as "found" using a `threading.Event`
             try:
@@ -204,6 +204,8 @@ class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
             except BaseException as exc:
                 self.kill()
                 chore.fail(exc)
+        if isinstance(self.targets, (SequenceFile, HMMPressedFile)):
+            self.targets.close()
 
     def kill(self) -> None:
         """Set the synchronized kill switch for all threads."""
@@ -340,6 +342,10 @@ class _BaseDispatcher(typing.Generic[_Q, _T], abc.ABC):
         for query in self.queries:
             query_count.value += 1
             yield thread.process(query)
+        
+        # close the targets if they were coming from a file
+        if isinstance(thread.targets, (SequenceFile, HMMPressedFile)):
+            thread.targets.close()
 
     def _multi_threaded(self) -> typing.Iterator[TopHits]:
         # create the semaphore which will be used to notify worker threads
