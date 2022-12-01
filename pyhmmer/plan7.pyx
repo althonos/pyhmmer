@@ -4185,6 +4185,14 @@ cdef class OptimizedProfileBlock:
         other_ = other
         return self._storage == other_._storage
 
+    def __sizeof__(self):
+        return (
+                sizeof(self)
+            +   sizeof(P7_OM_BLOCK)
+            +   self._block.listSize * sizeof(pthread_mutex_t)
+            +   self._block.listSize * sizeof(P7_OPROFILE*)
+        )
+
     # --- C methods ----------------------------------------------------------
 
     cdef void _allocate(self, size_t n) except *:
@@ -5279,7 +5287,7 @@ cdef class Pipeline:
             query (`~pyhmmer.easel.DigitalMSA`): The multiple sequence
                 alignment to use to query the sequence database.
             sequences (`DigitalSequenceBlock` or `SequenceFile`): The target
-                sequences to query with the alignment, either pre-loaded in 
+                sequences to query with the alignment, either pre-loaded in
                 memory inside a `pyhmmer.easel.DigitalSequenceBlock`, or to be
                 read iteratively from a `SequenceFile` opened in digital mode.
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
@@ -5349,9 +5357,9 @@ cdef class Pipeline:
             query (`~pyhmmer.easel.DigitalSequence`): The sequence object to
                 use to query the sequence database.
             sequences (`DigitalSequenceBlock` or `SequenceFile`): The target
-                sequences to query with the query sequence, either pre-loaded 
-                in memory inside a `pyhmmer.easel.DigitalSequenceBlock`, or to 
-                be read iteratively from a `SequenceFile` opened in digital 
+                sequences to query with the query sequence, either pre-loaded
+                in memory inside a `pyhmmer.easel.DigitalSequenceBlock`, or to
+                be read iteratively from a `SequenceFile` opened in digital
                 mode.
             builder (`~pyhmmer.plan7.Builder`, optional): A HMM builder to
                 use to convert the query to a `~pyhmmer.plan7.HMM`. If
