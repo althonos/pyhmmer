@@ -4388,6 +4388,24 @@ cdef class Sequence:
     def __copy__(self):
         return self.copy()
 
+    def __sizeof__(self):
+        assert self._sq != NULL
+        cdef ssize_t i
+        cdef size_t  extra_markup_size = 0
+        for i in range(self._sq.nxr):
+            extra_markup_size += strlen(self._sq.xr_tag[i]) * sizeof(char)
+            extra_markup_size += self._sq.salloc * sizeof(char)
+        return (
+                sizeof(self)
+            +   sizeof(ESL_SQ)
+            +   self._sq.nalloc * sizeof(char)
+            +   self._sq.aalloc * sizeof(char)
+            +   self._sq.dalloc * sizeof(char)
+            +   self._sq.salloc * sizeof(char)
+            +   self._sq.srcalloc * sizeof(char)
+            +   extra_markup_size
+        )
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -5125,6 +5143,8 @@ cdef class SequenceBlock:
 
         return equal
 
+    def __sizeof__(self):
+        return sizeof(self) + self._capacity * sizeof(ESL_SQ*)
 
     # --- C methods ----------------------------------------------------------
 
