@@ -141,6 +141,20 @@ class _TestReadFilename(object):
                 with easel.SequenceFile(path, self.format, digital=True, alphabet=alphabet) as f:
                     self.assertEqual(f.alphabet, alphabet)
 
+    def test_rewind_filename(self):
+        for filename, count, alphabet in zip_longest(self.filenames, self.counts, self.alphabet):
+            if alphabet is None:
+                continue
+            path = os.path.join(self.folder, filename)
+            with easel.SequenceFile(path, self.format, digital=True) as f:
+                seqs1 = f.read_block()
+                f.rewind()
+                seqs2 = f.read_block()
+                self.assertEqual(len(seqs1), count)
+                self.assertEqual(len(seqs2), count)
+                self.assertEqual(seqs1, seqs2)
+
+
 class _TestReadFileObject(object):
 
     def test_read_fileobject_guess_format(self):
@@ -186,6 +200,27 @@ class _TestReadFileObject(object):
                 #        an error because of a bug in `sqascii_GuessAlphabet`
                 #        causing `eslEOD` to be returned when `eslNOALPHABET`
                 #        is expected.
+
+    def test_rewind_fileobj(self):
+        # FIXME: Rewinding a `SequenceFile` with an underlying file-like object
+        #        is currently unsupported, because Easel will just reopen the
+        #        file
+        if self.format in easel.MSAFile._FORMATS:
+            raise unittest.SkipTest("{!r} format doesn't support rewinding with file-like objects")
+        # check reading a file while specifying the format works
+        for filename, count, alphabet in zip_longest(self.filenames, self.counts, self.alphabet):
+            if alphabet is None:
+                continue
+            path = os.path.join(self.folder, filename)
+            with open(path, "rb") as f:
+                buffer = io.BytesIO(f.read())
+            with easel.SequenceFile(buffer, self.format) as f:
+                seqs1 = f.read_block()
+                f.rewind()
+                seqs2 = f.read_block()
+                self.assertEqual(len(seqs1), count)
+                self.assertEqual(len(seqs2), count)
+                self.assertEqual(seqs1, seqs2)
 
 
 @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")

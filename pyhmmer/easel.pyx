@@ -6087,7 +6087,7 @@ cdef class SequenceFile:
 
     # --- Methods ------------------------------------------------------------
 
-    cpdef void close(self):
+    cpdef void close(self) except *:
         """close(self)\n--
 
         Close the file and free the resources used by the parser.
@@ -6175,6 +6175,8 @@ cdef class SequenceFile:
 
         """
         cdef Sequence seq
+        if self._sqfp == NULL:
+            raise ValueError("I/O operation on closed file.")
         if self.alphabet is None:
             seq = TextSequence()
         else:
@@ -6307,6 +6309,9 @@ cdef class SequenceFile:
         cdef size_t        max_sequences = SIZE_MAX if sequences is None else sequences
         cdef size_t        max_residues  = SIZE_MAX if residues is None else residues
 
+        if self._sqfp == NULL:
+            raise ValueError("I/O operation on closed file.")
+
         if self.alphabet is None:
             block = TextSequenceBlock()
         else:
@@ -6325,6 +6330,33 @@ cdef class SequenceFile:
 
         return block
 
+    cpdef void rewind(self) except *:
+        """rewind(self)\n--
+
+        Rewind the file back to the beginning.
+
+        For sequential formats, this method is supported for both *path*-based 
+        and *file object*-based sequence files. For multiple-sequence 
+        alignment formats, the underlying `MSAFile` needs to be reopened, 
+        so this is only supported for *path*-based files.
+
+        Raises:
+            `io.UnsupportedOperation`: When attempting to rewind a sequence
+                file where the underlying stream is a file-like object that
+                does not support the `~io.IOBase.seek` method.
+
+        """
+        if self._sqfp == NULL:
+            raise ValueError("I/O operation on closed file")
+        status = libeasel.sqio.esl_sqfile_Position(self._sqfp, 0)
+        if status == libeasel.eslEMEM:
+            raise AllocationError("ESL_SQFILE", sizeof(ESL_SQFILE))
+        elif status == libeasel.eslESYS or status == libeasel.eslEINVAL:
+            raise io.UnsupportedOperation("underlying stream is not seekable")
+        elif status == libeasel.eslENOTFOUND:
+            raise io.UnsupportedOperation("failed to re-open file")
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_sqfile_Position")
 
 # --- Sequence/Subsequence Index ---------------------------------------------
 

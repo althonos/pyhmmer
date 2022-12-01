@@ -257,11 +257,12 @@ cdef class SequenceFile:
     @staticmethod
     cdef ESL_SQFILE* _open_fileobj(object fh, int fmt) except NULL
 
-    cpdef void close(self)
+    cpdef void close(self) except *
     cpdef Alphabet guess_alphabet(self)
     cpdef Sequence read(self, bint skip_info=*, bint skip_sequence=*)
     cpdef Sequence readinto(self, Sequence, bint skip_info=*, bint skip_sequence=*)
     cpdef SequenceBlock read_block(self, object sequences=*, object residues=*)
+    cpdef void rewind(self) except *
 
 # --- Sequence/Subsequence Index ---------------------------------------------
 

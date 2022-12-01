@@ -106,7 +106,7 @@ cdef extern from "esl_sqio.h":
     int   esl_sqio_IsAlignment(int fmt) nogil
     int   esl_sqio_EncodeFormat(char *fmtstring) nogil
     char *esl_sqio_DecodeFormat(int fmt) nogil
-    int   esl_sqfile_Position(ESL_SQFILE *sqfp, off_t offset) except -1
+    int   esl_sqfile_Position(ESL_SQFILE *sqfp, off_t offset) except *
     int   esl_sqio_Ignore(ESL_SQFILE *sqfp, const char *ignoredchars) except -1
     int   esl_sqio_AcceptAs(ESL_SQFILE *sqfp, char *xchars, char readas) except -1
 
