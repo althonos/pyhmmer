@@ -199,6 +199,8 @@ class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
             # process the query, making sure to capture any exception
             # and then mark the hits as "found" using a `threading.Event`
             try:
+                if isinstance(self.targets, (HMMPressedFile, SequenceFile)):
+                    self.targets.rewind()
                 hits = self.process(chore.query)
                 chore.complete(hits)
             except BaseException as exc:
@@ -224,7 +226,7 @@ class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
         return NotImplemented
 
 
-class _SEARCHWorker(_BaseWorker[_SEARCHQueryType, DigitalSequenceBlock]):
+class _SEARCHWorker(_BaseWorker[_SEARCHQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]):
     @singledispatchmethod
     def query(self, query) -> TopHits:  # type: ignore
         raise TypeError("Unsupported query type for `hmmsearch`: {}".format(type(query).__name__))
@@ -236,7 +238,7 @@ class _SEARCHWorker(_BaseWorker[_SEARCHQueryType, DigitalSequenceBlock]):
         return self.pipeline.search_hmm(query, self.targets)
 
 
-class _PHMMERWorker(_BaseWorker[_PHMMERQueryType, DigitalSequenceBlock]):
+class _PHMMERWorker(_BaseWorker[_PHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]):
     @singledispatchmethod
     def query(self, query) -> TopHits:  # type: ignore
         raise TypeError("Unsupported query type for `phmmer`: {}".format(type(query).__name__))
@@ -250,7 +252,7 @@ class _PHMMERWorker(_BaseWorker[_PHMMERQueryType, DigitalSequenceBlock]):
         return self.pipeline.search_msa(query, self.targets, self.builder)
 
 
-class _NHMMERWorker(_BaseWorker[_NHMMERQueryType, DigitalSequenceBlock]):
+class _NHMMERWorker(_BaseWorker[_NHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]):
     @singledispatchmethod
     def query(self, query) -> TopHits:  # type: ignore
         raise TypeError("Unsupported query type for `nhmmer`: {}".format(type(query).__name__))
@@ -277,8 +279,6 @@ class _SCANWorker(_BaseWorker[DigitalSequence, typing.Union[OptimizedProfileBloc
 
     @query.register(DigitalSequence)
     def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
-        if isinstance(self.targets, HMMPressedFile):
-            self.targets.rewind()
         return self.pipeline.scan_seq(query, self.targets)
 
 
@@ -407,7 +407,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T], abc.ABC):
             return self._multi_threaded()
 
 
-class _SEARCHDispatcher(_BaseDispatcher[_SEARCHQueryType, DigitalSequenceBlock]):
+class _SEARCHDispatcher(_BaseDispatcher[_SEARCHQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]):
     def _new_thread(
         self,
         query_available: threading.Semaphore,
@@ -415,8 +415,18 @@ class _SEARCHDispatcher(_BaseDispatcher[_SEARCHQueryType, DigitalSequenceBlock])
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _SEARCHWorker:
+        if isinstance(self.targets, SequenceFile):
+            assert self.targets.name is not None
+            targets = SequenceFile(
+                self.targets.name, 
+                format=self.targets.format, 
+                digital=True, 
+                alphabet=self.alphabet
+            )
+        else:
+            targets = self.targets  # type: ignore
         return _SEARCHWorker(
-            self.targets,
+            targets,
             query_available,
             query_queue,
             query_count,
@@ -428,7 +438,7 @@ class _SEARCHDispatcher(_BaseDispatcher[_SEARCHQueryType, DigitalSequenceBlock])
         )
 
 
-class _PHMMERDispatcher(_BaseDispatcher[_PHMMERQueryType, DigitalSequenceBlock]):
+class _PHMMERDispatcher(_BaseDispatcher[_PHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]):
     def _new_thread(
         self,
         query_available: threading.Semaphore,
@@ -436,8 +446,18 @@ class _PHMMERDispatcher(_BaseDispatcher[_PHMMERQueryType, DigitalSequenceBlock])
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _PHMMERWorker:
+        if isinstance(self.targets, SequenceFile):
+            assert self.targets.name is not None
+            targets = SequenceFile(
+                self.targets.name, 
+                format=self.targets.format, 
+                digital=True, 
+                alphabet=self.alphabet
+            )
+        else:
+            targets = self.targets  # type: ignore
         return _PHMMERWorker(
-            self.targets,
+            targets,
             query_available,
             query_queue,
             query_count,
@@ -450,11 +470,11 @@ class _PHMMERDispatcher(_BaseDispatcher[_PHMMERQueryType, DigitalSequenceBlock])
         )
 
 
-class _NHMMERDispatcher(_BaseDispatcher[_NHMMERQueryType, DigitalSequenceBlock]):
+class _NHMMERDispatcher(_BaseDispatcher[_NHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]):
     def __init__(
         self,
         queries: typing.Iterable[_NHMMERQueryType],
-        targets: DigitalSequenceBlock,
+        targets: typing.Union[DigitalSequenceBlock, SequenceFile],
         cpus: int = 0,
         callback: typing.Optional[
             typing.Callable[[_NHMMERQueryType, int], None]
@@ -482,8 +502,18 @@ class _NHMMERDispatcher(_BaseDispatcher[_NHMMERQueryType, DigitalSequenceBlock])
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _NHMMERWorker:
+        if isinstance(self.targets, SequenceFile):
+            assert self.targets.name is not None
+            targets = SequenceFile(
+                self.targets.name, 
+                format=self.targets.format, 
+                digital=True, 
+                alphabet=self.alphabet
+            )
+        else:
+            targets = self.targets  # type: ignore
         return _NHMMERWorker(
-            self.targets,
+            targets,
             query_available,
             query_queue,
             query_count,
@@ -505,6 +535,7 @@ class _SCANDispatcher(_BaseDispatcher[DigitalSequence, typing.Union[OptimizedPro
         kill_switch: threading.Event,
     ) -> _SCANWorker:
         if isinstance(self.targets, HMMPressedFile):
+            assert self.targets.name is not None
             targets = HMMPressedFile(self.targets.name)
         else:
             targets = self.targets  # type: ignore
@@ -533,14 +564,31 @@ def hmmsearch(
 ) -> typing.Iterator[TopHits]:
     """Search HMM profiles against a sequence database.
 
+    In HMMER many-to-many comparisons, a *search* is the operation of 
+    querying with profile HMMs a database of sequences.
+
+    The `hmmsearch` function offers two ways of managing the database that 
+    will be selected based on the type of the ``sequences`` argument. If 
+    ``sequences`` is an `SequenceFile` object, `hmmsearch` will reopen the 
+    file in each thread, and load targets *iteratively* to scan with the 
+    query. Otherwise, it will *pre-fetch* the target sequences into a
+    `DigitalSequenceBlock` collection, and share them across threads 
+    without copy. The *pre-fetching* gives much higher performance at the 
+    cost of extra  startup time and much higher memory consumption. You may 
+    want to check how much memory is available (for instance with 
+    `psutil.virtual_memory`) before trying to load a whole sequence database, 
+    but it is really recommended to do so whenever possible.
+
     Arguments:
         queries (iterable of `HMM`, `Profile` or `OptimizedProfile`): The
             query HMMs or profiles to search for in the database. Note that
             passing a single object is supported.
-        sequences (collection of `~pyhmmer.easel.DigitalSequence`): A
+        sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A
             database of sequences to query. If you plan on using the
             same sequences several times, consider storing them into
-            a `~pyhmmer.easel.DigitalSequenceBlock` directly.
+            a `~pyhmmer.easel.DigitalSequenceBlock` directly. If a 
+            `SequenceFile` is given, profiles will be loaded iteratively 
+            from disk rather than prefetched.
         cpus (`int`): The number of threads to run in parallel. Pass ``1``
             to run everything in the main thread, ``0`` to automatically
             select a suitable number (using `psutil.cpu_count`), or any
@@ -555,7 +603,7 @@ def hmmsearch(
 
     Raises:
         `~pyhmmer.errors.AlphabetMismatch`: When any of the query HMMs
-        and the sequences do not share the same alphabet.
+            and the sequences do not share the same alphabet.
 
     Note:
         Any additional arguments passed to the `hmmsearch` function will be
@@ -581,20 +629,33 @@ def hmmsearch(
     if not isinstance(queries, collections.abc.Iterable):
         queries = (queries,)
 
-    queries = peekable(queries)
-    if not isinstance(sequences, DigitalSequenceBlock):
+    if isinstance(sequences, SequenceFile):
+        sequence_file: SequenceFile = sequences
+        if sequence_file.name is None:
+            raise ValueError("expected named `SequenceFile` for targets")
+        if not sequence_file.digital:
+            raise ValueError("expected digital mode `SequenceFile` for targets")
+        assert sequence_file.alphabet is not None
+        alphabet = sequence_file.alphabet
+        targets: typing.Union[SequenceFile, DigitalSequenceBlock] = sequence_file
+    elif isinstance(sequences, DigitalSequenceBlock):
+        alphabet = sequences.alphabet
+        targets = sequences
+    else:
+        queries = peekable(queries)
         try:
-            _alphabet = queries.peek().alphabet
-            sequences = DigitalSequenceBlock(_alphabet, sequences)
+            alphabet = queries.peek().alphabet
+            targets = DigitalSequenceBlock(alphabet, sequences)
         except StopIteration:
-            sequences = DigitalSequenceBlock(Alphabet.amino())
+            alphabet = Alphabet.amino()
+            targets = DigitalSequenceBlock(alphabet)
 
     dispatcher = _SEARCHDispatcher(
         queries=queries,
-        targets=sequences,
+        targets=targets,
         cpus=_cpus,
         callback=callback,
-        alphabet=sequences.alphabet,
+        alphabet=alphabet,
         builder=None,
         pipeline_class=Pipeline,
         **options,
@@ -622,7 +683,9 @@ def phmmer(
         sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A database
             of sequences to query. If you plan on using the same sequences
             several times, consider storing them into a
-            `~pyhmmer.easel.DigitalSequenceBlock` directly.
+            `~pyhmmer.easel.DigitalSequenceBlock` directly. If a 
+            `SequenceFile` is given, profiles will be loaded iteratively 
+            from disk rather than prefetched.
         cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
             run everything in the main thread, ``0`` to automatically
             select a suitable number (using `psutil.cpu_count`), or any
@@ -637,6 +700,10 @@ def phmmer(
     Yields:
         `~pyhmmer.plan7.TopHits`: A *top hits* instance for each query,
         in the same order the queries were passed in the input.
+
+    Raises:
+        `~pyhmmer.errors.AlphabetMismatch`: When any of the query sequence
+            and the profile do not share the same alphabet.
 
     Note:
         Any additional keyword arguments passed to the `phmmer` function
@@ -658,16 +725,30 @@ def phmmer(
 
     if not isinstance(queries, collections.abc.Iterable):
         queries = (queries,)
-    if not isinstance(sequences, DigitalSequenceBlock):
-        sequences = DigitalSequenceBlock(_alphabet, sequences)
+
+    if isinstance(sequences, SequenceFile):
+        sequence_file: SequenceFile = sequences
+        if sequence_file.name is None:
+            raise ValueError("expected named `SequenceFile` for targets")
+        if not sequence_file.digital:
+            raise ValueError("expected digital mode `SequenceFile` for targets")
+        assert sequence_file.alphabet is not None
+        alphabet = sequence_file.alphabet
+        targets: typing.Union[SequenceFile, DigitalSequenceBlock] = sequence_file
+    elif isinstance(sequences, DigitalSequenceBlock):
+        alphabet = sequences.alphabet
+        targets = sequences
+    else:
+        alphabet = _alphabet
+        targets = DigitalSequenceBlock(_alphabet, sequences)
 
     dispatcher = _PHMMERDispatcher(
         queries=queries,
-        targets=sequences,
+        targets=targets,
         cpus=_cpus,
         callback=callback,
         pipeline_class=Pipeline,
-        alphabet=sequences.alphabet,
+        alphabet=alphabet,
         builder=_builder,
         **options,
     )
@@ -694,7 +775,9 @@ def nhmmer(
         sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A
             database of sequences to query. If you plan on using the
             same sequences several times, consider storing them into
-            a `~pyhmmer.easel.DigitalSequenceBlock` directly.
+            a `~pyhmmer.easel.DigitalSequenceBlock` directly. If a 
+            `SequenceFile` is given, profiles will be loaded iteratively 
+            from disk rather than prefetched.
         cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
             run everything in the main thread, ``0`` to automatically
             select a suitable number (using `psutil.cpu_count`), or any
@@ -739,16 +822,30 @@ def nhmmer(
 
     if not isinstance(queries, collections.abc.Iterable):
         queries = (queries,)
-    if not isinstance(sequences, DigitalSequenceBlock):
-        sequences = DigitalSequenceBlock(_alphabet, sequences)
+
+    if isinstance(sequences, SequenceFile):
+        sequence_file: SequenceFile = sequences
+        if sequence_file.name is None:
+            raise ValueError("expected named `SequenceFile` for targets")
+        if not sequence_file.digital:
+            raise ValueError("expected digital mode `SequenceFile` for targets")
+        assert sequence_file.alphabet is not None
+        alphabet = sequence_file.alphabet
+        targets: typing.Union[SequenceFile, DigitalSequenceBlock] = sequence_file
+    elif isinstance(sequences, DigitalSequenceBlock):
+        alphabet = sequences.alphabet
+        targets = sequences
+    else:
+        alphabet = _alphabet
+        targets = DigitalSequenceBlock(_alphabet, sequences)
 
     dispatcher = _NHMMERDispatcher(
         queries=queries,
-        targets=sequences,
+        targets=targets,
         cpus=_cpus,
         callback=callback,
         pipeline_class=LongTargetsPipeline,
-        alphabet=sequences.alphabet,
+        alphabet=alphabet,
         builder=_builder,
         **options,
     )
@@ -931,7 +1028,7 @@ def hmmscan(
 
     Raises:
         `~pyhmmer.errors.AlphabetMismatch`: When any of the query sequence
-        and the profile do not share the same alphabet.
+            and the profile do not share the same alphabet.
 
     Note:
         Any additional keyword arguments passed to the `phmmer` function
@@ -1006,29 +1103,30 @@ if __name__ == "__main__":
     import sys
 
     def _hmmsearch(args: argparse.Namespace) -> int:
-        try:
-            with SequenceFile(args.seqdb, digital=True) as seqfile:
-                sequences: typing.List[DigitalSequence] = list(seqfile)  # type: ignore
-        except EOFError as err:
-            print(err, file=sys.stderr)
-            return 1
+        # try:
+        #     with SequenceFile(args.seqdb, digital=True) as seqfile:
+        #         sequences: typing.List[DigitalSequence] = list(seqfile)  # type: ignore
+        # except EOFError as err:
+        #     print(err, file=sys.stderr)
+        #     return 1
 
-        with HMMFile(args.hmmfile) as hmms:
-            queries = hmms.optimized_profiles() if hmms.is_pressed() else hmms
-            hits_list = hmmsearch(queries, sequences, cpus=args.jobs)  # type: ignore
-            for hits in hits_list:
-                for hit in hits:
-                    if hit.is_reported():
-                        print(
-                            hit.name.decode(),
-                            (hit.accession or b"-").decode(),
-                            (hits.query_name or b"-").decode(),
-                            (hits.query_accession or b"-").decode(),
-                            hit.evalue,
-                            hit.score,
-                            hit.bias,
-                            sep="\t",
-                        )
+        with SequenceFile(args.seqdb, digital=True) as seqfile:
+            sequences = seqfile.read_block() if args.prefetch else seqfile
+            with HMMFile(args.hmmfile) as hmms:
+                hits_list = hmmsearch(hmms, sequences, cpus=args.jobs)  # type: ignore
+                for hits in hits_list:
+                    for hit in hits:
+                        if hit.is_reported():
+                            print(
+                                hit.name.decode(),
+                                (hit.accession or b"-").decode(),
+                                (hits.query_name or b"-").decode(),
+                                (hits.query_accession or b"-").decode(),
+                                hit.evalue,
+                                hit.score,
+                                hit.bias,
+                                sep="\t",
+                            )
 
         return 0
 
@@ -1150,6 +1248,7 @@ if __name__ == "__main__":
     parser_hmmsearch.set_defaults(call=_hmmsearch)
     parser_hmmsearch.add_argument("hmmfile")
     parser_hmmsearch.add_argument("seqdb")
+    parser_hmmsearch.add_argument("--prefetch", action="store_true")
 
     parser_phmmer = subparsers.add_parser("phmmer")
     parser_phmmer.set_defaults(call=_phmmer)
