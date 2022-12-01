@@ -5,28 +5,28 @@ Create a Python package with embedded HMMs
 Overview
 --------
 
-Let's suppose we are developing a Python package for detecting 
-and analyzing `thioredoxins <https://en.wikipedia.org/wiki/Thioredoxin>`_, 
-where PyHMMER is used to identify thioredoxin domains. We want to 
-distribute the package and all the required HMMs so that the end users 
+Let's suppose we are developing a Python package for detecting
+and analyzing `thioredoxins <https://en.wikipedia.org/wiki/Thioredoxin>`_,
+where PyHMMER is used to identify thioredoxin domains. We want to
+distribute the package and all the required HMMs so that the end users
 can simply use the functions without having to download additional data.
 
 .. hint::
-    
+
     If you're new to developing Python packages, you may want to have a look
     at the `Python Packaging User Guide <https://packaging.python.org/en/latest/>`_.
 
-For this example, we will be using pre-made HMMs downloaded from 
-`InterPro <https://www.ebi.ac.uk/interpro>`_, but this would work 
+For this example, we will be using pre-made HMMs downloaded from
+`InterPro <https://www.ebi.ac.uk/interpro>`_, but this would work
 similarly if we were to use custom-made hmms.
 
 .. caution::
 
-    Make sure that you have the permission to redistribute the HMMs along 
+    Make sure that you have the permission to redistribute the HMMs along
     with your code! For instance, `Pfam <https://pfam.xfam.org/>`_ is licensed under
     `Creative Commons Zero <https://creativecommons.org/publicdomain/zero/1.0/>`_
-    which places the data in the public domain, but `SMART <http://smart.embl-heidelberg.de>`_ 
-    is licensed by `EMBLEM <https://software.embl-em.de/software/18>`_ and 
+    which places the data in the public domain, but `SMART <http://smart.embl-heidelberg.de>`_
+    is licensed by `EMBLEM <https://software.embl-em.de/software/18>`_ and
     does not allow redistribution.
 
 
@@ -89,13 +89,6 @@ internal HMM for finding hits:
     from pyhmmer.hmmer import hmmsearch
 
     def filter_thioredoxins(sequences: List[str]):
-        # load the embedded HMMs with `importlib.resources`
-        # (using __name__ as the module name tells `open_binary` to
-        # look in the same folder as the Python source file)
-        with importlib.resources.open_binary(__name__, "TIGR01068.hmm") as src:
-            with pyhmmer.plan7.HMMFile(src) as hmm_file:
-                hmms = list(hmm_file)
-
         # turn the input sequences into DigitalSequence objects
         # (we use the index of the sequence as their name)
         digital_sequences = [
@@ -106,10 +99,15 @@ internal HMM for finding hits:
         # use a bitmap to record which input sequences have had a hit
         is_thioredoxin = Bitfield.zeros(len(sequences))
 
-        # run the search pipeline and get hits with E-value <= 1e-5
-        for hits in hmmsearch(hmms, digital_sequences, E=1e-5):
-            for hit in hits:
-                is_thioredoxin[int(hit.name)] = True
+        # search sequences using the embedded HMMs with `importlib.resources`
+        # (using __name__ as the module name tells `open_binary` to
+        # look in the same folder as the Python source file)
+        with importlib.resources.open_binary(__name__, "TIGR01068.hmm") as src:
+            with pyhmmer.plan7.HMMFile(src) as hmm_file:
+                # run the search pipeline and get hits with E-value <= 1e-5
+                for hits in hmmsearch(hmm_file, digital_sequences, E=1e-5):
+                    for hit in hits:
+                        is_thioredoxin[int(hit.name)] = True
 
         # return only the sequences that had at least one hit
         return [ seq for i, seq in enumerate(sequences) if is_thioredoxin[i] ]
@@ -118,7 +116,7 @@ internal HMM for finding hits:
 .. hint::
 
     In this example we used only a single HMM inside the HMM file, however the
-    code above will work even if the HMM file contains more than one HMM.
+    code above would work even if the HMM file contained more than one HMM.
 
 
 Distributing data
@@ -149,4 +147,3 @@ installed, the HMMs will be installed next to the code.
     but you won't be able to upload a large HMM database such as Pfam in
     its entirety.
 
-    
