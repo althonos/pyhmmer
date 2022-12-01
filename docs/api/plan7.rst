@@ -42,10 +42,11 @@ OptimizedProfile
    :special-members: __init__
    :members:
 
-Background
-^^^^^^^^^^
 
-.. autoclass:: pyhmmer.plan7.Background
+OptimizedProfileBlock
+^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: pyhmmer.plan7.OptimizedProfileBlock
    :special-members: __init__
    :members:
 
@@ -67,12 +68,28 @@ LongTargetsPipeline
   :special-members: __init__
   :members:
 
+
+Builder
+-------
+
 Builder
 ^^^^^^^
 
 .. autoclass:: pyhmmer.plan7.Builder
   :special-members: __init__
   :members:
+
+
+Background 
+----------
+
+Background
+^^^^^^^^^^
+
+.. autoclass:: pyhmmer.plan7.Background
+   :special-members: __init__
+   :members:
+
 
 
 Results
