@@ -25,6 +25,7 @@ API Reference
         :nosignatures:
 
         pyhmmer.hmmer.hmmsearch
+        pyhmmer.hmmer.hmmscan
         pyhmmer.hmmer.phmmer
         pyhmmer.hmmer.nhmmer
         pyhmmer.hmmer.hmmpress
@@ -125,26 +126,26 @@ API Reference
     Plan7
     -----
 
-    Hidden Markov Model
-    ^^^^^^^^^^^^^^^^^^^
+    Profile HMMs
+    ^^^^^^^^^^^^
 
     .. autosummary::
         :nosignatures:
 
         pyhmmer.plan7.HMM
-        pyhmmer.plan7.HMMFile
-        pyhmmer.plan7.HMMPressedFile
+        pyhmmer.plan7.Profile
+        pyhmmer.plan7.OptimizedProfile
+        pyhmmer.plan7.OptimizedProfileBlock
 
 
-    Profile
-    ^^^^^^^
+    HMM Files
+    ^^^^^^^^^
 
     .. autosummary::
         :nosignatures:
 
-        pyhmmer.plan7.Profile
-        pyhmmer.plan7.OptimizedProfile
-        pyhmmer.plan7.Background
+        pyhmmer.plan7.HMMFile
+        pyhmmer.plan7.HMMPressedFile
 
 
     Pipelines
@@ -154,7 +155,9 @@ API Reference
         :nosignatures:
 
         pyhmmer.plan7.Pipeline
+        pyhmmer.plan7.LongTargetsPipeline
         pyhmmer.plan7.Builder
+        pyhmmer.plan7.Background
 
 
     Results
