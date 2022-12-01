@@ -342,7 +342,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T], abc.ABC):
         for query in self.queries:
             query_count.value += 1
             yield thread.process(query)
-        
+
         # close the targets if they were coming from a file
         if isinstance(thread.targets, (SequenceFile, HMMPressedFile)):
             thread.targets.close()
@@ -418,9 +418,9 @@ class _SEARCHDispatcher(_BaseDispatcher[_SEARCHQueryType, typing.Union[DigitalSe
         if isinstance(self.targets, SequenceFile):
             assert self.targets.name is not None
             targets = SequenceFile(
-                self.targets.name, 
-                format=self.targets.format, 
-                digital=True, 
+                self.targets.name,
+                format=self.targets.format,
+                digital=True,
                 alphabet=self.alphabet
             )
         else:
@@ -449,9 +449,9 @@ class _PHMMERDispatcher(_BaseDispatcher[_PHMMERQueryType, typing.Union[DigitalSe
         if isinstance(self.targets, SequenceFile):
             assert self.targets.name is not None
             targets = SequenceFile(
-                self.targets.name, 
-                format=self.targets.format, 
-                digital=True, 
+                self.targets.name,
+                format=self.targets.format,
+                digital=True,
                 alphabet=self.alphabet
             )
         else:
@@ -505,9 +505,9 @@ class _NHMMERDispatcher(_BaseDispatcher[_NHMMERQueryType, typing.Union[DigitalSe
         if isinstance(self.targets, SequenceFile):
             assert self.targets.name is not None
             targets = SequenceFile(
-                self.targets.name, 
-                format=self.targets.format, 
-                digital=True, 
+                self.targets.name,
+                format=self.targets.format,
+                digital=True,
                 alphabet=self.alphabet
             )
         else:
@@ -564,19 +564,19 @@ def hmmsearch(
 ) -> typing.Iterator[TopHits]:
     """Search HMM profiles against a sequence database.
 
-    In HMMER many-to-many comparisons, a *search* is the operation of 
+    In HMMER many-to-many comparisons, a *search* is the operation of
     querying with profile HMMs a database of sequences.
 
-    The `hmmsearch` function offers two ways of managing the database that 
-    will be selected based on the type of the ``sequences`` argument. If 
-    ``sequences`` is an `SequenceFile` object, `hmmsearch` will reopen the 
-    file in each thread, and load targets *iteratively* to scan with the 
+    The `hmmsearch` function offers two ways of managing the database that
+    will be selected based on the type of the ``sequences`` argument. If
+    ``sequences`` is an `SequenceFile` object, `hmmsearch` will reopen the
+    file in each thread, and load targets *iteratively* to scan with the
     query. Otherwise, it will *pre-fetch* the target sequences into a
-    `DigitalSequenceBlock` collection, and share them across threads 
-    without copy. The *pre-fetching* gives much higher performance at the 
-    cost of extra  startup time and much higher memory consumption. You may 
-    want to check how much memory is available (for instance with 
-    `psutil.virtual_memory`) before trying to load a whole sequence database, 
+    `DigitalSequenceBlock` collection, and share them across threads
+    without copy. The *pre-fetching* gives much higher performance at the
+    cost of extra  startup time and much higher memory consumption. You may
+    want to check how much memory is available (for instance with
+    `psutil.virtual_memory`) before trying to load a whole sequence database,
     but it is really recommended to do so whenever possible.
 
     Arguments:
@@ -586,8 +586,8 @@ def hmmsearch(
         sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A
             database of sequences to query. If you plan on using the
             same sequences several times, consider storing them into
-            a `~pyhmmer.easel.DigitalSequenceBlock` directly. If a 
-            `SequenceFile` is given, profiles will be loaded iteratively 
+            a `~pyhmmer.easel.DigitalSequenceBlock` directly. If a
+            `SequenceFile` is given, profiles will be loaded iteratively
             from disk rather than prefetched.
         cpus (`int`): The number of threads to run in parallel. Pass ``1``
             to run everything in the main thread, ``0`` to automatically
@@ -683,8 +683,8 @@ def phmmer(
         sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A database
             of sequences to query. If you plan on using the same sequences
             several times, consider storing them into a
-            `~pyhmmer.easel.DigitalSequenceBlock` directly. If a 
-            `SequenceFile` is given, profiles will be loaded iteratively 
+            `~pyhmmer.easel.DigitalSequenceBlock` directly. If a
+            `SequenceFile` is given, profiles will be loaded iteratively
             from disk rather than prefetched.
         cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
             run everything in the main thread, ``0`` to automatically
@@ -703,7 +703,7 @@ def phmmer(
 
     Raises:
         `~pyhmmer.errors.AlphabetMismatch`: When any of the query sequence
-            the profile or the optional builder do not share the same 
+            the profile or the optional builder do not share the same
             alphabet.
 
     Note:
@@ -776,8 +776,8 @@ def nhmmer(
         sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A
             database of sequences to query. If you plan on using the
             same sequences several times, consider storing them into
-            a `~pyhmmer.easel.DigitalSequenceBlock` directly. If a 
-            `SequenceFile` is given, profiles will be loaded iteratively 
+            a `~pyhmmer.easel.DigitalSequenceBlock` directly. If a
+            `SequenceFile` is given, profiles will be loaded iteratively
             from disk rather than prefetched.
         cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
             run everything in the main thread, ``0`` to automatically
@@ -987,18 +987,18 @@ def hmmscan(
     """Scan query sequences against a profile database.
 
     In HMMER many-to-many comparisons, a *scan* is the operation of querying
-    with sequences a database of profile HMMs. It is necessary slower than 
-    a *search* because reconfiguring profiles between each queries has 
+    with sequences a database of profile HMMs. It is necessary slower than
+    a *search* because reconfiguring profiles between each queries has
     additional overhead, so it's recommended to use a *search* if the order
     of the comparisons is not important.
 
     The `hmmscan` function offers two ways of managing the database that will
-    be selected based on the type of the ``profiles`` argument. If 
-    ``profiles`` is an `HMMPressedFile` object, `hmmscan` will reopen the 
-    file in each thread, and load profiles *iteratively* to scan with the 
+    be selected based on the type of the ``profiles`` argument. If
+    ``profiles`` is an `HMMPressedFile` object, `hmmscan` will reopen the
+    file in each thread, and load profiles *iteratively* to scan with the
     query. Otherwise, it will *pre-fetch* the optimized profiles into an
     `OptimizedProfileBlock` collection, and share them across queries. The
-    *pre-fetching* gives much higher performance at the cost of extra 
+    *pre-fetching* gives much higher performance at the cost of extra
     startup time and much higher memory consumption. You may want to check
     how much memory is available (for instance with `psutil.virtual_memory`)
     before trying to load a whole pHMM database.
@@ -1038,7 +1038,7 @@ def hmmscan(
 
     Hint:
         If reading the profiles from a pressed HMM database, make sure to
-        use the `HMMFile.optimized_profiles` method so that profiles are 
+        use the `HMMFile.optimized_profiles` method so that profiles are
         read iteratively from the file during the scan loop::
 
             >>> with HMMFile("tests/data/hmms/db/t2pks.hmm") as hmm_file:
@@ -1047,7 +1047,7 @@ def hmmscan(
             >>> sum(len(hits) for hits in all_hits)
             26
 
-        Otherwise, passing ``hmm_file`` as the ``profiles`` argument of 
+        Otherwise, passing ``hmm_file`` as the ``profiles`` argument of
         `hmmscan` would cause the entire HMM file to be loaded in memory
         into an `OptimizedProfileBlock` otherwise.
 
@@ -1103,6 +1103,11 @@ if __name__ == "__main__":
     import argparse
     import sys
 
+    # don't load target databases in memory if they would take more than
+    # 90% of the remainining available memory (because more memory will be
+    # needed afterwards to allocate the `TopHits` for each query)
+    MAX_MEMORY_LOAD = 0.80
+
     def _hmmsearch(args: argparse.Namespace) -> int:
         # check the size of the target database and the amount of available memory
         available_memory = psutil.virtual_memory().available
@@ -1110,7 +1115,7 @@ if __name__ == "__main__":
 
         with SequenceFile(args.seqdb, digital=True) as sequences:
             # pre-load the database if it is small enough to fit in memory
-            if database_size < available_memory:
+            if database_size < available_memory * MAX_MEMORY_LOAD:
                 sequences = sequences.read_block()  # type: ignore
             # load the query HMMs iteratively
             with HMMFile(args.hmmfile) as hmms:
@@ -1134,15 +1139,14 @@ if __name__ == "__main__":
         return 0
 
     def _phmmer(args: argparse.Namespace) -> int:
-        alphabet = Alphabet.amino()
-
         # check the size of the target database and the amount of available memory
         available_memory = psutil.virtual_memory().available
         database_size = os.stat(args.seqdb).st_size
 
+        alphabet = Alphabet.amino()
         with SequenceFile(args.seqdb, digital=True, alphabet=alphabet) as sequences:
             # pre-load the database if it is small enough to fit in memory
-            if database_size < available_memory:
+            if database_size < available_memory * MAX_MEMORY_LOAD:
                 sequences = sequences.read_block()  # type: ignore
             # load the query sequences iteratively
             with SequenceFile(args.seqfile, digital=True, alphabet=alphabet) as queries:
@@ -1164,11 +1168,10 @@ if __name__ == "__main__":
         return 0
 
     def _nhmmer(args: argparse.Namespace) -> int:
+        # at the moment `LongTargetsPipeline` only support block targets, not files
         with SequenceFile(args.seqdb, digital=True) as seqfile:
-            sequences = list(seqfile)
-
+            sequences = seqfile.read_block()
         with SequenceFile(args.seqfile, digital=True) as queryfile:
-            queries = list(queryfile)
             hits_list = nhmmer(queries, sequences, cpus=args.jobs)  # type: ignore
             for hits in hits_list:
                 for hit in hits:
@@ -1187,9 +1190,17 @@ if __name__ == "__main__":
         return 0
 
     def _hmmscan(args: argparse.Namespace) -> int:
-        with HMMFile(args.hmmdb) as hmms:
-            targets = hmms.optimized_profiles() if hmms.is_pressed() else hmms
-            with SequenceFile(args.seqfile, digital=True) as seqfile:
+        # check the size of the target database and the amount of available memory
+        available_memory = psutil.virtual_memory().available
+        database_size = os.stat(args.hmmdb).st_size
+
+        with SequenceFile(args.seqfile, digital=True) as seqfile:
+            with HMMFile(args.hmmdb) as hmms:
+                # pre-load profiles is they can fit into memory
+                targets = hmms.optimized_profiles() if hmms.is_pressed() else hmms
+                if hmms.is_pressed() and database_size < available_memory * MAX_MEMORY_LOAD:
+                    targets = OptimizedProfileBlock(seqfile.alphabet, targets)
+                # load the query sequences iteratively
                 hits_list = hmmscan(seqfile, targets, cpus=args.jobs)  # type: ignore
                 for hits in hits_list:
                     for hit in hits:
