@@ -6221,28 +6221,25 @@ cdef class SequenceFile:
         """
         assert seq._sq != NULL
 
-        cdef int         (*funcread)(ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
         cdef str         funcname
         cdef int         status
         cdef const char* errbuf
         cdef str         msg
 
-        if not skip_info and not skip_sequence:
-            funcname = "esl_sqio_Read"
-            funcread = libeasel.sqio.esl_sqio_Read
-        elif not skip_info:
-            funcname = "esl_sqio_ReadInfo"
-            funcread = libeasel.sqio.esl_sqio_ReadInfo
-        elif not skip_sequence:
-            funcname = "esl_sqio_ReadSequence"
-            funcread = libeasel.sqio.esl_sqio_ReadSequence
-        else:
-            raise ValueError("Cannot skip reading both sequence and metadata.")
-
         if self._sqfp == NULL:
             raise ValueError("I/O operation on closed file.")
+
+        if not skip_info and not skip_sequence:
+            funcname = "esl_sqio_Read"
+            status = libeasel.sqio.esl_sqio_Read(self._sqfp, seq._sq)
+        elif not skip_info:
+            funcname = "esl_sqio_ReadInfo"
+            status = libeasel.sqio.esl_sqio_ReadInfo(self._sqfp, seq._sq)
+        elif not skip_sequence:
+            funcname = "esl_sqio_ReadSequence"
+            status = libeasel.sqio.esl_sqio_ReadSequence(self._sqfp, seq._sq)
         else:
-            status = funcread(self._sqfp, seq._sq)
+            raise ValueError("Cannot skip reading both sequence and metadata.")
 
         if status == libeasel.eslOK:
             return seq
