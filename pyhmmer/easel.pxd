@@ -150,6 +150,7 @@ cdef class MSAFile:
     cdef          ESL_MSAFILE* _msaf
     cdef readonly object       _file
     cdef readonly Alphabet     alphabet
+    cdef readonly str          name
 
     @staticmethod
     cdef ESL_MSAFILE* _open_fileobj(object fh, int fmt) except NULL
@@ -253,6 +254,7 @@ cdef class SequenceFile:
     cdef          ESL_SQFILE* _sqfp
     cdef readonly object      _file
     cdef readonly Alphabet    alphabet
+    cdef readonly str         name
 
     @staticmethod
     cdef ESL_SQFILE* _open_fileobj(object fh, int fmt) except NULL

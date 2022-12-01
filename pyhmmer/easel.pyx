@@ -3853,6 +3853,11 @@ cdef class MSAFile:
     This class supports reading sequences stored in different formats, such
     as Stockholm, A2M, PSI-BLAST or Clustal.
 
+    Attributes:
+        name (`str`, *optional*): The name of the MSA file, if it was
+            created from a filename, or `None` if it wraps a file-like
+            object.
+
     Hint:
         Some Clustal files created by alignment tools other than Clustal
         (such as MUSCLE or MAFFT, for instance), may not contain the header
@@ -3914,6 +3919,7 @@ cdef class MSAFile:
 
     def __cinit__(self):
         self.alphabet = None
+        self.name = None
         self._msaf = NULL
 
     def __init__(
@@ -3973,6 +3979,7 @@ cdef class MSAFile:
             self._msaf = MSAFile._open_fileobj(file, fmt)
             status = libeasel.eslOK
         else:
+            self.name = os.fsdecode(fspath)
             status = libeasel.msafile.esl_msafile_Open(NULL, fspath, NULL, fmt, NULL, &self._msaf)
 
         # store a reference to the argument
@@ -5269,8 +5276,8 @@ cdef class SequenceBlock:
         Return a copy of the sequence block.
 
         Note:
-            The sequence internally refered to by this collection are not 
-            copied. Use `copy.deepcopy` if you also want to duplicate the 
+            The sequence internally refered to by this collection are not
+            copied. Use `copy.deepcopy` if you also want to duplicate the
             internal storage of each sequence.
 
         """
@@ -5401,8 +5408,8 @@ cdef class TextSequenceBlock(SequenceBlock):
         Return a copy of the text sequence block.
 
         Note:
-            The sequence internally refered to by this collection are not 
-            copied. Use `copy.deepcopy` is you also want to duplicate the 
+            The sequence internally refered to by this collection are not
+            copied. Use `copy.deepcopy` is you also want to duplicate the
             internal storage of each sequence.
 
         """
@@ -5570,8 +5577,8 @@ cdef class DigitalSequenceBlock(SequenceBlock):
         Return a copy of the digital sequence block.
 
         Note:
-            The sequence internally refered to by this collection are not 
-            copied. Use `copy.deepcopy` is you also want to duplicate the 
+            The sequence internally refered to by this collection are not
+            copied. Use `copy.deepcopy` is you also want to duplicate the
             internal storage of each sequence.
 
         """
@@ -5899,6 +5906,7 @@ cdef class SequenceFile:
 
     def __cinit__(self):
         self.alphabet = None
+        self.name = None
         self._sqfp = NULL
 
     def __init__(
@@ -5993,6 +6001,7 @@ cdef class SequenceFile:
             status = libeasel.eslOK
         else:
             status = libeasel.sqio.esl_sqfile_Open(fspath, fmt, NULL, &self._sqfp)
+            self.name = os.fsdecode(fspath)
 
         # store a reference to the argument
         self._file = file
@@ -6261,14 +6270,14 @@ cdef class SequenceFile:
             sequences (`int`, *optional*): The maximum number of sequences
                 to read before returning a block. Leave as `None` to read all
                 remaining sequences from the file.
-            residues (`int`, *optional*): The number of residues to read 
-                before returning the block. Leave as `None` to keep reading 
+            residues (`int`, *optional*): The number of residues to read
+                before returning the block. Leave as `None` to keep reading
                 sequences without a residue limit.
 
         Returns:
             `~pyhmmer.easel.SequenceBlock`: A sequence block object, which may
             be empty if there are no sequences to read anymore. The concrete
-            type depends on whether the `SequenceFile` was opened in text or 
+            type depends on whether the `SequenceFile` was opened in text or
             digital mode.
 
         Raises:
@@ -6282,7 +6291,7 @@ cdef class SequenceFile:
                 ...     block = sf.read_block(sequences=4)
                 >>> len(block)
                 4
-            
+
             Read sequences until the block contains at least 1000 residues:
 
                 >>> with SequenceFile("tests/data/seqs/LuxC.faa") as sf:
@@ -6294,7 +6303,7 @@ cdef class SequenceFile:
 
             Note that the last sequence will not be truncated, so the block
             will always contain more than ``max_residues`` unless the end of
-            the file was reached. 
+            the file was reached.
 
         .. versionadded:: 0.7.0
 
@@ -6332,9 +6341,9 @@ cdef class SequenceFile:
 
         Rewind the file back to the beginning.
 
-        For sequential formats, this method is supported for both *path*-based 
-        and *file object*-based sequence files. For multiple-sequence 
-        alignment formats, the underlying `MSAFile` needs to be reopened, 
+        For sequential formats, this method is supported for both *path*-based
+        and *file object*-based sequence files. For multiple-sequence
+        alignment formats, the underlying `MSAFile` needs to be reopened,
         so this is only supported for *path*-based files.
 
         Raises:
