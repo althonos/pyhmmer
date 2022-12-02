@@ -60,7 +60,7 @@ _collections_abc.Sequence.register(easel.Bitfield)
 _collections_abc.Sequence.register(plan7.Domains)
 _collections_abc.Sequence.register(plan7.TopHits)
 _collections_abc.Sequence.register(easel.SequenceBlock)
-_collections_abc.Sequence.register(plan7.OptimizedProfile)
+_collections_abc.Sequence.register(plan7.OptimizedProfileBlock)
 
 if hasattr(_contextlib, "AbstractContextManager"):
     _contextlib.AbstractContextManager.register(easel.SequenceFile)
