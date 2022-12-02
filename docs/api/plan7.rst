@@ -7,8 +7,8 @@ Plan7
 .. automodule:: pyhmmer.plan7
 
 
-Hidden Markov Model
--------------------
+Profile HMMs
+------------
 
 HMM
 ^^^
@@ -16,17 +16,6 @@ HMM
 .. autoclass:: pyhmmer.plan7.HMM
    :special-members: __init__
    :members:
-
-HMM File
-^^^^^^^^
-
-.. autoclass:: pyhmmer.plan7.HMMFile
-   :special-members: __init__
-   :members:
-
-
-Profile
--------
 
 Profile
 ^^^^^^^
@@ -51,6 +40,24 @@ OptimizedProfileBlock
    :members:
 
 
+HMM Files
+---------
+
+HMMFile
+^^^^^^^
+
+.. autoclass:: pyhmmer.plan7.HMMFile
+   :special-members: __init__
+   :members:
+
+HMMPressedFile
+^^^^^^^^^^^^^^
+
+.. autoclass:: pyhmmer.plan7.HMMPressedFile
+   :special-members: __init__
+   :members:
+
+
 Pipelines
 ---------
 
@@ -70,18 +77,12 @@ LongTargetsPipeline
 
 
 Builder
--------
-
-Builder
 ^^^^^^^
 
 .. autoclass:: pyhmmer.plan7.Builder
   :special-members: __init__
   :members:
 
-
-Background 
-----------
 
 Background
 ^^^^^^^^^^

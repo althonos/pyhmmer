@@ -61,7 +61,7 @@ SequenceBlock
 TextSequenceBlock
 ^^^^^^^^^^^^^^^^^
 
-.. autoclass:: pyhmmer.easel.TextSequence(SequenceBlock)
+.. autoclass:: pyhmmer.easel.TextSequenceBlock(SequenceBlock)
    :special-members: __init__
    :members:
 

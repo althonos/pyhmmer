@@ -26,6 +26,7 @@ PyHMMER API in combination with Python and other Python libraries:
     :maxdepth: 2
 
     Create a Python package with embedded HMMs <embed_hmms>
+    Improve performance with some tips <performance_tips>
 
 
 Dependent projects
