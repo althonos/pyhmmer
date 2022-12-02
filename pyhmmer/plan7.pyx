@@ -5219,6 +5219,8 @@ cdef class Pipeline:
 
         # check that the sequence file is in digital mode
         if SearchTargets is SequenceFile:
+            if sequences.name is None:
+                raise ValueError("can only use a `SequenceFile` backed by a file for reading targets")
             if not sequences.digital:
                 raise ValueError("target sequences file is not in digital mode")
         # check that all alphabets are consistent
@@ -6243,28 +6245,37 @@ cdef class LongTargetsPipeline(Pipeline):
         cdef P7_HIT*              hit            = NULL
         cdef P7_OPROFILE*         om             = NULL
 
+        # check that the sequence file is in digital mode
         if SearchTargets is SequenceFile:
-            raise NotImplementedError("`LongTargetsPipeline.search_hmm` for `SequenceFile` targets")
-        else:
-            # check the pipeline was configured with the same alphabet
-            if not self.alphabet._eq(query.alphabet):
-                raise AlphabetMismatch(self.alphabet, query.alphabet)
-            if not self.alphabet._eq(sequences.alphabet):
-                raise AlphabetMismatch(self.alphabet, sequences.alphabet)
+            if sequences.name is None:
+                raise ValueError("can only use a `SequenceFile` backed by a file for reading targets")
+            if not sequences.digital:
+                raise ValueError("target sequences file is not in digital mode")
 
-            # convert the query to an optimized profile
+        # check the pipeline was configured with the same alphabet
+        if not self.alphabet._eq(query.alphabet):
+            raise AlphabetMismatch(self.alphabet, query.alphabet)
+        if not self.alphabet._eq(sequences.alphabet):
+            raise AlphabetMismatch(self.alphabet, sequences.alphabet)
+
+        # get a length estimate for profile configuration
+        if SearchTargets is DigitalSequenceBlock:
             L = self.L_HINT if not sequences else sequences._refs[0].L
-            om = self._get_om_from_query(query, L=L)
+        else:
+            L = self.L_HINT
+        # get the optimized profile from the query
+        om = self._get_om_from_query(query, L=L)
 
-            with nogil:
-                # make sure the pipeline is set to search mode and ready for a new HMM
-                self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
-                # create the score data struct
-                scoredata.Kp = self.profile._gm.abc.Kp
-                scoredata._sd = libhmmer.p7_scoredata.p7_hmm_ScoreDataCreate(om, NULL)
-                if scoredata._sd == NULL:
-                    raise AllocationError("P7_SCOREDATA", sizeof(P7_SCOREDATA))
-                # run the search loop on all database sequences while recycling memory
+        with nogil:
+            # make sure the pipeline is set to search mode and ready for a new HMM
+            self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
+            # create the score data struct
+            scoredata.Kp = self.profile._gm.abc.Kp
+            scoredata._sd = libhmmer.p7_scoredata.p7_hmm_ScoreDataCreate(om, NULL)
+            if scoredata._sd == NULL:
+                raise AllocationError("P7_SCOREDATA", sizeof(P7_SCOREDATA))
+            # run the search loop on all database sequences while recycling memory
+            if SearchTargets is DigitalSequenceBlock:
                 LongTargetsPipeline._search_loop_longtargets(
                     self._pli,
                     om,
@@ -6274,32 +6285,44 @@ cdef class LongTargetsPipeline(Pipeline):
                     hits._th,
                     scoredata._sd,
                 )
-                # threshold with user-provided Z if any
-                if self._Z is None:
-                    res_count = self._pli.nres
-                else:
-                    res_count = <int64_t> (1000000 * self._pli.Z)
-                    if self._pli.strands == p7_strands_e.p7_STRAND_BOTH:
-                        res_count *= 2
-                libhmmer.p7_tophits.p7_tophits_ComputeNhmmerEvalues(hits._th, res_count, self.opt._om.max_length)
-                # assign lengths and remove duplicates
-                hits._sort_by_seqidx()
+            else:
+                LongTargetsPipeline._search_loop_longtargets_file(
+                    self._pli,
+                    om,
+                    self.background._bg,
+                    sequences._sqfp,
+                    hits._th,
+                    scoredata._sd,
+                )
+            # threshold with user-provided Z if any
+            if self._Z is None:
+                res_count = self._pli.nres
+            else:
+                res_count = <int64_t> (1000000 * self._pli.Z)
+                if self._pli.strands == p7_strands_e.p7_STRAND_BOTH:
+                    res_count *= 2
+            libhmmer.p7_tophits.p7_tophits_ComputeNhmmerEvalues(hits._th, res_count, self.opt._om.max_length)
+            # assign lengths and remove duplicates
+            hits._sort_by_seqidx()
+            if SearchTargets is DigitalSequenceBlock:
                 for j in range(hits._th.N):
                     hit = hits._th.hit[j]
                     hit.dcl[0].ad.L = sequences._refs[hit.seqidx].n
-                libhmmer.p7_tophits.p7_tophits_RemoveDuplicates(hits._th, self._pli.use_bit_cutoffs)
-                # sort hits
-                hits._sort_by_key()
-                hits._threshold(self)
+            else:
+                raise NotImplementedError("recording sequence length from target sequence file")
+            libhmmer.p7_tophits.p7_tophits_RemoveDuplicates(hits._th, self._pli.use_bit_cutoffs)
+            # sort hits
+            hits._sort_by_key()
+            hits._threshold(self)
 
-            # record the query name and accession
-            if om.name != NULL:
-                hits._qname = PyBytes_FromString(om.name)
-            if om.acc != NULL:
-                hits._qacc = PyBytes_FromString(om.acc)
+        # record the query name and accession
+        if om.name != NULL:
+            hits._qname = PyBytes_FromString(om.name)
+        if om.acc != NULL:
+            hits._qacc = PyBytes_FromString(om.acc)
 
-            # return the hits
-            return hits
+        # return the hits
+        return hits
 
     cpdef TopHits search_seq(
         self,
@@ -6521,6 +6544,83 @@ cdef class LongTargetsPipeline(Pipeline):
         libeasel.sq.esl_sq_Destroy(tmpsq)
 
         # Return 0 to indicate success
+        return 0
+    @staticmethod
+    cdef int _search_loop_longtargets_file(
+              P7_PIPELINE*  pli,
+              P7_OPROFILE*  om,
+              P7_BG*        bg,
+              ESL_SQFILE*   sqfp,
+              P7_TOPHITS*   th,
+              P7_SCOREDATA* scoredata,
+    ) nogil except 1:
+        cdef int     status
+        cdef int     nres
+        cdef size_t  t
+        cdef int     seq_id  = 0
+        cdef int64_t index   = 0
+        cdef int64_t j       = 0
+        cdef int64_t rem     = 0
+        cdef int64_t i       = 0
+        cdef int64_t C       = om.max_length
+        cdef int64_t W       = pli.block_length
+        cdef ESL_SQ* dbsq    = NULL
+        cdef ESL_SQ* dbsq_rc = NULL
+        
+        if om.max_length <= 0:
+            raise ValueError(f"invalid context size: {om.max_length!r}")
+        if pli.block_length <= 0:
+            raise ValueError(f"invalid window size: {pli.block_length!r}")
+        if pli.block_length <= om.max_length:
+            # TODO: see if this is handled in nhmmer, and how to emulate it?
+            raise ValueError("cannot have window size smaller than context")
+
+        try:
+            # allocate temporary memory for the sequences
+            dbsq = libeasel.sq.esl_sq_CreateDigital(om.abc)
+            if dbsq == NULL:
+                raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
+            if om.abc.complement != NULL:
+                dbsq_rc = libeasel.sq.esl_sq_CreateDigital(om.abc)
+                if dbsq_rc == NULL:
+                    raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
+            # read the first sequence window
+            status = libeasel.sqio.esl_sqio_ReadWindow(sqfp, 0, pli.block_length, dbsq)
+            if status == libeasel.eslEOF:
+                return 0
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_sqio_ReadWindow")
+            # run the search loop
+            while status == libeasel.eslOK:
+                # reconfigure the pipeline
+                dbsq.idx = seq_id
+                libhmmer.p7_pipeline.p7_pli_NewSeq(pli, dbsq)
+                # process forward strand
+                if pli.strands != p7_strands_e.p7_STRAND_BOTTOMONLY:
+                    pli.nres -= dbsq.C 
+                    libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, dbsq, p7_complementarity_e.p7_NOCOMPLEMENT, NULL, NULL, NULL)
+                    libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
+                else:
+                    pli.nres -= dbsq.n
+                # process reverse strand
+                if pli.strands != p7_strands_e.p7_STRAND_BOTTOMONLY and dbsq.abc.complement != NULL:
+                    libeasel.sq.esl_sq_Copy(dbsq, dbsq_rc)
+                    libeasel.sq.esl_sq_ReverseComplement(dbsq_rc)
+                    libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, dbsq_rc, p7_complementarity_e.p7_COMPLEMENT, NULL, NULL, NULL)
+                    libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
+                    pli.nres += dbsq_rc.W
+                # read next window
+                status = libeasel.sqio.esl_sqio_ReadWindow(sqfp, om.max_length, pli.block_length, dbsq)
+                if status == libeasel.eslEOD:
+                    pli.nseqs += 1
+                    status = libeasel.sqio.esl_sqio_ReadWindow(sqfp, 0, pli.block_length, dbsq)
+                    seq_id += 1
+                elif status != libeasel.eslOK and status != libeasel.eslEOF:
+                    raise UnexpectedError(status, "esl_sqio_ReadWindow")
+        finally:
+            libeasel.sq.esl_sq_Destroy(dbsq)
+            libeasel.sq.esl_sq_Destroy(dbsq_rc)
+
         return 0
 
 

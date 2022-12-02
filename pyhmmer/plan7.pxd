@@ -381,6 +381,15 @@ cdef class LongTargetsPipeline(Pipeline):
               P7_TOPHITS*   th,
               P7_SCOREDATA* scoredata,
     ) nogil except 1
+    @staticmethod
+    cdef int _search_loop_longtargets_file(
+              P7_PIPELINE*  pli,
+              P7_OPROFILE*  om,
+              P7_BG*        bg,
+              ESL_SQFILE*   sqfp,
+              P7_TOPHITS*   th,
+              P7_SCOREDATA* scoredata,
+    ) nogil except 1
     cpdef TopHits scan_seq(
         self,
         DigitalSequence query,
