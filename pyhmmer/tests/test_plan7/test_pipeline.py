@@ -278,7 +278,7 @@ class TestLongTargetsPipeline(unittest.TestCase):
             sequence="".join(random.sample(symbols, 1)[0] for i in range(length))
         ).digitize(alphabet)
 
-    def test_search_hmm(self):
+    def test_search_hmm_block(self):
         dna = Alphabet.dna()
         rng = pyhmmer.easel.Randomness(0)
 
@@ -296,6 +296,25 @@ class TestLongTargetsPipeline(unittest.TestCase):
         self.assertEqual(hits.query_name, hmm.name)
         self.assertEqual(hits.query_accession, hmm.accession)
 
+    def test_search_hmm_file(self):
+        dna = Alphabet.dna()
+        rng = pyhmmer.easel.Randomness(0)
+
+        hmm = pyhmmer.plan7.HMM.sample(100, dna, rng)
+        hmm.name = b"test_one"
+        hmm.accession = b"TST001"
+
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".fna") as f:
+            self._random_sequence(dna, b"seq1").write(f)
+            self._random_sequence(dna, b"seq2").write(f)
+            f.flush()
+
+            with pyhmmer.easel.SequenceFile(f.name, digital=True, alphabet=dna) as targets:
+                pipeline = LongTargetsPipeline(alphabet=dna)
+                hits = pipeline.search_hmm(hmm, targets)
+
+        self.assertEqual(hits.query_name, hmm.name)
+        self.assertEqual(hits.query_accession, hmm.accession)
 
     def test_search_hmm_alphabet_mismatch(self):
         dna = Alphabet.dna()
