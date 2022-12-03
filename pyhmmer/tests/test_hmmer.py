@@ -362,7 +362,7 @@ class TestNhmmer(unittest.TestCase):
         hits = pyhmmer.nhmmer([], seqs, cpus=1)
         self.assertIs(None, next(hits, None))
 
-    def test_bmyd_seq_bgc(self):
+    def test_bmyd_seq_bgc_block(self):
         alphabet = Alphabet.dna()
 
         path = pkg_resources.resource_filename(__name__, "data/seqs/bmyD.fna")
@@ -376,10 +376,10 @@ class TestNhmmer(unittest.TestCase):
         hits = next(pyhmmer.nhmmer(query, seqs, cpus=1))
         hits.sort()
 
+        self.assertEqual(len(hits), 1)
         with self.table("bmyD3.tbl") as table:
             self.assertTableEqual(hits, table)
 
-    @unittest.expectedFailure
     def test_bmyd_seq_bgc_file(self):
         alphabet = Alphabet.dna()
 
@@ -392,14 +392,11 @@ class TestNhmmer(unittest.TestCase):
             hits = list(pyhmmer.nhmmer(query, seqs, cpus=1))[0]
             hits.sort()
 
-        b = io.BytesIO()
-        hits.write(b, format="targets")
-        print(b.getvalue().decode())
-
+        self.assertEqual(hits.hits_reported, 1)
         with self.table("bmyD3.tbl") as table:
             self.assertTableEqual(hits, table)
 
-    def test_bmyd_hmm_bgc(self):
+    def test_bmyd_hmm_bgc_block(self):
         alphabet = Alphabet.dna()
 
         path = pkg_resources.resource_filename(__name__, "data/seqs/BGC0001090.gbk")
@@ -409,10 +406,23 @@ class TestNhmmer(unittest.TestCase):
         hits = next(pyhmmer.nhmmer(self.bmyD, seqs, cpus=1))
         hits.sort()
 
+        self.assertEqual(hits.hits_reported, 2)
         with self.table("bmyD1.tbl") as table:
             self.assertTableEqual(hits, table)
 
-    def test_bmyd_hmm_genome(self):
+    def test_bmyd_hmm_bgc_file(self):
+        alphabet = Alphabet.dna()
+
+        path = pkg_resources.resource_filename(__name__, "data/seqs/BGC0001090.gbk")
+        with SequenceFile(path, "genbank", digital=True, alphabet=alphabet) as seqs_file:
+            hits = list(pyhmmer.nhmmer(self.bmyD, seqs_file, cpus=1))[0]
+            hits.sort()
+
+        self.assertEqual(hits.hits_reported, 2)
+        with self.table("bmyD1.tbl") as table:
+            self.assertTableEqual(hits, table)
+
+    def test_bmyd_hmm_genome_block(self):
         alphabet = Alphabet.dna()
 
         path = pkg_resources.resource_filename(__name__, "data/seqs/CP000560.2.fna")
@@ -422,6 +432,19 @@ class TestNhmmer(unittest.TestCase):
         hits = next(pyhmmer.nhmmer(self.bmyD, seqs, cpus=1))
         hits.sort()
 
+        self.assertEqual(hits.hits_reported, 6)
+        with self.table("bmyD2.tbl") as table:
+            self.assertTableEqual(hits, table)
+
+    def test_bmyd_hmm_genome_file(self):
+        alphabet = Alphabet.dna()
+
+        path = pkg_resources.resource_filename(__name__, "data/seqs/CP000560.2.fna")
+        with SequenceFile(path, "fasta", digital=True, alphabet=alphabet) as seqs_file:
+            hits = list(pyhmmer.nhmmer(self.bmyD, seqs_file, cpus=1))[0]
+            hits.sort()
+
+        self.assertEqual(hits.hits_reported, 6)
         with self.table("bmyD2.tbl") as table:
             self.assertTableEqual(hits, table)
 
