@@ -1170,22 +1170,21 @@ if __name__ == "__main__":
     def _nhmmer(args: argparse.Namespace) -> int:
         # at the moment `LongTargetsPipeline` only support block targets, not files
         with SequenceFile(args.seqdb, digital=True) as seqfile:
-            sequences = seqfile.read_block()
-        with SequenceFile(args.seqfile, digital=True) as queryfile:
-            hits_list = nhmmer(queryfile, sequences, cpus=args.jobs)  # type: ignore
-            for hits in hits_list:
-                for hit in hits:
-                    if hit.is_reported():
-                        print(
-                            hit.name.decode(),
-                            "-",
-                            hit.best_domain.alignment.hmm_accession.decode(),
-                            hit.best_domain.alignment.hmm_name.decode(),
-                            hit.evalue,
-                            hit.score,
-                            hit.bias,
-                            sep="\t",
-                        )
+            with SequenceFile(args.seqfile, digital=True) as queryfile:
+                hits_list = nhmmer(queryfile, seqfile, cpus=args.jobs)  # type: ignore
+                for hits in hits_list:
+                    for hit in hits:
+                        if hit.is_reported():
+                            print(
+                                hit.name.decode(),
+                                "-",
+                                hit.best_domain.alignment.hmm_accession.decode(),
+                                hit.best_domain.alignment.hmm_name.decode(),
+                                hit.evalue,
+                                hit.score,
+                                hit.bias,
+                                sep="\t",
+                            )
 
         return 0
 
