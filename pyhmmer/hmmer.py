@@ -1124,7 +1124,7 @@ if __name__ == "__main__":
                 hits_list = hmmsearch(hmms, sequences, cpus=args.jobs)  # type: ignore
                 for hits in hits_list:
                     for hit in hits:
-                        if hit.is_reported():
+                        if hit.reported:
                             print(
                                 hit.name.decode(),
                                 (hit.accession or b"-").decode(),
@@ -1153,7 +1153,7 @@ if __name__ == "__main__":
                 hits_list = phmmer(queries, sequences, cpus=args.jobs)  # type: ignore
                 for hits in hits_list:
                     for hit in hits:
-                        if hit.is_reported():
+                        if hit.reported:
                             print(
                                 hit.name.decode(),
                                 "-",
@@ -1174,7 +1174,7 @@ if __name__ == "__main__":
                 hits_list = nhmmer(queryfile, seqfile, cpus=args.jobs)  # type: ignore
                 for hits in hits_list:
                     for hit in hits:
-                        if hit.is_reported():
+                        if hit.reported:
                             print(
                                 hit.name.decode(),
                                 "-",
@@ -1203,7 +1203,7 @@ if __name__ == "__main__":
                 hits_list = hmmscan(seqfile, targets, cpus=args.jobs)  # type: ignore
                 for hits in hits_list:
                     for hit in hits:
-                        if hit.is_reported():
+                        if hit.reported:
                             print(
                                 hit.name.decode(),
                                 (hit.accession or b"-").decode(),

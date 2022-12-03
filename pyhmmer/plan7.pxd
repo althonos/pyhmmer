@@ -142,12 +142,6 @@ cdef class Hit:
     cpdef VectorU8 __getstate__(self)
     cpdef object __setstate__(self, uint8_t[::1] state)
 
-    cpdef bint is_included(self)
-    cpdef bint is_reported(self)
-    cpdef bint is_new(self)
-    cpdef bint is_dropped(self)
-    cpdef bint is_duplicate(self)
-
     cpdef void manually_drop(self)
     cpdef void manually_include(self)
 

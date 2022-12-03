@@ -341,7 +341,8 @@ class TestNhmmer(unittest.TestCase):
 
     def assertTableEqual(self, hits, table):
         lines = iter(filter(lambda line: not line.startswith("#"), table))
-        for line, hit in itertools.zip_longest(lines, filter(Hit.is_reported, hits)):
+        reported_hits = filter(lambda hit: hit.reported, hits)
+        for line, hit in itertools.zip_longest(lines, reported_hits):
             self.assertIsNot(line, None)
             self.assertIsNot(hit, None)
             fields = list(filter(None, line.strip().split(" ")))
