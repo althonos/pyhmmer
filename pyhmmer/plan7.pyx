@@ -74,6 +74,7 @@ from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e, p7_s
 from libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL
 from libhmmer.p7_trace cimport P7_TRACE, p7t_statetype_e
 from libhmmer.nhmmer cimport ID_LENGTH_LIST, idlen_list_init, idlen_list_add, idlen_list_assign, idlen_list_destroy
+from capacity cimport new_capacity
 
 IF HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init
@@ -136,7 +137,6 @@ from .reexports.p7_hmmfile cimport (
     v3f_magic
 )
 
-include "capacity.pxi"
 include "exceptions.pxi"
 
 IF UNAME_SYSNAME == "Linux":
@@ -6316,7 +6316,7 @@ cdef class LongTargetsPipeline(Pipeline):
                     hit = hits._th.hit[j]
                     hit.dcl[0].ad.L = sequences._refs[hit.seqidx].n
             else:
-                status = idlen_list_assign(lidlens, hits._th)
+                status = idlen_list_assign(idlens, hits._th)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "idlen_list_assign")
                 idlen_list_destroy(idlens)
