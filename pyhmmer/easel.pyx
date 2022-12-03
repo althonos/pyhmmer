@@ -54,6 +54,7 @@ from libeasel.buffer cimport ESL_BUFFER
 from libeasel.sq cimport ESL_SQ
 from libeasel.sqio cimport ESL_SQFILE, ESL_SQASCII_DATA
 from libeasel.random cimport ESL_RANDOMNESS
+from capacity cimport new_capacity
 
 from .reexports.esl_sqio_ascii cimport (
     loadbuf,
@@ -87,7 +88,6 @@ from .reexports.esl_sqio_ascii cimport (
     fileheader_hmmpgmd,
 )
 
-include "capacity.pxi"
 include "exceptions.pxi"
 
 
