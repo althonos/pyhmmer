@@ -1172,7 +1172,7 @@ if __name__ == "__main__":
         with SequenceFile(args.seqdb, digital=True) as seqfile:
             sequences = seqfile.read_block()
         with SequenceFile(args.seqfile, digital=True) as queryfile:
-            hits_list = nhmmer(queries, sequences, cpus=args.jobs)  # type: ignore
+            hits_list = nhmmer(queryfile, sequences, cpus=args.jobs)  # type: ignore
             for hits in hits_list:
                 for hit in hits:
                     if hit.is_reported():
