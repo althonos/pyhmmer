@@ -1459,6 +1459,42 @@ cdef class Domain:
         assert self._dom != NULL
         return exp(self._dom.lnP)
 
+    @property
+    def included(self):
+        """`bool`: Whether this domain is marked as *included*.
+
+        .. versionadded:: 0.7.0
+
+        """
+        assert self._dom != NULL
+        return self._dom.is_included
+
+    @included.setter
+    def included(self, bint included):
+        assert self._dom != NULL
+        if included:
+            self._dom.is_included = self._dom.is_reported = True
+        else:
+            self._dom.is_included = False
+
+    @property
+    def reported(self):
+        """`bool`: Whether this domain is marked as *reported*.
+
+        .. versionadded:: 0.7.0
+
+        """
+        assert self._dom != NULL
+        return self._dom.is_reported
+
+    @reported.setter
+    def reported(self, bint reported):
+        assert self._dom != NULL
+        if reported:
+            self._dom.is_reported = True
+        else:
+            self._dom.is_reported = self._dom.is_included = False
+
 
 cdef class Domains:
     """A read-only view over the domains of a single `~pyhmmer.plan7.Hit`.
@@ -1653,19 +1689,19 @@ cdef class EvalueParameters:
 cdef class Hit:
     """A high-scoring database hit found by the comparison pipeline.
 
-    A hit is obtained in HMMER for every target where one or more 
-    significant domain alignment was found by a `Pipeline`. A `Hit` comes 
+    A hit is obtained in HMMER for every target where one or more
+    significant domain alignment was found by a `Pipeline`. A `Hit` comes
     with a *score*, which is obtained after correcting of the individual
-    bit scores of all its domains; a *P-value*, which is computed by 
+    bit scores of all its domains; a *P-value*, which is computed by
     testing the likelihood to obtain the same alignment using a random
     background model; and an *E-value*, which is obtained after Bonferonni
     correction of the *p-value*, taking into account the total number of
     targets in the target database.
 
-    Hits also store several information as flags. `Hit.included` and 
-    `Hit.reported` show whether a `Hit` is considered for inclusion 
-    (resp. reporting) with respects to the thresholds defined on the 
-    original `~pyhmmer.plan7.Pipeline`. These flags can be modified 
+    Hits also store several information as flags. `Hit.included` and
+    `Hit.reported` show whether a `Hit` is considered for inclusion
+    (resp. reporting) with respects to the thresholds defined on the
+    original `~pyhmmer.plan7.Pipeline`. These flags can be modified
     manually to force inclusion or exclusion of certains hits independently
     of their score or E-value. The `~pyhmmer.plan7.TopHits.write` method
     of `~pyhmmer.plan7.TopHits` objects will only write a line for hits
@@ -1675,24 +1711,24 @@ cdef class Hit:
 
         \text{included} \implies \text{reported}
 
-    When used during an iterative search, hits can also be marked as dropped 
-    by setting the `Hit.dropped` flag to `False`. Dropped hits will not be 
+    When used during an iterative search, hits can also be marked as dropped
+    by setting the `Hit.dropped` flag to `False`. Dropped hits will not be
     used for building HMMs during the next iteration. Hits newly found in an
     iteration will be marked as *new* with the `Hit.new` flag. `Hit.dropped`
-    and `Hit.included` are mutually exclusive, and setting one will unset 
+    and `Hit.included` are mutually exclusive, and setting one will unset
     the other. Dropped hits can be reported, but are not included:
 
     .. math::
 
         \text{dropped} \implies \neg \text{included}
 
-    When running a long target pipeline, some hits may appear as 
+    When running a long target pipeline, some hits may appear as
     duplicates if they were found across multiple windows. These hits
     will be marked as duplicates with the `Hit.duplicate` flag. Duplicate
     hits are neither reported nor included:
 
     .. math::
-        
+
         \text{duplicate} \implies \neg \text{reported}
 
     .. versionadded:: 0.6.1
@@ -1872,9 +1908,9 @@ cdef class Hit:
     @property
     def included(self):
         """`bool`: Whether this hit is marked as *included*.
-        
+
         .. versionadded:: 0.7.0
-        
+
         """
         assert self._hit != NULL
         return self._hit.flags & p7_hitflags_e.p7_IS_INCLUDED != 0
@@ -1897,9 +1933,9 @@ cdef class Hit:
     @property
     def reported(self):
         """`bool`: Whether this hit is marked as *reported*.
-        
+
         .. versionadded:: 0.7.0
-        
+
         """
         assert self._hit != NULL
         return self._hit.flags & p7_hitflags_e.p7_IS_REPORTED != 0
@@ -1921,9 +1957,9 @@ cdef class Hit:
     @property
     def new(self):
         """`bool`: Whether this hit is marked as *new*.
-        
+
         .. versionadded:: 0.7.0
-        
+
         """
         assert self._hit != NULL
         return self._hit.flags & p7_hitflags_e.p7_IS_NEW != 0
@@ -1939,9 +1975,9 @@ cdef class Hit:
     @property
     def dropped(self):
         """`bool`: Whether this hit is marked as *dropped*.
-        
+
         .. versionadded:: 0.7.0
-        
+
         """
         assert self._hit != NULL
         return self._hit.flags & p7_hitflags_e.p7_IS_DROPPED != 0
@@ -5882,9 +5918,9 @@ cdef class Pipeline:
                 create one with the default parameters.
             select_hits (callable, optional): A function or callable object
                 for manually selecting hits during each iteration. It should
-                take a single `~pyhmmer.plan7.TopHits` argument and change the 
-                inclusion of every individual hits by setting the 
-                `~pyhmmer.plan7.Hit.included` and `~pyhmmer.plan7.Hit.dropped` 
+                take a single `~pyhmmer.plan7.TopHits` argument and change the
+                inclusion of every individual hits by setting the
+                `~pyhmmer.plan7.Hit.included` and `~pyhmmer.plan7.Hit.dropped`
                 flags of each `~pyhmmer.plan7.Hit` manually.
 
         Returns:
