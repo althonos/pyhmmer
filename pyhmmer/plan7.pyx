@@ -21,7 +21,7 @@ from cpython.unicode cimport PyUnicode_DecodeASCII
 from libc.math cimport exp, ceil
 from libc.stddef cimport ptrdiff_t
 from libc.stdio cimport printf, rewind
-from libc.stdlib cimport calloc, malloc, realloc, free
+from libc.stdlib cimport calloc, malloc, realloc, free, llabs
 from libc.stdint cimport uint8_t, uint32_t, int64_t
 from libc.stdio cimport fprintf, FILE, stdout, fclose
 from libc.string cimport memset, memcpy, memmove, strdup, strndup, strlen, strcmp, strncpy
@@ -73,6 +73,7 @@ from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e, p7_strands_e, p7_complementarity_e
 from libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL
 from libhmmer.p7_trace cimport P7_TRACE, p7t_statetype_e
+from libhmmer.nhmmer cimport ID_LENGTH_LIST, idlen_list_init, idlen_list_add, idlen_list_assign, idlen_list_destroy
 
 IF HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init
@@ -6244,13 +6245,17 @@ cdef class LongTargetsPipeline(Pipeline):
         cdef TopHits              hits           = TopHits()
         cdef P7_HIT*              hit            = NULL
         cdef P7_OPROFILE*         om             = NULL
+        cdef ID_LENGTH_LIST*      idlens         = NULL
 
-        # check that the sequence file is in digital mode
+        # perform specific checks for targets stored in a file
         if SearchTargets is SequenceFile:
             if sequences.name is None:
                 raise ValueError("can only use a `SequenceFile` backed by a file for reading targets")
             if not sequences.digital:
                 raise ValueError("target sequences file is not in digital mode")
+            idlens = idlen_list_init(1024)
+            if idlens == NULL:
+                raise AllocationError("ID_LENGTH_LIST", sizeof(ID_LENGTH_LIST))
 
         # check the pipeline was configured with the same alphabet
         if not self.alphabet._eq(query.alphabet):
@@ -6269,6 +6274,7 @@ cdef class LongTargetsPipeline(Pipeline):
         with nogil:
             # make sure the pipeline is set to search mode and ready for a new HMM
             self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
+            self._pli.nseqs = 0
             # create the score data struct
             scoredata.Kp = self.profile._gm.abc.Kp
             scoredata._sd = libhmmer.p7_scoredata.p7_hmm_ScoreDataCreate(om, NULL)
@@ -6293,6 +6299,7 @@ cdef class LongTargetsPipeline(Pipeline):
                     sequences._sqfp,
                     hits._th,
                     scoredata._sd,
+                    idlens,
                 )
             # threshold with user-provided Z if any
             if self._Z is None:
@@ -6302,18 +6309,29 @@ cdef class LongTargetsPipeline(Pipeline):
                 if self._pli.strands == p7_strands_e.p7_STRAND_BOTH:
                     res_count *= 2
             libhmmer.p7_tophits.p7_tophits_ComputeNhmmerEvalues(hits._th, res_count, self.opt._om.max_length)
-            # assign lengths and remove duplicates
+            # assign target sequence lengths
             hits._sort_by_seqidx()
             if SearchTargets is DigitalSequenceBlock:
                 for j in range(hits._th.N):
                     hit = hits._th.hit[j]
                     hit.dcl[0].ad.L = sequences._refs[hit.seqidx].n
             else:
-                raise NotImplementedError("recording sequence length from target sequence file")
-            libhmmer.p7_tophits.p7_tophits_RemoveDuplicates(hits._th, self._pli.use_bit_cutoffs)
-            # sort hits
+                status = idlen_list_assign(lidlens, hits._th)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "idlen_list_assign")
+                idlen_list_destroy(idlens)
+                idlens = NULL
+            # remove target duplicates from the hits (using the ones with best E-value)
+            libhmmer.p7_tophits.p7_tophits_RemoveDuplicates(hits._th, True)#self._pli.use_bit_cutoffs)
+            # sort hits, threshold and record pipeline configuration
             hits._sort_by_key()
             hits._threshold(self)
+            # tally up total number of hits and target coverage
+            hits._pli.n_output = hits._pli.pos_output = 0
+            for j in range(hits._th.N):
+                if (hits._th.hit[j].flags & p7_hitflags_e.p7_IS_REPORTED) or (hits._th.hit[j].flags & p7_hitflags_e.p7_IS_INCLUDED):
+                    hits._pli.n_output += 1
+                    hits._pli.pos_output += 1 + llabs(hits._th.hit[j].dcl[0].jali - hits._th.hit[j].dcl[0].iali)
 
         # record the query name and accession
         if om.name != NULL:
@@ -6444,10 +6462,10 @@ cdef class LongTargetsPipeline(Pipeline):
         cdef int64_t C      = om.max_length
         cdef int64_t W      = pli.block_length
 
-        if om.max_length <= 0:
-            raise ValueError(f"invalid context size: {om.max_length!r}")
-        if pli.block_length <= 0:
-            raise ValueError(f"invalid window size: {pli.block_length!r}")
+        if C <= 0:
+            raise ValueError(f"invalid context size: {C!r}")
+        if W <= 0:
+            raise ValueError(f"invalid window size: {W!r}")
         if W <= C:
             # TODO: see if this is handled in nhmmer, and how to emulate it
             raise ValueError("cannot have window size smaller than context")
@@ -6547,33 +6565,41 @@ cdef class LongTargetsPipeline(Pipeline):
         return 0
     @staticmethod
     cdef int _search_loop_longtargets_file(
-              P7_PIPELINE*  pli,
-              P7_OPROFILE*  om,
-              P7_BG*        bg,
-              ESL_SQFILE*   sqfp,
-              P7_TOPHITS*   th,
-              P7_SCOREDATA* scoredata,
+        P7_PIPELINE*    pli,
+        P7_OPROFILE*    om,
+        P7_BG*          bg,
+        ESL_SQFILE*     sqfp,
+        P7_TOPHITS*     th,
+        P7_SCOREDATA*   scoredata,
+        ID_LENGTH_LIST* l
     ) nogil except 1:
         cdef int     status
-        cdef int     nres
-        cdef size_t  t
+        #cdef int     nres
+        #cdef size_t  t
         cdef int     seq_id  = 0
-        cdef int64_t index   = 0
-        cdef int64_t j       = 0
-        cdef int64_t rem     = 0
-        cdef int64_t i       = 0
+        #cdef int64_t index   = 0
+        #cdef int64_t j       = 0
+        #cdef int64_t rem     = 0
+        #cdef int64_t i       = 0
         cdef int64_t C       = om.max_length
         cdef int64_t W       = pli.block_length
         cdef ESL_SQ* dbsq    = NULL
         cdef ESL_SQ* dbsq_rc = NULL
-        
-        if om.max_length <= 0:
-            raise ValueError(f"invalid context size: {om.max_length!r}")
-        if pli.block_length <= 0:
-            raise ValueError(f"invalid window size: {pli.block_length!r}")
-        if pli.block_length <= om.max_length:
+
+        if C <= 0:
+            raise ValueError(f"invalid context size: {C!r}")
+        if W <= 0:
+            raise ValueError(f"invalid window size: {W!r}")
+        if W <= C:
             # TODO: see if this is handled in nhmmer, and how to emulate it?
             raise ValueError("cannot have window size smaller than context")
+
+        # configure the pipeline for the current HMM
+        status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
+        if status == libeasel.eslEINVAL:
+            raise ValueError("model does not have bit score thresholds expected by the pipeline")
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_pli_NewModel")
 
         try:
             # allocate temporary memory for the sequences
@@ -6585,7 +6611,7 @@ cdef class LongTargetsPipeline(Pipeline):
                 if dbsq_rc == NULL:
                     raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
             # read the first sequence window
-            status = libeasel.sqio.esl_sqio_ReadWindow(sqfp, 0, pli.block_length, dbsq)
+            status = libeasel.sqio.esl_sqio_ReadWindow(sqfp, 0, W, dbsq)
             if status == libeasel.eslEOF:
                 return 0
             elif status != libeasel.eslOK:
@@ -6597,7 +6623,7 @@ cdef class LongTargetsPipeline(Pipeline):
                 libhmmer.p7_pipeline.p7_pli_NewSeq(pli, dbsq)
                 # process forward strand
                 if pli.strands != p7_strands_e.p7_STRAND_BOTTOMONLY:
-                    pli.nres -= dbsq.C 
+                    pli.nres -= dbsq.C
                     libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, dbsq, p7_complementarity_e.p7_NOCOMPLEMENT, NULL, NULL, NULL)
                     libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
                 else:
@@ -6610,10 +6636,12 @@ cdef class LongTargetsPipeline(Pipeline):
                     libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
                     pli.nres += dbsq_rc.W
                 # read next window
-                status = libeasel.sqio.esl_sqio_ReadWindow(sqfp, om.max_length, pli.block_length, dbsq)
+                status = libeasel.sqio.esl_sqio_ReadWindow(sqfp, C, W, dbsq)
                 if status == libeasel.eslEOD:
+                    idlen_list_add(l, dbsq.idx, dbsq.L)
                     pli.nseqs += 1
-                    status = libeasel.sqio.esl_sqio_ReadWindow(sqfp, 0, pli.block_length, dbsq)
+                    libeasel.sq.esl_sq_Reuse(dbsq)
+                    status = libeasel.sqio.esl_sqio_ReadWindow(sqfp, 0, W, dbsq)
                     seq_id += 1
                 elif status != libeasel.eslOK and status != libeasel.eslEOF:
                     raise UnexpectedError(status, "esl_sqio_ReadWindow")

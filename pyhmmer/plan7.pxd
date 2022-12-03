@@ -21,6 +21,7 @@ from libhmmer.p7_profile cimport P7_PROFILE
 from libhmmer.p7_scoredata cimport P7_SCOREDATA
 from libhmmer.p7_tophits cimport P7_TOPHITS
 from libhmmer.p7_trace cimport P7_TRACE
+from libhmmer.nhmmer cimport ID_LENGTH_LIST
 
 IF HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx.p7_omx cimport P7_OM_BLOCK
@@ -49,7 +50,7 @@ cdef extern from "hmmer.h" nogil:
     DEF p7_NCUTOFFS = 6
 
 
-# --- Constants --------------------------------------------------------------
+# --- Fused types ------------------------------------------------------------
 
 ctypedef fused ScanTargets:
     HMMPressedFile
@@ -58,6 +59,7 @@ ctypedef fused ScanTargets:
 ctypedef fused SearchTargets:
     SequenceFile
     DigitalSequenceBlock
+
 
 # --- Cython classes ---------------------------------------------------------
 
@@ -383,12 +385,13 @@ cdef class LongTargetsPipeline(Pipeline):
     ) nogil except 1
     @staticmethod
     cdef int _search_loop_longtargets_file(
-              P7_PIPELINE*  pli,
-              P7_OPROFILE*  om,
-              P7_BG*        bg,
-              ESL_SQFILE*   sqfp,
-              P7_TOPHITS*   th,
-              P7_SCOREDATA* scoredata,
+        P7_PIPELINE*  pli,
+        P7_OPROFILE*  om,
+        P7_BG*        bg,
+        ESL_SQFILE*   sqfp,
+        P7_TOPHITS*   th,
+        P7_SCOREDATA* scoredata,
+        ID_LENGTH_LIST* idlens
     ) nogil except 1
     cpdef TopHits scan_seq(
         self,
