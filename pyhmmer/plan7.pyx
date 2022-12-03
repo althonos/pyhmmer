@@ -1879,6 +1879,21 @@ cdef class Hit:
         assert self._hit != NULL
         return self._hit.flags & p7_hitflags_e.p7_IS_INCLUDED != 0
 
+    @included.setter
+    def included(self, bint included):
+        assert self._hit != NULL
+        if included:
+            if (self._hit.flags & p7_hitflags_e.p7_IS_INCLUDED) == 0:
+                self.hits._th.nincluded += 1
+            if (self._hit.flags & p7_hitflags_e.p7_IS_REPORTED) == 0:
+                self.hits._th.nreported += 1
+            self._hit.flags |= p7_hitflags_e.p7_IS_INCLUDED | p7_hitflags_e.p7_IS_REPORTED
+            self._hit.flags &= ~(p7_hitflags_e.p7_IS_DROPPED | p7_hitflags_e.p7_IS_DUPLICATE)
+        else:
+            if (self._hit.flags & p7_hitflags_e.p7_IS_INCLUDED) != 0:
+                self.hits._th.nincluded -= 1
+            self._hit.flags &= (~p7_hitflags_e.p7_IS_INCLUDED)
+
     @property
     def reported(self):
         """`bool`: Whether this hit is marked as *reported*.
@@ -1888,6 +1903,20 @@ cdef class Hit:
         """
         assert self._hit != NULL
         return self._hit.flags & p7_hitflags_e.p7_IS_REPORTED != 0
+
+    @reported.setter
+    def reported(self, bint reported):
+        assert self._hit != NULL
+        if reported:
+            if (self._hit.flags & p7_hitflags_e.p7_IS_REPORTED) == 0:
+                self.hits._th.nreported += 1
+            self._hit.flags |= p7_hitflags_e.p7_IS_REPORTED
+        else:
+            if (self._hit.flags & p7_hitflags_e.p7_IS_INCLUDED) != 0:
+                self.hits._th.nincluded -= 1
+            if (self._hit.flags & p7_hitflags_e.p7_IS_REPORTED) != 0:
+                self.hits._th.nreported -= 1
+            self._hit.flags &= ~(p7_hitflags_e.p7_IS_REPORTED | p7_hitflags_e.p7_IS_INCLUDED)
 
     @property
     def new(self):
@@ -1899,6 +1928,14 @@ cdef class Hit:
         assert self._hit != NULL
         return self._hit.flags & p7_hitflags_e.p7_IS_NEW != 0
 
+    @new.setter
+    def new(self, bint new):
+        assert self._hit != NULL
+        if new:
+            self._hit.flags |= p7_hitflags_e.p7_IS_NEW
+        else:
+            self._hit.flags &= ~p7_hitflags_e.p7_IS_NEW
+
     @property
     def dropped(self):
         """`bool`: Whether this hit is marked as *dropped*.
@@ -1906,7 +1943,19 @@ cdef class Hit:
         .. versionadded:: 0.7.0
         
         """
+        assert self._hit != NULL
         return self._hit.flags & p7_hitflags_e.p7_IS_DROPPED != 0
+
+    @dropped.setter
+    def dropped(self, bint dropped):
+        assert self._hit != NULL
+        if dropped:
+            if (self._hit.flags & p7_hitflags_e.p7_IS_INCLUDED) != 0:
+                self.hits._th.nincluded -= 1
+            self._hit.flags |= p7_hitflags_e.p7_IS_DROPPED
+            self._hit.flags &= ~p7_hitflags_e.p7_IS_INCLUDED
+        else:
+            self._hit.flags &= ~p7_hitflags_e.p7_IS_DROPPED
 
     @property
     def duplicate(self):
@@ -1915,8 +1964,21 @@ cdef class Hit:
         .. versionadded:: 0.7.0
 
         """
+        assert self._hit != NULL
         return self._hit.flags & p7_hitflags_e.p7_IS_DUPLICATE != 0
 
+    @duplicate.setter
+    def duplicate(self, bint duplicate):
+        assert self._hit != NULL
+        if duplicate:
+            if (self._hit.flags & p7_hitflags_e.p7_IS_REPORTED) != 0:
+                self.hits._th.nreported -= 1
+            if (self._hit.flags & p7_hitflags_e.p7_IS_INCLUDED) != 0:
+                self.hits._th.nincluded -= 1
+            self._hit.flags |= p7_hitflags_e.p7_IS_DUPLICATE
+            self._hit.flags &= ~(p7_hitflags_e.p7_IS_INCLUDED | p7_hitflags_e.p7_IS_REPORTED)
+        else:
+            self._hit.flags &= ~p7_hitflags_e.p7_IS_DUPLICATE
 
     # --- Methods ------------------------------------------------------------
 

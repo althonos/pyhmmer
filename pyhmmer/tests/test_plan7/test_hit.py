@@ -14,18 +14,19 @@ from pyhmmer.plan7 import HMMFile, Pipeline, TopHits
 
 class TestTopHits(unittest.TestCase):
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/PF02826.hmm")
-        seqs_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/938293.PRJEB85.HG003687.faa")
-
         with HMMFile(hmm_path) as hmm_file:
-            self.hmm = hmm_file.read()
-        with SequenceFile(seqs_path, digital=True, alphabet=self.hmm.alphabet) as seqs_file:
-            self.seqs = seqs_file.read_block()
-
-        self.pipeline = Pipeline(alphabet=self.hmm.alphabet)
-        self.hits = self.pipeline.search_hmm(self.hmm, self.seqs)
-        self.pipeline.clear()
+            hmm = hmm_file.read()
+        seqs_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/938293.PRJEB85.HG003687.faa")
+        with SequenceFile(seqs_path, digital=True, alphabet=hmm.alphabet) as seqs_file:
+            seqs = seqs_file.read_block()
+        pipeline = Pipeline(alphabet=hmm.alphabet)
+        cls._hits = pipeline.search_hmm(hmm, seqs)
+    
+    def setUp(self):
+        self.hits = self._hits.copy()
 
     def test_name_property(self):
         hits = self.hits.copy()
@@ -83,3 +84,57 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(hit.description, b"NEW")
         self.assertEqual(hits[-1].description, b"NEW")
         self.assertTrue(self.hits[-1].description.startswith(b'# 202177 # 203019 #'))
+
+    def test_manual_inclusion(self):
+        hit = self.hits[-1]
+
+        hit.included = hit.reported = hit.dropped = hit.duplicate = False
+        self.assertFalse(hit.dropped)
+        self.assertFalse(hit.duplicate)
+        self.assertFalse(hit.reported)
+        self.assertFalse(hit.included)
+
+        hit.included = True
+        self.assertFalse(hit.duplicate)
+        self.assertFalse(hit.dropped)
+        self.assertTrue(hit.included)
+        self.assertTrue(hit.reported) # included hits are always reported
+
+    def test_manual_drop(self):
+        hit = self.hits[-1]
+
+        hit.dropped = False
+        hit.included = hit.reported = True
+        self.assertFalse(hit.dropped)
+        self.assertTrue(hit.reported)
+        self.assertTrue(hit.included)
+
+        hit.dropped = True
+        self.assertTrue(hit.dropped)
+        self.assertTrue(hit.reported) # dropped hits may be reported
+        self.assertFalse(hit.included) # dropped hits are never included
+        
+        hit.dropped = False
+        self.assertFalse(hit.dropped)
+        self.assertTrue(hit.reported)
+        self.assertFalse(hit.included)
+
+    def test_manual_duplicate(self):
+        hit = self.hits[-1]
+
+        hit.duplicate = hit.dropped = False
+        hit.included = hit.reported = True
+        self.assertFalse(hit.duplicate)
+        self.assertTrue(hit.reported)
+        self.assertTrue(hit.included)
+
+        hit.duplicate = True
+        self.assertTrue(hit.duplicate)
+        self.assertFalse(hit.reported) # duplicate hits are never reported
+        self.assertFalse(hit.included) # duplicate hits are never included
+        
+        hit.duplicate = False
+        self.assertFalse(hit.duplicate)
+        self.assertFalse(hit.reported) # duplicate hits are never reported
+        self.assertFalse(hit.included) # duplicate hits are never included
+        
