@@ -4013,13 +4013,18 @@ cdef class OptimizedProfile:
         else:
             raise UnexpectedError(status, "p7_oprofile_Write")
 
-    def convert(self, Profile profile):
+    cpdef void convert(self, Profile profile) except *:
         """convert(self, profile)\n--
 
         Store the given profile into ``self`` as a platform-specific profile.
 
-        Use this method to obtained an optimized profile from a `Profile`
+        Use this method to configure an optimized profile from a `Profile`
         while recycling the internal vector buffers.
+
+        Raises:
+            `ValueError`: When the optimized profile is too small to hold the
+                profile, or when the standard and the optimized profiles are
+                not compatible.
 
         See Also:
             The `Profile.optimized` method, which allows getting an
@@ -4030,17 +4035,13 @@ cdef class OptimizedProfile:
         assert self._om != NULL
         assert profile._gm != NULL
 
-        with nogil:
-            self._convert(profile._gm)
-
-    cdef int _convert(self, P7_PROFILE* gm) nogil except 1:
         cdef int status
-        if self._om.allocM < gm.M:
+
+        if self._om.allocM < profile._gm.M:
             raise ValueError("Optimized profile is too small to hold profile")
-        status = p7_oprofile.p7_oprofile_Convert(gm, self._om)
-        if status == libeasel.eslOK:
-            return 0
-        elif status == libeasel.eslEINVAL:
+        with nogil:
+            status = p7_oprofile.p7_oprofile_Convert(profile._gm, self._om)
+        if status == libeasel.eslEINVAL:
             raise ValueError("Standard and optimized profiles are not compatible.")
         elif status == libeasel.eslEMEM:
             raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
@@ -5047,7 +5048,7 @@ cdef class Pipeline:
                 if self.opt._om == NULL:
                     raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
             # convert the profile to an optimized one
-            self.opt._convert(self.profile._gm)
+            self.opt.convert(self.profile)
             # use the temporary optimized profile
             return self.opt._om
 
@@ -6901,11 +6902,11 @@ cdef class Profile:
             raise UnexpectedError(status, "p7_profile_Reuse")
 
     cpdef void configure(
-        self, 
-        HMM hmm, 
-        Background background, 
-        int L=400, 
-        bint multihit=True, 
+        self,
+        HMM hmm,
+        Background background,
+        int L=400,
+        bint multihit=True,
         bint local=True
     ) except *:
         """configure(self, hmm, background, L=400, multihit=True, local=True)\n--
@@ -6921,7 +6922,7 @@ cdef class Profile:
 
         """
         assert self._gm != NULL
-        
+
         cdef int         mode
         cdef int         status
         cdef P7_HMM*     hm     = hmm._hmm
@@ -6983,14 +6984,8 @@ cdef class Profile:
 
         """
         assert self._gm != NULL
-
-        cdef int              status
-        cdef OptimizedProfile opt
-
-        opt = OptimizedProfile(self._gm.M, self.alphabet)
-        with nogil:
-            opt._convert(self._gm)
-
+        cdef OptimizedProfile opt = OptimizedProfile(self._gm.M, self.alphabet)
+        opt.convert(self)
         return opt
 
 

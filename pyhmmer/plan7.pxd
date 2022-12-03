@@ -227,10 +227,8 @@ cdef class OptimizedProfile:
     cdef readonly Alphabet alphabet
 
     cpdef OptimizedProfile copy(self)
+    cpdef void convert(self, Profile profile) except *
     cpdef void write(self, object fh_filter, object fh_profile) except *
-
-    cdef int _convert(self, P7_PROFILE* gm) nogil except 1
-
     cpdef object ssv_filter(self, DigitalSequence seq)
 
 
