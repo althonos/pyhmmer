@@ -12,7 +12,7 @@ from pyhmmer.easel import SequenceFile, TextMSA, DigitalMSA
 from pyhmmer.plan7 import HMMFile, Pipeline, TopHits
 
 
-class TestTopHits(unittest.TestCase):
+class TestHit(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):

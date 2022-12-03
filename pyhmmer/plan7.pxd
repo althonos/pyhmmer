@@ -142,9 +142,6 @@ cdef class Hit:
     cpdef VectorU8 __getstate__(self)
     cpdef object __setstate__(self, uint8_t[::1] state)
 
-    cpdef void manually_drop(self)
-    cpdef void manually_include(self)
-
 
 cdef class HMM:
     cdef P7_HMM* _hmm

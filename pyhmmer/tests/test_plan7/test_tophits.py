@@ -81,18 +81,21 @@ class TestTopHits(unittest.TestCase):
         for h1, h2 in zip(hits1, hits2):
             self.assertHitEqual(h1, h2)
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/PF02826.hmm")
         seqs_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/938293.PRJEB85.HG003687.faa")
 
         with HMMFile(hmm_path) as hmm_file:
-            self.hmm = hmm_file.read()
-        with SequenceFile(seqs_path, digital=True, alphabet=self.hmm.alphabet) as seqs_file:
-            self.seqs = seqs_file.read_block()
+            cls.hmm = hmm_file.read()
+        with SequenceFile(seqs_path, digital=True, alphabet=cls.hmm.alphabet) as seqs_file:
+            cls.seqs = seqs_file.read_block()
 
-        self.pipeline = Pipeline(alphabet=self.hmm.alphabet)
-        self.hits = self.pipeline.search_hmm(self.hmm, self.seqs)
-        self.pipeline.clear()
+        cls.pipeline = Pipeline(alphabet=cls.hmm.alphabet)
+        cls._hits = cls.pipeline.search_hmm(cls.hmm, cls.seqs)
+    
+    def setUp(self):
+        self.hits = self._hits.copy()
 
     def test_bool(self):
         self.assertFalse(pyhmmer.plan7.TopHits())
@@ -164,9 +167,10 @@ class TestTopHits(unittest.TestCase):
         self.assertHitsEqual(merged, self.hits)
 
     def test_merge_pipeline(self):
-        hits1 = self.pipeline.search_hmm(self.hmm, self.seqs[:1000])
-        hits2 = self.pipeline.search_hmm(self.hmm, self.seqs[1000:2000])
-        hits3 = self.pipeline.search_hmm(self.hmm, self.seqs[2000:])
+        pipeline = Pipeline(alphabet=self.hmm.alphabet)
+        hits1 = pipeline.search_hmm(self.hmm, self.seqs[:1000])
+        hits2 = pipeline.search_hmm(self.hmm, self.seqs[1000:2000])
+        hits3 = pipeline.search_hmm(self.hmm, self.seqs[2000:])
 
         self.assertEqual(hits1.Z, 1000)
         self.assertEqual(hits2.Z, 1000)
@@ -277,3 +281,73 @@ class TestTopHits(unittest.TestCase):
             expected.pop()
 
         self.assertMultiLineEqual("\n".join(lines), "\n".join(expected))
+
+    def test_manual_report(self):
+        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertTrue(self.hits[0].reported)
+        
+        self.hits[0].reported = False
+        self.assertEqual(self.hits.hits_reported, 21)
+        self.assertFalse(self.hits[0].reported)
+        
+        self.hits[0].reported = True
+        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertTrue(self.hits[0].reported)
+
+    def test_manual_inclusion(self):
+        self.assertEqual(self.hits.hits_included, 15)
+        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertTrue(self.hits[0].included)
+        self.assertTrue(self.hits[0].reported)
+        
+        self.hits[0].included = False
+        self.assertEqual(self.hits.hits_included, 14)
+        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertFalse(self.hits[0].included)
+        self.assertTrue(self.hits[0].reported)
+        
+        self.hits[0].included = True
+        self.assertEqual(self.hits.hits_included, 15)
+        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertTrue(self.hits[0].included)
+        self.assertTrue(self.hits[0].reported)
+
+    def test_manual_drop(self):
+        self.assertEqual(self.hits.hits_included, 15)
+        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertTrue(self.hits[0].included)
+        self.assertTrue(self.hits[0].reported)
+        
+        self.hits[0].dropped = True
+        self.assertEqual(self.hits.hits_included, 14)
+        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertTrue(self.hits[0].dropped)
+        self.assertFalse(self.hits[0].included)
+        self.assertTrue(self.hits[0].reported)
+        
+        self.hits[0].dropped = False
+        self.assertEqual(self.hits.hits_included, 14)
+        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertFalse(self.hits[0].dropped)
+        self.assertFalse(self.hits[0].included)
+        self.assertTrue(self.hits[0].reported)
+
+    def test_manual_duplicate(self):
+        self.assertEqual(self.hits.hits_included, 15)
+        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertTrue(self.hits[0].included)
+        self.assertTrue(self.hits[0].reported)
+        
+        self.hits[0].duplicate = True
+        self.assertEqual(self.hits.hits_included, 14)
+        self.assertEqual(self.hits.hits_reported, 21)
+        self.assertFalse(self.hits[0].included)
+        self.assertFalse(self.hits[0].reported)
+        self.assertTrue(self.hits[0].duplicate)
+        
+        self.hits[0].duplicate = False
+        self.assertEqual(self.hits.hits_included, 14)
+        self.assertEqual(self.hits.hits_reported, 21)
+        self.assertFalse(self.hits[0].included)
+        self.assertFalse(self.hits[0].reported)
+        self.assertFalse(self.hits[0].duplicate)

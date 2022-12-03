@@ -1980,42 +1980,6 @@ cdef class Hit:
         else:
             self._hit.flags &= ~p7_hitflags_e.p7_IS_DUPLICATE
 
-    # --- Methods ------------------------------------------------------------
-
-    cpdef void manually_drop(self):
-        """manually_drop(self)\n--
-
-        Mark this hit as dropped.
-
-        Dropping a hit manually means that it will not be used when building
-        a multiple sequence alignment from the `TopHits` object, even if it
-        was above inclusion thresholds. This can be useful when manually
-        selecting hits during an iterative search performed by
-        `Pipeline.iterate_seq`.
-
-        .. versionadded:: 0.6.0
-
-        """
-        if self.is_included():
-            self.hits._th.nincluded -= 1
-        self._hit.flags = p7_hitflags_e.p7_IS_DROPPED
-
-    cpdef void manually_include(self):
-        """manually_include(self)\n--
-
-        Mark this hit as included.
-
-        Including a hit manually means that it will be used when building a
-        multiple sequence alignment from the `TopHits` object, even if it
-        was under inclusion thresholds.
-
-        .. versionadded:: 0.6.0
-
-        """
-        if not self.is_included():
-            self.hits._th.nincluded += 1
-        self._hit.flags = p7_hitflags_e.p7_IS_INCLUDED
-
 
 @cython.freelist(8)
 cdef class HMM:
