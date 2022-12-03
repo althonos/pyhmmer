@@ -3935,16 +3935,37 @@ cdef class OptimizedProfile:
         cutoffs._is_profile = True
         return cutoffs
 
-    # --- Methods ------------------------------------------------------------
+    @property
+    def local(self):
+        """`bool`: Whether the optimized profile is in local mode.
 
-    cpdef bint is_local(self):
-        """is_local(self)\n--
-
-        Return whether or not the profile is in a local alignment mode.
+        .. versionadded:: 0.7.0
 
         """
         assert self._om != NULL
         return p7_oprofile.p7_oprofile_IsLocal(self._om)
+
+    @property
+    def multihit(self):
+        """`bool`: Whether the optimized is in multihit mode.
+
+        .. versionadded:: 0.7.0
+
+        """
+        assert self._om != NULL
+        return self._om.nj == 1.0
+
+    @multihit.setter
+    def multihit(self, multihit):
+        if multihit:
+            if not self.multihit:
+                p7_oprofile.p7_oprofile_ReconfigMultihit(self._om, self._om.L)
+        else:
+            if self.multihit:
+                p7_oprofile.p7_oprofile_ReconfigUnihit(self._om, self._om.L)
+
+
+    # --- Methods ------------------------------------------------------------
 
     cpdef OptimizedProfile copy(self):
         """copy(self)\n--
@@ -6835,6 +6856,35 @@ cdef class Profile:
         cutoffs._flags = NULL
         cutoffs._is_profile = True
         return cutoffs
+
+    @property
+    def local(self):
+        """`bool`: Whether the profile is in local mode.
+
+        .. versionadded:: 0.7.0
+
+        """
+        assert self._om != NULL
+        return p7_oprofile.p7_oprofile_IsLocal(self._om)
+
+    @property
+    def multihit(self):
+        """`bool`: Whether the profile is in multihit mode.
+
+        .. versionadded:: 0.7.0
+
+        """
+        assert self._om != NULL
+        return self._om.nj == 1.0
+
+    @multihit.setter
+    def multihit(self, multihit):
+        if multihit:
+            if not self.multihit:
+                libhmmer.p7_profile.p7_ReconfigMultihit(self._gm, self._gm.L)
+        else:
+            if self.multihit:
+                libhmmer.p7_profile.p7_ReconfigUnihit(self._gm, self._gm.L)
 
     # --- Methods ------------------------------------------------------------
 

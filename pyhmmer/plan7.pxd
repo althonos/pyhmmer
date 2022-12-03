@@ -227,10 +227,8 @@ cdef class OptimizedProfile:
     cdef readonly Alphabet alphabet
 
     cpdef OptimizedProfile copy(self)
-    cpdef bint is_local(self)
     cpdef void write(self, object fh_filter, object fh_profile) except *
 
-    # @staticmethod
     cdef int _convert(self, P7_PROFILE* gm) nogil except 1
 
     cpdef object ssv_filter(self, DigitalSequence seq)
@@ -407,8 +405,6 @@ cdef class Profile:
     cdef int _configure(self, HMM hmm, Background background, int L, bint multihit=*, bint local=*) nogil except 1
 
     cpdef Profile copy(self)
-    cpdef bint is_local(self)
-    cpdef bint is_multihit(self)
     cpdef OptimizedProfile optimized(self)
 
 
