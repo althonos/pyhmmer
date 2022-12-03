@@ -166,13 +166,10 @@ cdef class Randomness:
     cdef ESL_RANDOMNESS* _rng
     cdef object          _owner
 
-    cdef int _seed(self, uint32_t n) except 1
-
     cpdef void seed(self, object n=*) except *
     cpdef Randomness copy(self)
     cpdef double random(self)
     cpdef double normalvariate(self, double mu, double sigma)
-    cpdef bint is_fast(self)
 
 
 # --- Sequence ---------------------------------------------------------------

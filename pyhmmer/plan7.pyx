@@ -756,7 +756,7 @@ cdef class Builder:
     def seed(self, uint32_t seed):
         self._seed = seed
         self._bld.do_reseeding = seed != 0
-        self.randomness._seed(seed)
+        self.randomness.seed(seed)
 
     @property
     def window_length(self):
@@ -846,7 +846,7 @@ cdef class Builder:
 
         # reseed RNG used by the builder if needed
         if self._bld.do_reseeding:
-            self.randomness._seed(self.seed)
+            self.randomness.seed(self.seed)
 
         # check alphabet and assign it to newly created objects
         hmm.alphabet = profile.alphabet = opti.alphabet = self.alphabet
@@ -966,7 +966,7 @@ cdef class Builder:
 
         # reseed RNG used by the builder if needed
         if self._bld.do_reseeding:
-            self.randomness._seed(self.seed)
+            self.randomness.seed(self.seed)
 
         # check alphabet and assign it to newly created objects
         hmm.alphabet = profile.alphabet = opti.alphabet = self.alphabet
@@ -4729,7 +4729,7 @@ cdef class Pipeline:
     def seed(self, uint32_t seed):
         self._seed = seed
         self._pli.do_reseeding = self._pli.ddef.do_reseeding = seed != 0
-        self.randomness._seed(seed)
+        self.randomness.seed(seed)
 
     @property
     def null2(self):
@@ -5167,7 +5167,7 @@ cdef class Pipeline:
         # `self._pli.do_reseeding` is False, because a true
         # deallocation/reallocation of a P7_PIPELINE would reinitialize
         # it unconditionally.
-        self.randomness._seed(self._seed)
+        self.randomness.seed(self._seed)
         # reinitialize the domaindef
         libhmmer.p7_domaindef.p7_domaindef_Reuse(self._pli.ddef)
 

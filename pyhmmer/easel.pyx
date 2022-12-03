@@ -4203,7 +4203,7 @@ cdef class Randomness:
             if self._rng == NULL:
                 raise AllocationError("ESL_RANDOMNESS", sizeof(ESL_RANDOMNESS))
         else:
-            self._seed(_seed)
+            self.seed(_seed)
 
     def __copy__(self):
         return self.copy()
@@ -4217,7 +4217,7 @@ cdef class Randomness:
         cdef type ty   = type(self)
         cdef str  name = ty.__name__
         cdef str  mod  = ty.__module__
-        return f"{mod}.{name}({self._rng.seed!r}, fast={self.is_fast()!r})"
+        return f"{mod}.{name}({self._rng.seed!r}, fast={self.fast!r})"
 
     def __getstate__(self):
         return self.getstate()
@@ -4229,6 +4229,16 @@ cdef class Randomness:
         assert self._rng != NULL
         return sizeof(ESL_RANDOMNESS) + sizeof(self)
 
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def fast(self):
+        """`bool`: `True` when the linear congruential generator is in use.
+        """
+        assert self._rng != NULL
+        return self._rng.type == libeasel.random.esl_randomness_type.eslRND_FAST
+
+
     # --- Methods ------------------------------------------------------------
 
     def getstate(self):
@@ -4238,7 +4248,7 @@ cdef class Randomness:
 
         """
         assert self._rng != NULL
-        if self.is_fast():
+        if self.fast:
             return ( True, self._rng.seed, self._rng.x )
         else:
             return ( False, self._rng.seed, self._rng.mti, [self._rng.mt[x] for x in range(624)] )
@@ -4261,11 +4271,6 @@ cdef class Randomness:
             for x in range(624):
                 self._rng.mt[x] = state[3][x]
 
-    cdef int _seed(self, uint32_t n) except 1:
-        status = libeasel.random.esl_randomness_Init(self._rng, n)
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "esl_randomness_Init")
-
     cpdef void seed(self, object n=None) except *:
         """seed(n=None)\n--
 
@@ -4277,8 +4282,14 @@ cdef class Randomness:
 
         """
         assert self._rng != NULL
-        cdef uint32_t seed = n if n is not None else 0
-        self._seed(seed)
+        
+        cdef int      status 
+        cdef uint32_t seed   = n if n is not None else 0
+
+        with nogil:
+            status = libeasel.random.esl_randomness_Init(self._rng, seed)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_randomness_Init")
 
     cpdef Randomness copy(self):
         """copy(self)\n--
@@ -4318,15 +4329,6 @@ cdef class Randomness:
         """
         assert self._rng != NULL
         return libeasel.random.esl_rnd_Gaussian(self._rng, mu, sigma)
-
-    cpdef bint is_fast(self):
-        """is_fast(self)\n--
-
-        Returns whether or not the linear congruential generator is in use.
-
-        """
-        assert self._rng != NULL
-        return self._rng.type == libeasel.random.esl_randomness_type.eslRND_FAST
 
 
 # --- Sequence ---------------------------------------------------------------

@@ -15,11 +15,11 @@ class TestRandomness(unittest.TestCase):
 
     def test_init_fast(self):
         rng = Randomness(42, fast=True)
-        self.assertTrue(rng.is_fast())
+        self.assertTrue(rng.fast)
 
     def test_init_mersenne(self):
         rng = Randomness(42)
-        self.assertFalse(rng.is_fast())
+        self.assertFalse(rng.fast)
 
     def test_init_error(self):
         self.assertRaises(TypeError, Randomness, "ok")
