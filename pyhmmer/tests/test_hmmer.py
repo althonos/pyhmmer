@@ -189,7 +189,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
         hits_hmm = self.get_hits(hmm, seqs)
         self.assertEqual(len(hits_hmm), 22)
 
-        hits_oprofile = self.get_hits(profile.optimized(), seqs)
+        hits_oprofile = self.get_hits(profile.to_optimized(), seqs)
         self.assertEqual(len(hits_oprofile), 22)
 
         for hit_hmm, hit_oprofile in itertools.zip_longest(hits_hmm, hits_oprofile):

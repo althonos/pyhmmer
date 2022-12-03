@@ -53,12 +53,11 @@ class TestProfile(unittest.TestCase):
                 profile.configure(
                     self.hmm,
                     self.background,
-                    200,
                     multihit=multihit,
                     local=local
                 )
-                self.assertEqual(profile.is_multihit(), multihit)
-                self.assertEqual(profile.is_local(), local)
+                self.assertEqual(profile.multihit, multihit)
+                self.assertEqual(profile.local, local)
 
     def test_M(self):
         self.assertEqual(self.profile.M, self.hmm.M)

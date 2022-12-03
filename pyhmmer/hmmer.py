@@ -894,7 +894,7 @@ def hmmpress(
             # build the optimized models
             gm = Profile(hmm.M, hmm.alphabet)
             gm.configure(hmm, bg, DEFAULT_L)
-            om = gm.optimized()
+            om = gm.to_optimized()
 
             # update the disk offsets of the optimized model to be written
             om.offsets.model = h3m.tell()
@@ -1076,7 +1076,7 @@ def hmmscan(
                 profile.configure(item, _background)
                 item = profile
             if isinstance(item, Profile):
-                item = item.optimized()
+                item = item.to_optimized()
             if isinstance(item, OptimizedProfile):
                 block.append(item)
             else:

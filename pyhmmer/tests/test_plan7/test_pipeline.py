@@ -207,7 +207,7 @@ class TestScanPipeline(unittest.TestCase):
         for hmm in self.hmms:
             profile = Profile(hmm.M, hmm.alphabet)
             profile.configure(hmm, background)
-            oprofiles.append(profile.optimized())
+            oprofiles.append(profile.to_optimized())
 
         pipeline = Pipeline(alphabet=self.alphabet)
         hits = pipeline.scan_seq(seq, oprofiles)

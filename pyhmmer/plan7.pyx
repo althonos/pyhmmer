@@ -5033,9 +5033,9 @@ cdef class Pipeline:
                 if self.profile._gm == NULL:
                     raise AllocationError("P7_PROFILE", sizeof(P7_OPROFILE))
             else:
-                self.profile._clear()
+                self.profile.clear()
             # configure the profile from the query HMM
-            self.profile._configure(<HMM> query, self.background, L)
+            self.profile.configure(<HMM> query, self.background, L)
             # use the local profile as a query
             query = self.profile
 
@@ -6864,8 +6864,8 @@ cdef class Profile:
         .. versionadded:: 0.7.0
 
         """
-        assert self._om != NULL
-        return p7_oprofile.p7_oprofile_IsLocal(self._om)
+        assert self._gm != NULL
+        return libhmmer.p7_profile.p7_profile_IsLocal(self._gm)
 
     @property
     def multihit(self):
@@ -6874,37 +6874,54 @@ cdef class Profile:
         .. versionadded:: 0.7.0
 
         """
-        assert self._om != NULL
-        return self._om.nj == 1.0
+        assert self._gm != NULL
+        return libhmmer.p7_profile.p7_profile_IsMultihit(self._gm)
 
     @multihit.setter
     def multihit(self, multihit):
         if multihit:
             if not self.multihit:
-                libhmmer.p7_profile.p7_ReconfigMultihit(self._gm, self._gm.L)
+                libhmmer.modelconfig.p7_ReconfigMultihit(self._gm, self._gm.L)
         else:
             if self.multihit:
-                libhmmer.p7_profile.p7_ReconfigUnihit(self._gm, self._gm.L)
+                libhmmer.modelconfig.p7_ReconfigUnihit(self._gm, self._gm.L)
 
     # --- Methods ------------------------------------------------------------
 
-    cdef int _clear(self) nogil except 1:
-        cdef int status
-        status = libhmmer.p7_profile.p7_profile_Reuse(self._gm)
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "p7_profile_Reuse")
-        return 0
-
-    def clear(self):
+    cpdef void clear(self) except *:
         """clear(self)\n--
 
         Clear internal buffers to reuse the profile without reallocation.
 
         """
-        assert self._gm != NULL
-        self._clear()
+        cdef int status
+        with nogil:
+            status = libhmmer.p7_profile.p7_profile_Reuse(self._gm)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_profile_Reuse")
 
-    cdef int _configure(self, HMM hmm, Background background, int L, bint multihit=True, bint local=True) nogil except 1:
+    cpdef void configure(
+        self, 
+        HMM hmm, 
+        Background background, 
+        int L=400, 
+        bint multihit=True, 
+        bint local=True
+    ) except *:
+        """configure(self, hmm, background, L=400, multihit=True, local=True)\n--
+
+        Configure a search profile using the given models.
+
+        Arguments:
+            hmm (`pyhmmer.plan7.HMM`): The model HMM with core probabilities.
+            bg (`pyhmmer.plan7.Background`): The null background model.
+            L (`int`): The expected target sequence length.
+            multihit (`bool`): Whether or not to use multihit modes.
+            local (`bool`): Whether or not to use non-local modes.
+
+        """
+        assert self._gm != NULL
+        
         cdef int         mode
         cdef int         status
         cdef P7_HMM*     hm     = hmm._hmm
@@ -6924,28 +6941,10 @@ cdef class Profile:
         else:
             mode = p7_UNILOCAL if local else p7_UNIGLOCAL
         # configure the model
-        status = libhmmer.modelconfig.p7_ProfileConfig(hm, bg, gm, L, mode)
+        with nogil:
+            status = libhmmer.modelconfig.p7_ProfileConfig(hm, bg, gm, L, mode)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_ProfileConfig")
-
-        return 0
-
-    def configure(self, HMM hmm, Background background, int L=400, bint multihit=True, bint local=True):
-        """configure(self, hmm, background, L=400, multihit=True, local=True)\n--
-
-        Configure a search profile using the given models.
-
-        Arguments:
-            hmm (`pyhmmer.plan7.HMM`): The model HMM with core probabilities.
-            bg (`pyhmmer.plan7.Background`): The null background model.
-            L (`int`): The expected target sequence length.
-            multihit (`bool`): Whether or not to use multihit modes.
-            local (`bool`): Whether or not to use non-local modes.
-
-        """
-        assert self._gm != NULL
-        with nogil:
-            self._configure(hmm, background, L, multihit, local)
 
     cpdef Profile copy(self):
         """copy(self)\n--
@@ -6973,25 +6972,7 @@ cdef class Profile:
         else:
             raise UnexpectedError(status, "p7_profile_Copy")
 
-    cpdef bint is_local(self):
-        """is_local(self)\n--
-
-        Return whether or not the profile is in a local alignment mode.
-
-        """
-        assert self._gm != NULL
-        return libhmmer.p7_profile.p7_profile_IsLocal(self._gm)
-
-    cpdef bint is_multihit(self):
-        """is_multihit(self)\n--
-
-        Returns whether or not the profile is in a multihit alignment mode.
-
-        """
-        assert self._gm != NULL
-        return libhmmer.p7_profile.p7_profile_IsMultihit(self._gm)
-
-    cpdef OptimizedProfile optimized(self):
+    cpdef OptimizedProfile to_optimized(self):
         """optimized(self)\n--
 
         Convert the profile to a platform-specific optimized profile.

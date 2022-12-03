@@ -398,14 +398,13 @@ cdef class LongTargetsPipeline(Pipeline):
     )
 
 cdef class Profile:
-    cdef P7_PROFILE* _gm
-    cdef readonly Alphabet          alphabet
+    cdef          P7_PROFILE* _gm
+    cdef readonly Alphabet    alphabet
 
-    cdef int _clear(self) nogil except 1
-    cdef int _configure(self, HMM hmm, Background background, int L, bint multihit=*, bint local=*) nogil except 1
-
+    cpdef void clear(self) except *
+    cpdef void configure(self, HMM hmm, Background background, int L=?, bint multihit=*, bint local=*) except *
     cpdef Profile copy(self)
-    cpdef OptimizedProfile optimized(self)
+    cpdef OptimizedProfile to_optimized(self)
 
 
 cdef class ScoreData:

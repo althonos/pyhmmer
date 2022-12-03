@@ -29,7 +29,7 @@ class TestOptimizedProfileBlock(unittest.TestCase):
 
     @classmethod
     def _random_optimized_profile(cls, name, M=100):
-        return cls._random_profile(name, M=M).optimized()
+        return cls._random_profile(name, M=M).to_optimized()
 
     def test_alphabet_mismatch(self):
         om1 = self._random_optimized_profile(b"profile1")
