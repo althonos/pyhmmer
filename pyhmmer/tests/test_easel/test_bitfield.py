@@ -60,3 +60,17 @@ class TestBitfield(unittest.TestCase):
         b2[2] = b2[4] = True
 
         self.assertEqual(b1.__getstate__(), b2.__getstate__())
+
+    def test_copy(self):
+        b1 = easel.Bitfield.zeros(8)
+        b1[2] = b1[4] = True
+
+        b2 = b1.copy()
+        for i in range(len(b1)):
+            self.assertEqual(b1[i], b2[i])
+
+        b2[2] = b2[4] = False
+        self.assertTrue(b1[2])
+        self.assertTrue(b1[4])
+        self.assertFalse(b2[2])
+        self.assertFalse(b2[4])

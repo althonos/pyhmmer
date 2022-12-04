@@ -42,6 +42,7 @@ cdef class Bitfield:
 
     cdef size_t _wrap_index(self, int index) except -1
     cpdef size_t count(self, bint value=*)
+    cpdef Bitfield copy(self)
     cpdef void toggle(self, int index) except *
 
 

@@ -638,6 +638,12 @@ cdef class Bitfield:
         cdef size_t nu = (self._b.nb // 64) + (self._b.nb % 64 != 0)
         return sizeof(uint64_t) * nu + sizeof(ESL_BITFIELD) + sizeof(self)
 
+    def __copy__(self):
+        return self.copy()
+
+    def __deepcopy__(self, memo):
+        return self.copy()
+
     def __getbuffer__(self, Py_buffer* buffer, int flags):
         assert self._b != NULL
 
@@ -688,6 +694,20 @@ cdef class Bitfield:
         with nogil:
             count_ = libeasel.bitfield.esl_bitfield_Count(self._b)
         return count_ if value else self._b.nb - count_
+
+    cpdef Bitfield copy(self):
+        """copy(self)\n--
+
+        Return a copy of this bitfield object.
+
+        .. versionadded:: 0.7.0
+
+        """
+        assert self._b != NULL
+        cdef Bitfield copy = type(self).zeros(self._b.nb)
+        with nogil:
+            memcpy(copy._b.b, self._b.b, self._shape[0]*sizeof(uint64_t))
+        return copy
 
     cpdef void toggle(self, int index) except *:
         """toggle(self, index)\n--
