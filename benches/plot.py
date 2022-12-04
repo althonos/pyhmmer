@@ -26,8 +26,12 @@ CPU_RX = re.compile(r"(?:--cpu|--jobs) (\d+)")
 for result in data["results"]:
     if result["command"].startswith(("hmmsearch", "hmmscan")):
         result["tool"] = result["command"].split(" ")[0]
+    elif "hmmscan" in result["command"]:
+        result["tool"] = "pyhmmer.hmmscan"
+    elif "hmmsearch" in result["command"]:
+        result["tool"] = "pyhmmer.hmmsearch"
     else:
-        result["tool"] = "pyhmmer"
+        raise ValueError(f"Unknown command: {result['command']!r}")
     if "Pfam.v33-1.hmm " in result["command"]:
         result["format"] = "text"
     elif "Pfam.v33-1.pressed.hmm.h3m " in result["command"]:
@@ -35,16 +39,19 @@ for result in data["results"]:
     elif "Pfam.v33-1.pressed.hmm " in result["command"]:
         result["format"] = "pressed"
     else:
-        print(result["command"])
-        raise ValueError("could not find format")
+        raise ValueError(f"Unknown format: {result['command']!r}")
     result["cpu"] = int(CPU_RX.search(result["command"]).group(1))
 
-plt.figure(1, figsize=(18, 6))
-plt.subplot(1, 3, 1)
+plt.figure(1, figsize=(24, 6))
+plt.subplot(1, 4, 1)
 
 data["results"].sort(key=lambda r: (r["tool"], r["format"], r["cpu"]))
 for color, (tool, group) in zip(
-    Bold_3.hex_colors, itertools.groupby(data["results"], key=lambda r: r["tool"])
+    Bold_3.hex_colors[1:], 
+    filter(
+       lambda x: "hmmsearch" in x[0], 
+       itertools.groupby(data["results"], key=lambda r: r["tool"])
+    )
 ):
     group = list(group)
 
@@ -68,8 +75,40 @@ for color, (tool, group) in zip(
 plt.legend()
 plt.xlabel("CPUs")
 plt.ylabel("Time (s)")
-# plt.savefig("benchmark.hmmsearch.svg")
-# plt.show()
+
+plt.figure(1, figsize=(24, 6))
+plt.subplot(1, 4, 2)
+
+data["results"].sort(key=lambda r: (r["tool"], r["format"], r["cpu"]))
+for color, (tool, group) in zip(
+    Bold_3.hex_colors[1:], 
+    filter(
+       lambda x: "hmmscan" in x[0], 
+       itertools.groupby(data["results"], key=lambda r: r["tool"])
+    )
+):
+    group = list(group)
+
+    group_text = [r for r in group if r["format"] == "text"]
+    if any(group_text):
+        X = numpy.array([r["cpu"] for r in group_text])
+        Y = numpy.array([r["mean"] for r in group_text])
+        ci = [1.96 * r["stddev"] / math.sqrt(len(r["times"])) for r in group_text]
+        plt.plot(X, Y, color=color, linestyle="--", marker="o")
+        plt.fill_between(X, Y - ci, Y + ci, color=color, alpha=0.1)
+
+    group_pressed = [r for r in group if r["format"] == "pressed"]
+    if any(group_pressed):
+        X = numpy.array([r["cpu"] for r in group_pressed])
+        Y = numpy.array([r["mean"] for r in group_pressed])
+        ci = [1.96 * r["stddev"] / math.sqrt(len(r["times"])) for r in group_pressed]
+        plt.plot(X, Y, label=tool, color=color, marker="o")
+        plt.fill_between(X, Y - ci, Y + ci, color=color, alpha=0.1)
+
+
+plt.legend()
+plt.xlabel("CPUs")
+plt.ylabel("Time (s)")
 
 
 with open(os.path.join(args.folder, "phmmer.json")) as f:
@@ -80,11 +119,11 @@ for result in data["results"]:
     if result["command"].startswith("phmmer"):
         result["tool"] = result["command"].split(" ")[0]
     else:
-        result["tool"] = "pyhmmer"
+        result["tool"] = "pyhmmer.phmmer"
     result["cpu"] = int(CPU_RX.search(result["command"]).group(1))
 
 # plt.figure(2, figsize=(6,6))
-plt.subplot(1, 3, 2)
+plt.subplot(1, 4, 3)
 data["results"].sort(key=lambda r: (r["tool"], r["cpu"]))
 for color, (tool, group) in zip(
     Bold_3.hex_colors[1:], itertools.groupby(data["results"], key=lambda r: r["tool"])
@@ -110,11 +149,11 @@ for result in data["results"]:
     if result["command"].startswith("nhmmer"):
         result["tool"] = result["command"].split(" ")[0]
     else:
-        result["tool"] = "pyhmmer"
+        result["tool"] = "pyhmmer.nhmmer"
     result["cpu"] = int(CPU_RX.search(result["command"]).group(1))
 
 # plt.figure(2, figsize=(6,6))
-plt.subplot(1, 3, 3)
+plt.subplot(1, 4, 4)
 data["results"].sort(key=lambda r: (r["tool"], r["cpu"]))
 for color, (tool, group) in zip(
     Bold_3.hex_colors[1:], itertools.groupby(data["results"], key=lambda r: r["tool"])
