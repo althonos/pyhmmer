@@ -393,7 +393,7 @@ class TestNhmmer(unittest.TestCase):
             hits = list(pyhmmer.nhmmer(query, seqs, cpus=1))[0]
             hits.sort()
 
-        self.assertEqual(hits.hits_reported, 1)
+        self.assertEqual(len(hits.reported), 1)
         with self.table("bmyD3.tbl") as table:
             self.assertTableEqual(hits, table)
 
@@ -407,7 +407,7 @@ class TestNhmmer(unittest.TestCase):
         hits = next(pyhmmer.nhmmer(self.bmyD, seqs, cpus=1))
         hits.sort()
 
-        self.assertEqual(hits.hits_reported, 2)
+        self.assertEqual(len(hits.reported), 2)
         with self.table("bmyD1.tbl") as table:
             self.assertTableEqual(hits, table)
 
@@ -419,7 +419,7 @@ class TestNhmmer(unittest.TestCase):
             hits = list(pyhmmer.nhmmer(self.bmyD, seqs_file, cpus=1))[0]
             hits.sort()
 
-        self.assertEqual(hits.hits_reported, 2)
+        self.assertEqual(len(hits.reported), 2)
         with self.table("bmyD1.tbl") as table:
             self.assertTableEqual(hits, table)
 
@@ -433,7 +433,7 @@ class TestNhmmer(unittest.TestCase):
         hits = next(pyhmmer.nhmmer(self.bmyD, seqs, cpus=1))
         hits.sort()
 
-        self.assertEqual(hits.hits_reported, 6)
+        self.assertEqual(len(hits.reported), 6)
         with self.table("bmyD2.tbl") as table:
             self.assertTableEqual(hits, table)
 
@@ -445,7 +445,7 @@ class TestNhmmer(unittest.TestCase):
             hits = list(pyhmmer.nhmmer(self.bmyD, seqs_file, cpus=1))[0]
             hits.sort()
 
-        self.assertEqual(hits.hits_reported, 6)
+        self.assertEqual(len(hits.reported), 6)
         with self.table("bmyD2.tbl") as table:
             self.assertTableEqual(hits, table)
 

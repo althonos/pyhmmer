@@ -160,7 +160,7 @@ import sys
 import warnings
 
 from .errors import AllocationError, UnexpectedError, AlphabetMismatch
-from .utils import peekable
+from .utils import peekable, SizedIterator
 
 
 # --- Constants --------------------------------------------------------------
@@ -7567,26 +7567,6 @@ cdef class TopHits:
         return self._pli.long_targets
 
     @property
-    def hits_reported(self):
-        """`int`: The number of hits that are above the reporting threshold.
-
-        .. versionchanged:: 0.5.0
-           Renamed from ``reported`` to ``hits_reported``.
-
-        """
-        return self._th.nreported
-
-    @property
-    def hits_included(self):
-        """`int`: The number of hits that are above the inclusion threshold.
-
-        .. versionchanged:: 0.5.0
-           Renamed from ``included`` to ``hits_included``.
-
-        """
-        return self._th.nincluded
-
-    @property
     def strand(self):
         """`str` or `None`: The strand these hits were obtained from.
 
@@ -7615,6 +7595,30 @@ cdef class TopHits:
 
         """
         return self._pli.block_length if self._pli.long_targets else None
+
+    @property
+    def included(self):
+        """iterator of `Hit`: An iterator over the hits marked as *included*.
+
+        .. versionadded:: 0.7.0
+
+        """
+        return SizedIterator(
+            self._th.nincluded,
+            filter(operator.attrgetter("included"), self)
+        )
+    
+    @property
+    def reported(self):
+        """iterator of `Hit`: An iterator over the hits marked as *reported*.
+
+        .. versionadded:: 0.7.0
+
+        """
+        return SizedIterator(
+            self._th.nreported,
+            filter(operator.attrgetter("reported"), self)
+        )
 
     # --- Utils --------------------------------------------------------------
 

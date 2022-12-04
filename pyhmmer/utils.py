@@ -97,3 +97,23 @@ class singledispatchmethod(typing.Generic[_T]):
     ) -> typing.Any:
         """Registers a new implementation for the given class."""
         return self.dispatcher.register(cls, func=method)
+
+
+class SizedIterator(typing.Generic[_T], typing.Iterator[_T], typing.Sized):
+    """An iterator with a known number of items.
+    """
+
+    def __init__(self, n: int, iterable: typing.Iterable[_T]) -> None:
+        self._it = iter(iterable)
+        self._n = n
+
+    def __len__(self) -> int:
+        return self._n
+
+    def __iter__(self: _S) -> _S:
+        return self
+
+    def __next__(self) -> _T:
+        if self._n > 0:
+            self._n -= 1
+        return next(self._it)

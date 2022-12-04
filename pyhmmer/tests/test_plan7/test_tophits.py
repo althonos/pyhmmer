@@ -233,14 +233,14 @@ class TestTopHits(unittest.TestCase):
 
     def test_threshold(self):
         # after thresholding, one of the hits will not be included.
-        self.assertEqual(self.hits.hits_included, 15)
-        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertEqual(len(self.hits.included), 15)
+        self.assertEqual(len(self.hits.reported), 22)
 
     def test_to_msa(self):
         msa = self.hits.to_msa(self.hmm.alphabet)
         self.assertIsInstance(msa, TextMSA)
         unique_names = { seq.name.split(b"/")[0] for seq in msa.sequences }
-        self.assertEqual(len(unique_names), self.hits.hits_included)
+        self.assertEqual(len(unique_names), len(self.hits.included))
 
         msa_d = self.hits.to_msa(
             self.hmm.alphabet,
@@ -283,71 +283,71 @@ class TestTopHits(unittest.TestCase):
         self.assertMultiLineEqual("\n".join(lines), "\n".join(expected))
 
     def test_manual_report(self):
-        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertEqual(len(self.hits.reported), 22)
         self.assertTrue(self.hits[0].reported)
         
         self.hits[0].reported = False
-        self.assertEqual(self.hits.hits_reported, 21)
+        self.assertEqual(len(self.hits.reported), 21)
         self.assertFalse(self.hits[0].reported)
         
         self.hits[0].reported = True
-        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertEqual(len(self.hits.reported), 22)
         self.assertTrue(self.hits[0].reported)
 
     def test_manual_inclusion(self):
-        self.assertEqual(self.hits.hits_included, 15)
-        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertEqual(len(self.hits.included), 15)
+        self.assertEqual(len(self.hits.reported), 22)
         self.assertTrue(self.hits[0].included)
         self.assertTrue(self.hits[0].reported)
         
         self.hits[0].included = False
-        self.assertEqual(self.hits.hits_included, 14)
-        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertEqual(len(self.hits.included), 14)
+        self.assertEqual(len(self.hits.reported), 22)
         self.assertFalse(self.hits[0].included)
         self.assertTrue(self.hits[0].reported)
         
         self.hits[0].included = True
-        self.assertEqual(self.hits.hits_included, 15)
-        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertEqual(len(self.hits.included), 15)
+        self.assertEqual(len(self.hits.reported), 22)
         self.assertTrue(self.hits[0].included)
         self.assertTrue(self.hits[0].reported)
 
     def test_manual_drop(self):
-        self.assertEqual(self.hits.hits_included, 15)
-        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertEqual(len(self.hits.included), 15)
+        self.assertEqual(len(self.hits.reported), 22)
         self.assertTrue(self.hits[0].included)
         self.assertTrue(self.hits[0].reported)
         
         self.hits[0].dropped = True
-        self.assertEqual(self.hits.hits_included, 14)
-        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertEqual(len(self.hits.included), 14)
+        self.assertEqual(len(self.hits.reported), 22)
         self.assertTrue(self.hits[0].dropped)
         self.assertFalse(self.hits[0].included)
         self.assertTrue(self.hits[0].reported)
         
         self.hits[0].dropped = False
-        self.assertEqual(self.hits.hits_included, 14)
-        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertEqual(len(self.hits.included), 14)
+        self.assertEqual(len(self.hits.reported), 22)
         self.assertFalse(self.hits[0].dropped)
         self.assertFalse(self.hits[0].included)
         self.assertTrue(self.hits[0].reported)
 
     def test_manual_duplicate(self):
-        self.assertEqual(self.hits.hits_included, 15)
-        self.assertEqual(self.hits.hits_reported, 22)
+        self.assertEqual(len(self.hits.included), 15)
+        self.assertEqual(len(self.hits.reported), 22)
         self.assertTrue(self.hits[0].included)
         self.assertTrue(self.hits[0].reported)
         
         self.hits[0].duplicate = True
-        self.assertEqual(self.hits.hits_included, 14)
-        self.assertEqual(self.hits.hits_reported, 21)
+        self.assertEqual(len(self.hits.included), 14)
+        self.assertEqual(len(self.hits.reported), 21)
         self.assertFalse(self.hits[0].included)
         self.assertFalse(self.hits[0].reported)
         self.assertTrue(self.hits[0].duplicate)
         
         self.hits[0].duplicate = False
-        self.assertEqual(self.hits.hits_included, 14)
-        self.assertEqual(self.hits.hits_reported, 21)
+        self.assertEqual(len(self.hits.included), 14)
+        self.assertEqual(len(self.hits.reported), 21)
         self.assertFalse(self.hits[0].included)
         self.assertFalse(self.hits[0].reported)
         self.assertFalse(self.hits[0].duplicate)
