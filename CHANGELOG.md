@@ -6,7 +6,51 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.7.0...HEAD
+
+
+## [v0.7.0] - 2022-12-04
+[v0.7.0]: https://github.com/althonos/pyhmmer/compare/v0.6.3...v0.7.0
+
+### Added
+- `Bitfield.zeros` and `Bitfield.ones` classmethods for constructing an empty bitfield of known size.
+- `Bitfield.copy` method to copy a bitfield object.
+- `SequenceBlock` and `OptimizedProfileBlock` classes to store Python objects next to a contiguous array of pointers for iterating with the GIL released.
+- `SequenceFile.read_block` method to read a whole sequence block from a file.
+- `HMM.sample` class method to generate a HMM at random given a `Randomness` source.
+- `hmmscan` function to scan a profile database with sequence queries.
+- `deepcopy` implementations to `HMM`, `Profile` and `OptimizedProfile` classes of `plan7`.
+- `rewind` method to `HMMFile`, `HMMPressedFile` and `SequenceFile` to reset a file back to its initial position.
+- `name` attribute to `HMMFile`, `HMMPressedFile`, `MSAFile` and `SequenceFile` to expose the path of a file (when it was created from path).
+- `local` property to `Profile` and `OptimizedProfile`, indicating whether a profile is in local or global mode.
+- `multihit` property to `Profile` and `OptimizedProfile`, indicating whether a profile is in unihit or multihit mode, with a setter taking care of the reconfiguration.
+- `Domain.included` and `Domain.reported` settable properties to report the inclusion and reporting status of a single domain. 
+- `TopHits.included` and `TopHits.reported` sized iterator to iterate only on included and reported hits.
+- `Domains.included` and `Domains.reported` sized iterator to iterate only on included and reported domains.
+
+### Changed
+- `Bitfield`, `Vector` and `Matrix` can now be created from an iterable.
+- `Pipeline` search methods now expect a `DigitalSequenceBlock` or a `SequenceFile` for the target sequence database.
+- `Pipeline` scan methods now expect an `OptimizedProfileBlock` or a `HMMPressedFile` for the target profile database.
+- `TraceAligner` now expect a `DigitalSequenceBlock` for the sequences to align to the HMM.
+- `Profile.configure` now uses a default value of 400 for the `L` argument.
+- `hmmsearch`, `nhmmer` and `phmmer` support being given a single query instead of requiring an iterable.
+- `HMMPressedFile` can now be created, closed and used as a context manager directly without having to manage the source `HMMFile`.
+- Renamed `Profile.optimized` method to `Profile.to_optimized`.
+- Replaced `Randomness.is_fast` method with the `Randomness.fast` property.
+- Rewrite handling of `Hit` flags using settable properties (`Hit.included`, `Hit.reported`, `Hit.new`, `Hit.dropped`, `Hit.duplicate`) instead of methods.
+
+### Fixed
+- Memory leak in the `LongTargetsPipeline` search loop.
+- PyPy behaviour change of `readinto` methods now expecting `unsigned char*` instead of `char*` memoryview.
+- `NULL`-pointer dereference in `Pipeline.search_hmm` when given a query without name.
+- `LongTargetsPipeline` not recording the query name and accession.
+- Memory leak caused by using a non-default prior scheme when constructing a `Builder`.
+
+### Removed
+- `PipelineSearchTargets`, replaced in functionality with `easel.DigitalSequenceBlock`.
+- `is_local` and `is_multihit` methods of `Profile` and `OptimizedProfile`, replaced with equivalent properties.
+- `Hit.manually_drop` and `Hit.manually_include` methods, replaced with the different `Hit` properties.
 
 
 ## [v0.6.3] - 2022-09-09

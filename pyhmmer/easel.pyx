@@ -497,6 +497,8 @@ cdef class Bitfield:
 
         Create a new bitfield of size ``n`` with all elements set to `False`.
 
+        .. versionadded:: 0.7.0
+
         """
         if n <= 0:
             raise ValueError("Cannot create an empty `Bitfield`")
@@ -512,6 +514,8 @@ cdef class Bitfield:
         """ones(cls, n, /)\n--
 
         Create a new bitfield of size ``n`` with all elements set to `True`.
+
+        .. versionadded:: 0.7.0
 
         """
         cdef Bitfield bitfield = cls.zeros(n)
