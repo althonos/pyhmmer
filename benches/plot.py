@@ -169,6 +169,6 @@ plt.legend()
 plt.xlabel("CPUs")
 plt.ylabel("Time (s)")
 
-
+plt.tight_layout()
 plt.savefig(os.path.join(args.folder, "plot.svg"), transparent=True)
 plt.show()
