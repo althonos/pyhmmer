@@ -1472,9 +1472,16 @@ cdef class Domain:
     @included.setter
     def included(self, bint included):
         assert self._dom != NULL
+        assert self.hit._hit != NULL
         if included:
+            if not self._dom.is_included:
+                self.hit._hit.nincluded += 1
+            if not self._dom.is_reported:
+                self.hit._hit.nreported += 1
             self._dom.is_included = self._dom.is_reported = True
         else:
+            if self._dom.is_included:
+                self.hit._hit.nincluded -= 1
             self._dom.is_included = False
 
     @property
@@ -1490,9 +1497,16 @@ cdef class Domain:
     @reported.setter
     def reported(self, bint reported):
         assert self._dom != NULL
+        assert self.hit._hit != NULL
         if reported:
+            if not self._dom.is_reported:
+                self.hit._hit.nreported += 1
             self._dom.is_reported = True
         else:
+            if self._dom.is_reported:
+                self.hit._hit.nreported -= 1
+            if self._dom.is_included:
+                self.hit._hit.nincluded -= 1
             self._dom.is_reported = self._dom.is_included = False
 
 
@@ -1510,15 +1524,44 @@ cdef class Domains:
         self.hit = hit
 
     def __len__(self):
+        assert self.hit._hit != NULL
         return self.hit._hit.ndom
 
     def __getitem__(self, int index):
+        assert self.hit._hit != NULL
         if index < 0:
             index += self.hit._hit.ndom
         if index >= self.hit._hit.ndom or index < 0:
             raise IndexError("list index out of range")
         return Domain(self.hit, <size_t> index)
 
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def included(self):
+        """iterator of `Domain`: An iterator over *included* domains only.
+
+        .. versionadded:: 0.7.0
+
+        """
+        assert self.hit._hit != NULL
+        return SizedIterator(
+            self.hit._hit.nincluded,
+            filter(operator.attrgetter("included"), self)
+        )
+
+    @property
+    def reported(self):
+        """iterator of `Domain`: An iterator over *reported* domains only.
+
+        .. versionadded:: 0.7.0
+
+        """
+        assert self.hit._hit != NULL
+        return SizedIterator(
+            self.hit._hit.nreported,
+            filter(operator.attrgetter("reported"), self)
+        )
 
 @cython.freelist(8)
 @cython.no_gc_clear
