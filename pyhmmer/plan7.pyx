@@ -74,6 +74,7 @@ from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e, p7_strands_e, p7_complementarity_e
 from libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL
 from libhmmer.p7_trace cimport P7_TRACE, p7t_statetype_e
+from libhmmer.p7_prior cimport P7_PRIOR
 from libhmmer.nhmmer cimport ID_LENGTH_LIST
 from capacity cimport new_capacity
 
@@ -698,21 +699,24 @@ cdef class Builder:
         else:
             self._bld.re_target = libhmmer.p7_ETARGET_OTHER
 
-        # set the prior scheme
+        # set the prior scheme (this involves re-allocating a new prior)
         self.prior_scheme = prior_scheme
-        if prior_scheme is None:
-            self._bld.prior = NULL
-        elif prior_scheme == "laplace":
-            self._bld.prior = libhmmer.p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
-        elif prior_scheme == "alphabet":
-            if alphabet.is_amino():
-                self._bld.prior = libhmmer.p7_prior.p7_prior_CreateAmino()
-            elif alphabet.is_nucleotide():
-                self._bld.prior = libhmmer.p7_prior.p7_prior_CreateNucleic()
-            else:
+        libhmmer.p7_prior.p7_prior_Destroy(self._bld.prior)
+        self._bld.prior = NULL
+        if prior_scheme is not None:
+            if prior_scheme == "laplace":
                 self._bld.prior = libhmmer.p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
-        else:
-            raise ValueError("Invalid value for 'prior_scheme': {prior_scheme}")
+            elif prior_scheme == "alphabet":
+                if alphabet.is_amino():
+                    self._bld.prior = libhmmer.p7_prior.p7_prior_CreateAmino()
+                elif alphabet.is_nucleotide():
+                    self._bld.prior = libhmmer.p7_prior.p7_prior_CreateNucleic()
+                else:
+                    self._bld.prior = libhmmer.p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
+            else:
+                raise ValueError("Invalid value for 'prior_scheme': {prior_scheme!r}")
+            if self._bld.prior == NULL:
+                raise AllocationError("P7_PRIOR", sizeof(P7_PRIOR))
 
         # set the gap probabilities and score matrix using alphabet-specific
         # defaults (this is only used when building a HMM for a single sequence)
