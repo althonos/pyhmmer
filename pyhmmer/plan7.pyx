@@ -808,7 +808,7 @@ cdef class Builder:
         Arguments:
             sequence (`~pyhmmer.easel.DigitalSequence`): A single biological
                 sequence in digital mode to build a HMM with.
-            background (`pyhmmer.plan7.background`): The background model
+            background (`~pyhmmer.plan7.Background`): The background model
                 to use to create the HMM.
 
         Returns:
@@ -914,7 +914,7 @@ cdef class Builder:
         Arguments:
             msa (`~pyhmmer.easel.DigitalMSA`): A multiple sequence
                 alignment in digital mode to build a HMM with.
-            background (`pyhmmer.plan7.background`): The background model
+            background (`~pyhmmer.plan7.Background`): The background model
                 to use to create the HMM.
 
         Returns:
@@ -1107,7 +1107,7 @@ cdef class Cutoffs:
                 >>> thioesterase.cutoffs.gathering
                 (180.0, 120.0)
 
-            Set the attribute to `None` or delete it with `del` to clear
+            Set the attribute to `None` or delete it with ``del`` to clear
             the gathering thresholds::
 
                 >>> thioesterase.cutoffs.gathering = None
@@ -1325,7 +1325,7 @@ cdef class Cutoffs:
     cpdef VectorF as_vector(self):
         """as_vector(self)\n--
 
-        Return a view over the score cutoffs as a `~VectorF`.
+        Return a view over the score cutoffs as a `~pyhmmer.easel.VectorF`.
 
         """
         assert self._cutoffs != NULL
@@ -1720,7 +1720,7 @@ cdef class EvalueParameters:
     cpdef VectorF as_vector(self):
         """as_vector(self)\n--
 
-        Return a view over the e-value parameters as a `~VectorF`.
+        Return a view over the e-value parameters as a `~pyhmmer.easel.VectorF`.
 
         """
         assert self._evparams != NULL
@@ -1735,7 +1735,7 @@ cdef class EvalueParameters:
 
 
 cdef class Hit:
-    """A high-scoring database hit found by the comparison pipeline.
+    r"""A high-scoring database hit found by the comparison pipeline.
 
     A hit is obtained in HMMER for every target where one or more
     significant domain alignment was found by a `Pipeline`. A `Hit` comes
@@ -3850,7 +3850,7 @@ cdef class OptimizedProfile:
 
         Once allocated, you must call the `~OptimizedProfile.convert`
         method with a `~plan7.Profile` object. It's actually easier to
-        use `Profile.optimized` method to obtained a configured
+        use `Profile.to_optimized` method to obtained a configured
         `OptimizedProfile` directly, unless you're explicitly trying
         to recycle memory.
 
@@ -4188,7 +4188,7 @@ cdef class OptimizedProfile:
                 not compatible.
 
         See Also:
-            The `Profile.optimized` method, which allows getting an
+            The `Profile.to_optimized` method, which allows getting an
             `OptimizedProfile` directly from a profile without having to
             allocate first.
 
@@ -4627,15 +4627,18 @@ cdef class Pipeline:
     (comparing a single query sequence to a target profile database). The
     two methods are yielding equivalent results: if you have a collection
     of :math:`M` sequences and :math:`N` HMMs to compare, doing a search
-    or a scan should give the same hits.
+    or a scan should give the same raw scores. The E-values will however
+    be different if ``Z`` and  ``domZ`` where not set manually: :math:`Z`
+    will be set to :math:`M` for a *search*, and to :math:`N` for a scan.
 
     The main reason for which you should choose *search* or *scan* is the
     relative size of the sequences and HMMs databases. In the original
     HMMER3 code, the memory was managed in a way that you never had to
     load the entirety of the target sequences in memory. In PyHMMER, the
-    *search* methods will **require** that you have the entirety of target
-    sequences loaded in memory, which may not be feasible if you have too
-    many sequences.
+    methods accept both reading the target database from a file, or loading
+    it entirely into memory. A *scan* is always slower than a *search*
+    because of the overhead introduced when reconfiguring a profile for a
+    new sequence.
 
     Attributes:
         alphabet (`~pyhmmer.easel.Alphabet`): The alphabet for which the
@@ -5365,8 +5368,8 @@ cdef class Pipeline:
                 to query the sequence database.
             sequences (`DigitalSequenceBlock` or `SequenceFile`): The target
                 sequences to query with the HMM, either pre-loaded in memory
-                inside a `pyhmmer.easel.DigitalSequenceBlock`, or to be read
-                iteratively from a `SequenceFile` opened in digital mode.
+                inside a `~pyhmmer.easel.DigitalSequenceBlock`, or to be
+                read iteratively from a `SequenceFile` opened in digital mode.
 
         Returns:
             `~pyhmmer.plan7.TopHits`: the hits found in the sequence database.
@@ -6392,6 +6395,13 @@ cdef class LongTargetsPipeline(Pipeline):
         DigitalSequence query,
         ScanTargets targets,
     ):
+        """scan_seq(self, query, targets)\n--
+
+        Run the pipeline using a query sequence against a profile database.
+
+        This is currently unsupported for `LongTargetsPipeline`.
+
+        """
         raise NotImplementedError("Cannot run a database scan with the long target pipeline")
 
     cpdef TopHits search_hmm(
@@ -7143,7 +7153,7 @@ cdef class Profile:
             raise UnexpectedError(status, "p7_profile_Copy")
 
     cpdef OptimizedProfile to_optimized(self):
-        """optimized(self)\n--
+        """to_optimized(self)\n--
 
         Convert the profile to a platform-specific optimized profile.
 
@@ -7894,8 +7904,8 @@ cdef class TopHits:
             alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the
                 HMM this `TopHits` was obtained from. It is required to
                 convert back hits to single sequences.
-            sequences (`list` of `~easel.Sequence`, optional): A list of
-                additional sequences to include in the alignment.
+            sequences (`list` of `~pyhmmer.easel.Sequence`, optional): A list 
+                of additional sequences to include in the alignment.
             traces (`list` of `~plan7.Trace`, optional): A list of
                 additional traces to include in the alignment.
 
@@ -7903,7 +7913,7 @@ cdef class TopHits:
             trim (`bool`): Trim off any residues that get assigned to
                 flanking :math:`N` and :math:`C` states (in profile traces)
                 or :math:`I_0` and :math:`I_m` (in core traces).
-            digitize (`bool`): If set to `True`, returns a `DigitalMSA`
+            digitize (`bool`): If set to `True`, returns a  `DigitalMSA` 
                 instead of a `TextMSA`.
             all_consensus_cols (`bool`): Force a column to be created for
                 every consensus column in the model, even if it means having
@@ -7911,8 +7921,9 @@ cdef class TopHits:
 
         Returns:
             `~pyhmmer.easel.MSA`: A multiple sequence alignment containing
-            the reported hits, either a `TextMSA` or a `DigitalMSA`
-            depending on the value of the ``digitize`` argument.
+            the reported hits, either a `~pyhmmer.easel.TextMSA` or a 
+            `~pyhmmer.easel.DigitalMSA` depending on the value of the 
+            ``digitize`` argument.
 
         .. versionadded:: 0.3.0
 
@@ -8453,8 +8464,9 @@ cdef class TraceAligner:
 
         Returns:
             `~pyhmmer.easel.MSA`: A multiple sequence alignment containing
-            the aligned sequences, either a `TextMSA` or a `DigitalMSA`
-            depending on the value of the ``digitize`` argument.
+            the aligned sequences, either a `~pyhmmer.easel.TextMSA` or a 
+            `~pyhmmer.easel.DigitalMSA` depending on the value of the 
+            ``digitize`` argument.
 
         Raises:
             `~pyhmmer.errors.AlphabetMismatch`: when the alphabet of any

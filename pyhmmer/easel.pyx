@@ -459,33 +459,34 @@ cdef class Alphabet:
 cdef class Bitfield:
     """A statically sized sequence of booleans stored as a packed bitfield.
 
-    A bitfield is instantiated with an iterable, and each object will be
-    tested for truth:
+    Example:
+        Instantiate a bitfield from an iterable, where each object will be
+        tested for truth:
 
-        >>> bitfield = Bitfield([True, False, False])
-        >>> len(bitfield)
-        3
-        >>> bitfield[0]
-        True
-        >>> bitfield[1]
-        False
+            >>> bitfield = Bitfield([True, False, False])
+            >>> len(bitfield)
+            3
+            >>> bitfield[0]
+            True
+            >>> bitfield[1]
+            False
 
-    Use `Bitfield.zeros` and `Bitfield.ones` to initialize a bitfield of
-    a given length with all fields set to ``0`` or ``1``::
+        Use `Bitfield.zeros` and `Bitfield.ones` to initialize a bitfield of
+        a given length with all fields set to :math:`0` or :math:`1`::
 
-        >>> Bitfield.zeros(4)
-        pyhmmer.easel.Bitfield([False, False, False, False])
-        >>> Bitfield.ones(4)
-        pyhmmer.easel.Bitfield([True, True, True, True])
+            >>> Bitfield.zeros(4)
+            pyhmmer.easel.Bitfield([False, False, False, False])
+            >>> Bitfield.ones(4)
+            pyhmmer.easel.Bitfield([True, True, True, True])
 
-    Use indexing to access and edit individual bits::
+        Use indexing to access and edit individual bits::
 
-        >>> bitfield[0] = True
-        >>> bitfield[0]
-        True
-        >>> bitfield[0] = False
-        >>> bitfield[0]
-        False
+            >>> bitfield[0] = True
+            >>> bitfield[0]
+            True
+            >>> bitfield[0] = False
+            >>> bitfield[0]
+            False
 
     """
 
@@ -4369,9 +4370,9 @@ cdef class Sequence:
     To avoid this, ``pyhmmer`` provides two subclasses of the `Sequence`
     abstract class to maintain the mode contract: `TextSequence` and
     `DigitalSequence`. Functions expecting sequences in digital format, like
-    `pyhmmer.hmmsearch`, can then use Python type system to make sure they
-    receive sequences in the right mode. This allows type checkers such as
-    ``mypy`` to detect potential contract breaches at compile-time.
+    `pyhmmer.hmmer.hmmsearch`, can then use Python type system to make sure 
+    they receive sequences in the right mode. This allows type checkers 
+    such as ``mypy`` to detect potential contract breaches at compile-time.
 
     """
 
