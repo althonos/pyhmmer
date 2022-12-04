@@ -59,3 +59,6 @@ cdef inline int idlen_list_assign(ID_LENGTH_LIST* l, P7_TOPHITS* th) nogil:
             return libeasel.eslENOTFOUND
         th.hit[i].dcl[0].ad.L = l.id_lengths[j].length
     return libeasel.eslOK
+
+cdef inline int idlen_list_clear(ID_LENGTH_LIST* l) nogil:
+    l.count = 0

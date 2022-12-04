@@ -57,6 +57,7 @@ cimport libhmmer.p7_scoredata
 cimport libhmmer.p7_tophits
 cimport libhmmer.p7_trace
 cimport libhmmer.tracealign
+cimport libhmmer.nhmmer
 from libeasel cimport eslERRBUFSIZE, eslCONST_LOG2R
 from libeasel.alphabet cimport ESL_ALPHABET, esl_alphabet_Create, esl_abc_ValidateType
 from libeasel.getopts cimport ESL_GETOPTS, ESL_OPTIONS
@@ -73,7 +74,7 @@ from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e, p7_strands_e, p7_complementarity_e
 from libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL
 from libhmmer.p7_trace cimport P7_TRACE, p7t_statetype_e
-from libhmmer.nhmmer cimport ID_LENGTH_LIST, idlen_list_init, idlen_list_add, idlen_list_assign, idlen_list_destroy
+from libhmmer.nhmmer cimport ID_LENGTH_LIST
 from capacity cimport new_capacity
 
 IF HMMER_IMPL == "VMX":
@@ -6146,6 +6147,12 @@ cdef class LongTargetsPipeline(Pipeline):
 
     # --- Magic methods ------------------------------------------------------
 
+    def __cinit__(self):
+        self._idlens = NULL
+
+    def __dealloc__(self):
+        libhmmer.nhmmer.idlen_list_destroy(self._idlens)
+
     def __init__(
         self,
         Alphabet alphabet,
@@ -6205,6 +6212,10 @@ cdef class LongTargetsPipeline(Pipeline):
         self.B1 = B1
         self.B2 = B2
         self.B3 = B3
+        # allocate storage for the ID/length list
+        self._idlens = libhmmer.nhmmer.idlen_list_init(64)
+        if self._idlens == NULL:
+            raise AllocationError("ID_LENGTH_LIST", sizeof(ID_LENGTH_LIST))
 
     # --- Properties ---------------------------------------------------------
 
@@ -6425,7 +6436,6 @@ cdef class LongTargetsPipeline(Pipeline):
         cdef TopHits              hits           = TopHits()
         cdef P7_HIT*              hit            = NULL
         cdef P7_OPROFILE*         om             = NULL
-        cdef ID_LENGTH_LIST*      idlens         = NULL
 
         # perform specific checks for targets stored in a file
         if SearchTargets is SequenceFile:
@@ -6433,9 +6443,6 @@ cdef class LongTargetsPipeline(Pipeline):
                 raise ValueError("can only use a `SequenceFile` backed by a file for reading targets")
             if not sequences.digital:
                 raise ValueError("target sequences file is not in digital mode")
-            idlens = idlen_list_init(1024)
-            if idlens == NULL:
-                raise AllocationError("ID_LENGTH_LIST", sizeof(ID_LENGTH_LIST))
 
         # check the pipeline was configured with the same alphabet
         if not self.alphabet._eq(query.alphabet):
@@ -6455,6 +6462,8 @@ cdef class LongTargetsPipeline(Pipeline):
             # make sure the pipeline is set to search mode and ready for a new HMM
             self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
             self._pli.nseqs = 0
+            # reset the ID/length list
+            libhmmer.nhmmer.idlen_list_clear(self._idlens)
             # create the score data struct
             scoredata.Kp = self.profile._gm.abc.Kp
             scoredata._sd = libhmmer.p7_scoredata.p7_hmm_ScoreDataCreate(om, NULL)
@@ -6470,6 +6479,7 @@ cdef class LongTargetsPipeline(Pipeline):
                     sequences._length,
                     hits._th,
                     scoredata._sd,
+                    self._idlens,
                 )
             else:
                 LongTargetsPipeline._search_loop_longtargets_file(
@@ -6479,9 +6489,9 @@ cdef class LongTargetsPipeline(Pipeline):
                     sequences._sqfp,
                     hits._th,
                     scoredata._sd,
-                    idlens,
+                    self._idlens,
                 )
-            # threshold with user-provided Z if any
+            # threshold with user-provided Z if any and compute E-values
             if self._Z is None:
                 res_count = self._pli.nres
             else:
@@ -6491,16 +6501,9 @@ cdef class LongTargetsPipeline(Pipeline):
             libhmmer.p7_tophits.p7_tophits_ComputeNhmmerEvalues(hits._th, res_count, self.opt._om.max_length)
             # assign target sequence lengths
             hits._sort_by_seqidx()
-            if SearchTargets is DigitalSequenceBlock:
-                for j in range(hits._th.N):
-                    hit = hits._th.hit[j]
-                    hit.dcl[0].ad.L = sequences._refs[hit.seqidx].n
-            else:
-                status = idlen_list_assign(idlens, hits._th)
-                if status != libeasel.eslOK:
-                    raise UnexpectedError(status, "idlen_list_assign")
-                idlen_list_destroy(idlens)
-                idlens = NULL
+            status = libhmmer.nhmmer.idlen_list_assign(self._idlens, hits._th)
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "idlen_list_assign")
             # remove target duplicates from the hits (using the ones with best E-value)
             libhmmer.p7_tophits.p7_tophits_RemoveDuplicates(hits._th, True)#self._pli.use_bit_cutoffs)
             # sort hits, threshold and record pipeline configuration
@@ -6624,13 +6627,14 @@ cdef class LongTargetsPipeline(Pipeline):
 
     @staticmethod
     cdef int _search_loop_longtargets(
-              P7_PIPELINE*  pli,
-              P7_OPROFILE*  om,
-              P7_BG*        bg,
-        const ESL_SQ**      sq,
-        const size_t        n_targets,
-              P7_TOPHITS*   th,
-              P7_SCOREDATA* scoredata,
+              P7_PIPELINE*    pli,
+              P7_OPROFILE*    om,
+              P7_BG*          bg,
+        const ESL_SQ**        sq,
+        const size_t          n_targets,
+              P7_TOPHITS*     th,
+              P7_SCOREDATA*   scoredata,
+              ID_LENGTH_LIST* idlens
     ) nogil except 1:
         cdef int     status
         cdef int     nres
@@ -6664,9 +6668,12 @@ cdef class LongTargetsPipeline(Pipeline):
 
         # run the inner loop on all sequences
         for t in range(n_targets):
+            # record length
+            libhmmer.nhmmer.idlen_list_add(idlens, index, sq[t].L)
+
             # initialize the sequence window storage
             tmpsq.idx = index
-            tmpsq.L = -1 #sq[t].n
+            tmpsq.L = -1
             libeasel.sq.esl_sq_SetAccession(tmpsq, sq[t].acc)
             libeasel.sq.esl_sq_SetName(tmpsq, sq[t].name)
             libeasel.sq.esl_sq_SetDesc(tmpsq, sq[t].desc)
@@ -6751,7 +6758,7 @@ cdef class LongTargetsPipeline(Pipeline):
         ESL_SQFILE*     sqfp,
         P7_TOPHITS*     th,
         P7_SCOREDATA*   scoredata,
-        ID_LENGTH_LIST* l
+        ID_LENGTH_LIST* idlens
     ) nogil except 1:
         cdef int     status
         #cdef int     nres
@@ -6818,7 +6825,7 @@ cdef class LongTargetsPipeline(Pipeline):
                 # read next window
                 status = libeasel.sqio.esl_sqio_ReadWindow(sqfp, C, W, dbsq)
                 if status == libeasel.eslEOD:
-                    idlen_list_add(l, dbsq.idx, dbsq.L)
+                    libhmmer.nhmmer.idlen_list_add(idlens, dbsq.idx, dbsq.L)
                     pli.nseqs += 1
                     libeasel.sq.esl_sq_Reuse(dbsq)
                     status = libeasel.sqio.esl_sqio_ReadWindow(sqfp, 0, W, dbsq)
@@ -7650,7 +7657,7 @@ cdef class TopHits:
             self._th.nincluded,
             filter(operator.attrgetter("included"), self)
         )
-    
+
     @property
     def reported(self):
         """iterator of `Hit`: An iterator over the hits marked as *reported*.

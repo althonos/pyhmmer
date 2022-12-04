@@ -343,6 +343,8 @@ cdef class Pipeline:
 
 
 cdef class LongTargetsPipeline(Pipeline):
+    cdef ID_LENGTH_LIST* _idlens
+
     cpdef TopHits search_hmm(
         self,
         object query,
@@ -362,13 +364,14 @@ cdef class LongTargetsPipeline(Pipeline):
     )
     @staticmethod
     cdef int _search_loop_longtargets(
-              P7_PIPELINE*  pli,
-              P7_OPROFILE*  om,
-              P7_BG*        bg,
-        const ESL_SQ**      sq,
-        const size_t        n_targets,
-              P7_TOPHITS*   th,
-              P7_SCOREDATA* scoredata,
+              P7_PIPELINE*    pli,
+              P7_OPROFILE*    om,
+              P7_BG*          bg,
+        const ESL_SQ**        sq,
+        const size_t          n_targets,
+              P7_TOPHITS*     th,
+              P7_SCOREDATA*   scoredata,
+              ID_LENGTH_LIST* idlens
     ) nogil except 1
     @staticmethod
     cdef int _search_loop_longtargets_file(
