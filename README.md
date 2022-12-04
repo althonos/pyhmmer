@@ -144,14 +144,14 @@ Contributions are more than welcome! See [`CONTRIBUTING.md`](https://github.com/
 ## ⏱️ Benchmarks
 
 Benchmarks were run on a [i7-10710U CPU](https://ark.intel.com/content/www/us/en/ark/products/196448/intel-core-i7-10710u-processor-12m-cache-up-to-4-70-ghz.html) running @1.10GHz with 6 physical / 12
-logical cores, using a FASTA file containing 2,100 protein sequences extracted
-from the genome of *Anaerococcus provencensis*
-([`938293.PRJEB85.HG003687.faa`](https://github.com/althonos/pyhmmer/blob/master/tests/data/seqs/938293.PRJEB85.HG003687.faa))
+logical cores, using a FASTA file containing 4,489 protein sequences extracted
+from the genome of *Escherichia coli*
+([`562.PRJEB4685`](https://progenomes.embl.de/genome.cgi))
 and the version 33.1 of the [Pfam](https://pfam.xfam.org/) HMM library containing
-18,259 domains. Commands were run 4 times on a warm SSD. *Plain lines show
+18,259 domains. Commands were run 3 times on a warm SSD. *Plain lines show
 the times for pressed HMMs, and dashed-lines the times for HMMs in text format.*
 
-![Benchmarks](https://raw.github.com/althonos/pyhmmer/master/benches/v0.5.0/plot.svg)
+![Benchmarks](https://raw.github.com/althonos/pyhmmer/master/benches/v0.7.0/plot.svg)
 
 Raw numbers can be found in the [`benches` folder](https://github.com/althonos/pyhmmer/blob/master/benches/).
 They suggest that `phmmer` should be run with the number of *logical* cores,
