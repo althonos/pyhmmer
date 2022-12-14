@@ -180,6 +180,48 @@ class configure(_build_clib):
     the same configuration values (`self.build_temp`, `self.build_clib`, etc).
     """
 
+    _FUNCTION_HEADERS = {
+        "_mm_malloc": ["malloc.h"],
+        "aligned_alloc": ["stdlib.h"],
+        "chmod": ["sys/stat.h", "stddef.h"],
+        "erfc": ["math.h"],
+        "fstat": ["sys/stat.h", "stddef.h"],
+        "fseeko": ["stdio.h"],
+        "getcwd": ["unistd.h"],
+        "getpid": ["unistd.h"],
+        "mkstemp": ["stdlib.h"],
+        "popen": ["stdio.h"],
+        "posix_memalign": ["stdlib.h"],
+        "putenv": ["stdlib.h"],
+        "strcasecmp": ["strings.h", "stddef.h"],
+        "stat": ["sys/stat.h", "stddef.h"],
+        "strsep": ["string.h"],
+        "sysconf": ["unistd.h"],
+        "sysctl": ["sys/types.h", "sys/sysctl.h", "stddef.h"],
+        "times": ["sys/times.h", "stddef.h"],
+    }
+
+    _FUNCTION_ARGUMENTS = {
+        "_mm_malloc": ["0", "0"],
+        "aligned_alloc": ["0", "0"],
+        "chmod": ["NULL", "0"],
+        "erfc": ["0"],
+        "fstat": ["1", "NULL"],
+        "fseeko": ["NULL", "0", "0"],
+        "getcwd": ["NULL", "0"],
+        "getpid": [],
+        "mkstemp": ["NULL"],
+        "popen": ["NULL", "NULL"],
+        "posix_memalign": ["NULL", "0", "0"],
+        "putenv": ["NULL"],
+        "strcasecmp": ["NULL", "NULL"],
+        "stat": ["NULL", "NULL"],
+        "strsep": ["NULL", "NULL"],
+        "sysconf": ["0"],
+        "sysctl": ["NULL", "0", "NULL", "NULL", "NULL", "0"],
+        "times": ["NULL"],
+    }
+
     # --- Compatibility with base `build_clib` command ---
 
     def check_library_list(self, libraries):
@@ -223,9 +265,14 @@ class configure(_build_clib):
         objects = []
 
         with open(testfile, "w") as f:
-            f.write('int main() {{return {}(); return 0;}}\n'.format(funcname))
+            for header in self._FUNCTION_HEADERS[funcname]:
+                f.write("#include <{}>\n".format(header))
+            f.write("int main() {{ {}({}); return 0; }}".format(
+                funcname,
+                ', '.join(self._FUNCTION_ARGUMENTS[funcname]),
+            ))
         try:
-            objects = self.compiler.compile([testfile], debug=self.debug)
+            objects = self.compiler.compile([testfile], debug=self.debug, extra_postargs=["-Wno-all"])
             self.compiler.link_executable(objects, binfile)
         except (CompileError, LinkError) as err:
             _eprint("no")
