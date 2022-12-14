@@ -6,7 +6,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.7.1...HEAD
+
+
+## [v0.7.1] - 2022-12-15
+[v0.7.1]: https://github.com/althonos/pyhmmer/compare/v0.7.0...v0.7.1
+
+### Added
+- Missing `__reduce__` method to `TopHits`.
+
+### Fixed
+- Build detection of available platform functions in `setup.py`.
 
 
 ## [v0.7.0] - 2022-12-04
