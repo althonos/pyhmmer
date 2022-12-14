@@ -7695,7 +7695,14 @@ cdef class TopHits:
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tophits_Threshold")
         # record pipeline configuration
+        # NOTE: the pointers on the copy are set to NULL by precaution, but since
+        # `pipeline._pli` is allocated by the Python object directly, it will not
+        # be deallocated, so there should be no risk of double free nevertheless.
         memcpy(&self._pli, pipeline._pli, sizeof(P7_PIPELINE))
+        self._pli.oxf = self._pli.oxb = self._pli.fwd = self._pli.bck = NULL
+        self._pli.r = NULL
+        self._pli.ddef = NULL
+        self._pli.hfp = NULL
         return 0
 
     cdef int _sort_by_key(self) nogil except 1:
