@@ -12,11 +12,10 @@ import re
 import sys
 import subprocess
 from pprint import pprint
-from unittest import mock
 
-import setuptools
+import setuptools # always import setuptools first
 from distutils.command.clean import clean as _clean
-from distutils.errors import CompileError
+from distutils.errors import CompileError, LinkError
 from setuptools.command.build_ext import build_ext as _build_ext
 from setuptools.command.build_clib import build_clib as _build_clib
 from setuptools.command.sdist import sdist as _sdist
@@ -194,12 +193,6 @@ class configure(_build_clib):
 
     # --- Autotools-like helpers ---
 
-    def _silent_spawn(self, cmd):
-        try:
-            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-        except subprocess.CalledProcessError as err:
-            raise CompileError(err.stderr)
-
     def _has_header(self, headername):
         _eprint('checking whether <{}> can be included'.format(headername), end="... ")
 
@@ -210,9 +203,8 @@ class configure(_build_clib):
         with open(testfile, "w") as f:
             f.write('#include "{}"\n'.format(headername))
         try:
-            with mock.patch.object(self.compiler, "spawn", new=self._silent_spawn):
-                objects = self.compiler.compile([testfile], debug=self.debug)
-        except CompileError as err:
+            objects = self.compiler.compile([testfile], debug=self.debug)
+        except (CompileError, LinkError) as err:
             _eprint("no")
             return False
         else:
@@ -233,10 +225,9 @@ class configure(_build_clib):
         with open(testfile, "w") as f:
             f.write('int main() {{return {}(); return 0;}}\n'.format(funcname))
         try:
-            with mock.patch.object(self.compiler, "spawn", new=self._silent_spawn):
-                objects = self.compiler.compile([testfile], debug=self.debug)
-                self.compiler.link_executable(objects, binfile)
-        except CompileError:
+            objects = self.compiler.compile([testfile], debug=self.debug)
+            self.compiler.link_executable(objects, binfile)
+        except (CompileError, LinkError) as err:
             _eprint("no")
             return False
         else:
@@ -266,11 +257,10 @@ class configure(_build_clib):
                 }
             """)
         try:
-            with mock.patch.object(self.compiler, "spawn", new=self._silent_spawn):
-                objects = self.compiler.compile([testfile], debug=self.debug, extra_preargs=["-msse2"])
-                self.compiler.link_executable(objects, binfile)
-                subprocess.run([binfile], check=True)
-        except CompileError:
+            objects = self.compiler.compile([testfile], debug=self.debug, extra_preargs=["-msse2"])
+            self.compiler.link_executable(objects, binfile)
+            subprocess.run([binfile], check=True)
+        except (CompileError, LinkError):
             _eprint("no")
             return False
         except subprocess.CalledProcessError:
@@ -304,11 +294,10 @@ class configure(_build_clib):
                 }
             """)
         try:
-            with mock.patch.object(self.compiler, "spawn", new=self._silent_spawn):
-                objects = self.compiler.compile([testfile], debug=self.debug)
-                self.compiler.link_executable(objects, binfile)
-                subprocess.run([binfile], check=True)
-        except CompileError:
+            objects = self.compiler.compile([testfile], debug=self.debug)
+            self.compiler.link_executable(objects, binfile)
+            subprocess.run([binfile], check=True)
+        except (CompileError, LinkError):
             _eprint('no')
             return False
         except subprocess.CalledProcessError:
