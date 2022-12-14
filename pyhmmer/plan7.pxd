@@ -416,6 +416,7 @@ cdef class TopHits:
     cdef bytes       _qname
     cdef bytes       _qacc
 
+    cpdef tuple __reduce__(self)
     cpdef dict __getstate__(self)
     cpdef object __setstate__(self, dict state)
 

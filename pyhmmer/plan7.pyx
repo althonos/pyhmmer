@@ -7290,6 +7290,9 @@ cdef class TopHits:
     def __add__(TopHits self, TopHits other):
         return self.merge(other)
 
+    cpdef tuple __reduce__(self):
+        return TopHits, (), self.__getstate__()
+
     cpdef dict __getstate__(self):
         assert self._th != NULL
 
