@@ -670,7 +670,6 @@ cdef class GeneticCode:
 
         """
         assert block is not None
-        assert block._refs != NULL
 
         cdef size_t               i
         cdef int64_t              nlen
@@ -685,6 +684,8 @@ cdef class GeneticCode:
         proteins = DigitalSequenceBlock(self.aa_alphabet)
         proteins._allocate(block._length)
         for i in range(block._length):
+            assert block._refs != NULL
+            assert block._refs[i] != NULL
             # get length of input and output sequences         
             nlen = block._refs[i].n
             if nlen % 3 != 0:
