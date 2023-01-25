@@ -691,8 +691,8 @@ cdef class GeneticCode:
                 raise ValueError(f"Incomplete sequence of length {nlen!r} at index {i!r}")
             alen = nlen // 3
             # create new object
-            proteins._append(protein)
             protein = DigitalSequence(self.aa_alphabet)
+            proteins._append(protein)
             # grow the internal sequence buffer
             status = libeasel.sq.esl_sq_GrowTo(protein._sq, alen)
             if status == libeasel.eslEMEM:
