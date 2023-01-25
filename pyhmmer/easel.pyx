@@ -354,7 +354,7 @@ cdef class Alphabet:
     cpdef VectorU8 encode(self, str sequence):
         """encode(self, sequence)\n--
 
-        Encode a text sequence into its digital representation.
+        Encode a raw text sequence into its digital representation.
 
         Arguments:
             sequence (`str`): A raw sequence in text format.
@@ -395,15 +395,15 @@ cdef class Alphabet:
 
         return encoded
 
-
     cpdef str decode(self, const libeasel.ESL_DSQ[::1] sequence):
         """decode(self, sequence)\n--
 
-        Decode a digital sequence into its textual representation.
+        Decode a raw digital sequence into its textual representation.
 
         Arguments:
-            sequence (`~pyhmmmer.easel.VectorU8`): A raw sequence in digital
-                format.
+            sequence (`object`, *buffer-like*): A raw sequence in digital
+                format. Any object implementing the buffer protocol (like
+                `bytearray`, `~pyhmmer.easel.VectorU8`, etc.) may be given.
 
         Returns:
             `str`: A raw sequence in textual format.
@@ -469,8 +469,8 @@ cdef class GeneticCode:
         libeasel.gencode.esl_gencode_Destroy(self._gcode)
 
     def __init__(
-        self, 
-        Alphabet nt_alphabet not None = Alphabet.dna(), 
+        self,
+        Alphabet nt_alphabet not None = Alphabet.dna(),
         Alphabet aa_alphabet not None = Alphabet.amino(),
         int translation_table = 1
     ):
@@ -481,7 +481,7 @@ cdef class GeneticCode:
         Arguments:
             nt_alphabet (`pyhmmer.easel.Alphabet`): The nucleotide alphabet
                 corresponding.
-            aa_alphabet (`pyhmmer.easel.Alphabet`): The target alphabet 
+            aa_alphabet (`pyhmmer.easel.Alphabet`): The target alphabet
                 into which to translate the sequence.
             translation_table (`int`): The translation table to use. Check the
                 `Wikipedia <https://w.wiki/47wo>`_ page listing all genetic
@@ -501,16 +501,16 @@ cdef class GeneticCode:
         self._gcode = libeasel.gencode.esl_gencode_Create(nt_alphabet._abc, aa_alphabet._abc)
         if self._gcode == NULL:
             raise AllocationError("ESL_GENCODE", sizeof(ESL_GENCODE))
-        
+
         self.nt_alphabet = nt_alphabet
         self.aa_alphabet = aa_alphabet
         self.translation_table = translation_table
-        
+
     @property
     def translation_table(self):
-        """`int`: The translation table in use. 
+        """`int`: The translation table in use.
 
-        Can be set manually to a different number to change the 
+        Can be set manually to a different number to change the
         translation table for the current `GeneticCode` object.
 
         """
@@ -533,185 +533,65 @@ cdef class GeneticCode:
         assert self._gcode != NULL
         return self._gcode.desc.decode('ascii')
 
-    cpdef str translation(self, str codon):
-        """translation(self, codon)\n--
-
-        Get the amino-acid that a single codon translates into.
-
-        Arguments:
-            codon (`str`): A trinucleotide codon to translate.
-
-        Example:
-            >>> GeneticCode(translation_table=1).translation("CTG")
-            'L'
-            >>> GeneticCode(translation_table=12).translation("CTG")
-            'S'
-
-        """
-        assert self._gcode != NULL
-
-        cdef ESL_DSQ  aa 
-        cdef VectorU8 dcodon 
-        
-        if len(codon) != 3:
-            raise ValueError(f"Expected trinucleotide codon, got {codon!r}")
-
-        dcodon = self.nt_alphabet.encode(codon)
-        aa = libeasel.gencode.esl_gencode_GetTranslation(self._gcode, <ESL_DSQ*> dcodon._data)
-        assert aa >= 0
-        assert aa < self.aa_alphabet.Kp
-        return chr(self.aa_alphabet._abc.sym[aa])
-    
-    cdef void _translate(self, const ESL_SQ* src, ESL_SQ* dst) nogil except *:
-
+    cdef void _translate(
+        self,
+        const ESL_DSQ* seq,
+        int64_t seqlen,
+        ESL_DSQ* out,
+        int64_t outlen
+    ) nogil except *:
         cdef int     aa
         cdef int64_t i
         cdef int64_t j
 
-        # translate sequence codon-by-codon
-        for i, j in enumerate(range(0, src.n, 3)):
-            aa = libeasel.gencode.esl_gencode_GetTranslation(self._gcode, &src.dsq[j+1])
+        if seqlen % 3 != 0:
+            raise ValueError(f"Invalid sequence of length {seqlen!r}")
+        if outlen < seqlen // 3:
+            raise BufferError(f"Output buffer too short for sequence of length {seqlen // 3!r}")
+
+        for i, j in enumerate(range(0, seqlen, 3)):
+            aa = libeasel.gencode.esl_gencode_GetTranslation(self._gcode, <ESL_DSQ*> &seq[j])
             if aa == -1:
                 raise ValueError(f"Failed to translate codon at index {j!r}")
-            dst.dsq[i+1] = aa
-        
-        # set sentinel values
-        dst.dsq[0] = dst.dsq[dst.n+1] = libeasel.eslDSQ_SENTINEL
-        
+            out[i] = aa
 
-    cpdef DigitalSequence translate(self, DigitalSequence sequence):
+    cpdef VectorU8 translate(self, const ESL_DSQ[::1] sequence):
         """translate(self, sequence)\n--
 
-        Translate the given sequence using the genetic code.
+        Translate a raw nucleotide sequence into a protein.
 
         Arguments:
-            sequence (`pyhmmer.easel.DigitalSequence`): A sequence to 
-                translate, in digital mode.
+            sequence (`object`, *buffer-like*): A raw sequence in digital
+                format. Any object implementing the buffer protocol (like
+                `bytearray`, `~pyhmmer.easel.VectorU8`, etc.) may be given.
 
         Returns:
-            `pyhmmer.easel.DigitalSequence`: The translation of the 
-            input sequence, in digital mode. The name of the source
-            sequence will be stored in the ``source`` attribute of 
-            the result.
+            `pyhmmer.easel.VectorU8`: The translation of the input
+            sequence, as a raw digital sequence.
 
         Raises:
-            `pyhmmer.errors.AlphabetMismatch`: When ``sequence`` has a
-                different alphabet as the expected one (``nt_alphabet``).
-            `ValueError`: When ``sequence`` could not be translated 
+            `ValueError`: When ``sequence`` could not be translated
                 properly, because of a codon could not be recognized, or
                 because the sequence has an invalid length.
 
         Note:
             The translation of a DNA/RNA codon supports ambiguous codons.
-            If the amino acid is unambiguous, despite codon ambiguity, 
-            the correct amino acid is still determined: ``GGR`` translates 
-            as ``Gly``, ``UUY`` as ``Phe``, etc. If there is no single 
-            unambiguous amino acid translation, the codon is translated 
-            as ``X``. Ambiguous amino acids (such as ``J`` or ``B``) are 
+            If the amino acid is unambiguous, despite codon ambiguity,
+            the correct amino acid is still determined: ``GGR`` translates
+            as ``Gly``, ``UUY`` as ``Phe``, etc. If there is no single
+            unambiguous amino acid translation, the codon is translated
+            as ``X``. Ambiguous amino acids (such as ``J`` or ``B``) are
             never produced.
 
         """
-        assert sequence is not None
-        assert sequence._sq != NULL
+        cdef int64_t  nlen = sequence.shape[0]
+        cdef int64_t  alen = nlen // 3
+        cdef VectorU8 prot = VectorU8.zeros(alen)
 
-        cdef int             status
-        cdef size_t          nlen  = len(sequence)
-        cdef size_t          alen  = nlen // 3
-        cdef DigitalSequence protein = DigitalSequence(self.aa_alphabet)
-
-        # check sequence is suitable for translation
-        if not self.nt_alphabet._eq(sequence.alphabet):
-            raise AlphabetMismatch(self.nt_alphabet, sequence.alphabet)
-        if nlen % 3:
-            raise ValueError(f"Incomplete sequence of length {nlen!r}")
-
-        # pre-allocate output buffer
-        status = libeasel.sq.esl_sq_GrowTo(protein._sq, alen)
-        if status == libeasel.eslEMEM:
-            raise AllocationError("ESL_DSQ", sizeof(ESL_DSQ), alen + 2)
-        elif status != libeasel.eslOK:
-            raise UnexpectedError(status, "esl_sq_Grow")
-              
-        # record sequence coordinates
-        protein._sq.start = 1
-        protein._sq.C = 0
-        protein._sq.end = protein._sq.W = protein._sq.L = protein._sq.n = alen
-
-        # translate the sequence
         with nogil:
-            self._translate(sequence._sq, protein._sq)
-            
-        return protein
+            self._translate(&sequence[0], nlen, <ESL_DSQ*> prot._data, alen)
 
-    cpdef DigitalSequenceBlock translate_block(self, DigitalSequenceBlock block):
-        """translate_block(self, block)\n--
-
-        Translate all the sequences in a block using the genetic code.
-
-        Arguments:
-            block (`pyhmmer.easel.DigitalSequenceBlock`): A block of 
-                sequences to translate, in digital mode.
-
-        Returns:
-            `pyhmmer.easel.DigitalSequenceBlock`: A digital sequence
-            block containing the translation of each sequence from the
-            input block.
-
-        Returns:
-            `pyhmmer.easel.DigitalSequence`: The translation of the 
-            input sequence, in digital mode.
-
-        Raises:
-            `pyhmmer.errors.AlphabetMismatch`: When ``block`` has a
-                different alphabet as the expected one (``nt_alphabet``).
-            `ValueError`: When a sequence from the block could not be 
-                translated properly, because of a codon could not be 
-                recognized, or because the sequence has an invalid length.
-
-        """
-        assert block is not None
-
-        cdef size_t               i
-        cdef int64_t              nlen
-        cdef DigitalSequence      protein
-        cdef DigitalSequenceBlock proteins
-
-        # check block is suitable for translation
-        if not self.nt_alphabet._eq(block.alphabet):
-            raise AlphabetMismatch(self.nt_alphabet, block.alphabet)
-
-        # pre-allocate protein sequence buffers
-        proteins = DigitalSequenceBlock(self.aa_alphabet)
-        proteins._allocate(block._length)
-        for i in range(block._length):
-            assert block._refs != NULL
-            assert block._refs[i] != NULL
-            # get length of input and output sequences         
-            nlen = block._refs[i].n
-            if nlen % 3 != 0:
-                raise ValueError(f"Incomplete sequence of length {nlen!r} at index {i!r}")
-            alen = nlen // 3
-            # create new object
-            protein = DigitalSequence(self.aa_alphabet)
-            proteins._append(protein)
-            # grow the internal sequence buffer
-            status = libeasel.sq.esl_sq_GrowTo(protein._sq, alen)
-            if status == libeasel.eslEMEM:
-                raise AllocationError("ESL_DSQ", sizeof(ESL_DSQ), alen + 2)
-            elif status != libeasel.eslOK:
-                raise UnexpectedError(status, "esl_sq_Grow")
-            # record sequence coordinates
-            protein._sq.start = 1
-            protein._sq.C = 0
-            protein._sq.end = protein._sq.W = protein._sq.L = protein._sq.n = alen
-
-        # translate the sequences
-        with nogil:
-            for i in range(block._length):
-                self._translate(block._refs[i], proteins._refs[i])
-
-        proteins._largest = block._largest
-        return proteins
+        return prot
 
 
 # --- Bitfield ---------------------------------------------------------------
@@ -4567,8 +4447,8 @@ cdef class Randomness:
 
         """
         assert self._rng != NULL
-        
-        cdef int      status 
+
+        cdef int      status
         cdef uint32_t seed   = n if n is not None else 0
 
         with nogil:
@@ -4630,8 +4510,8 @@ cdef class Sequence:
     To avoid this, ``pyhmmer`` provides two subclasses of the `Sequence`
     abstract class to maintain the mode contract: `TextSequence` and
     `DigitalSequence`. Functions expecting sequences in digital format, like
-    `pyhmmer.hmmer.hmmsearch`, can then use Python type system to make sure 
-    they receive sequences in the right mode. This allows type checkers 
+    `pyhmmer.hmmer.hmmsearch`, can then use Python type system to make sure
+    they receive sequences in the right mode. This allows type checkers
     such as ``mypy`` to detect potential contract breaches at compile-time.
 
     """

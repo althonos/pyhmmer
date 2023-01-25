@@ -43,11 +43,21 @@ cdef class GeneticCode:
     cdef readonly Alphabet     aa_alphabet
     cdef          ESL_GENCODE* _gcode
 
-    cdef void _translate(self, const ESL_SQ* src, ESL_SQ* dst) nogil except *
+    # cdef void _translate(self, const ESL_SQ* src, ESL_SQ* dst) nogil except *
 
-    cpdef str translation(self, str codon)
-    cpdef DigitalSequence translate(self, DigitalSequence sequence)
-    cpdef DigitalSequenceBlock translate_block(self, DigitalSequenceBlock block)
+    # cpdef str translation(self, str codon)
+    # cpdef DigitalSequence translate(self, DigitalSequence sequence)
+    # cpdef DigitalSequenceBlock translate_block(self, DigitalSequenceBlock block)
+
+    cdef void _translate(
+        self,
+        const ESL_DSQ* seq,
+        int64_t seqlen,
+        ESL_DSQ* out,
+        int64_t outlen
+    ) nogil except *
+
+    cpdef VectorU8 translate(self, const ESL_DSQ[::1] sequence)
 
 
 # --- Bitfield ---------------------------------------------------------------
