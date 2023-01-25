@@ -9,6 +9,7 @@ from posix.types cimport off_t
 cimport libeasel.sq
 from libeasel.alphabet cimport ESL_ALPHABET
 from libeasel.bitfield cimport ESL_BITFIELD
+from libeasel.gencode cimport ESL_GENCODE
 from libeasel.keyhash cimport ESL_KEYHASH
 from libeasel.msa cimport ESL_MSA
 from libeasel.msafile cimport ESL_MSAFILE
@@ -33,6 +34,18 @@ cdef class Alphabet:
     cpdef bint is_nucleotide(self)
     cpdef VectorU8 encode(self, str sequence)
     cpdef str decode(self, const ESL_DSQ[::1] sequence)
+
+
+# --- GeneticCode ------------------------------------------------------------
+
+cdef class GeneticCode:
+    cdef readonly Alphabet     nt_alphabet
+    cdef readonly Alphabet     aa_alphabet
+    cdef          ESL_GENCODE* _gcode
+
+    cpdef str translation(self, str codon)
+    cpdef DigitalSequence translate(self, DigitalSequence sequence)
+
 
 # --- Bitfield ---------------------------------------------------------------
 

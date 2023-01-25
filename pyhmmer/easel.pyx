@@ -39,6 +39,7 @@ cimport libeasel
 cimport libeasel.alphabet
 cimport libeasel.bitfield
 cimport libeasel.buffer
+cimport libeasel.gencode
 cimport libeasel.keyhash
 cimport libeasel.matrixops
 cimport libeasel.msa
@@ -51,6 +52,7 @@ cimport libeasel.ssi
 cimport libeasel.vec
 from libeasel cimport ESL_DSQ, esl_pos_t
 from libeasel.buffer cimport ESL_BUFFER
+from libeasel.gencode cimport ESL_GENCODE
 from libeasel.sq cimport ESL_SQ
 from libeasel.sqio cimport ESL_SQFILE, ESL_SQASCII_DATA
 from libeasel.random cimport ESL_RANDOMNESS
@@ -452,6 +454,177 @@ cdef class Alphabet:
                         raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
 
             return decoded
+
+
+# --- GeneticCode ------------------------------------------------------------
+
+cdef class GeneticCode:
+    """A genetic code table for translation.
+    """
+
+    def __cinit__(self):
+        self._gcode = NULL
+
+    def __dealloc__(self):
+        libeasel.gencode.esl_gencode_Destroy(self._gcode)
+
+    def __init__(
+        self, 
+        Alphabet nt_alphabet not None = Alphabet.dna(), 
+        Alphabet aa_alphabet not None = Alphabet.amino(),
+        int translation_table = 1
+    ):
+        """__init__(self, nt_alphabet=Alphabet.dna(), aa_alphabet=Alphabet.amino(), translation_table=1)\n--
+
+        Create a new genetic code for translating nucleotide sequences.
+
+        Arguments:
+            nt_alphabet (`pyhmmer.easel.Alphabet`): The nucleotide alphabet
+                corresponding.
+            aa_alphabet (`pyhmmer.easel.Alphabet`): The target alphabet 
+                into which to translate the sequence.
+            translation_table (`int`): The translation table to use. Check the
+                `Wikipedia <https://w.wiki/47wo>`_ page listing all genetic
+                codes for the available values.
+
+        """
+        cdef int status
+
+        if nt_alphabet is None:
+            nt_alphabet = Alphabet.dna()
+        elif not nt_alphabet.is_nucleotide():
+            raise ValueError(f"Invalid nucleotide alphabet {nt_alphabet!r}")
+
+        if aa_alphabet is None:
+            aa_alphabet = Alphabet.amino()
+
+        self._gcode = libeasel.gencode.esl_gencode_Create(nt_alphabet._abc, aa_alphabet._abc)
+        if self._gcode == NULL:
+            raise AllocationError("ESL_GENCODE", sizeof(ESL_GENCODE))
+        
+        self.nt_alphabet = nt_alphabet
+        self.aa_alphabet = aa_alphabet
+        self.translation_table = translation_table
+        
+    @property
+    def translation_table(self):
+        """`int`: The translation table in use. 
+
+        Can be set manually to a different number to change the 
+        translation table for the current `GeneticCode` object.
+
+        """
+        assert self._gcode != NULL
+        return self._gcode.transl_table
+
+    @translation_table.setter
+    def translation_table(self, int translation_table):
+        assert self._gcode != NULL
+        status = libeasel.gencode.esl_gencode_Set(self._gcode, translation_table)
+        if status == libeasel.eslENOTFOUND:
+            raise ValueError(f"Invalid translation table: {translation_table!r}")
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_gencode_Set")
+
+    @property
+    def description(self):
+        """`str`: A description of the translation table currently in use.
+        """
+        assert self._gcode != NULL
+        return self._gcode.desc.decode('ascii')
+
+    cpdef str translation(self, str codon):
+        """translation(self, codon)\n--
+
+        Get the amino-acid that a single codon translates into.
+
+        Arguments:
+            codon (`str`): A trinucleotide codon to translate.
+
+        Example:
+            >>> GeneticCode(translation_table=1).translation("CTG")
+            'L'
+            >>> GeneticCode(translation_table=12).translation("CTG")
+            'S'
+
+        """
+        assert self._gcode != NULL
+
+        cdef ESL_DSQ  aa 
+        cdef VectorU8 dcodon 
+        
+        if len(codon) != 3:
+            raise ValueError(f"Expected trinucleotide codon, got {codon!r}")
+
+        dcodon = self.nt_alphabet.encode(codon)
+        aa = libeasel.gencode.esl_gencode_GetTranslation(self._gcode, <ESL_DSQ*> dcodon._data)
+        assert aa >= 0
+        assert aa < self.aa_alphabet.Kp
+        return chr(self.aa_alphabet._abc.sym[aa])
+        
+    cpdef DigitalSequence translate(self, DigitalSequence sequence):
+        """translate(self, sequence)\n--
+
+        Translate the given sequence using the genetic code configuration.
+
+        Arguments:
+            sequence (`pyhmmer.easel.DigitalSequence`): A sequence to 
+                translate, in digital mode.
+
+        Raises:
+            `pyhmmer.errors.AlphabetMismatch`: When ``sequence`` has a
+                different alphabet as the expected one (``nt_alphabet``).
+            `ValueError`: When ``sequence`` could not be translated 
+                properly, because of a codon could not be recognized, or
+                because the sequence has an invalid length.
+
+        Note:
+            The translation of a DNA/RNA codon supports ambiguous codons.
+            If the amino acid is unambiguous, despite codon ambiguity, 
+            the correct amino acid is still determined: ``GGR`` translates 
+            as ``Gly``, ``UUY`` as ``Phe``, etc. If there is no single 
+            unambiguous amino acid translation, the codon is translated 
+            as ``X``. Ambiguous amino acids (such as ``J`` or ``B``) are 
+            never produced.
+
+        """
+        assert sequence is not None
+        assert sequence._sq != NULL
+
+        cdef size_t          i
+        cdef size_t          j
+        cdef int             aa
+        cdef int             status
+        cdef size_t          nlen  = len(sequence)
+        cdef size_t          alen  = nlen // 3
+        cdef DigitalSequence protein = DigitalSequence(self.aa_alphabet)
+
+        if nlen % 3:
+            raise ValueError(f"Incomplete sequence of length {nlen!r}")
+        if not self.nt_alphabet._eq(sequence.alphabet):
+            raise AlphabetMismatch(self.nt_alphabet, sequence.alphabet)
+
+        status = libeasel.sq.esl_sq_GrowTo(protein._sq, alen)
+        if status == libeasel.eslEMEM:
+            raise AllocationError("ESL_DSQ", sizeof(ESL_DSQ), alen + 2)
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_sq_Grow")
+              
+        with nogil:
+            # translate sequence codon-by-codon
+            for i, j in enumerate(range(0, nlen, 3)):
+                aa = libeasel.gencode.esl_gencode_GetTranslation(self._gcode, &sequence._sq.dsq[j+1])
+                if aa == -1:
+                    raise ValueError(f"Failed to translate codon at index {j!r}")
+                protein._sq.dsq[i+1] = aa
+            # set sentinel values
+            protein._sq.dsq[0] = protein._sq.dsq[alen+1] = libeasel.eslDSQ_SENTINEL
+            # set sequence coordinates
+            protein._sq.start = 1
+            protein._sq.C = 0
+            protein._sq.end = protein._sq.W = protein._sq.L = protein._sq.n = alen
+            
+        return protein
 
 
 # --- Bitfield ---------------------------------------------------------------

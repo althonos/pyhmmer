@@ -1,3 +1,11 @@
+from libc.stdio cimport FILE
+from libc.stdint cimport int8_t
+
+from libeasel cimport ESL_DSQ
+from libeasel.alphabet cimport ESL_ALPHABET
+from libeasel.sq cimport ESL_SQ, ESL_SQ_BLOCK
+
+
 cdef extern from "esl_gencode.h" nogil:
 
     ctypedef struct ESL_GENCODE:
@@ -34,8 +42,8 @@ cdef extern from "esl_gencode.h" nogil:
 
 
     # Create/Destroy workstate
-    extern void esl_gencode_WorkstateDestroy(ESL_GENCODE_WORKSTATE *wrk);
-    extern ESL_GENCODE_WORKSTATE * esl_gencode_WorkstateCreate(ESL_GETOPTS *go, ESL_GENCODE *gcode);
+    # extern void esl_gencode_WorkstateDestroy(ESL_GENCODE_WORKSTATE *wrk);
+    # extern ESL_GENCODE_WORKSTATE * esl_gencode_WorkstateCreate(ESL_GETOPTS *go, ESL_GENCODE *gcode);
 
     # the ESL_GENCODE genetic code object
     ESL_GENCODE *esl_gencode_Create(const ESL_ALPHABET *nt_abc, const ESL_ALPHABET *aa_abc);
@@ -45,8 +53,8 @@ cdef extern from "esl_gencode.h" nogil:
     int          esl_gencode_SetInitiatorOnlyAUG(ESL_GENCODE *gcode);
 
     # reading and writing genetic codes in NCBI format
-    int          esl_gencode_Read(ESL_FILEPARSER *efp, const ESL_ALPHABET *nucleic_abc, const ESL_ALPHABET *amino_abc, ESL_GENCODE **ret_gcode);
-    int          esl_gencode_Write(FILE *ofp, const ESL_GENCODE *gcode, int add_comment);
+    # int          esl_gencode_Read(ESL_FILEPARSER *efp, const ESL_ALPHABET *nucleic_abc, const ESL_ALPHABET *amino_abc, ESL_GENCODE **ret_gcode);
+    # int          esl_gencode_Write(FILE *ofp, const ESL_GENCODE *gcode, int add_comment);
 
     # DNA->protein digital translation, allowing ambiguity chars
     int   esl_gencode_GetTranslation(const ESL_GENCODE *gcode, ESL_DSQ *dsqp);
