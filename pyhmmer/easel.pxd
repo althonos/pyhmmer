@@ -39,15 +39,9 @@ cdef class Alphabet:
 # --- GeneticCode ------------------------------------------------------------
 
 cdef class GeneticCode:
-    cdef readonly Alphabet     nt_alphabet
-    cdef readonly Alphabet     aa_alphabet
+    cdef readonly Alphabet     amino_alphabet
+    cdef readonly Alphabet     nucleotide_alphabet
     cdef          ESL_GENCODE* _gcode
-
-    # cdef void _translate(self, const ESL_SQ* src, ESL_SQ* dst) nogil except *
-
-    # cpdef str translation(self, str codon)
-    # cpdef DigitalSequence translate(self, DigitalSequence sequence)
-    # cpdef DigitalSequenceBlock translate_block(self, DigitalSequenceBlock block)
 
     cdef void _translate(
         self,
@@ -220,6 +214,7 @@ cdef class DigitalSequence(Sequence):
 
     cpdef DigitalSequence copy(self)
     cpdef TextSequence textize(self)
+    cpdef DigitalSequence translate(self, GeneticCode genetic_code)
     cpdef DigitalSequence reverse_complement(self, bint inplace=*)
 
 

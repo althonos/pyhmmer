@@ -8,6 +8,7 @@ import tempfile
 import warnings
 
 from pyhmmer import easel
+from pyhmmer.errors import AlphabetMismatch
 
 
 class _TestSequenceBase(abc.ABC):
@@ -140,6 +141,23 @@ class TestDigitalSequence(_TestSequenceBase, unittest.TestCase):
 
     def test_invalid_characters(self):
         self.assertRaises(ValueError, easel.DigitalSequence, self.abc, name=b"TEST", sequence=b"test")
+
+    def test_translate(self):
+        gencode = easel.GeneticCode()
+        seq = easel.TextSequence(sequence="ATGCTGCCCGGTTTGGCACTGCTCCTGCTGGCCGCC").digitize(gencode.nucleotide_alphabet)
+        prot = seq.translate(gencode).textize()
+        self.assertEqual(prot.sequence, "MLPGLALLLLAA")
+
+    def test_translate_empty(self):
+        gencode = easel.GeneticCode()
+        seq = easel.DigitalSequence(gencode.nucleotide_alphabet)
+        prot = seq.translate(gencode).textize()
+        self.assertEqual(prot.sequence, "")
+
+    def test_translate_alphabet_mismatch(self):
+        gencode = easel.GeneticCode()
+        with self.assertRaises(AlphabetMismatch):
+            prot = easel.DigitalSequence(gencode.amino_alphabet).translate(gencode)
 
 
 class TestTextSequence(_TestSequenceBase, unittest.TestCase):

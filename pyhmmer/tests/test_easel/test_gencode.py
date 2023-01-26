@@ -22,7 +22,7 @@ class TestGeneticCode(unittest.TestCase):
 
     def test_invalid_table(self):
         with self.assertRaises(ValueError):
-            gencode = GeneticCode(translation_table=42)
+            gencode = GeneticCode(42)
 
     def test_translate_empty(self):
         gencode = GeneticCode()
