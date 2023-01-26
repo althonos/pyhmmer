@@ -214,7 +214,7 @@ cdef class DigitalSequence(Sequence):
 
     cpdef DigitalSequence copy(self)
     cpdef TextSequence textize(self)
-    cpdef DigitalSequence translate(self, GeneticCode genetic_code)
+    cpdef DigitalSequence translate(self, GeneticCode genetic_code=*)
     cpdef DigitalSequence reverse_complement(self, bint inplace=*)
 
 
@@ -265,6 +265,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
 
     cpdef DigitalSequenceBlock copy(self)
     cpdef TextSequenceBlock textize(self)
+    cpdef DigitalSequenceBlock translate(self, GeneticCode genetic_code=*)
     cpdef DigitalSequence largest(self)
 
 # --- Sequence File ----------------------------------------------------------

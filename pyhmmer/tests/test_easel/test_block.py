@@ -1,8 +1,10 @@
 import abc
 import unittest
 
-from ...easel import (
+from pyhmmer.errors import AlphabetMismatch
+from pyhmmer.easel import (
     Alphabet,
+    GeneticCode,
     SequenceBlock, 
     TextSequenceBlock,
     DigitalSequenceBlock,
@@ -287,3 +289,26 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
         self.assertEqual(len(tblock), 2)
         self.assertEqual(tblock[0], seq1.textize())
         self.assertEqual(tblock[1], seq2.textize())
+
+    def test_translate(self):
+        seq1 = self._new_sequence(b"seq1", "ATGCTG")
+        seq2 = self._new_sequence(b"seq1", "ATGCCC")
+
+        block = self._new_block([seq1, seq2])
+        prots = block.translate().textize()
+
+        self.assertEqual(len(prots), 2)
+        self.assertEqual(prots[0].sequence, "ML")
+        self.assertEqual(prots[1].sequence, "MP")
+
+    def test_translate_empty(self):
+        gencode = GeneticCode()
+        block = DigitalSequenceBlock(gencode.nucleotide_alphabet)
+        prots = block.translate(gencode)
+        self.assertEqual(len(prots), 0)
+
+    def test_translate_alphabet_mismatch(self):
+        gencode = GeneticCode()
+        block = DigitalSequenceBlock(gencode.amino_alphabet)
+        with self.assertRaises(AlphabetMismatch):
+            prots = block.translate(gencode)

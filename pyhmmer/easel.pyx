@@ -5164,13 +5164,16 @@ cdef class DigitalSequence(Sequence):
         assert libeasel.sq.esl_sq_IsText(new._sq)
         return new
 
-    cpdef DigitalSequence translate(self, GeneticCode genetic_code):
-        """translate(self, genetic_code)\n--
+    cpdef DigitalSequence translate(self, GeneticCode genetic_code = GeneticCode()):
+        """translate(self, genetic_code=GeneticCode())\n--
 
         Translate the sequence using the given genetic code.
 
         Arguments:
-            genetic_code (`pyhmmer.easel.GeneticCode`): 
+            genetic_code (`pyhmmer.easel.GeneticCode`): The genetic code to 
+                use for translating the sequence. If none provided, the 
+                default uses the standard translation table (1) and expects
+                DNA sequences.
 
         Returns:
             `pyhmmer.easel.DigitalSequence`: The translation of the 
@@ -5179,8 +5182,9 @@ cdef class DigitalSequence(Sequence):
             the result.
 
         Raises:
-            `pyhmmer.errors.AlphabetMismatch`: When ``sequence`` has a
-                different alphabet as the expected one (``nt_alphabet``).
+            `pyhmmer.errors.AlphabetMismatch`: When the ``genetic_code``
+                expects a different nucleotide alphabet than the one
+                currently in use to encode the sequence.
             `ValueError`: When ``sequence`` could not be translated 
                 properly, because of a codon could not be recognized, or
                 because the sequence has an invalid length.
@@ -5215,16 +5219,15 @@ cdef class DigitalSequence(Sequence):
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_Grow")
                 
-        # record sequence coordinates
-        protein._sq.start = 1
-        protein._sq.C = 0
-        protein._sq.end = protein._sq.W = protein._sq.L = protein._sq.n = aalen
-
-        # translate sequence
+        # translate sequence 
         with nogil:
             genetic_code._translate(&self._sq.dsq[1], ntlen, &protein._sq.dsq[1], aalen)
             protein._sq.dsq[0] = protein._sq.dsq[aalen+1] = libeasel.eslDSQ_SENTINEL
 
+        # record sequence coordinates
+        protein._sq.start = 1
+        protein._sq.C = 0
+        protein._sq.end = protein._sq.W = protein._sq.L = protein._sq.n = aalen
         return protein
 
     cpdef DigitalSequence reverse_complement(self, bint inplace=False):
@@ -5816,6 +5819,87 @@ cdef class DigitalSequenceBlock(SequenceBlock):
                 libeasel.sq.esl_sq_Copy(self._refs[i], block._refs[i])
 
         return block
+
+    cpdef DigitalSequenceBlock translate(self, GeneticCode genetic_code = GeneticCode()):
+        """translate(self, genetic_code=GeneticCode())\n--
+
+        Translate the sequence block using the given genetic code.
+
+        Arguments:
+            genetic_code (`pyhmmer.easel.GeneticCode`): The genetic code to 
+                use for translating the sequence. If none provided, the 
+                default uses the standard translation table (1) and expects
+                DNA sequences.
+
+        Returns:
+            `pyhmmer.easel.DigitalSequenceBlock`: The translation of 
+            each sequence from the block, in digital mode. 
+
+        Raises:
+            `pyhmmer.errors.AlphabetMismatch`: When the ``genetic_code``
+                expects a different nucleotide alphabet than the one
+                currently for the sequences in the block.
+            `ValueError`: When a sequence from the block could not be 
+                translated properly, because of a codon could not be 
+                recognized, or because the sequence has an invalid length.
+
+        See Also:
+            `pyhmmer.easel.DigitalSequence.translate` for more information
+            on how ambiguous nucleotides are handled.
+
+        """
+        assert self.alphabet is not None
+
+        # cdef int64_t         ntlen   = len(self)
+        # cdef int64_t         aalen   = ntlen // 3
+        # cdef DigitalSequence protein = DigitalSequence(genetic_code.amino_alphabet)
+
+        cdef size_t               i
+        cdef int64_t              aalen
+        cdef int64_t              ntlen
+        cdef int                  status
+        cdef DigitalSequence      protein
+        cdef DigitalSequenceBlock proteins
+        
+        # check block can be translated
+        if not self.alphabet._eq(genetic_code.nucleotide_alphabet):
+            raise AlphabetMismatch(genetic_code.nucleotide_alphabet, self.alphabet)
+
+        # pre-allocate protein sequence buffers
+        proteins = DigitalSequenceBlock(genetic_code.amino_alphabet)
+        proteins._allocate(self._length)
+        for i in range(self._length):
+            assert self._refs != NULL
+            assert self._refs[i] != NULL
+            # get length of input and output sequences         
+            ntlen = self._refs[i].n
+            if ntlen % 3 != 0:
+                raise ValueError(f"Incomplete sequence of length {ntlen!r} at index {i!r}")
+            aalen = ntlen // 3
+            # create new object
+            protein = DigitalSequence(genetic_code.amino_alphabet)
+            proteins._append(protein)
+            # grow the internal sequence buffer
+            status = libeasel.sq.esl_sq_GrowTo(protein._sq, aalen)
+            if status == libeasel.eslEMEM:
+                raise AllocationError("ESL_DSQ", sizeof(ESL_DSQ), aalen + 2)
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_sq_Grow")
+            # record sequence coordinates
+            protein._sq.start = 1
+            protein._sq.C = 0
+            protein._sq.end = protein._sq.W = protein._sq.L = protein._sq.n = aalen
+
+        # translate the sequences
+        with nogil:
+            for i in range(self._length):
+                ntlen = self._refs[i].n
+                aalen = proteins._refs[i].n
+                genetic_code._translate(&self._refs[i].dsq[1], ntlen, &proteins._refs[i].dsq[1], aalen)
+                protein._sq.dsq[0] = protein._sq.dsq[aalen+1] = libeasel.eslDSQ_SENTINEL
+
+        proteins._largest = self._largest
+        return proteins
 
     cpdef DigitalSequence largest(self):
         return SequenceBlock.largest(self)
