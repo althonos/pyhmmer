@@ -5,7 +5,7 @@ from pyhmmer.errors import AlphabetMismatch
 from pyhmmer.easel import (
     Alphabet,
     GeneticCode,
-    SequenceBlock, 
+    SequenceBlock,
     TextSequenceBlock,
     DigitalSequenceBlock,
     Sequence,
@@ -32,7 +32,7 @@ class _TestSequenceBlock(abc.ABC):
 
     def test_identity(self):
         self.assertIsNot(self._new_block(), self._new_block())
-    
+
     def test_len(self):
         seq1 = self._new_sequence(b"seq1", "ATGC")
         seq2 = self._new_sequence(b"seq2", "ATGCA")
@@ -78,7 +78,7 @@ class _TestSequenceBlock(abc.ABC):
         self.assertEqual(len(block), 0)
         block.clear()
         self.assertEqual(len(block), 0)
-        
+
         block = self._new_block()
         self.assertEqual(len(block), 0)
         block.clear()
@@ -100,7 +100,7 @@ class _TestSequenceBlock(abc.ABC):
             block[3]
         with self.assertRaises(IndexError):
             block[-5]
-        
+
     def test_setitem(self):
         seq1 = self._new_sequence(b"seq1", "ATGC")
         seq2 = self._new_sequence(b"seq2", "ATGCA")
@@ -109,7 +109,7 @@ class _TestSequenceBlock(abc.ABC):
         block = self._new_block([seq1, seq2])
         self.assertEqual(len(block), 2)
 
-        block[0] = seq3 
+        block[0] = seq3
         self.assertIs(block[0], seq3)
         self.assertIs(block[1], seq2)
 
@@ -204,7 +204,7 @@ class _TestSequenceBlock(abc.ABC):
         self.assertIn(seq1, block)
         self.assertIn(seq2, block)
         self.assertNotIn(seq3, block)
-        
+
         self.assertNotIn(42, block)
         self.assertNotIn(object(), block)
 
@@ -253,7 +253,7 @@ class TestTextSequenceBlock(_TestSequenceBlock, unittest.TestCase):
 
     def test_digitize(self):
         alphabet = Alphabet.dna()
-        
+
         seq1 = self._new_sequence(b"seq1", "ATGC")
         seq2 = self._new_sequence(b"seq2", "ATGCA")
 
@@ -298,8 +298,12 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
         prots = block.translate().textize()
 
         self.assertEqual(len(prots), 2)
+        # test sequences
         self.assertEqual(prots[0].sequence, "ML")
         self.assertEqual(prots[1].sequence, "MP")
+        # test names
+        self.assertEqual(prots[0].name, b"seq1")
+        self.assertEqual(prots[0].name, b"seq1")
 
     def test_translate_empty(self):
         gencode = GeneticCode()
