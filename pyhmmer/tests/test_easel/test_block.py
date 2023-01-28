@@ -272,8 +272,17 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
     def setUpClass(cls):
         cls.alphabet = Alphabet.dna()
 
-    def _new_sequence(self, name, seq):
-        return TextSequence(name=name, sequence=seq).digitize(self.alphabet)
+    def _new_sequence(self, name, seq,
+                      description=None,
+                      source=None,
+                      taxonomy_id=2):
+
+        return TextSequence(name=name,
+                            sequence=seq,
+                            description=description,
+                            source=source,
+                            taxonomy_id=taxonomy_id
+                            ).digitize(self.alphabet)
 
     def _new_block(self, sequences=()):
         return DigitalSequenceBlock(self.alphabet, sequences)
@@ -291,8 +300,15 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
         self.assertEqual(tblock[1], seq2.textize())
 
     def test_translate(self):
-        seq1 = self._new_sequence(b"seq1", "ATGCTG")
-        seq2 = self._new_sequence(b"seq1", "ATGCCC")
+        seq1 = self._new_sequence(b"seq1",
+                                  "ATGCTG",
+                                  description=b"one",
+                                  source=b"some_source")
+        seq2 = self._new_sequence(b"seq2",
+                                  "ATGCCC",
+                                  description=b"two",
+                                  source=b"other_source",
+                                  taxonomy_id=2)
 
         block = self._new_block([seq1, seq2])
         prots = block.translate().textize()
@@ -303,7 +319,15 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
         self.assertEqual(prots[1].sequence, "MP")
         # test names
         self.assertEqual(prots[0].name, b"seq1")
-        self.assertEqual(prots[0].name, b"seq1")
+        self.assertEqual(prots[1].name, b"seq2")
+        # test other metadata fields
+        self.assertEqual(prots[0].description, b"one")
+        self.assertEqual(prots[1].description, b"two")
+        self.assertEqual(prots[0].source, b"some_source")
+        self.assertEqual(prots[1].source, b"other_source")
+        self.assertEqual(prots[0].taxonomy_id, 1)
+        self.assertEqual(prots[1].taxonomy_id, 2)
+
 
     def test_translate_empty(self):
         gencode = GeneticCode()

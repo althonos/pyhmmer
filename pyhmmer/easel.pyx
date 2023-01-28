@@ -5177,9 +5177,7 @@ cdef class DigitalSequence(Sequence):
 
         Returns:
             `pyhmmer.easel.DigitalSequence`: The translation of the
-            input sequence, in digital mode. The name of the source
-            sequence will be stored in the ``source`` attribute of
-            the result.
+            input sequence, in digital mode.
 
         Raises:
             `pyhmmer.errors.AlphabetMismatch`: When the ``genetic_code``
@@ -5204,7 +5202,12 @@ cdef class DigitalSequence(Sequence):
 
         cdef int64_t         ntlen   = len(self)
         cdef int64_t         aalen   = ntlen // 3
-        cdef DigitalSequence protein = DigitalSequence(genetic_code.amino_alphabet)
+        cdef DigitalSequence protein = DigitalSequence(genetic_code.amino_alphabet,
+                                                       name=self.name,
+                                                       description=self.description,
+                                                       accession=self.accession,
+                                                       source=self.source,
+                                                       taxonomy_id=self.taxonomy_id)
 
         # check sequence can be translated
         if not self.alphabet._eq(genetic_code.nucleotide_alphabet):
@@ -5223,7 +5226,6 @@ cdef class DigitalSequence(Sequence):
         with nogil:
             genetic_code._translate(&self._sq.dsq[1], ntlen, &protein._sq.dsq[1], aalen)
             protein._sq.dsq[0] = protein._sq.dsq[aalen+1] = libeasel.eslDSQ_SENTINEL
-            status = libeasel.sq.esl_sq_SetName(protein._sq, self._sq.name)
 
         # record sequence coordinates
         protein._sq.start = 1
@@ -5879,7 +5881,15 @@ cdef class DigitalSequenceBlock(SequenceBlock):
                 raise ValueError(f"Incomplete sequence of length {ntlen!r} at index {i!r}")
             aalen = ntlen // 3
             # create new object
-            protein = DigitalSequence(genetic_code.amino_alphabet, name=self._refs[i].name)
+            protein = DigitalSequence(
+                genetic_code.amino_alphabet,
+                name=self._refs[i].name,
+                description=self._refs[i].desc,
+                accession=self._refs[i].acc,
+                source=self._refs[i].source,
+                taxonomy_id=self._refs[i].tax_id
+            )
+
             proteins._append(protein)
             # grow the internal sequence buffer
             status = libeasel.sq.esl_sq_GrowTo(protein._sq, aalen)
@@ -5899,8 +5909,6 @@ cdef class DigitalSequenceBlock(SequenceBlock):
                 aalen = proteins._refs[i].n
                 genetic_code._translate(&self._refs[i].dsq[1], ntlen, &proteins._refs[i].dsq[1], aalen)
                 protein._sq.dsq[0] = protein._sq.dsq[aalen+1] = libeasel.eslDSQ_SENTINEL
-                seq_name = self._refs[i].name
-                status = libeasel.sq.esl_sq_SetName(protein._sq, seq_name)
 
         proteins._largest = self._largest
         return proteins
