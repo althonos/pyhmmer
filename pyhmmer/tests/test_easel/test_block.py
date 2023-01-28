@@ -272,10 +272,12 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
     def setUpClass(cls):
         cls.alphabet = Alphabet.dna()
 
-    def _new_sequence(self, name, seq,
+    def _new_sequence(self,
+                      name,
+                      seq,
                       description=None,
                       source=None,
-                      taxonomy_id=2):
+                      taxonomy_id=None):
 
         return TextSequence(name=name,
                             sequence=seq,
@@ -303,7 +305,9 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
         seq1 = self._new_sequence(b"seq1",
                                   "ATGCTG",
                                   description=b"one",
-                                  source=b"some_source")
+                                  source=b"some_source",
+                                  taxonomy_id=1)
+
         seq2 = self._new_sequence(b"seq2",
                                   "ATGCCC",
                                   description=b"two",
@@ -325,8 +329,9 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
         self.assertEqual(prots[1].description, b"two")
         self.assertEqual(prots[0].source, b"some_source")
         self.assertEqual(prots[1].source, b"other_source")
-        self.assertEqual(prots[0].taxonomy_id, 1)
         self.assertEqual(prots[1].taxonomy_id, 2)
+        self.assertEqual(prots[0].taxonomy_id, 1)
+
 
 
     def test_translate_empty(self):

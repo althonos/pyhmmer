@@ -5883,11 +5883,11 @@ cdef class DigitalSequenceBlock(SequenceBlock):
             # create new object
             protein = DigitalSequence(
                 genetic_code.amino_alphabet,
-                name=self._refs[i].name,
-                description=self._refs[i].desc,
-                accession=self._refs[i].acc,
-                source=self._refs[i].source,
-                taxonomy_id=self._refs[i].tax_id
+                name=self._storage[i].name,
+                description=self._storage[i].description,
+                accession=self._storage[i].accession,
+                source=self._storage[i].source,
+                taxonomy_id=self._storage[i].taxonomy_id
             )
 
             proteins._append(protein)
