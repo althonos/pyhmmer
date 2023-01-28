@@ -4906,6 +4906,8 @@ cdef class TextSequence(Sequence):
 
         if status == libeasel.eslOK:
             assert libeasel.sq.esl_sq_IsDigital(new._sq)
+            new.taxonomy_id = self._sq.tax_id
+
             return new
         elif status == libeasel.eslEINVAL:
             raise ValueError(f"Cannot digitize sequence with alphabet {alphabet}: invalid chars in sequence")
@@ -5154,12 +5156,15 @@ cdef class DigitalSequence(Sequence):
 
         with nogil:
             new._sq = libeasel.sq.esl_sq_Create()
+
             if new._sq == NULL:
                 raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
 
             status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "esl_sq_Copy")
+
+            new._sq.tax_id = self._sq.tax_id
 
         assert libeasel.sq.esl_sq_IsText(new._sq)
         return new
@@ -5647,6 +5652,7 @@ cdef class TextSequenceBlock(SequenceBlock):
         with nogil:
             for i in range(self._length):
                 libeasel.sq.esl_sq_Copy(self._refs[i], block._refs[i])
+                block._refs[i].tax_id = self._refs[i].tax_id
 
         return block
 
@@ -5821,6 +5827,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
         with nogil:
             for i in range(self._length):
                 libeasel.sq.esl_sq_Copy(self._refs[i], block._refs[i])
+                block._refs[i].tax_id = self._refs[i].tax_id
 
         return block
 
