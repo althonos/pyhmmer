@@ -4861,8 +4861,7 @@ cdef class TextSequence(Sequence):
             self.description = description
         if source is not None:
             self.source = source
-        if taxonomy_id is not None:
-            self.taxonomy_id = taxonomy_id
+        self.taxonomy_id = taxonomy_id
 
         assert libeasel.sq.esl_sq_IsText(self._sq)
         assert self._sq.name != NULL
@@ -4906,8 +4905,7 @@ cdef class TextSequence(Sequence):
 
         if status == libeasel.eslOK:
             assert libeasel.sq.esl_sq_IsDigital(new._sq)
-            new.taxonomy_id = self._sq.tax_id
-
+            new.taxonomy_id = self.taxonomy_id
             return new
         elif status == libeasel.eslEINVAL:
             raise ValueError(f"Cannot digitize sequence with alphabet {alphabet}: invalid chars in sequence")
@@ -5076,8 +5074,7 @@ cdef class DigitalSequence(Sequence):
             self.description = description
         if source is not None:
             self.source = source
-        if taxonomy_id is not None:
-            self.taxonomy_id = taxonomy_id
+        self.taxonomy_id = taxonomy_id
 
         assert libeasel.sq.esl_sq_IsDigital(self._sq)
         assert self._sq.name != NULL
