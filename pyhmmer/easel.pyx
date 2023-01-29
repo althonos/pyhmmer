@@ -5202,20 +5202,25 @@ cdef class DigitalSequence(Sequence):
         assert self._sq != NULL
         assert self.alphabet is not None
 
+        cdef DigitalSequence protein
         cdef int64_t         ntlen   = len(self)
         cdef int64_t         aalen   = ntlen // 3
-        cdef DigitalSequence protein = DigitalSequence(genetic_code.amino_alphabet,
-                                                       name=self.name,
-                                                       description=self.description,
-                                                       accession=self.accession,
-                                                       source=self.source,
-                                                       taxonomy_id=self.taxonomy_id)
 
         # check sequence can be translated
         if not self.alphabet._eq(genetic_code.nucleotide_alphabet):
             raise AlphabetMismatch(genetic_code.nucleotide_alphabet, self.alphabet)
         if ntlen % 3 != 0:
             raise ValueError(f"Incomplete sequence of length {len(self)!r}")
+
+        # create copy with metadata
+        protein = DigitalSequence(
+            genetic_code.amino_alphabet,
+            name=self.name,
+            description=self.description,
+            accession=self.accession,
+            source=self.source,
+            taxonomy_id=self.taxonomy_id
+        )
 
         # allocate output buffer
         status = libeasel.sq.esl_sq_GrowTo(protein._sq, aalen)
