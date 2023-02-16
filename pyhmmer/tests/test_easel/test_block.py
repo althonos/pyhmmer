@@ -305,14 +305,12 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
         seq1 = self._new_sequence(b"seq1",
                                   "ATGCTG",
                                   description=b"one",
-                                  source=b"some_source",
-                                  taxonomy_id=1)
+                                  source=b"some_source")
 
         seq2 = self._new_sequence(b"seq2",
                                   "ATGCCC",
                                   description=b"two",
-                                  source=b"other_source",
-                                  taxonomy_id=2)
+                                  source=b"other_source")
 
         block = self._new_block([seq1, seq2])
         prots = block.translate().textize()
@@ -329,8 +327,6 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
         self.assertEqual(prots[1].description, b"two")
         self.assertEqual(prots[0].source, b"some_source")
         self.assertEqual(prots[1].source, b"other_source")
-        self.assertEqual(prots[1].taxonomy_id, 2)
-        self.assertEqual(prots[0].taxonomy_id, 1)
 
 
 
