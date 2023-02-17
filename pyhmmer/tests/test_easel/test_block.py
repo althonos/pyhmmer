@@ -5,7 +5,7 @@ from pyhmmer.errors import AlphabetMismatch
 from pyhmmer.easel import (
     Alphabet,
     GeneticCode,
-    SequenceBlock, 
+    SequenceBlock,
     TextSequenceBlock,
     DigitalSequenceBlock,
     Sequence,
@@ -32,7 +32,7 @@ class _TestSequenceBlock(abc.ABC):
 
     def test_identity(self):
         self.assertIsNot(self._new_block(), self._new_block())
-    
+
     def test_len(self):
         seq1 = self._new_sequence(b"seq1", "ATGC")
         seq2 = self._new_sequence(b"seq2", "ATGCA")
@@ -78,7 +78,7 @@ class _TestSequenceBlock(abc.ABC):
         self.assertEqual(len(block), 0)
         block.clear()
         self.assertEqual(len(block), 0)
-        
+
         block = self._new_block()
         self.assertEqual(len(block), 0)
         block.clear()
@@ -100,7 +100,7 @@ class _TestSequenceBlock(abc.ABC):
             block[3]
         with self.assertRaises(IndexError):
             block[-5]
-        
+
     def test_setitem(self):
         seq1 = self._new_sequence(b"seq1", "ATGC")
         seq2 = self._new_sequence(b"seq2", "ATGCA")
@@ -109,7 +109,7 @@ class _TestSequenceBlock(abc.ABC):
         block = self._new_block([seq1, seq2])
         self.assertEqual(len(block), 2)
 
-        block[0] = seq3 
+        block[0] = seq3
         self.assertIs(block[0], seq3)
         self.assertIs(block[1], seq2)
 
@@ -204,7 +204,7 @@ class _TestSequenceBlock(abc.ABC):
         self.assertIn(seq1, block)
         self.assertIn(seq2, block)
         self.assertNotIn(seq3, block)
-        
+
         self.assertNotIn(42, block)
         self.assertNotIn(object(), block)
 
@@ -253,7 +253,7 @@ class TestTextSequenceBlock(_TestSequenceBlock, unittest.TestCase):
 
     def test_digitize(self):
         alphabet = Alphabet.dna()
-        
+
         seq1 = self._new_sequence(b"seq1", "ATGC")
         seq2 = self._new_sequence(b"seq2", "ATGCA")
 
@@ -272,8 +272,19 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
     def setUpClass(cls):
         cls.alphabet = Alphabet.dna()
 
-    def _new_sequence(self, name, seq):
-        return TextSequence(name=name, sequence=seq).digitize(self.alphabet)
+    def _new_sequence(self,
+                      name,
+                      seq,
+                      description=None,
+                      source=None,
+                      taxonomy_id=None):
+
+        return TextSequence(name=name,
+                            sequence=seq,
+                            description=description,
+                            source=source,
+                            taxonomy_id=taxonomy_id
+                            ).digitize(self.alphabet)
 
     def _new_block(self, sequences=()):
         return DigitalSequenceBlock(self.alphabet, sequences)
@@ -291,15 +302,33 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
         self.assertEqual(tblock[1], seq2.textize())
 
     def test_translate(self):
-        seq1 = self._new_sequence(b"seq1", "ATGCTG")
-        seq2 = self._new_sequence(b"seq1", "ATGCCC")
+        seq1 = self._new_sequence(b"seq1",
+                                  "ATGCTG",
+                                  description=b"one",
+                                  source=b"some_source")
+
+        seq2 = self._new_sequence(b"seq2",
+                                  "ATGCCC",
+                                  description=b"two",
+                                  source=b"other_source")
 
         block = self._new_block([seq1, seq2])
         prots = block.translate().textize()
 
         self.assertEqual(len(prots), 2)
+        # test sequences
         self.assertEqual(prots[0].sequence, "ML")
         self.assertEqual(prots[1].sequence, "MP")
+        # test names
+        self.assertEqual(prots[0].name, b"seq1")
+        self.assertEqual(prots[1].name, b"seq2")
+        # test other metadata fields
+        self.assertEqual(prots[0].description, b"one")
+        self.assertEqual(prots[1].description, b"two")
+        self.assertEqual(prots[0].source, b"some_source")
+        self.assertEqual(prots[1].source, b"other_source")
+
+
 
     def test_translate_empty(self):
         gencode = GeneticCode()
