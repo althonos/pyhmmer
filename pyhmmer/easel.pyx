@@ -4664,6 +4664,8 @@ cdef class Sequence:
 
         .. versionadded:: 0.4.6
 
+        .. deprecated:: 0.7.2
+
         """
         assert self._sq != NULL
         return None if self._sq.tax_id == -1 else self._sq.tax_id
@@ -4671,6 +4673,14 @@ cdef class Sequence:
     @taxonomy_id.setter
     def taxonomy_id(self, object tax_id):
         assert self._sq != NULL
+        warnings.warn(
+            (
+                "`Sequence.taxonomy_id` is not supported consistently "
+                "in Easel and will be removed in `v0.8.0`"
+            ),
+            category=DeprecationWarning,
+            stacklevel=1
+        )
         if tax_id is None:
             self._sq.tax_id = -1
         elif (<int32_t> tax_id) > 0:
@@ -4861,7 +4871,12 @@ cdef class TextSequence(Sequence):
             self.description = description
         if source is not None:
             self.source = source
-        self.taxonomy_id = taxonomy_id
+
+        # TODO: Remove `taxonomy_id` attribute in v0.8.0.
+        if taxonomy_id is None:
+            self._sq.tax_id = -1
+        else:
+            self.taxonomy_id = taxonomy_id
 
         assert libeasel.sq.esl_sq_IsText(self._sq)
         assert self._sq.name != NULL
@@ -5074,7 +5089,12 @@ cdef class DigitalSequence(Sequence):
             self.description = description
         if source is not None:
             self.source = source
-        self.taxonomy_id = taxonomy_id
+
+        # TODO: Remove `taxonomy_id` attribute in v0.8.0.
+        if taxonomy_id is None:
+            self._sq.tax_id = -1
+        else:
+            self.taxonomy_id = taxonomy_id
 
         assert libeasel.sq.esl_sq_IsDigital(self._sq)
         assert self._sq.name != NULL
