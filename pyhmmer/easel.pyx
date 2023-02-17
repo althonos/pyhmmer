@@ -460,6 +460,9 @@ cdef class Alphabet:
 
 cdef class GeneticCode:
     """A genetic code table for translation.
+
+    .. versionadded:: 0.7.2
+
     """
 
     def __cinit__(self):
@@ -5217,6 +5220,8 @@ cdef class DigitalSequence(Sequence):
             unambiguous amino acid translation, the codon is translated
             as ``X``. Ambiguous amino acids (such as ``J`` or ``B``) are
             never produced.
+
+        .. versionadded:: 0.7.2
 
         """
         assert self._sq != NULL
