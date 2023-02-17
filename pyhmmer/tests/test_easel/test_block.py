@@ -272,19 +272,21 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
     def setUpClass(cls):
         cls.alphabet = Alphabet.dna()
 
-    def _new_sequence(self,
-                      name,
-                      seq,
-                      description=None,
-                      source=None,
-                      taxonomy_id=None):
-
-        return TextSequence(name=name,
-                            sequence=seq,
-                            description=description,
-                            source=source,
-                            taxonomy_id=taxonomy_id
-                            ).digitize(self.alphabet)
+    def _new_sequence(
+        self,
+        name,
+        seq,
+        description=None,
+        source=None,
+        taxonomy_id=None
+    ):
+        return TextSequence(
+            name=name,
+            sequence=seq,
+            description=description,
+            source=source,
+            taxonomy_id=taxonomy_id
+        ).digitize(self.alphabet)
 
     def _new_block(self, sequences=()):
         return DigitalSequenceBlock(self.alphabet, sequences)
@@ -302,33 +304,42 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
         self.assertEqual(tblock[1], seq2.textize())
 
     def test_translate(self):
-        seq1 = self._new_sequence(b"seq1",
-                                  "ATGCTG",
-                                  description=b"one",
-                                  source=b"some_source")
+        seq1 = self._new_sequence(
+            b"seq1",
+            "ATGCTG",
+            description=b"one",
+            source=b"some_source"
+        )
+        seq2 = self._new_sequence(
+            b"seq2",
+            "ATGCCC",
+            description=b"two",
+            source=b"other_source"
+        )
+        seq3 = self._new_sequence(
+            b"seq3",
+            "ATGCTG",
+        )
 
-        seq2 = self._new_sequence(b"seq2",
-                                  "ATGCCC",
-                                  description=b"two",
-                                  source=b"other_source")
-
-        block = self._new_block([seq1, seq2])
+        block = self._new_block([seq1, seq2, seq3])
         prots = block.translate().textize()
 
-        self.assertEqual(len(prots), 2)
+        self.assertEqual(len(prots), 3)
         # test sequences
         self.assertEqual(prots[0].sequence, "ML")
         self.assertEqual(prots[1].sequence, "MP")
+        self.assertEqual(prots[2].sequence, "ML")
         # test names
         self.assertEqual(prots[0].name, b"seq1")
         self.assertEqual(prots[1].name, b"seq2")
+        self.assertEqual(prots[2].name, b"seq3")
         # test other metadata fields
         self.assertEqual(prots[0].description, b"one")
         self.assertEqual(prots[1].description, b"two")
+        self.assertEqual(prots[2].description, b"")
         self.assertEqual(prots[0].source, b"some_source")
         self.assertEqual(prots[1].source, b"other_source")
-
-
+        self.assertEqual(prots[2].source, b"")
 
     def test_translate_empty(self):
         gencode = GeneticCode()
