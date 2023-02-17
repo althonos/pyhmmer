@@ -148,6 +148,14 @@ class TestDigitalSequence(_TestSequenceBase, unittest.TestCase):
         prot = seq.translate(gencode).textize()
         self.assertEqual(prot.sequence, "MLPGLALLLLAA")
 
+    def test_translate_copy_metadata(self):
+        gencode = easel.GeneticCode()
+        textseq = easel.TextSequence(sequence="ATGCTGCCCGGT", name=b"seq", source=b"source")
+        seq = textseq.digitize(gencode.nucleotide_alphabet)
+        prot = seq.translate(gencode).textize()
+        self.assertEqual(prot.name, textseq.name)      
+        self.assertEqual(prot.source, textseq.source)      
+
     def test_translate_empty(self):
         gencode = easel.GeneticCode()
         seq = easel.DigitalSequence(gencode.nucleotide_alphabet)
