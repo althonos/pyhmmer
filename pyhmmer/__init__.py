@@ -26,7 +26,7 @@ from .hmmer import hmmalign, hmmsearch, hmmpress, nhmmer, hmmscan, phmmer
 
 __author__ = "Martin Larralde <martin.larralde@embl.de>"
 __license__ = "MIT"
-__version__ = "0.7.1"
+__version__ = "0.7.2"
 __all__ = [
     "errors",
     "easel",

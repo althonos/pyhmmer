@@ -6,7 +6,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.7.2...HEAD
+
+
+## [v0.7.2] - 2023-02-17
+[v0.7.2]: https://github.com/althonos/pyhmmer/compare/v0.7.1...v0.7.2
+
+### Added
+- `easel.GeneticCode` class wrapping an `ESL_GENCODE` struct for configuring translation.
+- `DigitalSequence.translate` method to translate a nucleotide sequence to a protein sequence. Metadata is copied from the source sequence to its translation ([#31](https://github.com/althonos/pyhmmer/pull/31), by [@valentynbez](https://github.com/valentynbez)).
+
+### Deprecated
+- `Sequence.taxonomy_id` property, as it is not used by Easel and implementation is not consistent (See [EddyRivasLab/easel#68](https://github.com/EddyRivasLab/easel/issues/68)).
 
 
 ## [v0.7.1] - 2022-12-15
