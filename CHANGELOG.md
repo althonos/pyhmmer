@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - `DigitalSequence.translate` method to translate a nucleotide sequence to a protein sequence. Metadata is copied from the source sequence to its translation ([#31](https://github.com/althonos/pyhmmer/pull/31), by [@valentynbez](https://github.com/valentynbez)).
 
 ### Deprecated
-- `Sequence.taxonomy_id` property, as it is not used by Easel and implementation is not consistent (See [EddyRivasLab/easel#68](https://github.com/EddyRivasLab/easel/issues/68)).
+- `Sequence.taxonomy_id` property, as it is not used by Easel and implementation is not consistent (see [EddyRivasLab/easel#68](https://github.com/EddyRivasLab/easel/issues/68)).
 
 
 ## [v0.7.1] - 2022-12-15

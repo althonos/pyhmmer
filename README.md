@@ -100,7 +100,11 @@ $ pydoc pyhmmer.plan7
 
 ## 💡 Example
 
-Use `pyhmmer` to run `hmmsearch`, and obtain an iterable over
+Use `pyhmmer` to run `hmmsearch` to search for Type 2 PKS domains
+([`t2pks.hmm`](https://raw.githubusercontent.com/althonos/pyhmmer/master/pyhmmer/tests/data/hmms/txt/t2pks.hmm))
+inside proteins extracted from the genome of *Anaerococcus provencensis*
+([`938293.PRJEB85.HG003687.faa`](https://raw.githubusercontent.com/althonos/pyhmmer/master/pyhmmer/tests/data/seqs/938293.PRJEB85.HG003687.faa)).
+This will produce an iterable over
 [`TopHits`] that can be used for further sorting/querying in Python.
 Processing happens in parallel using Python threads, and a [`TopHits`]
 object is yielded for every [`HMM`] passed in the input iterable.
