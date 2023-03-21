@@ -62,6 +62,7 @@ _T = typing.TypeVar("_T")
 _PHMMERQueryType = typing.Union[DigitalSequence, DigitalMSA]
 _SEARCHQueryType = typing.Union[HMM, Profile, OptimizedProfile]
 _NHMMERQueryType = typing.Union[_PHMMERQueryType, _SEARCHQueryType]
+_JACKHMMERQueryType = typing.Union[DigitalSequence, _SEARCHQueryType]
 
 # --- Result class -----------------------------------------------------------
 
@@ -250,6 +251,35 @@ class _PHMMERWorker(_BaseWorker[_PHMMERQueryType, typing.Union[DigitalSequenceBl
     @query.register(DigitalMSA)
     def _(self, query: DigitalMSA) -> TopHits:  # type: ignore
         return self.pipeline.search_msa(query, self.targets, self.builder)
+
+
+class _JACKHMMERWorker(_BaseWorker[_JACKHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]):
+    
+    def __init__(
+        self,
+        max_iterations: typing.Optional[int] = 5,
+        select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+        *args,
+        **kwargs
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.select_hits = select_hits
+        self.max_iterations = max_iterations
+
+    @singledispatchmethod
+    def query(self, query) -> TopHits:  # type: ignore
+        raise TypeError("Unsupported query type for `jackhmmer`: {}".format(type(query).__name__))
+
+    @query.register(DigitalSequence)
+    def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
+        iterator = self.pipeline.iterate_seq(query, self.targets, self.builder, self.select_hits)
+        for n in range(self.max_iterations):
+            iteration = next(iterator)
+            if iteration.converged:
+                break
+        # unpack results
+        hmm, hits, msa, converged, it = iteration
+        return hits
 
 
 class _NHMMERWorker(_BaseWorker[_NHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]):
@@ -457,6 +487,52 @@ class _PHMMERDispatcher(_BaseDispatcher[_PHMMERQueryType, typing.Union[DigitalSe
         else:
             targets = self.targets  # type: ignore
         return _PHMMERWorker(
+            targets,
+            query_available,
+            query_queue,
+            query_count,
+            kill_switch,
+            self.callback,
+            self.options,
+            self.pipeline_class,
+            self.alphabet,
+            copy.copy(self.builder),
+        )
+
+
+class _JACKHMMERDispatcher(_BaseDispatcher[_JACKHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]):
+    
+    def __init__(
+        self,
+        max_iterations: typing.Optional[int] = 5,
+        select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+        *args,
+        **kwargs
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.max_iterations = max_iterations
+        self.select_hits = select_hits
+
+    def _new_thread(
+        self,
+        query_available: threading.Semaphore,
+        query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType]]]",
+        query_count: "multiprocessing.Value[int]",  # type: ignore
+        kill_switch: threading.Event,
+    ) -> _JACKHMMERWorker:
+        if isinstance(self.targets, SequenceFile):
+            assert self.targets.name is not None
+            targets = SequenceFile(
+                self.targets.name,
+                format=self.targets.format,
+                digital=True,
+                alphabet=self.alphabet
+            )
+        else:
+            targets = self.targets  # type: ignore
+        return _JACKHMMERWorker(
+            self.max_iterations,
+            self.select_hits,
             targets,
             query_available,
             query_queue,
@@ -751,6 +827,102 @@ def phmmer(
         pipeline_class=Pipeline,
         alphabet=alphabet,
         builder=_builder,
+        **options,
+    )
+    return dispatcher.run()
+
+
+# --- jackhmmer -----------------------------------------------------------------
+
+def jackhmmer(
+    queries: typing.Union[_JACKHMMERQueryType, typing.Iterable[_JACKHMMERQueryType]],
+    sequences: typing.Iterable[DigitalSequence],
+    *,
+    max_iterations: typing.Optional[int] = 5,
+    select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+    cpus: int = 0,
+    callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
+    builder: typing.Optional[Builder] = None,
+    **options,  # type: typing.Dict[str, object]
+) -> typing.Iterator[TopHits]:
+    """Search protein sequences against a sequence database.
+
+    Arguments:
+        queries (iterable of `DigitalSequence` or `DigitalMSA`): The query
+            sequences to search for in the sequence database. Passing a
+            single object is supported.
+        sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A database
+            of sequences to query. If you plan on using the same sequences
+            several times, consider storing them into a
+            `~pyhmmer.easel.DigitalSequenceBlock` directly. If a
+            `SequenceFile` is given, profiles will be loaded iteratively
+            from disk rather than prefetched.
+        max_iterations (`int`): The maximum number of iterations for the search.
+            Hits will be returned early if the results converge.
+        select_hits (callable, optional): A function or callable object
+            for manually selecting hits during each iteration. It should
+            take a single `TopHits` argument and change the inclusion of
+            individual hits with the `Hit.include` and `Hit.drop` methods.
+        cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
+            run everything in the main thread, ``0`` to automatically
+            select a suitable number (using `psutil.cpu_count`), or any
+            positive number otherwise.
+        callback (callable): A callback that is called everytime a query is
+            processed with two arguments: the query, and the total number
+            of queries. This can be used to display progress in UI.
+        builder (`~pyhmmer.plan7.Builder`, optional): A builder to configure
+            how the queries are converted to HMMs. Passing `None` will create
+            a default instance.
+
+    Yields:
+        `~pyhmmer.plan7.TopHits`: A *top hits* instance for each query,
+        in the same order the queries were passed in the input.
+
+    Raises:
+        `~pyhmmer.errors.AlphabetMismatch`: When any of the query sequence
+            the profile or the optional builder do not share the same
+            alphabet.
+
+    Note:
+        Any additional keyword arguments passed to the `jackhmmer` function
+        will be passed transparently to the `~pyhmmer.plan7.Pipeline` to
+        be created in each worker thread.
+
+    .. versionadded:: 0.7.3
+    """
+    _alphabet = Alphabet.amino()
+    _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count() or 1
+    _builder = Builder(_alphabet, architecture="hand") if builder is None else builder
+
+    if not isinstance(queries, collections.abc.Iterable):
+        queries = (queries,)
+
+    if isinstance(sequences, SequenceFile):
+        sequence_file: SequenceFile = sequences
+        if sequence_file.name is None:
+            raise ValueError("expected named `SequenceFile` for targets")
+        if not sequence_file.digital:
+            raise ValueError("expected digital mode `SequenceFile` for targets")
+        assert sequence_file.alphabet is not None
+        alphabet = sequence_file.alphabet
+        targets: typing.Union[SequenceFile, DigitalSequenceBlock] = sequence_file
+    elif isinstance(sequences, DigitalSequenceBlock):
+        alphabet = sequences.alphabet
+        targets = sequences
+    else:
+        alphabet = _alphabet
+        targets = DigitalSequenceBlock(_alphabet, sequences)
+
+    dispatcher = _JACKHMMERDispatcher(
+        queries=queries,
+        targets=targets,
+        cpus=_cpus,
+        callback=callback,
+        pipeline_class=Pipeline,
+        alphabet=alphabet,
+        builder=_builder,
+        max_iterations=max_iterations,
+        select_hits=select_hits,
         **options,
     )
     return dispatcher.run()

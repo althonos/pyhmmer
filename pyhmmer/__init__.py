@@ -21,7 +21,7 @@ from . import easel
 from . import plan7
 from . import daemon
 
-from .hmmer import hmmalign, hmmsearch, hmmpress, nhmmer, hmmscan, phmmer
+from .hmmer import hmmalign, hmmsearch, hmmpress, nhmmer, hmmscan, phmmer, jackhmmer
 
 
 __author__ = "Martin Larralde <martin.larralde@embl.de>"
@@ -38,6 +38,7 @@ __all__ = [
     "hmmpress",
     "phmmer",
     "nhmmer",
+    "jackhmmer",
 ]
 
 # Small addition to the docstring: we want to show a link redirecting to the
