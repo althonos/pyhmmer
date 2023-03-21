@@ -326,6 +326,53 @@ class TestPhmmer(unittest.TestCase):
                 self.assertEqual(domain.env_to, int(fields[20]))
 
 
+class TestJackhmmer(unittest.TestCase):
+
+    @staticmethod
+    def table(name):
+        bin_stream = pkg_resources.resource_stream(__name__, "data/tables/{}".format(name))
+        return io.TextIOWrapper(bin_stream)
+
+    def test_no_queries(self):
+        alphabet = Alphabet.amino()
+        path = pkg_resources.resource_filename(__name__, "data/seqs/PKSI.faa")
+        with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
+            seqs = seqs_file.read_block()
+        hits = pyhmmer.jackhmmer([], seqs, cpus=1, max_iterations=1)
+        self.assertIs(None, next(hits, None))
+
+    def test_pksi(self):
+        alphabet = Alphabet.amino()
+        path = pkg_resources.resource_filename(__name__, "data/seqs/PKSI.faa")
+        with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
+            seqs = seqs_file.read_block()
+        hits = next(pyhmmer.jackhmmer(seqs[-1:], seqs, cpus=1, max_iterations=1))
+        hits.sort()
+
+        with self.table("A0A089QRB9.domtbl") as table:
+            lines = iter(filter(lambda line: not line.startswith("#"), table))
+            it = ((hit, domain) for hit in hits for domain in hit.domains)
+            for line, (hit, domain) in itertools.zip_longest(lines, it):
+                self.assertIsNot(line, None)
+                self.assertIsNot(hit, None)
+                fields = list(filter(None, line.strip().split(" ")))
+
+                self.assertEqual(hit.name.decode(), fields[0])
+                self.assertAlmostEqual(hit.score, float(fields[7]), delta=0.1)
+                self.assertAlmostEqual(hit.bias, float(fields[8]), delta=0.1)
+                self.assertAlmostEqual(hit.evalue, float(fields[6]), delta=0.1)
+
+                self.assertAlmostEqual(domain.i_evalue, float(fields[12]), delta=0.1)
+                self.assertAlmostEqual(domain.score, float(fields[13]), delta=0.1)
+
+                self.assertEqual(domain.alignment.hmm_from, int(fields[15]))
+                self.assertEqual(domain.alignment.hmm_to, int(fields[16]))
+                self.assertEqual(domain.alignment.target_from, int(fields[17]))
+                self.assertEqual(domain.alignment.target_to, int(fields[18]))
+                self.assertEqual(domain.env_from, int(fields[19]))
+                self.assertEqual(domain.env_to, int(fields[20]))
+
+
 class TestNhmmer(unittest.TestCase):
 
     @classmethod
