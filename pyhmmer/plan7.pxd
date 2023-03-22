@@ -328,7 +328,7 @@ cdef class Pipeline:
 
     cpdef IterativeSearch iterate_hmm(
         self,
-        DigitalSequence query,
+        HMM query,
         DigitalSequenceBlock sequences,
         Builder builder = ?,
         object select_hits = ?,
