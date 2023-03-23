@@ -293,34 +293,34 @@ class configure(_build_clib):
             if os.path.isfile(binfile):
                 os.remove(binfile)
 
-    def _check_sse2(self):
-        _eprint('checking whether compiler can build SSE2 code', end="... ")
+    def _check_simd_generic(self, name, program):
+        _eprint('checking whether compiler can build', name, 'code', end="... ")
 
-        testfile = os.path.join(self.build_temp, "have_sse2.c")
-        binfile = os.path.join(self.build_temp, "have_sse2.bin")
+        base = "have_{}".format(name)
+        testfile = os.path.join(self.build_temp, "{}.c".format(base))
+        binfile = self.compiler.executable_filename(base, output_dir=self.build_temp)
         objects = []
 
+        self.mkpath(self.build_temp)
         with open(testfile, "w") as f:
-            f.write("""
-                #include <emmintrin.h>
-                int main() {
-                    __m128i a = _mm_set1_epi16(1);
-                    short   x = _mm_extract_epi16(a, 1);
-                    return (x == 1) ? 0 : 1;
-                }
-            """)
+            f.write(program)
+
         try:
-            objects = self.compiler.compile([testfile], debug=self.debug, extra_preargs=["-msse2"])
-            self.compiler.link_executable(objects, binfile)
+            self.mkpath(self.build_temp)
+            objects = self.compiler.compile([testfile], extra_preargs=platform_compile_args)
+            self.compiler.link_executable(objects, base, extra_preargs=platform_compile_args, output_dir=self.build_temp)
             subprocess.run([binfile], check=True)
-        except (CompileError, LinkError):
+        except CompileError:
             _eprint("no")
             return False
-        except subprocess.CalledProcessError:
+        except (subprocess.SubprocessError, OSError):
             _eprint("yes, but cannot run code")
             return True  # assume we are cross-compiling, and still build
         else:
-            _eprint("yes, with -msse2")
+            if not platform_compile_args:
+                _eprint("yes")
+            else:
+                _eprint("yes, with {}".format(" ".join(platform_compile_args)))
             return True
         finally:
             os.remove(testfile)
@@ -329,15 +329,38 @@ class configure(_build_clib):
             if os.path.isfile(binfile):
                 os.remove(binfile)
 
+    def _check_avx2(self):
+        return self._check_simd_generic(
+            "AVX2",
+            program="""
+                #include <immintrin.h>
+                int main(int argc, char *argv[]) {{
+                    __m256i a = _mm256_set1_epi16(-1);
+                            a = _mm256_abs_epi16(a);
+                    short   x = _mm256_extract_epi16(a, 1);
+                    return (x == 1) ? 0 : 1;
+                }}
+            """,
+        )
+
+    def _check_sse2(self):
+        return self._check_simd_generic(
+            "SSE2",
+            program="""
+                #include <emmintrin.h>
+                int main(int argc, char *argv[]) {{
+                    __m128i a = _mm_set1_epi16(-1);
+                            a = _mm_and_si128(a, a);
+                    short   x = _mm_extract_epi16(a, 1);
+                    return (x == -1) ? 0 : 1;
+                }}
+            """,
+        )
+
     def _check_vmx(self):
-        _eprint('checking whether compiler can build VMX code', end="... ")
-
-        testfile = os.path.join(self.build_temp, "have_sse.c")
-        binfile = os.path.join(self.build_temp, "have_sse.bin")
-        objects = []
-
-        with open(testfile, "w") as f:
-            f.write("""
+        return self._check_simd_generic(
+            "VMX", 
+            program="""
                 #include <altivec.h>
                 int main() {
                     vector float a = vec_splats(1.0);
@@ -345,26 +368,8 @@ class configure(_build_clib):
                     vec_ste(a, 0, &f);
                     return (f == 1) ? 0 : 1;
                 }
-            """)
-        try:
-            objects = self.compiler.compile([testfile], debug=self.debug)
-            self.compiler.link_executable(objects, binfile)
-            subprocess.run([binfile], check=True)
-        except (CompileError, LinkError):
-            _eprint('no')
-            return False
-        except subprocess.CalledProcessError:
-            _eprint('yes, but cannot run code')
-            return True  # assume we are cross-compiling, and still build
-        else:
-            _eprint('yes')
-            return True
-        finally:
-            os.remove(testfile)
-            for obj in filter(os.path.isfile, objects):
-                os.remove(obj)
-            if os.path.isfile(binfile):
-                os.remove(binfile)
+            """
+        )
 
     # --- Required interface for `setuptools.Command` ---
 
@@ -440,6 +445,8 @@ class configure(_build_clib):
                 supported_feature = self._check_sse2()
             elif hmmer_impl == "VMX":
                 supported_feature = self._check_vmx()
+            elif hmmer_impl == "NEON":
+                supported_feature = self._check_neon()
             else:
                 supported_feature = False
             if not supported_feature:
@@ -668,7 +675,13 @@ elif machine.startswith(("x86", "amd", "i386", "i686")):
     hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_sse", "vitscore.c"))
     hmmer_impl = "SSE"
     platform_define_macros = [("eslENABLE_SSE", 1)]
-    platform_compile_args = ["-msse3"]
+    platform_compile_args = ["-msse4.1"]
+elif machine.startswith(("arm", "ARM")):
+    hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_neon", "*.c")))
+    hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_neon", "vitscore.c"))
+    hmmer_impl = "NEON"
+    platform_define_macros = [("eslENABLE_NEON", 1)]
+    platform_compile_args = [] if "64" in machine else ["-mfpu=neon"]
 else:
     _eprint('pyHMMER is not supported on CPU architecture:', repr(machine))
     platform_define_macros = []
