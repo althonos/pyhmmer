@@ -329,15 +329,15 @@ class configure(_build_clib):
             if os.path.isfile(binfile):
                 os.remove(binfile)
 
-    def _check_avx2(self):
+    def _check_neon(self):
         return self._check_simd_generic(
-            "AVX2",
+            "NEON",
             program="""
-                #include <immintrin.h>
+                #include <arm_neon.h>
                 int main(int argc, char *argv[]) {{
-                    __m256i a = _mm256_set1_epi16(-1);
-                            a = _mm256_abs_epi16(a);
-                    short   x = _mm256_extract_epi16(a, 1);
+                    int16x8_t a = vdupq_n_s16(-1);
+                              a = vabsq_s16(a);
+                    short     x = vgetq_lane_s16(a, 1);
                     return (x == 1) ? 0 : 1;
                 }}
             """,
