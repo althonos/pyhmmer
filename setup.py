@@ -676,7 +676,7 @@ elif machine.startswith(("x86", "amd", "i386", "i686")):
     hmmer_impl = "SSE"
     platform_define_macros = [("eslENABLE_SSE", 1)]
     platform_compile_args = ["-msse4.1"]
-elif machine.startswith(("arm", "ARM")):
+elif machine.lower().startswith(("arm", "aarch")):
     hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_neon", "*.c")))
     hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_neon", "vitscore.c"))
     hmmer_impl = "NEON"
