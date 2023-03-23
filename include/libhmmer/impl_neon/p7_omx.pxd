@@ -1,16 +1,19 @@
 from libc.stdio cimport FILE
 
-from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
+from libhmmer.impl_neon.p7_oprofile cimport P7_OPROFILE
 
 
-cdef extern from "emmintrin.h":
+cdef extern from "<arm_neon.h>":
 
-    ctypedef struct __m128i:
+    ctypedef struct float32x4_t:
         pass
 
-    ctypedef struct __m128:
+    ctypedef struct uint8x16_t:
         pass
-
+    
+    ctypedef struct int16x8_t:
+        pass
+        
 
 cdef extern from "impl_neon/impl_neon.h" nogil:
 
