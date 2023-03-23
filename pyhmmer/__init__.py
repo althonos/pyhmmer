@@ -21,6 +21,7 @@ References:
 import collections.abc as _collections_abc
 import contextlib as _contextlib
 import os as _os
+import warnings as _warnings
 
 from . import errors
 from . import easel
@@ -74,3 +75,11 @@ if hasattr(_contextlib, "AbstractContextManager"):
     _contextlib.AbstractContextManager.register(easel.SSIReader)
     _contextlib.AbstractContextManager.register(easel.SSIWriter)
     _contextlib.AbstractContextManager.register(plan7.HMMFile)
+
+_warnings.warn(
+    "You are importing the experimental Arm64 branch of PyHMMER, "
+    "based on the develop branch of HMMER (3.3.2+eab5d49). "
+    "No guarantee is made about stability or compatibility with "
+    "the stable HMMER release (3.3.2). Use at your own risk.",
+    ImportWarning,
+)
