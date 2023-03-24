@@ -7,7 +7,8 @@ cython ~=0.29.16
 psutil ~=5.0
 
 # coverage dependencies
-coverage ~=7.0
+coverage ~=4.0 ; python_version == '3.6'
+coverage ~=7.0 ; python_version >= '3.7'
 
 # deployment dependencies
 auditwheel
