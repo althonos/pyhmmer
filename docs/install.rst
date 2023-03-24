@@ -69,7 +69,18 @@ the repository and install the repository by running (with the admin rights):
 
 .. code:: console
 
-	$ pip install --user https://github.com/althonos/pyhmmer/archive/master.zip
+	$ pip install -U git+https://github.com/althonos/pyhmmer
+
+
+An experimental branch for platforms with Arm NEON support (either `armv7`
+or `aarch64`) can be installed the same way. Note that Arm is not officially
+supported by HMMER yet, so the Arm port is provided without warranty at
+the moment:
+
+.. code:: console
+
+	$ pip install -U git+https://github.com/althonos/pyhmmer@neon-support
+
 
 .. caution::
 
