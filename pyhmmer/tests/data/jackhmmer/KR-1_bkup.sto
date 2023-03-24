@@ -1,0 +1,67 @@
+# STOCKHOLM 1.0
+#=GF ID KR-i1
+#=GF AU hmmsearch (HMMER 3.3.2)
+
+#=GS 938293.PRJEB85.HG003688_10/1-245    DE [subseq from] # 15132 # 15875 # -1 # ID=1_10;partial=00;start_type=ATG;rbs_motif=None;rbs_spacer=None;gc_cont=0.363
+#=GS 938293.PRJEB85.HG003686_266/7-252   DE [subseq from] # 274277 # 275047 # -1 # ID=7_266;partial=00;start_type=ATG;rbs_motif=AGGAG;rbs_spacer=5-10bp;gc_cont=0.390
+#=GS 938293.PRJEB85.HG003686_256/3-246   DE [subseq from] # 264604 # 265359 # 1 # ID=7_256;partial=00;start_type=ATG;rbs_motif=AGGAG;rbs_spacer=5-10bp;gc_cont=0.337
+#=GS 938293.PRJEB85.HG003690_137/10-55   DE [subseq from] # 149241 # 149420 # -1 # ID=4_137;partial=00;start_type=ATG;rbs_motif=4Base/6BMM;rbs_spacer=13-15bp;gc_cont=0.472
+#=GS 938293.PRJEB85.HG003688_14/283-330  DE [subseq from] # 20242 # 21648 # -1 # ID=1_14;partial=00;start_type=ATG;rbs_motif=AGGAG;rbs_spacer=5-10bp;gc_cont=0.405
+#=GS 938293.PRJEB85.HG003685_255/382-415 DE [subseq from] # 285508 # 287457 # 1 # ID=6_255;partial=00;start_type=ATG;rbs_motif=GGAGG;rbs_spacer=5-10bp;gc_cont=0.359
+
+938293.PRJEB85.HG003688_10/1-245            -MYNCTMKTVLITGSSRGIGAAIARRLNDD-YKIIINYRnSKEKAFKLLYELRETN.PNVIAVKADVSKEEDVAMMFDVAEKNFGHVDILINNAGISHF..SLIQDIEFQTWKDVINTNLNSVFLNSKRAIP--NMISNR..YGVIINMSSIWGDFGASMEA..LYSTSKGGINTFTKALAKELAPSGIRVNAIAPGMVE
+#=GR 938293.PRJEB85.HG003688_10/1-245    PP .78999************************.********999**************.******************************************..*******************************..576766..7*******************..************************************
+938293.PRJEB85.HG003686_266/7-252           ----LTGDVAIVTGASSGLGVQFAKALASQGAKLALFAR.REEKLKEVAENIENEFdVEVKYYVTDVTDSKKVSENVGKVIEDFGKIDILVNNAGLGLS..APTTETSDEDWQKMMNINVNSLFYMAREVAK--NMKENG..YGRIINLGSIHSSVALANGAltMYTTTKGAVENMTKALAVEWAKDGITVNAIGPAYFA
+#=GR 938293.PRJEB85.HG003686_266/7-252   PP ....7999*******************************.**********99999889*****************************************..*******************************..788888..*****************999889***********************************
+938293.PRJEB85.HG003686_256/3-246           ------GRVAIVTGATRGIGLGITKQLLVDGYKICAFGTrDIKDYEEFS-DIYDPE.-SIFYFKGDISNIDDRKQFVSKVYEKFKSINVLVNNAGVAPKvrEDILEVSEESIDRLFEINTKAMFFLTQDIAK--RMISDKntDKCIINISSISSSVVSVDRA..DYCISKAAISMITKLYASRLAEYGINVYEIQPGIIK
+#=GR 938293.PRJEB85.HG003686_256/3-246   PP ......89**************************666654889999999.8***99..**************************************9993334557899*********************99..45555534449*****************..************************************
+938293.PRJEB85.HG003690_137/10-55           ---------------------------------------.----------------.------------------------------------------..---------------------------------------..--------------------..------------------------------------
+#=GR 938293.PRJEB85.HG003690_137/10-55   PP ........................................................................................................................................................................................................
+938293.PRJEB85.HG003688_14/283-330          -----VGKKVCVVGGGN-VAMDAARSAKRLGADVTVVYR.--RSFEEMPARIEESH.H-----------------------------------------..---------------------------------------..--------------------..------------------------------------
+#=GR 938293.PRJEB85.HG003688_14/283-330  PP .....5899********.*********************...77777776666655.4..............................................................................................................................................
+938293.PRJEB85.HG003685_255/382-415         ---TGDGKKVVVIGAGP-AGSEAAIVLANRGYKVTVFE-.----------------.------------------------------------------..---------------------------------------..--------------------..------------------------------------
+#=GR 938293.PRJEB85.HG003685_255/382-415 PP ...679*********99.****************8765..................................................................................................................................................................
+#=GC PP_cons                                .7888899**************************99889.9999999999899988.8*****************************************..888899*************************..576766..78******************..************************************
+#=GC RF                                     xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xxxxxxxxxxxxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx..xxxxxxxxxxxxxxxxxxxx..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+938293.PRJEB85.HG003688_10/1-245            TDMMRN--------DFTDE--EIEELKKEVSLNRFARPEEIAGLVKYLISDEASYITGDIIHINGG----
+#=GR 938293.PRJEB85.HG003688_10/1-245    PP *77444........33333..378899***********************************9998....
+938293.PRJEB85.HG003686_266/7-252           SEMTENLL---------EDEAFNQFIAMSDPMGRTGKPGELDTALLMFASHHSSYTTGQLLTVDGG----
+#=GR 938293.PRJEB85.HG003686_266/7-252   PP *7755533.........2344555699999***********************************8....
+938293.PRJEB85.HG003686_256/3-246           TDMTKIAEQKYDKLFNE----------GITPIRRWGYPEDIALAVSALAEFKFKYTTGQVIKVDGGY---
+#=GR 938293.PRJEB85.HG003686_256/3-246   PP *9988888888888663..........789***********************************96...
+938293.PRJEB85.HG003690_137/10-55           --------------------AFNQFIAMSDPMGRTGKPGELDTALLMFASHHSSYTTGQLLTVDGG----
+#=GR 938293.PRJEB85.HG003690_137/10-55   PP ....................3333477888***********************************8....
+938293.PRJEB85.HG003688_14/283-330          ----------------------------------------------------------------------
+#=GR 938293.PRJEB85.HG003688_14/283-330  PP ......................................................................
+938293.PRJEB85.HG003685_255/382-415         ----------------------------------------------------------------------
+#=GR 938293.PRJEB85.HG003685_255/382-415 PP ......................................................................
+#=GC PP_cons                                *88666668888885533344455688999***********************************86...
+#=GC RF                                     xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+//
+# STOCKHOLM 1.0
+#=GF ID KR_C9
+#=GF AU hmmsearch (HMMER 3.3.2)
+
+#=GS 938293.PRJEB85.HG003688_10/5-246  DE [subseq from] # 15132 # 15875 # -1 # ID=1_10;partial=00;start_type=ATG;rbs_motif=None;rbs_spacer=None;gc_cont=0.363
+#=GS 938293.PRJEB85.HG003686_266/9-252 DE [subseq from] # 274277 # 275047 # -1 # ID=7_266;partial=00;start_type=ATG;rbs_motif=AGGAG;rbs_spacer=5-10bp;gc_cont=0.390
+#=GS 938293.PRJEB85.HG003686_256/4-245 DE [subseq from] # 264604 # 265359 # 1 # ID=7_256;partial=00;start_type=ATG;rbs_motif=AGGAG;rbs_spacer=5-10bp;gc_cont=0.337
+
+938293.PRJEB85.HG003688_10/5-246          ----TMKTVLITGSSRGIGAAIARRLNDD-YKI.IINYRNsKEKAFKLLYELRET.NPNVIAVKADVSKEEDVAMMFDVAEKNFGHVDILINNAGISHF..SLIQDIEFQTWKDVINTNLNSVFLNSKRAIP--NMISNRYGVIINMSSIWGDFGASMEA..LYSTSKGGINTFTKALAKELAPSGIRVNAIAPGMVETD
+#=GR 938293.PRJEB85.HG003688_10/5-246  PP ....56889*****************876.677.7777751677889999*****.*******************************************..***************************9885..7999**********************..*************************************9
+938293.PRJEB85.HG003686_266/9-252         -----GDVAIVTGASSGLGVQFAKALASQGAKL.ALFARR.EEKLKEVAENIENEfDVEVKYYVTDVTDSKKVSENVGKVIEDFGKIDILVNNAGLGLS..APTTETSDEDWQKMMNINVNSLFYMAREVAK--NMKENGYGRIINLGSIHSSVALANGAltMYTTTKGAVENMTKALAVEWAKDGITVNAIGPAYFASE
+#=GR 938293.PRJEB85.HG003686_266/9-252 PP .....579*************************.******.**********9877579999**************************************..*****************************76..79***************999999998546**********************************999
+938293.PRJEB85.HG003686_256/4-245         ------RVAIVTGATRGIGLGITKQLLVDGYKIcAFGTRD.IKDYEEFSDIYDP-.-ESIFYFKGDISNIDDRKQFVSKVYEKFKSINVLVNNAGVAPKvrEDILEVSEESIDRLFEINTKAMFFLTQDIAKRMISDKNTDKCIINISSISSSVVSVDRA..DYCISKAAISMITKLYASRLAEYGINVYEIQPGIIKTD
+#=GR 938293.PRJEB85.HG003686_256/4-245 PP ......89***********************983457777.7777766554443...35667899******************************9876114567999**********************9999888899999**********9999***..**************************************
+#=GC PP_cons                              ....5689******************999*998.778887.88888888888779.9788899*********************************999..8899************************987997999***************9999**9..9************************************9
+#=GC RF                                   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xxxxxx.xxxxxxxxxxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+938293.PRJEB85.HG003688_10/5-246          MM---RN------DFTDEEI-EELKK.EVSLNRFARPEEIAGLVKYLISDEASYITGDIIHINGGF---
+#=GR 938293.PRJEB85.HG003688_10/5-246  PP 95...44......5677776.789**.***********************************9995...
+938293.PRJEB85.HG003686_266/9-252         MTENL----------LEDEAFNQFIAmSDPMGRTGKPGELDTALLMFASHHSSYTTGQLLTVDGG----
+#=GR 938293.PRJEB85.HG003686_266/9-252 PP 99876..........45666666655156999999999999999999999999999999999998....
+938293.PRJEB85.HG003686_256/4-245         MTKIAEQKYDKLFNEG----------.ITPIRRWGYPEDIALAVSALAEFKFKYTTGQVIKVDGG----
+#=GR 938293.PRJEB85.HG003686_256/4-245 PP *********9999743...........35888888888888888888888888888888888888....
+#=GC PP_cons                              9899877**99996556666667888.679999999999999999999999999999999999985...
+#=GC RF                                   xxxxxxxxxxxxxxxxxxxxxxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+//
