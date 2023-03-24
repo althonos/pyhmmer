@@ -7,8 +7,7 @@ cython ~=0.29.16
 psutil ~=5.0
 
 # coverage dependencies
-coverage ~=4.0
-codecov ~=2.0
+coverage ~=7.0
 
 # deployment dependencies
 auditwheel
