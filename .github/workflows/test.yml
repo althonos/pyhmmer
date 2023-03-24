@@ -73,12 +73,14 @@ jobs:
       run: python -m coverage run -m unittest discover -vv
     - name: Upload to Codecov
       if: matrix.python-impl == 'CPython'
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v3
       with:
-        flags: ${{ matrix.python-impl }},${{ matrix.python-release }},${{ env.OS }}
+        flags: ${{ matrix.python-release }}
+        env_vars: OS
         name: test-python-${{ matrix.python-version }}
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
+        verbose: true
 
   test_osx:
     name: Test (OSX)
@@ -147,11 +149,13 @@ jobs:
     - name: Test with coverage
       run: python -m coverage run -m unittest discover -vv
     - name: Upload to Codecov
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v3
       if: matrix.python-impl == 'CPython'
       with:
-        flags: ${{ matrix.python-impl }},${{ matrix.python-release }},${{ env.OS }}
+        flags: ${{ matrix.python-release }}
+        env_vars: OS
         name: test-python-${{ matrix.python-version }}
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
         codecov_curl_args: "--globoff"
+        verbose: true
