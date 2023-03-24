@@ -3784,8 +3784,12 @@ cdef class IterativeSearch:
         else:
             hmm, _, _ = self.builder.build_msa(self.msa, self.background)
             n_prev = len(self.msa.sequences)
-            extra_sequences = [self.query]
-            extra_traces = [Trace.from_sequence(self.query)]
+            if isinstance(self.query, HMM):
+                extra_sequences = None
+                extra_traces = None
+            else:
+                extra_sequences = [self.query]
+                extra_traces = [Trace.from_sequence(self.query)]
 
         hits = self._search_hmm(hmm)
         hits.sort(by="key")
@@ -5949,7 +5953,7 @@ cdef class Pipeline:
 
     cpdef IterativeSearch iterate_hmm(
         self,
-        DigitalSequence query,
+        HMM query,
         DigitalSequenceBlock sequences,
         Builder builder = None,
         object select_hits = None,
