@@ -6,7 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.7.3...HEAD
+
+
+## [v0.7.3] - 2023-03-24
+[v0.7.3]: https://github.com/althonos/pyhmmer/compare/v0.7.2...v0.7.3
+
+### Fixed
+- Wrong argument type in `IterativeSearch.iterate_hmm` method ([#34](https://github.com/althonos/pyhmmer/pull/34), by [@zdk123](https://github.com/althonos/pyhmmer/commits?author=zdk123)).
 
 
 ## [v0.7.2] - 2023-02-17
