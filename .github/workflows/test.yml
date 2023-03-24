@@ -83,7 +83,7 @@ jobs:
         verbose: true
 
   test_linux_arm64:
-    name: Build Linux wheels (Aarch64)
+    name: Test (Linux, arm64)
     runs-on: ubuntu-latest
     strategy:
       matrix:
