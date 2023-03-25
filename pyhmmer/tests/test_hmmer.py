@@ -333,18 +333,24 @@ class TestJackhmmer(unittest.TestCase):
         bin_stream = pkg_resources.resource_stream(__name__, "data/tables/{}".format(name))
         return io.TextIOWrapper(bin_stream)
 
+    @staticmethod
+    def seqs_file(name, digital=False):
+        seqs_path = pkg_resources.resource_filename(__name__, "data/seqs/{}.faa".format(name))
+        return SequenceFile(seqs_path, digital=digital)
+
+    @staticmethod
+    def hmm_file(name):
+        path = pkg_resources.resource_filename(__name__, "data/hmms/txt/{}.hmm".format(name))
+        return HMMFile(path)
+
     def test_no_queries(self):
-        alphabet = Alphabet.amino()
-        path = pkg_resources.resource_filename(__name__, "data/seqs/PKSI.faa")
-        with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
+        with self.seqs_file("PKSI", digital=True) as seqs_file:
             seqs = seqs_file.read_block()
         hits = pyhmmer.jackhmmer([], seqs, cpus=1, max_iterations=1)
         self.assertIs(None, next(hits, None))
 
     def test_pksi(self):
-        alphabet = Alphabet.amino()
-        path = pkg_resources.resource_filename(__name__, "data/seqs/PKSI.faa")
-        with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
+        with self.seqs_file("PKSI", digital=True) as seqs_file:
             seqs = seqs_file.read_block()
         hits = next(pyhmmer.jackhmmer(seqs[-1:], seqs, cpus=1, max_iterations=1))
         hits.sort()
@@ -372,6 +378,38 @@ class TestJackhmmer(unittest.TestCase):
                 self.assertEqual(domain.env_from, int(fields[19]))
                 self.assertEqual(domain.env_to, int(fields[20]))
 
+    def test_thioestherase(self):
+        with self.hmm_file("Thioesterase") as hmm_file:
+            hmm = hmm_file.read()
+        with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
+            seqs = seqs_file.read_block()
+
+        hits = next(pyhmmer.jackhmmer(hmm, seqs, cpus=1, max_iterations=1, incE=.1, incdomE=.1))
+        self.assertEqual(len(hits), 1)
+
+        hits.sort()
+
+        hit = hits[0]
+        self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_113")
+        self.assertAlmostEqual(hit.score, 8.6, delta=0.1)      # printed with %6.1f
+        self.assertAlmostEqual(hit.bias, 1.5, delta=0.1)       # printed with  %5.1f
+        self.assertAlmostEqual(hit.evalue, 0.096, delta=0.01)  # printed with %9.2g
+        self.assertEqual(len(hit.domains), 1)
+
+        domain = hit.domains[0]
+        self.assertAlmostEqual(domain.score, 8.1, delta=0.1)
+        self.assertAlmostEqual(domain.bias, 1.5, delta=0.1)
+        self.assertAlmostEqual(domain.i_evalue, 0.14, places=2)  # printed with %9.2g
+        self.assertAlmostEqual(domain.c_evalue, 6.5e-05, places=2)  # printed with %9.2g
+        self.assertEqual(domain.alignment.target_from, 115)
+        self.assertEqual(domain.alignment.target_to, 129)
+        self.assertEqual(domain.alignment.hmm_from, 79)
+        self.assertEqual(domain.alignment.hmm_to, 93)
+        self.assertEqual(domain.env_from, 115)
+        self.assertEqual(domain.env_to, 129)
+
+        last = hit.domains[-1]
+        self.assertEqual(domain.alignment.hmm_name, last.alignment.hmm_name)
 
 class TestNhmmer(unittest.TestCase):
 

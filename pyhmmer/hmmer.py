@@ -270,9 +270,7 @@ class _JACKHMMERWorker(_BaseWorker[_JACKHMMERQueryType, typing.Union[DigitalSequ
     def query(self, query) -> TopHits:  # type: ignore
         raise TypeError("Unsupported query type for `jackhmmer`: {}".format(type(query).__name__))
 
-    @query.register(DigitalSequence)
-    def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
-        iterator = self.pipeline.iterate_seq(query, self.targets, self.builder, self.select_hits)
+    def _iterate(self, iterator) -> TopHits:
         for n in range(self.max_iterations):
             iteration = next(iterator)
             if iteration.converged:
@@ -280,6 +278,16 @@ class _JACKHMMERWorker(_BaseWorker[_JACKHMMERQueryType, typing.Union[DigitalSequ
         # unpack results
         hmm, hits, msa, converged, it = iteration
         return hits
+
+    @query.register(DigitalSequence)
+    def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
+        iterator = self.pipeline.iterate_seq(query, self.targets, self.builder, self.select_hits)
+        return self._iterate(iterator)
+
+    @query.register(HMM)
+    def _(self, query: HMM) -> TopHits:  # type: ignore
+        iterator = self.pipeline.iterate_hmm(query, self.targets, self.builder, self.select_hits)
+        return self._iterate(iterator)
 
 
 class _NHMMERWorker(_BaseWorker[_NHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]):
@@ -501,7 +509,8 @@ class _PHMMERDispatcher(_BaseDispatcher[_PHMMERQueryType, typing.Union[DigitalSe
 
 
 class _JACKHMMERDispatcher(_BaseDispatcher[_JACKHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]):
-    
+    """Extend _BaseDispatcher with JackHmmer options
+    """
     def __init__(
         self,
         max_iterations: typing.Optional[int] = 5,
@@ -1339,6 +1348,47 @@ if __name__ == "__main__":
 
         return 0
 
+
+    @contextlib.contextmanager
+    def QueryFile(queryfile, alphabet):
+        """
+        Special context manager for handling a sequence file or an HMM file.
+        """
+        try:
+            yield SequenceFile(queryfile, digital=True, alphabet=alphabet)
+        except ValueError:
+            yield HMMFile(queryfile)
+
+    def _jackhmmer(args: argparse.Namespace) -> int:
+        # check the size of the target database and the amount of available memory
+        available_memory = psutil.virtual_memory().available
+        database_size = os.stat(args.seqdb).st_size
+
+        alphabet = Alphabet.amino()
+        with SequenceFile(args.seqdb, digital=True, alphabet=alphabet) as sequences:
+            # pre-load the database if it is small enough to fit in memory
+            if database_size < available_memory * MAX_MEMORY_LOAD:
+                sequences = sequences.read_block()  # type: ignore
+            # load the query sequences or HMMs iteratively
+            with QueryFile(args.queryfile, alphabet) as queries:
+                hits_list = jackhmmer(queries, sequences, cpus=args.jobs)  # type: ignore
+                for hits in hits_list:
+                    for hit in hits:
+                        if hit.reported:
+                            print(
+                                hit.name.decode(),
+                                "-",
+                                hit.best_domain.alignment.hmm_accession.decode(),
+                                hit.best_domain.alignment.hmm_name.decode(),
+                                hit.evalue,
+                                hit.score,
+                                hit.bias,
+                                sep="\t",
+                            )
+
+        return 0
+
+
     def _nhmmer(args: argparse.Namespace) -> int:
         # at the moment `LongTargetsPipeline` only support block targets, not files
         with SequenceFile(args.seqdb, digital=True) as seqfile:
@@ -1442,6 +1492,11 @@ if __name__ == "__main__":
     parser_phmmer = subparsers.add_parser("phmmer")
     parser_phmmer.set_defaults(call=_phmmer)
     parser_phmmer.add_argument("seqfile")
+    parser_phmmer.add_argument("seqdb")
+
+    parser_phmmer = subparsers.add_parser("jackhmmer")
+    parser_phmmer.set_defaults(call=_jackhmmer)
+    parser_phmmer.add_argument("queryfile") # can be sequences or HMM
     parser_phmmer.add_argument("seqdb")
 
     parser_nhmmer = subparsers.add_parser("nhmmer")
