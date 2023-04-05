@@ -152,6 +152,8 @@ cdef class HMM:
     cpdef dict __getstate__(self)
     cpdef object __setstate__(self, dict state)
 
+    cdef void _initialize(self) nogil
+
     cpdef HMM copy(self)
     cpdef VectorF match_occupancy(self)
     cpdef double mean_match_entropy(self) except *
