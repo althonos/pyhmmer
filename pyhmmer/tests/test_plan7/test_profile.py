@@ -19,7 +19,7 @@ class TestProfile(unittest.TestCase):
     def setUpClass(cls):
         rng = Randomness(seed=0)
         cls.alphabet = Alphabet.amino()
-        cls.hmm = HMM.sample(100, cls.alphabet, rng)
+        cls.hmm = HMM.sample(cls.alphabet, 100, rng)
         cls.hmm.name = b"hmm_one"
         cls.hmm.accession = b"HMM1"
         cls.hmm.description = b"first HMM"

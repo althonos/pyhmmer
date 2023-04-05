@@ -321,8 +321,8 @@ class HMM(object):
     @classmethod
     def sample(
         cls,
-        M: int,
         alphabet: Alphabet,
+        M: int,
         randomness: Randomness,
         ungapped: bool = False,
         enumerate: bool = False,

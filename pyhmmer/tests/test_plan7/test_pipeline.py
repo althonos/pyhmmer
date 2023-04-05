@@ -33,11 +33,11 @@ class TestSearchPipeline(unittest.TestCase):
         pipeline = Pipeline(alphabet=Alphabet.dna())
 
         # mismatch between pipeline alphabet and database alphabet
-        hmm1 = pyhmmer.plan7.HMM.sample(100, pipeline.alphabet, rng)
+        hmm1 = pyhmmer.plan7.HMM.sample(pipeline.alphabet, 100, rng)
         self.assertRaises(AlphabetMismatch, pipeline.search_hmm, hmm1, self.references)
 
         # mismatch between pipeline alphabet and query alphabet
-        hmm2 = pyhmmer.plan7.HMM.sample(100, self.alphabet, rng)
+        hmm2 = pyhmmer.plan7.HMM.sample(self.alphabet, 100, rng)
         self.assertRaises(AlphabetMismatch, pipeline.search_hmm, hmm2, self.references)
 
     def test_search_seq_alphabet_mismatch(self):
@@ -86,7 +86,7 @@ class TestSearchPipeline(unittest.TestCase):
     def test_search_hmm_unnamed(self):
         # make sure `Pipeline.search_hmm` doesn't crash when given an HMM with no name
         rng = pyhmmer.easel.Randomness()
-        hmm = pyhmmer.plan7.HMM.sample(100, self.alphabet, rng)
+        hmm = pyhmmer.plan7.HMM.sample(self.alphabet, 100, rng)
         hmm.name = b"test"
         hmm.accession = None
         pipeline = Pipeline(alphabet=self.alphabet)
@@ -315,7 +315,7 @@ class TestLongTargetsPipeline(unittest.TestCase):
             self._random_sequence(dna, b"seq2"),
         ])
 
-        hmm = pyhmmer.plan7.HMM.sample(100, dna, rng)
+        hmm = pyhmmer.plan7.HMM.sample(dna, 100, rng)
         hmm.name = b"test_one"
         hmm.accession = b"TST001"
 
@@ -328,7 +328,7 @@ class TestLongTargetsPipeline(unittest.TestCase):
         dna = Alphabet.dna()
         rng = pyhmmer.easel.Randomness(0)
 
-        hmm = pyhmmer.plan7.HMM.sample(100, dna, rng)
+        hmm = pyhmmer.plan7.HMM.sample(dna, 100, rng)
         hmm.name = b"test_one"
         hmm.accession = b"TST001"
 
@@ -352,11 +352,11 @@ class TestLongTargetsPipeline(unittest.TestCase):
         # mismatch between pipeline alphabet and database alphabet
         pipeline = LongTargetsPipeline(alphabet=dna)
         targets = DigitalSequenceBlock(amino)
-        hmm = pyhmmer.plan7.HMM.sample(100, dna, rng)
+        hmm = pyhmmer.plan7.HMM.sample(dna, 100, rng)
         self.assertRaises(AlphabetMismatch, pipeline.search_hmm, hmm, targets)
 
         # mismatch between pipeline alphabet and query alphabet
         pipeline = LongTargetsPipeline(alphabet=dna)
         targets = DigitalSequenceBlock(dna)
-        hmm = pyhmmer.plan7.HMM.sample(100, amino, rng)
+        hmm = pyhmmer.plan7.HMM.sample(amino, 100, rng)
         self.assertRaises(AlphabetMismatch, pipeline.search_hmm, hmm, targets)

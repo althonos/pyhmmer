@@ -2080,9 +2080,9 @@ cdef class HMM:
     @classmethod
     def sample(
         cls,
+        Alphabet alphabet not None,
         int M,
-        Alphabet alphabet,
-        Randomness randomness,
+        Randomness randomness not None,
         bint ungapped=False,
         bint enumerable=False,
     ):
@@ -2091,9 +2091,9 @@ cdef class HMM:
         Sample an HMM of length ``M`` at random.
 
         Arguments:
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
             M (`int`): The length of the model to generate (i.e. the
                 number of nodes).
-            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
             randomness (`~pyhmmer.easel.Randomness`): The random number
                 generator to use for sampling.
             ungapped (`bool`): Set to `True` to build an ungapped HMM, i.e.
@@ -7466,12 +7466,12 @@ cdef class TopHits:
             raise AllocationError("P7_HIT*", sizeof(P7_HIT*), state["N"])
 
         # setup sorted array
-        assert len(state["hit"]) == self._th.N
+        assert len(state["hit"]) == <Py_ssize_t> self._th.N
         for i, offset in enumerate(state["hit"]):
             self._th.hit[i] = &self._th.unsrt[offset]
 
         # deserialize hits
-        assert len(state["unsrt"]) == self._th.N
+        assert len(state["unsrt"]) == <Py_ssize_t> self._th.N
         for i, hit_state in enumerate(state["unsrt"]):
             n = 0
             status = libhmmer.p7_hit.p7_hit_Deserialize(

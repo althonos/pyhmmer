@@ -16,7 +16,7 @@ class TestOptimizedProfileBlock(unittest.TestCase):
 
     @classmethod
     def _random_hmm(cls, name, M=100):
-        hmm = HMM.sample(M, cls.alphabet, cls.rng)
+        hmm = HMM.sample(cls.alphabet, M, cls.rng)
         hmm.name = name
         return hmm
 
