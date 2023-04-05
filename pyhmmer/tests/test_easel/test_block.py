@@ -278,14 +278,12 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
         seq,
         description=None,
         source=None,
-        taxonomy_id=None
     ):
         return TextSequence(
             name=name,
             sequence=seq,
             description=description,
             source=source,
-            taxonomy_id=taxonomy_id
         ).digitize(self.alphabet)
 
     def _new_block(self, sequences=()):

@@ -4660,36 +4660,6 @@ cdef class Sequence:
             raise UnexpectedError(status, "esl_sq_SetSource")
 
     @property
-    def taxonomy_id(self):
-        """`int` or `None`: The NCBI taxonomy ID for the source organism, if any.
-
-        .. versionadded:: 0.4.6
-
-        .. deprecated:: 0.7.2
-
-        """
-        assert self._sq != NULL
-        return None if self._sq.tax_id == -1 else self._sq.tax_id
-
-    @taxonomy_id.setter
-    def taxonomy_id(self, object tax_id):
-        assert self._sq != NULL
-        warnings.warn(
-            (
-                "`Sequence.taxonomy_id` is not supported consistently "
-                "in Easel and will be removed in `v0.8.0`"
-            ),
-            category=DeprecationWarning,
-            stacklevel=1
-        )
-        if tax_id is None:
-            self._sq.tax_id = -1
-        elif (<int32_t> tax_id) > 0:
-            self._sq.tax_id = tax_id
-        else:
-            raise ValueError(f"NCBI taxonomy must be a positive integer or None, got {tax_id}")
-
-    @property
     def residue_markups(self):
         """`dict`: Extra residue markups, mapping information to each position.
 
@@ -4846,9 +4816,8 @@ cdef class TextSequence(Sequence):
         bytes accession=None,
         str   sequence=None,
         bytes source=None,
-        object taxonomy_id=None,
     ):
-        """__init__(self, name=None, description=None, accession=None, sequence=None, source=None, taxonomy_id=None)\n--
+        """__init__(self, name=None, description=None, accession=None, sequence=None, source=None)\n--
 
         Create a new text-mode sequence with the given attributes.
 
@@ -4872,12 +4841,6 @@ cdef class TextSequence(Sequence):
             self.description = description
         if source is not None:
             self.source = source
-
-        # TODO: Remove `taxonomy_id` attribute in v0.8.0.
-        if taxonomy_id is None:
-            self._sq.tax_id = -1
-        else:
-            self.taxonomy_id = taxonomy_id
 
         assert libeasel.sq.esl_sq_IsText(self._sq)
         assert self._sq.name != NULL
@@ -4921,7 +4884,6 @@ cdef class TextSequence(Sequence):
 
         if status == libeasel.eslOK:
             assert libeasel.sq.esl_sq_IsDigital(new._sq)
-            new.taxonomy_id = self.taxonomy_id
             return new
         elif status == libeasel.eslEINVAL:
             raise ValueError(f"Cannot digitize sequence with alphabet {alphabet}: invalid chars in sequence")
@@ -5035,7 +4997,6 @@ cdef class DigitalSequence(Sequence):
               bytes                 accession   = None,
         const libeasel.ESL_DSQ[::1] sequence    = None,
               bytes                 source      = None,
-              object                taxonomy_id = None,
     ):
         """__init__(self, alphabet, name=None, description=None, accession=None, sequence=None, source=None)\n--
 
@@ -5090,12 +5051,6 @@ cdef class DigitalSequence(Sequence):
             self.description = description
         if source is not None:
             self.source = source
-
-        # TODO: Remove `taxonomy_id` attribute in v0.8.0.
-        if taxonomy_id is None:
-            self._sq.tax_id = -1
-        else:
-            self.taxonomy_id = taxonomy_id
 
         assert libeasel.sq.esl_sq_IsDigital(self._sq)
         assert self._sq.name != NULL
@@ -5182,8 +5137,6 @@ cdef class DigitalSequence(Sequence):
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "esl_sq_Copy")
 
-            new._sq.tax_id = self._sq.tax_id
-
         assert libeasel.sq.esl_sq_IsText(new._sq)
         return new
 
@@ -5242,7 +5195,6 @@ cdef class DigitalSequence(Sequence):
             description=self.description,
             accession=self.accession,
             source=self.source,
-            taxonomy_id=self.taxonomy_id
         )
 
         # allocate output buffer
@@ -5677,7 +5629,6 @@ cdef class TextSequenceBlock(SequenceBlock):
         with nogil:
             for i in range(self._length):
                 libeasel.sq.esl_sq_Copy(self._refs[i], block._refs[i])
-                block._refs[i].tax_id = self._refs[i].tax_id
 
         return block
 
@@ -5852,7 +5803,6 @@ cdef class DigitalSequenceBlock(SequenceBlock):
         with nogil:
             for i in range(self._length):
                 libeasel.sq.esl_sq_Copy(self._refs[i], block._refs[i])
-                block._refs[i].tax_id = self._refs[i].tax_id
 
         return block
 
@@ -5919,7 +5869,6 @@ cdef class DigitalSequenceBlock(SequenceBlock):
                 description=self._storage[i].description,
                 accession=self._storage[i].accession,
                 source=self._storage[i].source,
-                taxonomy_id=self._storage[i].taxonomy_id
             )
 
             proteins._append(protein)
