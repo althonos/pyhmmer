@@ -24,8 +24,7 @@ class TestProfile(unittest.TestCase):
         cls.hmm.accession = b"HMM1"
         cls.hmm.description = b"first HMM"
         cls.background = Background(cls.alphabet)
-        cls.profile = Profile(cls.hmm.M, cls.alphabet)
-        cls.profile.configure(cls.hmm, cls.background, 200)
+        cls.profile = cls.hmm.to_profile(background=cls.background, L=200)
 
     def test_configure(self):
         profile = Profile(self.hmm.M, Alphabet.dna())
@@ -37,8 +36,7 @@ class TestProfile(unittest.TestCase):
         self.assertRaises(AlphabetMismatch, profile.configure, hmm, self.background, 200)
 
     def test_eq(self):
-        profile2 = Profile(self.hmm.M, self.alphabet)
-        profile2.configure(self.hmm, self.background, 200)
+        profile2 = self.hmm.to_profile(background=self.background, L=200)
         self.assertEqual(self.profile, profile2)
         self.assertNotEqual(self.profile, 1)
 
@@ -63,8 +61,7 @@ class TestProfile(unittest.TestCase):
         self.assertEqual(self.profile.M, self.hmm.M)
 
     def test_L(self):
-        profile = Profile(self.hmm.M, self.alphabet)
-        profile.configure(self.hmm, self.background, 200)
+        profile = self.hmm.to_profile(background=self.background, L=200)
         self.assertEqual(profile.L, 200)
         profile.L = 300
         self.assertEqual(profile.L, 300)

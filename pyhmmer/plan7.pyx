@@ -374,7 +374,7 @@ cdef class Background:
 
     Attributes:
         alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the
-            backgound model.
+            background model.
         uniform (`bool`): Whether or not the null model has been created
             with uniform frequencies.
         residue_frequencies (`~pyhmmer.easel.VectorF`): The null1 background
@@ -3123,6 +3123,38 @@ cdef class HMM:
             status = libhmmer.p7_hmm.p7_hmm_SetComposition(self._hmm)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_hmm_SetComposition")
+
+    cpdef Profile to_profile(
+        self, 
+        Background background = None, 
+        int L = 400, 
+        bint multihit = True, 
+        bint local = True
+    ):
+        """to_profile(self, background=None, L=400, multihit=True, local=True)\n--
+
+        Create a new profile configured for this HMM.
+
+        This method is a shortcut for creating a new `~pyhmmer.plan7.Profile` 
+        and calling `~pyhmmer.plan7.Profile.configure` for a given HMM. 
+        Prefer manually calling `~pyhmmer.plan7.Profile.configure` to recycle
+        the profile buffer when running inside a loop.
+
+        Arguments:
+            background (`~pyhmmer.plan7.Background`, optional): The null 
+                background model. In `None` given, create a default one
+                for the HMM alphabet.
+            L (`int`): The expected target sequence length.
+            multihit (`bool`): Whether or not to use multihit mode.
+            local (`bool`): Whether to use local or global mode.
+
+        .. versionadded:: 0.8.0
+
+        """
+        cdef Profile profile = Profile(alphabet=self.alphabet, M=self.M)
+        background = Background(self.alphabet) if background is None else background
+        profile.configure(self, background, L=L, multihit=multihit, local=local)
+        return profile
 
     cpdef void write(self, object fh, bint binary=False) except *:
         """write(self, fh, binary=False)\n--
@@ -7114,8 +7146,8 @@ cdef class Profile:
         Configure a search profile using the given models.
 
         Arguments:
-            hmm (`pyhmmer.plan7.HMM`): The model HMM with core probabilities.
-            bg (`pyhmmer.plan7.Background`): The null background model.
+            hmm (`~pyhmmer.plan7.HMM`): The model HMM with core probabilities.
+            background (`~pyhmmer.plan7.Background`): The null background model.
             L (`int`): The expected target sequence length.
             multihit (`bool`): Whether or not to use multihit modes.
             local (`bool`): Whether or not to use non-local modes.
