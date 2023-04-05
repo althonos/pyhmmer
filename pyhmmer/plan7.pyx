@@ -2165,14 +2165,15 @@ cdef class HMM:
         self.alphabet = None
         self._hmm = NULL
 
-    def __init__(self, int M, Alphabet alphabet):
-        """__init__(self, M, alphabet)\n--
+    def __init__(self, Alphabet alphabet not None, int M, bytes name not None):
+        """__init__(self, alphabet, M, name)\n--
 
         Create a new HMM from scratch.
 
         Arguments:
-            M (`int`): The length of the model (i.e. the number of nodes).
             alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
+            M (`int`): The length of the model (i.e. the number of nodes).
+            name (`bytes`): The name of the model.
 
         """
         # store the alphabet so it's not deallocated
@@ -2187,6 +2188,7 @@ cdef class HMM:
         # is valid and doesn't crash if used as-is (see #36).
         with nogil:
             self._initialize()
+        self.name = name
 
         # FIXME(@althonos): Remove following block when
         # https://github.com/EddyRivasLab/hmmer/pull/236
@@ -2273,7 +2275,7 @@ cdef class HMM:
         return s
 
     def __reduce__(self):
-        return HMM, (self.M, self.alphabet), self.__getstate__()
+        return HMM, (self.alphabet, self.M, self.name), self.__getstate__()
 
     cpdef dict __getstate__(self):
         assert self._hmm != NULL
@@ -2455,18 +2457,18 @@ cdef class HMM:
 
     @property
     def name(self):
-        """`bytes` or `None`: The name of the HMM, if any.
+        """`bytes`: The name of the HMM.
         """
         assert self._hmm != NULL
         return None if self._hmm.name == NULL else <bytes> self._hmm.name
 
     @name.setter
-    def name(self, bytes name):
+    def name(self, bytes name not None):
         assert self._hmm != NULL
 
-        cdef char* name_  = NULL if name is None else <char*> name
+        cdef int   length = len(name)
+        cdef char* name_  = <char*> name
         cdef int   err    = libhmmer.p7_hmm.p7_hmm_SetName(self._hmm, name_)
-        cdef int   length = 0 if name is None else len(name)
 
         if err == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), length)
@@ -2526,8 +2528,10 @@ cdef class HMM:
             alphabet, we only expose the relevant residues. This means that
             the vector will be of size ``alphabet.K``:
 
-                >>> dna = easel.Alphabet.dna()  # dna.K=4
-                >>> hmm = plan7.HMM(100, dna)
+                >>> dna = easel.Alphabet.dna()
+                >>> dna.K
+                4
+                >>> hmm = plan7.HMM(dna, 100, b"test")
                 >>> hmm.set_composition()
                 >>> len(hmm.composition)
                 4
@@ -2700,7 +2704,7 @@ cdef class HMM:
             valid probabilities, so it will always be set as follow with
             1 probability for the first symbol, and 0 for the rest::
 
-                >>> hmm = HMM(100, alphabet=easel.Alphabet.dna())
+                >>> hmm = HMM(easel.Alphabet.dna(), 100, b"test")
                 >>> hmm.match_emissions[0]
                 pyhmmer.easel.VectorF([1.0, 0.0, 0.0, 0.0])
 

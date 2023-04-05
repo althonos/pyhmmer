@@ -24,7 +24,7 @@ class TestHMM(unittest.TestCase):
 
     def test_checksum(self):
         abc = Alphabet.dna()
-        hmm = HMM(100, abc)
+        hmm = HMM(abc, 100, b"test")
         self.assertIs(hmm.checksum, None)
 
         hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/LuxC.hmm")
@@ -34,7 +34,7 @@ class TestHMM(unittest.TestCase):
 
     def test_composition(self):
         abc = Alphabet.dna()
-        hmm = HMM(100, abc)
+        hmm = HMM(abc, 100, b"test")
         self.assertIs(hmm.composition, None)
         hmm.set_composition()
         self.assertEqual(len(hmm.composition), hmm.alphabet.K)
@@ -51,7 +51,7 @@ class TestHMM(unittest.TestCase):
         abc = Alphabet.amino()
         self.assertEqual(self.hmm, self.hmm)
         self.assertEqual(self.hmm, self.hmm.copy())
-        self.assertNotEqual(self.hmm, HMM(100, abc))
+        self.assertNotEqual(self.hmm, HMM(abc, 100, b"test"))
         self.assertNotEqual(self.hmm, 1)
 
     def test_insert_emissions(self):
@@ -63,7 +63,7 @@ class TestHMM(unittest.TestCase):
 
     def test_command_line(self):
         abc = Alphabet.amino()
-        hmm = HMM(100, abc)
+        hmm = HMM(abc, 100, b"test")
         self.assertIs(hmm.command_line, None)
         hmm.command_line = "hmmbuild x"
         self.assertEqual(hmm.command_line, "hmmbuild x")
@@ -74,19 +74,17 @@ class TestHMM(unittest.TestCase):
 
     def test_name(self):
         abc = Alphabet.amino()
-        hmm = HMM(100, abc)
+        hmm = HMM(abc, 100, b"test")
 
-        self.assertIs(hmm.name, None)
+        self.assertEqual(hmm.name, b"test")
         hmm.name = b"Test"
         self.assertEqual(hmm.name, b"Test")
         hmm.name = b""
         self.assertEqual(hmm.name, b"")
-        hmm.name = None
-        self.assertIs(hmm.name, None)
 
     def test_accession(self):
         abc = Alphabet.amino()
-        hmm = HMM(100, abc)
+        hmm = HMM(abc, 100, b"test")
 
         self.assertIs(hmm.accession, None)
         hmm.accession = b"TST001"
@@ -98,7 +96,7 @@ class TestHMM(unittest.TestCase):
 
     def test_description(self):
         abc = Alphabet.amino()
-        hmm = HMM(100, abc)
+        hmm = HMM(abc, 100, b"test")
 
         self.assertIs(hmm.description, None)
         hmm.description = b"A very important HMM"
@@ -111,7 +109,7 @@ class TestHMM(unittest.TestCase):
     def test_consensus(self):
         # if not set, HMM is None
         abc = Alphabet.amino()
-        hmm = HMM(100, abc)
+        hmm = HMM(abc, 100, b"test")
         self.assertIs(hmm.consensus, None)
         # if the HMM is fully configured, the consensus should be as
         # long as the number of nodes
@@ -132,7 +130,8 @@ class TestHMM(unittest.TestCase):
 
     def test_write_empty(self):
         buffer = io.BytesIO()
-        hmm = HMM(10, Alphabet.amino())
+        abc = Alphabet.amino()
+        hmm = HMM(abc, 10, b"test")
         hmm.write(buffer)
         self.assertGreater(len(buffer.getvalue()), 0)
 
@@ -145,10 +144,10 @@ class TestHMM(unittest.TestCase):
         self.assertIsInstance(ctx.exception.__cause__, TypeError)
 
     def test_renormalize(self):
-        dna = Alphabet.dna()
-        hmm = HMM(10, dna)
+        abc = Alphabet.dna()
+        hmm = HMM(abc, 10, b"test")
         for i in range(1, hmm.M+1):
-            for j in range(dna.K):
+            for j in range(abc.K):
                 hmm.match_emissions[i, j] = 25.0
 
         hmm.renormalize()
@@ -156,28 +155,28 @@ class TestHMM(unittest.TestCase):
             self.assertAlmostEqual(hmm.match_emissions[i].sum(), 1.0, places=5)
 
     def test_scale(self):
-        dna = Alphabet.dna()
-        hmm = HMM(10, dna)
+        abc = Alphabet.dna()
+        hmm = HMM(abc, 10, b"test")
         for i in range(1, hmm.M+1):
-            for j in range(dna.K):
+            for j in range(abc.K):
                 hmm.match_emissions[i, j] = 25.0
 
         hmm.scale(2.0)
         for i in range(1, hmm.M+1):
-            for j in range(dna.K):
+            for j in range(abc.K):
                 self.assertAlmostEqual(hmm.match_emissions[i, j], 50.0, places=5)
 
     def test_zero(self):
-        dna = Alphabet.dna()
-        hmm = HMM(10, dna)
-        hmm.name = b"custom"
+        abc = Alphabet.dna()
+        hmm = HMM(abc, 10, b"custom")
         for i in range(1, hmm.M+1):
-            for j in range(dna.K):
+            for j in range(abc.K):
                 hmm.match_emissions[i, j] = 25.0
+        self.assertEqual(hmm.name, b"custom")
 
         hmm.zero()
         for i in range(hmm.M+1):
-            for j in range(dna.K):
+            for j in range(abc.K):
                 self.assertEqual(hmm.match_emissions[i, j], 0.0)
         self.assertEqual(hmm.name, b"custom")
 

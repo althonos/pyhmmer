@@ -87,10 +87,11 @@ class TestSearchPipeline(unittest.TestCase):
         # make sure `Pipeline.search_hmm` doesn't crash when given an HMM with no name
         rng = pyhmmer.easel.Randomness()
         hmm = pyhmmer.plan7.HMM.sample(100, self.alphabet, rng)
-        hmm.name = hmm.accession = None
+        hmm.name = b"test"
+        hmm.accession = None
         pipeline = Pipeline(alphabet=self.alphabet)
         hits = pipeline.search_hmm(hmm, self.references)
-        self.assertIs(hits.query_name, None)
+        self.assertEqual(hits.query_name, b"test")
         self.assertIs(hits.query_accession, None)
 
     def test_search_seq_block(self):

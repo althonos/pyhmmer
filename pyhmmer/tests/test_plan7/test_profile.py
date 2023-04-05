@@ -31,7 +31,7 @@ class TestProfile(unittest.TestCase):
         bg = Background(profile.alphabet)
         self.assertNotEqual(profile.alphabet, self.hmm.alphabet)
         self.assertRaises(AlphabetMismatch, profile.configure, self.hmm, bg, 200)
-        hmm = HMM(100, profile.alphabet)
+        hmm = HMM(profile.alphabet, 100, b"test")
         self.assertNotEqual(profile.alphabet, self.background.alphabet)
         self.assertRaises(AlphabetMismatch, profile.configure, hmm, self.background, 200)
 
