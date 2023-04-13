@@ -74,6 +74,8 @@ class build_ext(_build_ext):
         self._clib_cmd = self.get_finalized_command("build_clib")
         self._clib_cmd.force = self.force
         self._clib_cmd.debug = self.debug
+        if self.parallel == 0:
+            self.parallel = os.cpu_count()
 
     def run(self):
         # check `cythonize` is available
@@ -96,6 +98,7 @@ class build_ext(_build_ext):
         # use debug directives with Cython if building in debug mode
         cython_args = {
             "include_path": ["include"],
+            "nthreads": self.parallel,
             "compiler_directives": {},
             "compile_time_env": {
                 "SYS_IMPLEMENTATION_NAME": sys.implementation.name,
