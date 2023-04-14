@@ -10,8 +10,6 @@ to facilitate the development of biological software in C. It is used by
 
 # --- C declarations ---------------------------------------------------------
 
-DEF eslERRBUFSIZE = 128
-
 IF UNAME_SYSNAME == "Linux":
     include "fileobj/linux.pxi"
 ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
@@ -50,7 +48,7 @@ cimport libeasel.sqio
 cimport libeasel.sqio.ascii
 cimport libeasel.ssi
 cimport libeasel.vec
-from libeasel cimport ESL_DSQ, esl_pos_t
+from libeasel cimport ESL_DSQ, esl_pos_t, eslERRBUFSIZE
 from libeasel.buffer cimport ESL_BUFFER
 from libeasel.gencode cimport ESL_GENCODE
 from libeasel.sq cimport ESL_SQ
