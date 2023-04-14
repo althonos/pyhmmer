@@ -3,14 +3,14 @@ from libc.stdio cimport FILE
 
 cdef extern from "esl_mininizer.h" nogil:
 
-    cdef int eslMIN_MAXITER
-    cdef float eslMIN_CG_RTOL
-    cdef float eslMIN_CG_ATOL
-    cdef int eslMIN_BRACK_MAXITER
-    cdef float eslMIN_BRACK_STEP
-    cdef float eslMIN_BRENT_RTOL
-    cdef float eslMIN_BRENT_ATOL
-    cdef float eslMIN_DERIV_STEP
+    const int eslMIN_MAXITER
+    const float eslMIN_CG_RTOL
+    const float eslMIN_CG_ATOL
+    const int eslMIN_BRACK_MAXITER
+    const float eslMIN_BRACK_STEP
+    const float eslMIN_BRENT_RTOL
+    const float eslMIN_BRENT_ATOL
+    const float eslMIN_DERIV_STEP
 
 
     ctypedef struct ESL_MIN_CFG:

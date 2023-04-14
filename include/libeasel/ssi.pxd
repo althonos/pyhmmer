@@ -2,17 +2,14 @@ from libc.stdio cimport FILE
 from libc.stdint cimport int16_t, int32_t, int64_t, uint16_t, uint32_t, uint64_t
 from posix.types cimport off_t
 
-
-cdef extern from "easel.h":
-
-    DEF eslERRBUFSIZE = 128
+from libeasel cimport eslERRBUFSIZE
 
 
 cdef extern from "esl_ssi.h" nogil:
 
-    cdef int eslSSI_MAXFILES
-    cdef int eslSSI_MAXKEYS
-    cdef int eslSSI_MAXRAM
+    const size_t eslSSI_MAXFILES
+    const size_t eslSSI_MAXKEYS
+    const size_t eslSSI_MAXRAM
 
 
     ctypedef struct ESL_SSI:

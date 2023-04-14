@@ -2,10 +2,10 @@ from libc.stdint cimport uint32_t, int32_t, int64_t
 
 cdef extern from "esl_dsqdata.h" nogil:
 
-    cdef size_t eslDSQDATA_CHUNK_MAXSEQ
-    cdef size_t eslDSQDATA_CHUNK_MAXPACKET
-    cdef size_t eslDSQDATA_UNPACKERS
-    cdef size_t eslDSQDATA_UMAX
+    const size_t eslDSQDATA_CHUNK_MAXSEQ
+    const size_t eslDSQDATA_CHUNK_MAXPACKET
+    const size_t eslDSQDATA_UNPACKERS
+    const size_t eslDSQDATA_UMAX
 
     ctypedef esl_dsqdata_chunk_s ESL_DSQDATA_CHUNK
     cdef struct esl_dsqdata_chunk_s:

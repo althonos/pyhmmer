@@ -72,29 +72,29 @@ cdef extern from "esl_json.h" nogil:
         int linepos
 
     # Full and incremental JSON parsing
-    extern int esl_json_Parse(ESL_BUFFER *bf, ESL_JSON **ret_pi);
-    extern int esl_json_PartialParse(ESL_JSON_PARSER *parser, ESL_JSON *pi, const char *s, esl_pos_t n, esl_pos_t *ret_nused, char *errbuf);
+    int esl_json_Parse(ESL_BUFFER *bf, ESL_JSON **ret_pi);
+    int esl_json_PartialParse(ESL_JSON_PARSER *parser, ESL_JSON *pi, const char *s, esl_pos_t n, esl_pos_t *ret_nused, char *errbuf);
 
     # ESL_JSON
-    extern ESL_JSON *esl_json_Create   (void);
-    extern int       esl_json_Grow     (ESL_JSON *pi);
-    extern size_t    esl_json_Sizeof   (ESL_JSON *pi);
-    extern size_t    esl_json_MinSizeof(ESL_JSON *pi);
-    extern int       esl_json_Reuse    (ESL_JSON *pi);
-    extern void      esl_json_Destroy  (ESL_JSON *pi);
+    ESL_JSON *esl_json_Create   (void);
+    int       esl_json_Grow     (ESL_JSON *pi);
+    size_t    esl_json_Sizeof   (ESL_JSON *pi);
+    size_t    esl_json_MinSizeof(ESL_JSON *pi);
+    int       esl_json_Reuse    (ESL_JSON *pi);
+    void      esl_json_Destroy  (ESL_JSON *pi);
 
     # ESL_JSON_PARSER
-    extern ESL_JSON_PARSER *esl_json_parser_Create(void);
-    extern void             esl_json_parser_Destroy(ESL_JSON_PARSER *parser);
+    ESL_JSON_PARSER *esl_json_parser_Create(void);
+    void             esl_json_parser_Destroy(ESL_JSON_PARSER *parser);
 
     # Accessing tokenized data
-    extern char      *esl_json_GetMem   (const ESL_JSON *pi, int idx, const ESL_BUFFER *bf);
-    extern esl_pos_t  esl_json_GetLen   (const ESL_JSON *pi, int idx, const ESL_BUFFER *bf);
-    extern int        esl_json_ReadInt  (const ESL_JSON *pi, int idx,       ESL_BUFFER *bf, int   *ret_i);
-    extern int        esl_json_ReadFloat(const ESL_JSON *pi, int idx,       ESL_BUFFER *bf, float *ret_x);
+    char      *esl_json_GetMem   (const ESL_JSON *pi, int idx, const ESL_BUFFER *bf);
+    esl_pos_t  esl_json_GetLen   (const ESL_JSON *pi, int idx, const ESL_BUFFER *bf);
+    int        esl_json_ReadInt  (const ESL_JSON *pi, int idx,       ESL_BUFFER *bf, int   *ret_i);
+    int        esl_json_ReadFloat(const ESL_JSON *pi, int idx,       ESL_BUFFER *bf, float *ret_x);
 
     # Debugging, development 
-    extern int   esl_json_Validate(const ESL_JSON *pi, const ESL_BUFFER *bf, char *errbuf);
-    extern char *esl_json_DecodeType(enum esl_json_type_e type);
-    extern int   esl_json_Dump(FILE *fp, ESL_JSON *pi);
-    extern int   esl_json_SampleDirty(ESL_RANDOMNESS *rng, char **ret_s, int *ret_n);
+    int   esl_json_Validate(const ESL_JSON *pi, const ESL_BUFFER *bf, char *errbuf);
+    char *esl_json_DecodeType(enum esl_json_type_e type);
+    int   esl_json_Dump(FILE *fp, ESL_JSON *pi);
+    int   esl_json_SampleDirty(ESL_RANDOMNESS *rng, char **ret_s, int *ret_n);

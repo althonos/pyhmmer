@@ -7,22 +7,22 @@ cdef extern from "stdarg.h" nogil:
 
 cdef extern from "easel.h" nogil:
 
-    cdef size_t eslERRBUFSIZE
+    const size_t eslERRBUFSIZE
 
-    cdef double eslCONST_E
-    cdef double eslCONST_PI
-    cdef double eslCONST_EULER
-    cdef double eslCONST_GOLD
-    cdef double eslCONST_LOG2
-    cdef double eslCONST_LOG2R
-    cdef double eslINFINITY
+    const double eslCONST_E
+    const double eslCONST_PI
+    const double eslCONST_EULER
+    const double eslCONST_GOLD
+    const double eslCONST_LOG2
+    const double eslCONST_LOG2R
+    const double eslINFINITY
 
     ctypedef uint8_t ESL_DSQ
-    cdef     ESL_DSQ eslDSQ_SENTINEL
-    cdef     ESL_DSQ eslDSQ_ILLEGAL
-    cdef     ESL_DSQ eslDSQ_IGNORED
-    cdef     ESL_DSQ eslDSQ_EOL
-    cdef     ESL_DSQ eslDSQ_EOD
+    const    ESL_DSQ eslDSQ_SENTINEL
+    const    ESL_DSQ eslDSQ_ILLEGAL
+    const    ESL_DSQ eslDSQ_IGNORED
+    const    ESL_DSQ eslDSQ_EOL
+    const    ESL_DSQ eslDSQ_EOD
 
     ctypedef int64_t esl_pos_t
 

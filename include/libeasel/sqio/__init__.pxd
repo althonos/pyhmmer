@@ -81,7 +81,7 @@ cdef extern from "esl_sqio.h" nogil:
         eslSQFILE_FMINDEX = 9
 
 
-    cdef int eslREADBUFSIZE
+    const size_t eslREADBUFSIZE
 
 
     int  esl_sqfile_Open(const char *seqfile, int fmt, const char *env, ESL_SQFILE **ret_sqfp) except *

@@ -1,9 +1,6 @@
 from libc.stdio cimport FILE
 
-
-cdef extern from "easel.h" nogil:
-
-    DEF eslERRBUFSIZE = 128
+from libeasel cimport eslERRBUFSIZE
 
 
 cdef extern from "esl_fileparser.h" nogil:

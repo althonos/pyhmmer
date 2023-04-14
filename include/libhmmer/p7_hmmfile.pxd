@@ -1,15 +1,11 @@
 from libc.stdio cimport FILE
 from posix.types cimport off_t
 
+from libeasel cimport eslERRBUFSIZE
 from libeasel.alphabet cimport ESL_ALPHABET
 from libeasel.fileparser cimport ESL_FILEPARSER
 from libeasel.ssi cimport ESL_SSI
 from libhmmer.p7_hmm cimport P7_HMM
-
-
-cdef extern from "easel.h" nogil:
-
-    DEF eslERRBUFSIZE = 128
 
 
 cdef extern from "hmmer.h" nogil:

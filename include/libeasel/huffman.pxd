@@ -1,6 +1,6 @@
 cdef extern from "esl_huffman.h" nogil:
 
-    cdef size_t eslHUFFMAN_MAXCODE
+    const size_t eslHUFFMAN_MAXCODE
 
     ctypedef huffman_s ESL_HUFFMAN
     cdef struct huffman_s:
