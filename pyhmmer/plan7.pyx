@@ -8441,9 +8441,9 @@ cdef class TraceAligner:
         # check alphabet
         if not hmm.alphabet._eq(sequences.alphabet):
             raise AlphabetMismatch(hmm.alphabet, sequences.alphabet)
-        # check HMM validity
-        # if libhmmer.p7_hmm.p7_hmm_Validate(hmm._hmm, errbuf, 1e-3) != libeasel.eslOK:
-        #     raise ValueError(f"Invalid HMM: {errbuf.decode()}")
+        # check HMM validity, otherwise the function may segfault
+        if libhmmer.p7_hmm.p7_hmm_Validate(hmm._hmm, errbuf, 1e-3) != libeasel.eslOK:
+            raise ValueError(f"Invalid HMM: {errbuf.decode()}")
 
         # allocate the return array of traces and create empty traces
         traces._ntraces = nseq
@@ -8514,12 +8514,13 @@ cdef class TraceAligner:
             Targets must now be inside a `~pyhmmer.easel.DigitalSequenceBlock`.
 
         """
-        cdef int             status
-        cdef size_t          i
-        cdef MSA             msa
-        cdef ssize_t         nseq   = len(sequences)
-        cdef ssize_t         ntr    = len(traces)
-        cdef int             flags  = 0
+        cdef int       status
+        cdef size_t    i
+        cdef MSA       msa
+        cdef ssize_t   nseq   = len(sequences)
+        cdef ssize_t   ntr    = len(traces)
+        cdef int       flags  = 0
+        cdef bytearray errbuf = bytearray(eslERRBUFSIZE)
 
         # check optional flags and prepare the returned MSA
         if trim:
@@ -8543,6 +8544,9 @@ cdef class TraceAligner:
         # check alphabet
         if not hmm.alphabet._eq(sequences.alphabet):
             raise AlphabetMismatch(hmm.alphabet, sequences.alphabet)
+        # check HMM validity, otherwise the function may segfault
+        if libhmmer.p7_hmm.p7_hmm_Validate(hmm._hmm, errbuf, 1e-3) != libeasel.eslOK:
+            raise ValueError(f"Invalid HMM: {errbuf.decode()}")
 
         # make the alignments
         with nogil:
