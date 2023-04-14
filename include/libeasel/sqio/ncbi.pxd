@@ -7,8 +7,8 @@ from libeasel.sqio cimport esl_sqio_s
 
 cdef extern from "esl_sqio.h" nogil:
 
-    DEF MAX_DB_VOLUMES = 100
-    DEF MAX_RESIDUE_COUNT = 1024 * 1024
+    const size_t MAX_DB_VOLUMES
+    const size_t MAX_RESIDUE_COUNT
 
     ctypedef esl_sqncbi_vol_s ESL_SQNCBI_VOLUME
     cdef struct esl_sqncbi_vol_s:

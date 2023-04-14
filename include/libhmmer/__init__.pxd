@@ -22,7 +22,7 @@ cdef extern from "hmmer.h" nogil:
     cdef bint p7_IsMulti(int)
 
 
-    cdef size_t p7_NEVPARAM = 6
+    const size_t p7_NEVPARAM
     cdef enum p7_evparams_e:
         p7_MMU     = 0
         p7_MLAMBDA = 1
@@ -31,10 +31,10 @@ cdef extern from "hmmer.h" nogil:
         p7_FTAU    = 4
         p7_FLAMBDA = 5
 
-    cdef float p7_EVPARAM_UNSET = -99999.0
+    const float p7_EVPARAM_UNSET
 
 
-    cdef size_t p7_NCUTOFFS = 6
+    const size_t p7_NCUTOFFS
     cdef enum p7_cutoffs_e:
         p7_GA1 = 0
         p7_GA2 = 1
@@ -43,16 +43,16 @@ cdef extern from "hmmer.h" nogil:
         p7_NC1 = 4
         p7_NC2 = 5
 
-    cdef float p7_CUTOFF_UNSET = -99999.0
+    const float p7_CUTOFF_UNSET
 
 
-    cdef size_t p7_NOFFSETS = 3
+    const size_t p7_NOFFSETS
     cdef enum p7_offsets_e:
         p7_MOFFSET = 0
         p7_FOFFSET = 1
         p7_POFFSET = 2
 
-    cdef int p7_DEFAULT            =     0
-    cdef int p7_DIGITIZE           = (1<<0)
-    cdef int p7_ALL_CONSENSUS_COLS = (1<<1)
-    cdef int p7_TRIM               = (1<<2)
+    const int p7_DEFAULT            
+    const int p7_DIGITIZE           
+    const int p7_ALL_CONSENSUS_COLS 
+    const int p7_TRIM               

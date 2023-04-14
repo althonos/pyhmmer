@@ -1,30 +1,25 @@
 from posix.types cimport off_t
 
 from libeasel.alphabet cimport ESL_ALPHABET
-
-
-cdef extern from "p7_config.h" nogil:
-    DEF p7_MAXABET = 20
+from libhmmer cimport p7_NEVPARAM, p7_NCUTOFFS, p7_NOFFSETS
+from libhmmer.p7_hmm cimport p7_MAXABET
 
 
 cdef extern from "hmmer.h" nogil:
-    DEF p7_NEVPARAM = 6
-    DEF p7_NCUTOFFS = 6
-    DEF p7_NOFFSETS = 3
 
-    DEF p7P_NXSTATES = 4
+    const size_t p7P_NXSTATES
     cdef enum p7p_xstates_e:
         p7P_E = 0
         p7P_N = 1
         p7P_J = 2
         p7P_C = 3
 
-    DEF p7P_NXTRANS = 2
+    const size_t p7P_NXTRANS
     cdef enum p7p_xtransitions_e:
         p7P_LOOP = 0
         p7P_MOVE = 1
 
-    DEF p7P_NTRANS = 8
+    const size_t p7P_NTRANS
     cdef enum p7p_tsc_e:
         p7P_MM = 0
         p7P_IM = 1
@@ -35,7 +30,7 @@ cdef extern from "hmmer.h" nogil:
         p7P_MI = 6
         p7P_II = 7
 
-    DEF p7P_NR = 2
+    const size_t p7P_NR
     cdef enum p7p_rsc_e:
         p7P_MSC = 0
         p7P_ISC = 1

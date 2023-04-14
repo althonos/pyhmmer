@@ -10,19 +10,12 @@ from libeasel.random cimport ESL_RANDOMNESS
 
 cdef extern from "hmmer.h" nogil:
 
-    DEF p7_NEVPARAM = 6
-    cdef size_t p7_NEVPARAM
+    const size_t p7_NEVPARAM
+    const size_t p7_NCUTOFFS
+    const size_t p7_NOFFSETS
+    const size_t p7_MAXABET
 
-    DEF p7_NCUTOFFS = 6
-    cdef size_t p7_NCUTOFFS
-
-    DEF p7_NOFFSETS = 3
-    cdef size_t p7_NOFFSETS
-
-    DEF p7_MAXABET = 20
-    cdef size_t p7_MAXABET
-
-    cdef size_t p7H_NTRANSITIONS = 7
+    const size_t p7H_NTRANSITIONS = 7
     cdef enum p7h_transitions_e:
         p7H_MM = 0
         p7H_MI = 1
@@ -118,32 +111,3 @@ cdef extern from "hmmer.h" nogil:
     int     p7_hmm_Validate(P7_HMM *hmm, char *errbuf, float tol);
     # Other routines in the API
     int     p7_hmm_CalculateOccupancy(const P7_HMM *hmm, float *mocc, float *iocc);
-
-
-
-
-
-
-
-
-
-
-  #
-  # # struct p7_hmmfile_s:
-  # #     FILE* f
-  # #     char* filename
-  # #     ESL_SSI* ssi
-  # #
-  # #     bint do_gzip
-  # #     bint do_stdin
-  # #     bint newly_opened
-  # #     bint is_pressed
-  # #
-  # #     int format
-  # #     int (*parser)(struct p7_hmmfile_s*, ESL_ALPHABET**, P7_HMM**)
-  # #
-  # # ctypedef p7_hmmfile_s P7_HMMFILE
-  #
-  #
-  #
-  # int p7_hmmfile_OpenE(const char *filename, char *env, P7_HMMFILE **ret_hfp, char *errbuf)

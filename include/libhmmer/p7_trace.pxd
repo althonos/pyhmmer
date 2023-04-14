@@ -10,7 +10,7 @@ from libhmmer.p7_gmx cimport P7_GMX
 
 cdef extern from "hmmer.h" nogil:
 
-    DEF p7T_NSTATETYPES = 12
+    const size_t p7T_NSTATETYPES
     cdef enum p7t_statetype_e:
         p7T_BOGUS =  0
         p7T_M     =  1

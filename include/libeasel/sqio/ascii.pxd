@@ -11,7 +11,7 @@ from libeasel.ssi cimport ESL_SSI
 
 
 cdef extern from "esl_sqio.h" nogil:
-    DEF MAX_RESIDUE_COUNT = 1024*1024
+    const size_t MAX_RESIDUE_COUNT
 
     ctypedef esl_sqascii_s ESL_SQASCII_DATA
     cdef struct esl_sqascii_s:
