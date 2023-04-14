@@ -25,6 +25,7 @@ PyHMMER API in combination with Python and other Python libraries:
 .. toctree::
     :maxdepth: 2
 
+    Recipes for extending PyHMMER <recipes>
     Create a Python package with embedded HMMs <embed_hmms>
     Improve performance with some tips <performance_tips>
 
@@ -37,6 +38,9 @@ PyHMMER is being used in several projects, including:
 - `GECCO <https://gecco.embl.de>`_, a tool for detecting Biosynthetic Gene
   Clusters in genomic data, uses PyHMMER to annotate proteins with Pfam domains
   to use as sequence features for a machine learning model.
+- `BiG-SLICE <https://github.com/medema-group/bigslice>`_, an interactive tool 
+  for the large scale analysis of Biosynthetic Gene Clusters data, uses
+  PyHMMER for the Pfam domain annotation step.
 - `duomolog <https://github.com/tijeco/duomolog>`_, a method to identify the
   best set of homologous sequences from two homology searching approaches,
   uses PyHMMER to search for homologous sequences before comparing the results
