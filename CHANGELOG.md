@@ -6,14 +6,29 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.7.3...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.7.4...HEAD
+
+
+## [v0.7.4] - 2023-04-14
+[v0.7.4]: https://github.com/althonos/pyhmmer/compare/v0.7.3...v0.7.4
+
+### Added
+- *Recipes* page to the documentation with code example for loading multiple HMM files ([#24](https://github.com/althonos/pyhmmer/issues/24), by [@zdk123](https://github.com/zdk123)).
+
+### Fixed
+- `TraceAligner` methods causing a segfault when passed an uninitialized HMM ([#36](https://github.com/althonos/pyhmmer/issues/36)).
+
+### Changed
+- `HMM` default constructor now always creates a valid HMM (with respects to probability arrays).
+- `TraceAligner` now validates the input `HMM` before calling the HMMER code.
+- Use stack allocation for all error buffers instead of creating empty `bytearray` objects where applicable.
 
 
 ## [v0.7.3] - 2023-03-24
 [v0.7.3]: https://github.com/althonos/pyhmmer/compare/v0.7.2...v0.7.3
 
 ### Fixed
-- Wrong argument type in `IterativeSearch.iterate_hmm` method ([#34](https://github.com/althonos/pyhmmer/pull/34), by [@zdk123](https://github.com/althonos/pyhmmer/commits?author=zdk123)).
+- Wrong argument type in `IterativeSearch.iterate_hmm` method ([#34](https://github.com/althonos/pyhmmer/pull/34), by [@zdk123](https://github.com/zdk123)).
 
 
 ## [v0.7.2] - 2023-02-17
