@@ -178,9 +178,9 @@ htmlhelp_basename = pyhmmer.__name__
 # -- Options for extlinks extension ------------------------------------------
 
 extlinks = {
-    'doi': ('https://doi.org/%s', 'doi:'),
-    'pmid': ('https://pubmed.ncbi.nlm.nih.gov/%s', 'PMID:'),
-    'isbn': ('https://www.worldcat.org/isbn/%s', 'ISBN:'),
+    'doi': ('https://doi.org/%s', 'doi:%s'),
+    'pmid': ('https://pubmed.ncbi.nlm.nih.gov/%s', 'PMID:%s'),
+    'isbn': ('https://www.worldcat.org/isbn/%s', 'ISBN:%s'),
 }
 
 # -- Options for imgmath extension -------------------------------------------
