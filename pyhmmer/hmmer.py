@@ -271,12 +271,14 @@ class _JACKHMMERWorker(
         self,
         max_iterations: typing.Optional[int] = 5,
         select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+        checkpoints: typing.Optional[bool] = False,
         *args,
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
         self.select_hits = select_hits
         self.max_iterations = max_iterations
+        self.checkpoints = checkpoints
 
     @singledispatchmethod
     def query(self, query) -> IterationResult:  # type: ignore
@@ -284,26 +286,34 @@ class _JACKHMMERWorker(
             "Unsupported query type for `jackhmmer`: {}".format(type(query).__name__)
         )
 
-    def _iterate(self, iterator) -> IterationResult:
+    def _iterate(
+        self, iterator, checkpoints=False
+    ) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:
+        iteration_checkpoints = ()
         for n in range(self.max_iterations):
             iteration = next(iterator)
+            if checkpoints:
+                iteration_checkpoints.append(iteration)
             if iteration.converged:
                 break
-        return iteration
+        if checkpoints:
+            return iteration_checkpoints
+        else:
+            return iteration
 
     @query.register(DigitalSequence)
-    def _(self, query: DigitalSequence) -> IterationResult:  # type: ignore
+    def _(self, query: DigitalSequence) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:  # type: ignore
         iterator = self.pipeline.iterate_seq(
             query, self.targets, self.builder, self.select_hits
         )
-        return self._iterate(iterator)
+        return self._iterate(iterator, self.checkpoints)
 
     @query.register(HMM)
-    def _(self, query: HMM) -> IterationResult:  # type: ignore
+    def _(self, query: HMM) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:  # type: ignore
         iterator = self.pipeline.iterate_hmm(
             query, self.targets, self.builder, self.select_hits
         )
-        return self._iterate(iterator)
+        return self._iterate(iterator, self.checkpoints)
 
 
 class _NHMMERWorker(
@@ -548,12 +558,14 @@ class _JACKHMMERDispatcher(
         self,
         max_iterations: typing.Optional[int] = 5,
         select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+        checkpoints: typing.Optional[bool] = False,
         *args,
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
         self.max_iterations = max_iterations
         self.select_hits = select_hits
+        self.checkpoints = checkpoints
 
     def _new_thread(
         self,
@@ -575,6 +587,7 @@ class _JACKHMMERDispatcher(
         return _JACKHMMERWorker(
             self.max_iterations,
             self.select_hits,
+            self.checkpoints,
             targets,
             query_available,
             query_queue,
@@ -891,6 +904,7 @@ def jackhmmer(
     *,
     max_iterations: typing.Optional[int] = 5,
     select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+    checkpoints: typing.Optional[bool] = False,
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
@@ -914,6 +928,11 @@ def jackhmmer(
             for manually selecting hits during each iteration. It should
             take a single `TopHits` argument and change the inclusion of
             individual hits with the `Hit.include` and `Hit.drop` methods.
+        checkpoints (`bool`): A logical flag to return the results at each
+            iteration 'checkpoint'. If True, then an iterable of up to `max_iterations`
+            IterationResults will be returned, rather than just the final JackHmmer
+            round. This is similar to `--chkhmm` amd `--chkali` flags from hmmer3's
+            jackhmmer interface.
         cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
             run everything in the main thread, ``0`` to automatically
             select a suitable number (using `psutil.cpu_count`), or any
@@ -927,7 +946,8 @@ def jackhmmer(
 
     Yields:
         `~pyhmmer.plan7.IterationResult`: An *iteration result* instance for each query,
-        in the same order the queries were passed in the input.
+        in the same order the queries were passed in the input. If `checkpoint` option is
+        True, the results from all iterations will also be returned.
 
     Raises:
         `~pyhmmer.errors.AlphabetMismatch`: When any of the query sequence
@@ -974,6 +994,7 @@ def jackhmmer(
         builder=_builder,
         max_iterations=max_iterations,
         select_hits=select_hits,
+        checkpoints=checkpoints,
         **options,
     )
     return dispatcher.run()
