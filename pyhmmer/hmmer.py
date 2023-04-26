@@ -1054,27 +1054,29 @@ def jackhmmer(
     """Search protein sequences against a sequence database.
 
     Arguments:
-        queries (iterable of `DigitalSequence` or `DigitalMSA`): The query
-            sequences to search for in the sequence database. Passing a
-            single object is supported.
+        queries (iterable of `DigitalSequence`): The query sequences to search 
+            for in the sequence database. Passing a single sequence object 
+            is supported.
         sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A database
             of sequences to query. If you plan on using the same sequences
             several times, consider storing them into a
             `~pyhmmer.easel.DigitalSequenceBlock` directly. `jackhmmer` does
             not support passing a `~pyhmmer.easel.SequenceFile` at the
             moment.
-        max_iterations (`int`): The maximum number of iterations for the search.
-            Hits will be returned early if the results converge.
+        max_iterations (`int`): The maximum number of iterations for the 
+            search. Hits will be returned early if the searched converged.
         select_hits (callable, optional): A function or callable object
             for manually selecting hits during each iteration. It should
-            take a single `TopHits` argument and change the inclusion of
-            individual hits with the `Hit.include` and `Hit.drop` methods.
+            take a single `~pyhmmer.plan7.TopHits` argument and change the
+            inclusion of individual hits with the `~pyhmmer.plan7.Hit.include`
+            and `~pyhmmer.plan7.Hit.drop` methods of `~pyhmmer.plan7.Hit` 
+            objects.
         checkpoints (`bool`): A logical flag to return the results at each
             iteration 'checkpoint'. If `True`, then an iterable of up to
             ``max_iterations`` `~pyhmmer.plan7.IterationResult` will be
             returned, rather than just the final iteration. This is similar
-            to ``--chkhmm`` amd ``--chkali`` flags from HMMER3's ``jackhmmer``
-            interface.
+            to ``--chkhmm`` amd ``--chkali`` flags from HMMER3's 
+            ``jackhmmer`` interface.
         cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
             run everything in the main thread, ``0`` to automatically
             select a suitable number (using `psutil.cpu_count`), or any
@@ -1102,7 +1104,8 @@ def jackhmmer(
         will be passed transparently to the `~pyhmmer.plan7.Pipeline` to
         be created in each worker thread.
 
-    .. versionadded:: 0.7.3
+    .. versionadded:: 0.8.0
+
     """
     _alphabet = Alphabet.amino()
     _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count() or 1
