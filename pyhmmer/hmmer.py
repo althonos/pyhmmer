@@ -43,6 +43,7 @@ from .plan7 import (
     Pipeline,
     LongTargetsPipeline,
     TopHits,
+    IterationResult,
     HMM,
     HMMFile,
     HMMPressedFile,
@@ -57,15 +58,27 @@ from .utils import peekable, singledispatchmethod
 _Q = typing.TypeVar("_Q")
 # the target type for the pipeline
 _T = typing.TypeVar("_T")
+# the result type for the pipeline
+_R = typing.TypeVar("_R")
+_I = typing.TypeVar("_I")
 
 # the query types for the different tasks
 _PHMMERQueryType = typing.Union[DigitalSequence, DigitalMSA]
 _SEARCHQueryType = typing.Union[HMM, Profile, OptimizedProfile]
 _NHMMERQueryType = typing.Union[_PHMMERQueryType, _SEARCHQueryType]
+_JACKHMMERQueryType = typing.Union[DigitalSequence, _SEARCHQueryType]
+
+# `typing.Literal`` is only available in Python 3.8 and later
+if typing.TYPE_CHECKING:
+    try:
+        from typing import Literal
+    except ImportError:
+        from typing_extensions import Literal  # type: ignore
 
 # --- Result class -----------------------------------------------------------
 
-class _Chore(typing.Generic[_Q]):
+
+class _Chore(typing.Generic[_Q, _R]):
     """A chore for a worker thread.
 
     Attributes:
@@ -82,16 +95,16 @@ class _Chore(typing.Generic[_Q]):
 
     query: _Q
     event: threading.Event
-    hits: typing.Optional[TopHits]
+    result: typing.Optional[_R]
     exception: typing.Optional[BaseException]
 
-    __slots__ = ("query", "event", "hits", "exception")
+    __slots__ = ("query", "event", "result", "exception")
 
     def __init__(self, query: _Q) -> None:
         """Create a new chore from the given query."""
         self.query = query
         self.event = threading.Event()
-        self.hits = None
+        self.result = None
         self.exception = None
 
     def available(self) -> bool:
@@ -102,16 +115,16 @@ class _Chore(typing.Generic[_Q]):
         """Wait for the chore to be done."""
         return self.event.wait(timeout)
 
-    def get(self) -> TopHits:
+    def get(self) -> _R:
         """Get the results of the chore, blocking if the chore was not done."""
         self.event.wait()
         if self.exception is not None:
             raise self.exception
-        return typing.cast(TopHits, self.hits)
+        return typing.cast(_R, self.result)
 
-    def complete(self, hits: TopHits) -> None:
-        """Mark the chore as done and record ``hits`` as the results."""
-        self.hits = hits
+    def complete(self, result: _R) -> None:
+        """Mark the chore as done and record ``result`` as the results."""
+        self.result = result
         self.event.set()
 
     def fail(self, exception: BaseException) -> None:
@@ -122,7 +135,8 @@ class _Chore(typing.Generic[_Q]):
 
 # --- Pipeline threads -------------------------------------------------------
 
-class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
+
+class _BaseWorker(typing.Generic[_Q, _T, _R], threading.Thread):
     """A generic worker thread to parallelize a pipelined search.
 
     Attributes:
@@ -162,7 +176,7 @@ class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
         self,
         targets: _T,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_Q]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_Q, _R]]]",
         query_count: multiprocessing.Value,  # type: ignore
         kill_switch: threading.Event,
         callback: typing.Optional[typing.Callable[[_Q, int], None]],
@@ -176,7 +190,7 @@ class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
         self.targets: _T = targets
         self.pipeline = pipeline_class(alphabet=alphabet, **options)
         self.query_available: threading.Semaphore = query_available
-        self.query_queue: "queue.Queue[typing.Optional[_Chore[_Q]]]" = query_queue
+        self.query_queue: "queue.Queue[typing.Optional[_Chore[_Q, _R]]]" = query_queue
         self.query_count = query_count
         self.callback: typing.Optional[typing.Callable[[_Q, int], None]] = (
             callback or self._none_callback
@@ -211,7 +225,7 @@ class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
         """Set the synchronized kill switch for all threads."""
         self.kill_switch.set()
 
-    def process(self, query: _Q) -> TopHits:
+    def process(self, query: _Q) -> _R:
         """Process a single query and return the resulting hits."""
         if isinstance(self.targets, (HMMPressedFile, SequenceFile)):
             self.targets.rewind()
@@ -221,15 +235,23 @@ class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
         return hits
 
     @abc.abstractmethod
-    def query(self, query: _Q) -> TopHits:
+    def query(self, query: _Q) -> _R:
         """Run a single query against the target database."""
         return NotImplemented
 
 
-class _SEARCHWorker(_BaseWorker[_SEARCHQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]):
+class _SEARCHWorker(
+    _BaseWorker[
+        _SEARCHQueryType,
+        typing.Union[DigitalSequenceBlock, SequenceFile],
+        TopHits,
+    ]
+):
     @singledispatchmethod
     def query(self, query) -> TopHits:  # type: ignore
-        raise TypeError("Unsupported query type for `hmmsearch`: {}".format(type(query).__name__))
+        raise TypeError(
+            "Unsupported query type for `hmmsearch`: {}".format(type(query).__name__)
+        )
 
     @query.register(HMM)
     @query.register(Profile)
@@ -238,10 +260,18 @@ class _SEARCHWorker(_BaseWorker[_SEARCHQueryType, typing.Union[DigitalSequenceBl
         return self.pipeline.search_hmm(query, self.targets)
 
 
-class _PHMMERWorker(_BaseWorker[_PHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]):
+class _PHMMERWorker(
+    _BaseWorker[
+        _PHMMERQueryType,
+        typing.Union[DigitalSequenceBlock, SequenceFile],
+        TopHits,
+    ]
+):
     @singledispatchmethod
     def query(self, query) -> TopHits:  # type: ignore
-        raise TypeError("Unsupported query type for `phmmer`: {}".format(type(query).__name__))
+        raise TypeError(
+            "Unsupported query type for `phmmer`: {}".format(type(query).__name__)
+        )
 
     @query.register(DigitalSequence)
     def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
@@ -252,10 +282,116 @@ class _PHMMERWorker(_BaseWorker[_PHMMERQueryType, typing.Union[DigitalSequenceBl
         return self.pipeline.search_msa(query, self.targets, self.builder)
 
 
-class _NHMMERWorker(_BaseWorker[_NHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]):
+class _JACKHMMERWorker(
+    typing.Generic[_I],
+    _BaseWorker[
+        _JACKHMMERQueryType,
+        DigitalSequenceBlock,
+        _I,
+    ],
+):
+    def __init__(
+        self,
+        targets: DigitalSequenceBlock,
+        query_available: threading.Semaphore,
+        query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, _I]]]",
+        query_count: multiprocessing.Value,  # type: ignore
+        kill_switch: threading.Event,
+        callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]],
+        options: typing.Dict[str, typing.Any],
+        pipeline_class: typing.Type[Pipeline],
+        alphabet: Alphabet,
+        builder: typing.Optional[Builder] = None,
+        max_iterations: typing.Optional[int] = 5,
+        select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+        checkpoints: bool = False,
+    ) -> None:
+        super().__init__(
+            targets=targets,
+            query_available=query_available,
+            query_queue=query_queue,
+            query_count=query_count,
+            kill_switch=kill_switch,
+            callback=callback,
+            options=options,
+            pipeline_class=pipeline_class,
+            alphabet=alphabet,
+            builder=builder,
+        )
+        self.select_hits = select_hits
+        self.max_iterations = max_iterations
+        self.checkpoints = checkpoints
+
+    @singledispatchmethod
+    def query(self, query) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:  # type: ignore
+        raise TypeError(
+            "Unsupported query type for `jackhmmer`: {}".format(type(query).__name__)
+        )
+
+    @query.register(DigitalSequence)
+    def _(self, query: DigitalSequence) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:  # type: ignore
+        iterator = self.pipeline.iterate_seq(
+            query, self.targets, self.builder, self.select_hits
+        )
+        return self._iterate(iterator, self.checkpoints)
+
+    @query.register(HMM)
+    def _(self, query: HMM) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:  # type: ignore
+        iterator = self.pipeline.iterate_hmm(
+            query, self.targets, self.builder, self.select_hits
+        )
+        return self._iterate(iterator, self.checkpoints)
+
+    @typing.overload
+    def _iterate(
+        self,
+        iterator: typing.Iterable[IterationResult],
+        checkpoints: "Literal[False]"
+    ) -> IterationResult:
+        ...
+
+    @typing.overload
+    def _iterate(
+        self,
+        iterator: typing.Iterable[IterationResult],
+        checkpoints: "Literal[True]"
+    ) -> typing.Iterable[IterationResult]:
+        ...
+
+    @typing.overload
+    def _iterate(
+        self,
+        iterator: typing.Iterable[IterationResult],
+        checkpoints: bool = False
+    ) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:
+        ...
+
+    def _iterate(
+        self,
+        iterator: typing.Iterable[IterationResult],
+        checkpoints: bool = False
+    ) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:
+        iteration_checkpoints = []
+        for iteration in itertools.islice(iterator, self.max_iterations):
+            if checkpoints:
+                iteration_checkpoints.append(iteration)
+            if iteration.converged:
+                break
+        return iteration_checkpoints if checkpoints else iteration
+
+
+class _NHMMERWorker(
+    _BaseWorker[
+        _NHMMERQueryType,
+        typing.Union[DigitalSequenceBlock, SequenceFile],
+        TopHits,
+    ]
+):
     @singledispatchmethod
     def query(self, query) -> TopHits:  # type: ignore
-        raise TypeError("Unsupported query type for `nhmmer`: {}".format(type(query).__name__))
+        raise TypeError(
+            "Unsupported query type for `nhmmer`: {}".format(type(query).__name__)
+        )
 
     @query.register(DigitalSequence)
     def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
@@ -272,10 +408,18 @@ class _NHMMERWorker(_BaseWorker[_NHMMERQueryType, typing.Union[DigitalSequenceBl
         return self.pipeline.search_hmm(query, self.targets)
 
 
-class _SCANWorker(_BaseWorker[DigitalSequence, typing.Union[OptimizedProfileBlock, HMMPressedFile]]):
+class _SCANWorker(
+    _BaseWorker[
+        DigitalSequence,
+        typing.Union[OptimizedProfileBlock, HMMPressedFile],
+        TopHits,
+    ]
+):
     @singledispatchmethod
     def query(self, query) -> TopHits:  # type: ignore
-        raise TypeError("Unsupported query type for `hmmscan`: {}".format(type(query).__name__))
+        raise TypeError(
+            "Unsupported query type for `hmmscan`: {}".format(type(query).__name__)
+        )
 
     @query.register(DigitalSequence)
     def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
@@ -284,7 +428,8 @@ class _SCANWorker(_BaseWorker[DigitalSequence, typing.Union[OptimizedProfileBloc
 
 # --- Search runners ---------------------------------------------------------
 
-class _BaseDispatcher(typing.Generic[_Q, _T], abc.ABC):
+
+class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
     def __init__(
         self,
         queries: typing.Iterable[_Q],
@@ -317,13 +462,13 @@ class _BaseDispatcher(typing.Generic[_Q, _T], abc.ABC):
     def _new_thread(
         self,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_Q]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_Q, _R]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
-    ) -> _BaseWorker[_Q, _T]:
+    ) -> _BaseWorker[_Q, _T, _R]:
         return NotImplemented
 
-    def _single_threaded(self) -> typing.Iterator[TopHits]:
+    def _single_threaded(self) -> typing.Iterator[_R]:
         # create the queues to pass the HMM objects around, as well as atomic
         # values that we use to synchronize the threads
         query_available = threading.Semaphore(0)
@@ -347,13 +492,13 @@ class _BaseDispatcher(typing.Generic[_Q, _T], abc.ABC):
         if isinstance(thread.targets, (SequenceFile, HMMPressedFile)):
             thread.targets.close()
 
-    def _multi_threaded(self) -> typing.Iterator[TopHits]:
+    def _multi_threaded(self) -> typing.Iterator[_R]:
         # create the semaphore which will be used to notify worker threads
         # there is a new chore available
         query_available = threading.Semaphore(0)
         # create the queues to pass the query objects around, as well as
         # atomic values that we use to synchronize the threads
-        results: typing.Deque[_Chore[_Q]] = collections.deque()
+        results: typing.Deque[_Chore[_Q, _R]] = collections.deque()
         query_queue = queue.Queue(maxsize=self.cpus)  # type: ignore
         query_count = multiprocessing.Value(ctypes.c_ulong)
         kill_switch = threading.Event()
@@ -376,7 +521,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T], abc.ABC):
             for query in self.queries:
                 # get the next query and add it to the query queue
                 query_count.value += 1
-                chore = _Chore(query)
+                chore: _Chore[_Q, _R] = _Chore(query)
                 query_queue.put(chore)  # <-- blocks if too many chores in queue
                 query_available.release()
                 results.append(chore)
@@ -400,18 +545,24 @@ class _BaseDispatcher(typing.Generic[_Q, _T], abc.ABC):
             kill_switch.set()
             raise
 
-    def run(self) -> typing.Iterator[TopHits]:
+    def run(self) -> typing.Iterator[_R]:
         if self.cpus == 1:
             return self._single_threaded()
         else:
             return self._multi_threaded()
 
 
-class _SEARCHDispatcher(_BaseDispatcher[_SEARCHQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]):
+class _SEARCHDispatcher(
+    _BaseDispatcher[
+        _SEARCHQueryType,
+        typing.Union[DigitalSequenceBlock, SequenceFile],
+        TopHits,
+    ]
+):
     def _new_thread(
         self,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_SEARCHQueryType]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_SEARCHQueryType, TopHits]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _SEARCHWorker:
@@ -421,7 +572,7 @@ class _SEARCHDispatcher(_BaseDispatcher[_SEARCHQueryType, typing.Union[DigitalSe
                 self.targets.name,
                 format=self.targets.format,
                 digital=True,
-                alphabet=self.alphabet
+                alphabet=self.alphabet,
             )
         else:
             targets = self.targets  # type: ignore
@@ -438,11 +589,17 @@ class _SEARCHDispatcher(_BaseDispatcher[_SEARCHQueryType, typing.Union[DigitalSe
         )
 
 
-class _PHMMERDispatcher(_BaseDispatcher[_PHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]):
+class _PHMMERDispatcher(
+    _BaseDispatcher[
+        _PHMMERQueryType,
+        typing.Union[DigitalSequenceBlock, SequenceFile],
+        TopHits,
+    ]
+):
     def _new_thread(
         self,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_PHMMERQueryType]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_PHMMERQueryType, TopHits]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _PHMMERWorker:
@@ -452,7 +609,7 @@ class _PHMMERDispatcher(_BaseDispatcher[_PHMMERQueryType, typing.Union[DigitalSe
                 self.targets.name,
                 format=self.targets.format,
                 digital=True,
-                alphabet=self.alphabet
+                alphabet=self.alphabet,
             )
         else:
             targets = self.targets  # type: ignore
@@ -470,7 +627,78 @@ class _PHMMERDispatcher(_BaseDispatcher[_PHMMERQueryType, typing.Union[DigitalSe
         )
 
 
-class _NHMMERDispatcher(_BaseDispatcher[_NHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]):
+class _JACKHMMERDispatcher(
+    typing.Generic[_I],
+    _BaseDispatcher[
+        _JACKHMMERQueryType,
+        DigitalSequenceBlock,
+        _I,
+    ]
+):
+    """A dispatcher to run JackHMMER iterative searches.
+    """
+
+    def __init__(
+        self,
+        queries: typing.Iterable[_JACKHMMERQueryType],
+        targets: DigitalSequenceBlock,
+        cpus: int = 0,
+        callback: typing.Optional[
+            typing.Callable[[_JACKHMMERQueryType, int], None]
+        ] = None,
+        pipeline_class: typing.Type[Pipeline] = Pipeline,
+        alphabet: Alphabet = Alphabet.amino(),
+        builder: typing.Optional[Builder] = None,
+        max_iterations: typing.Optional[int] = 5,
+        select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+        checkpoints: bool = False,
+        **options,  # type: object
+    ) -> None:
+        super().__init__(
+            queries=queries,
+            targets=targets,
+            cpus=cpus,
+            callback=callback,
+            pipeline_class=pipeline_class,
+            alphabet=alphabet,
+            builder=builder,
+            **options
+        )
+        self.max_iterations = max_iterations
+        self.select_hits = select_hits
+        self.checkpoints = checkpoints
+
+    def _new_thread(
+        self,
+        query_available: threading.Semaphore,
+        query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, _I]]]",
+        query_count: "multiprocessing.Value[int]",  # type: ignore
+        kill_switch: threading.Event,
+    ) -> _JACKHMMERWorker[_I]:
+        return _JACKHMMERWorker(
+            self.targets,
+            query_available,
+            query_queue,
+            query_count,
+            kill_switch,
+            self.callback,
+            self.options,
+            self.pipeline_class,
+            self.alphabet,
+            copy.copy(self.builder),
+            self.max_iterations,
+            self.select_hits,
+            self.checkpoints,
+        )
+
+
+class _NHMMERDispatcher(
+    _BaseDispatcher[
+        _NHMMERQueryType,
+        typing.Union[DigitalSequenceBlock, SequenceFile],
+        TopHits,
+    ]
+):
     def __init__(
         self,
         queries: typing.Iterable[_NHMMERQueryType],
@@ -498,7 +726,7 @@ class _NHMMERDispatcher(_BaseDispatcher[_NHMMERQueryType, typing.Union[DigitalSe
     def _new_thread(
         self,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_NHMMERQueryType]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_NHMMERQueryType, TopHits]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _NHMMERWorker:
@@ -508,7 +736,7 @@ class _NHMMERDispatcher(_BaseDispatcher[_NHMMERQueryType, typing.Union[DigitalSe
                 self.targets.name,
                 format=self.targets.format,
                 digital=True,
-                alphabet=self.alphabet
+                alphabet=self.alphabet,
             )
         else:
             targets = self.targets  # type: ignore
@@ -526,11 +754,17 @@ class _NHMMERDispatcher(_BaseDispatcher[_NHMMERQueryType, typing.Union[DigitalSe
         )
 
 
-class _SCANDispatcher(_BaseDispatcher[DigitalSequence, typing.Union[OptimizedProfileBlock, HMMPressedFile]]):
+class _SCANDispatcher(
+    _BaseDispatcher[
+        DigitalSequence,
+        typing.Union[OptimizedProfileBlock, HMMPressedFile],
+        TopHits,
+    ]
+):
     def _new_thread(
         self,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[DigitalSequence]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[DigitalSequence, TopHits]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _SCANWorker:
@@ -553,6 +787,7 @@ class _SCANDispatcher(_BaseDispatcher[DigitalSequence, typing.Union[OptimizedPro
 
 
 # --- hmmsearch --------------------------------------------------------------
+
 
 def hmmsearch(
     queries: typing.Union[_SEARCHQueryType, typing.Iterable[_SEARCHQueryType]],
@@ -665,6 +900,7 @@ def hmmsearch(
 
 # --- phmmer -----------------------------------------------------------------
 
+
 def phmmer(
     queries: typing.Union[_PHMMERQueryType, typing.Iterable[_PHMMERQueryType]],
     sequences: typing.Iterable[DigitalSequence],
@@ -756,7 +992,173 @@ def phmmer(
     return dispatcher.run()
 
 
+# --- jackhmmer -----------------------------------------------------------------
+
+@typing.overload
+def jackhmmer(
+    queries: typing.Union[_JACKHMMERQueryType, typing.Iterable[_JACKHMMERQueryType]],
+    sequences: typing.Iterable[DigitalSequence],
+    *,
+    max_iterations: typing.Optional[int] = 5,
+    select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+    checkpoints: "Literal[True]",
+    cpus: int = 0,
+    callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
+    builder: typing.Optional[Builder] = None,
+    **options,  # type: typing.Dict[str, object]
+) -> typing.Iterator[typing.Iterable[IterationResult]]:
+    ...
+
+@typing.overload
+def jackhmmer(
+    queries: typing.Union[_JACKHMMERQueryType, typing.Iterable[_JACKHMMERQueryType]],
+    sequences: typing.Iterable[DigitalSequence],
+    *,
+    max_iterations: typing.Optional[int] = 5,
+    select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+    checkpoints: "Literal[False]",
+    cpus: int = 0,
+    callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
+    builder: typing.Optional[Builder] = None,
+    **options,  # type: typing.Dict[str, object]
+) -> typing.Iterator[IterationResult]:
+    ...
+
+@typing.overload
+def jackhmmer(
+    queries: typing.Union[_JACKHMMERQueryType, typing.Iterable[_JACKHMMERQueryType]],
+    sequences: typing.Iterable[DigitalSequence],
+    *,
+    max_iterations: typing.Optional[int] = 5,
+    select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+    checkpoints: bool = False,
+    cpus: int = 0,
+    callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
+    builder: typing.Optional[Builder] = None,
+    **options,  # type: typing.Dict[str, object]
+) -> typing.Union[typing.Iterator[IterationResult], typing.Iterator[typing.Iterable[IterationResult]]]:
+    ...
+
+def jackhmmer(
+    queries: typing.Union[_JACKHMMERQueryType, typing.Iterable[_JACKHMMERQueryType]],
+    sequences: typing.Iterable[DigitalSequence],
+    *,
+    max_iterations: typing.Optional[int] = 5,
+    select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+    checkpoints: bool = False,
+    cpus: int = 0,
+    callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
+    builder: typing.Optional[Builder] = None,
+    **options,  # type: typing.Dict[str, object]
+) -> typing.Union[typing.Iterator[IterationResult], typing.Iterator[typing.Iterable[IterationResult]]]:
+    """Search protein sequences against a sequence database.
+
+    Arguments:
+        queries (iterable of `DigitalSequence`): The query sequences to search
+            for in the sequence database. Passing a single sequence object
+            is supported.
+        sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A database
+            of sequences to query. If you plan on using the same sequences
+            several times, consider storing them into a
+            `~pyhmmer.easel.DigitalSequenceBlock` directly. `jackhmmer` does
+            not support passing a `~pyhmmer.easel.SequenceFile` at the
+            moment.
+        max_iterations (`int`): The maximum number of iterations for the
+            search. Hits will be returned early if the searched converged.
+        select_hits (callable, optional): A function or callable object
+            for manually selecting hits during each iteration. It should
+            take a single `~pyhmmer.plan7.TopHits` argument and change the
+            inclusion of individual hits with the `~pyhmmer.plan7.Hit.include`
+            and `~pyhmmer.plan7.Hit.drop` methods of `~pyhmmer.plan7.Hit`
+            objects.
+        checkpoints (`bool`): A logical flag to return the results at each
+            iteration 'checkpoint'. If `True`, then an iterable of up to
+            ``max_iterations`` `~pyhmmer.plan7.IterationResult` will be
+            returned, rather than just the final iteration. This is similar
+            to ``--chkhmm`` amd ``--chkali`` flags from HMMER3's
+            ``jackhmmer`` interface.
+        cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
+            run everything in the main thread, ``0`` to automatically
+            select a suitable number (using `psutil.cpu_count`), or any
+            positive number otherwise.
+        callback (callable): A callback that is called everytime a query is
+            processed with two arguments: the query, and the total number
+            of queries. This can be used to display progress in UI.
+        builder (`~pyhmmer.plan7.Builder`, optional): A builder to configure
+            how the queries are converted to HMMs. Passing `None` will create
+            a default instance.
+
+    Yields:
+        `~pyhmmer.plan7.IterationResult`: An *iteration result* instance for
+        each query, in the same order the queries were passed in the input.
+        If ``checkpoint`` option is `True`, all iterations will be returned
+        instead of the last one.
+
+    Raises:
+        `~pyhmmer.errors.AlphabetMismatch`: When any of the query sequence
+            the profile or the optional builder do not share the same
+            alphabet.
+
+    Note:
+        Any additional keyword arguments passed to the `jackhmmer` function
+        will be passed transparently to the `~pyhmmer.plan7.Pipeline` to
+        be created in each worker thread.
+
+    Caution:
+        Default values used for ``jackhmmer`` do not correspond to the
+        default parameters used for creating a pipeline in the other cases.
+        If no parameter value is given as a keyword argument, `jackhmmer`
+        will create the pipeline with ``incE=0.001`` and ``incdomE=0.001``,
+        where a default `~pyhmmer.plan7.Pipeline` would use ``incE=0.01``
+        and ``incdomE=0.01``.
+
+    .. versionadded:: 0.8.0
+
+    """
+    _alphabet = Alphabet.amino()
+    _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count() or 1
+    _builder = Builder(_alphabet, architecture="hand") if builder is None else builder
+
+    options.setdefault("incE", 0.001)
+    options.setdefault("incdomE", 0.001)
+
+    if not isinstance(queries, collections.abc.Iterable):
+        queries = (queries,)
+
+    if isinstance(sequences, SequenceFile):
+        sequence_file: SequenceFile = sequences
+        if sequence_file.name is None:
+            raise ValueError("expected named `SequenceFile` for targets")
+        if not sequence_file.digital:
+            raise ValueError("expected digital mode `SequenceFile` for targets")
+        assert sequence_file.alphabet is not None
+        alphabet = sequence_file.alphabet
+        targets = typing.cast(DigitalSequenceBlock, sequence_file.read_block())
+    elif isinstance(sequences, DigitalSequenceBlock):
+        alphabet = sequences.alphabet
+        targets = sequences
+    else:
+        alphabet = _alphabet
+        targets = DigitalSequenceBlock(_alphabet, sequences)
+
+    dispatcher = _JACKHMMERDispatcher(  # type: ignore
+        queries=queries,
+        targets=targets,
+        cpus=_cpus,
+        callback=callback,
+        pipeline_class=Pipeline,
+        alphabet=alphabet,
+        builder=_builder,
+        max_iterations=max_iterations,
+        select_hits=select_hits,
+        checkpoints=checkpoints,
+        **options,
+    )
+    return dispatcher.run()
+
+
 # --- nhmmer -----------------------------------------------------------------
+
 
 def nhmmer(
     queries: typing.Union[_NHMMERQueryType, typing.Iterable[_NHMMERQueryType]],
@@ -855,6 +1257,7 @@ def nhmmer(
 
 # --- hmmpress ---------------------------------------------------------------
 
+
 def hmmpress(
     hmms: typing.Iterable[HMM],
     output: typing.Union[str, "os.PathLike[str]"],
@@ -920,6 +1323,7 @@ def hmmpress(
 
 # --- hmmalign ---------------------------------------------------------------
 
+
 def hmmalign(
     hmm: HMM,
     sequences: typing.Iterable[DigitalSequence],
@@ -974,6 +1378,7 @@ def hmmalign(
 
 
 # --- hmmscan ----------------------------------------------------------------
+
 
 def hmmscan(
     queries: typing.Union[DigitalSequence, typing.Iterable[DigitalSequence]],
@@ -1062,7 +1467,7 @@ def hmmscan(
     if not isinstance(queries, collections.abc.Iterable):
         queries = (queries,)
     if isinstance(profiles, HMMPressedFile):
-        alphabet = _alphabet # FIXME: try to detect from content instead?
+        alphabet = _alphabet  # FIXME: try to detect from content instead?
         targets = profiles
     elif isinstance(profiles, OptimizedProfileBlock):
         alphabet = profiles.alphabet
@@ -1081,7 +1486,9 @@ def hmmscan(
                 block.append(item)
             else:
                 ty = type(item).__name__
-                raise TypeError("Expected HMM, Profile or OptimizedProfile, found {}".format(ty))
+                raise TypeError(
+                    "Expected HMM, Profile or OptimizedProfile, found {}".format(ty)
+                )
         targets = block  # type: ignore
 
     dispatcher = _SCANDispatcher(
@@ -1096,10 +1503,10 @@ def hmmscan(
     )
     return dispatcher.run()
 
+
 # add a very limited CLI so that this module can be invoked in a shell:
 #     $ python -m pyhmmer.hmmsearch <hmmfile> <seqdb>
 if __name__ == "__main__":
-
     import argparse
     import sys
 
@@ -1167,6 +1574,47 @@ if __name__ == "__main__":
 
         return 0
 
+    @contextlib.contextmanager
+    def open_query_file(
+        queryfile: typing.Union[os.PathLike[str], typing.BinaryIO],
+        alphabet: Alphabet,
+    ) -> typing.Iterator[typing.Union[SequenceFile, HMMFile]]:
+        """Open either a sequence file or an HMM file.
+        """
+        try:
+            yield SequenceFile(queryfile, digital=True, alphabet=alphabet)
+        except ValueError:
+            yield HMMFile(queryfile)
+
+    def _jackhmmer(args: argparse.Namespace) -> int:
+        # check the size of the target database and the amount of available memory
+        available_memory = psutil.virtual_memory().available
+        database_size = os.stat(args.seqdb).st_size
+
+        alphabet = Alphabet.amino()
+        with SequenceFile(args.seqdb, digital=True, alphabet=alphabet) as sequences:
+            # pre-load the database if it is small enough to fit in memory
+            if database_size < available_memory * MAX_MEMORY_LOAD:
+                sequences = sequences.read_block()  # type: ignore
+            # load the query sequences or HMMs iteratively
+            with open_query_file(args.queryfile, alphabet) as queries:
+                result = jackhmmer(queries, sequences, checkpoint=False, cpus=args.jobs)
+                for hits in result.hits_list:
+                    for hit in hits:
+                        if hit.reported:
+                            print(
+                                hit.name.decode(),
+                                "-",
+                                hit.best_domain.alignment.hmm_accession.decode(),
+                                hit.best_domain.alignment.hmm_name.decode(),
+                                hit.evalue,
+                                hit.score,
+                                hit.bias,
+                                sep="\t",
+                            )
+
+        return 0
+
     def _nhmmer(args: argparse.Namespace) -> int:
         # at the moment `LongTargetsPipeline` only support block targets, not files
         with SequenceFile(args.seqdb, digital=True) as seqfile:
@@ -1197,7 +1645,10 @@ if __name__ == "__main__":
             with HMMFile(args.hmmdb) as hmms:
                 # pre-load profiles is they can fit into memory
                 targets = hmms.optimized_profiles() if hmms.is_pressed() else hmms
-                if hmms.is_pressed() and database_size < available_memory * MAX_MEMORY_LOAD:
+                if (
+                    hmms.is_pressed()
+                    and database_size < available_memory * MAX_MEMORY_LOAD
+                ):
                     targets = OptimizedProfileBlock(seqfile.alphabet, targets)  # type: ignore
                 # load the query sequences iteratively
                 hits_list = hmmscan(seqfile, targets, cpus=args.jobs)  # type: ignore
@@ -1270,6 +1721,11 @@ if __name__ == "__main__":
     parser_phmmer = subparsers.add_parser("phmmer")
     parser_phmmer.set_defaults(call=_phmmer)
     parser_phmmer.add_argument("seqfile")
+    parser_phmmer.add_argument("seqdb")
+
+    parser_phmmer = subparsers.add_parser("jackhmmer")
+    parser_phmmer.set_defaults(call=_jackhmmer)
+    parser_phmmer.add_argument("queryfile")  # can be sequences or HMM
     parser_phmmer.add_argument("seqdb")
 
     parser_nhmmer = subparsers.add_parser("nhmmer")
