@@ -375,14 +375,12 @@ class TestJackhmmer(unittest.TestCase):
             seqs = seqs_file.read_block()
         results = pyhmmer.jackhmmer(seqs[-1:], seqs, cpus=1, max_iterations=1)
         result = next(results)
-        # unpack IterationResult
-        _, hits, _, _, it = result
-        self.assertEqual(it, 1)
-        hits.sort()
+        self.assertEqual(result.iteration, 1)
+        result.hits.sort()
 
         with self.table("A0A089QRB9.domtbl") as table:
             lines = iter(filter(lambda line: not line.startswith("#"), table))
-            it = ((hit, domain) for hit in hits for domain in hit.domains)
+            it = ((hit, domain) for hit in result.hits for domain in hit.domains)
             for line, (hit, domain) in itertools.zip_longest(lines, it):
                 self.assertIsNot(line, None)
                 self.assertIsNot(hit, None)
@@ -402,6 +400,23 @@ class TestJackhmmer(unittest.TestCase):
                 self.assertEqual(domain.alignment.target_to, int(fields[18]))
                 self.assertEqual(domain.env_from, int(fields[19]))
                 self.assertEqual(domain.env_to, int(fields[20]))
+
+    def test_pksi_checkpoint(self):
+        with self.seqs_file("PKSI", digital=True) as seqs_file:
+            seqs = seqs_file.read_block()
+        # jackhmmer CLI converges in 3 iterations, 5 hits, 17 sequences in MSA
+        iterations = next(
+            pyhmmer.jackhmmer(
+                seqs[-1],
+                seqs,
+                cpus=1,
+                checkpoints=True,
+            )
+        )
+        self.assertEqual(len(iterations), 3)
+        self.assertTrue(iterations[-1].converged)
+        self.assertEqual(len(iterations[-1].hits), 5)
+        self.assertEqual(len(iterations[-1].msa.sequences), 17)
 
     def test_thioestherase(self):
         with self.hmm_file("Thioesterase") as hmm_file:

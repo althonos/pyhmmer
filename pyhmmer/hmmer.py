@@ -1054,8 +1054,8 @@ def jackhmmer(
     """Search protein sequences against a sequence database.
 
     Arguments:
-        queries (iterable of `DigitalSequence`): The query sequences to search 
-            for in the sequence database. Passing a single sequence object 
+        queries (iterable of `DigitalSequence`): The query sequences to search
+            for in the sequence database. Passing a single sequence object
             is supported.
         sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A database
             of sequences to query. If you plan on using the same sequences
@@ -1063,19 +1063,19 @@ def jackhmmer(
             `~pyhmmer.easel.DigitalSequenceBlock` directly. `jackhmmer` does
             not support passing a `~pyhmmer.easel.SequenceFile` at the
             moment.
-        max_iterations (`int`): The maximum number of iterations for the 
+        max_iterations (`int`): The maximum number of iterations for the
             search. Hits will be returned early if the searched converged.
         select_hits (callable, optional): A function or callable object
             for manually selecting hits during each iteration. It should
             take a single `~pyhmmer.plan7.TopHits` argument and change the
             inclusion of individual hits with the `~pyhmmer.plan7.Hit.include`
-            and `~pyhmmer.plan7.Hit.drop` methods of `~pyhmmer.plan7.Hit` 
+            and `~pyhmmer.plan7.Hit.drop` methods of `~pyhmmer.plan7.Hit`
             objects.
         checkpoints (`bool`): A logical flag to return the results at each
             iteration 'checkpoint'. If `True`, then an iterable of up to
             ``max_iterations`` `~pyhmmer.plan7.IterationResult` will be
             returned, rather than just the final iteration. This is similar
-            to ``--chkhmm`` amd ``--chkali`` flags from HMMER3's 
+            to ``--chkhmm`` amd ``--chkali`` flags from HMMER3's
             ``jackhmmer`` interface.
         cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
             run everything in the main thread, ``0`` to automatically
@@ -1104,12 +1104,23 @@ def jackhmmer(
         will be passed transparently to the `~pyhmmer.plan7.Pipeline` to
         be created in each worker thread.
 
+    Caution:
+        Default values used for ``jackhmmer`` do not correspond to the
+        default parameters used for creating a pipeline in the other cases.
+        If no parameter value is given as a keyword argument, `jackhmmer`
+        will create the pipeline with ``incE=0.001`` and ``incdomE=0.001``,
+        where a default `~pyhmmer.plan7.Pipeline` would use ``incE=0.01``
+        and ``incdomE=0.01``.
+
     .. versionadded:: 0.8.0
 
     """
     _alphabet = Alphabet.amino()
     _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count() or 1
     _builder = Builder(_alphabet, architecture="hand") if builder is None else builder
+
+    options.setdefault("incE", 0.001)
+    options.setdefault("incdomE", 0.001)
 
     if not isinstance(queries, collections.abc.Iterable):
         queries = (queries,)
@@ -1587,8 +1598,8 @@ if __name__ == "__main__":
                 sequences = sequences.read_block()  # type: ignore
             # load the query sequences or HMMs iteratively
             with open_query_file(args.queryfile, alphabet) as queries:
-                _, hits_list, _, _, _ = jackhmmer(queries, sequences, checkpoint=False, cpus=args.jobs)  # type: ignore
-                for hits in hits_list:
+                result = jackhmmer(queries, sequences, checkpoint=False, cpus=args.jobs)
+                for hits in result.hits_list:
                     for hit in hits:
                         if hit.reported:
                             print(
