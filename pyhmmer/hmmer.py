@@ -307,7 +307,7 @@ class _JACKHMMERWorker(
         self.checkpoints = checkpoints
 
     @singledispatchmethod
-    def query(self, query) -> IterationResult:  # type: ignore
+    def query(self, query) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:  # type: ignore
         raise TypeError(
             "Unsupported query type for `jackhmmer`: {}".format(type(query).__name__)
         )
@@ -650,9 +650,6 @@ class _JACKHMMERDispatcher(
         else:
             targets = self.targets  # type: ignore
         return _JACKHMMERWorker(
-            self.max_iterations,
-            self.select_hits,
-            self.checkpoints,
             targets,
             query_available,
             query_queue,
@@ -663,6 +660,9 @@ class _JACKHMMERDispatcher(
             self.pipeline_class,
             self.alphabet,
             copy.copy(self.builder),
+            self.max_iterations,
+            self.select_hits,
+            self.checkpoints,
         )
 
 
