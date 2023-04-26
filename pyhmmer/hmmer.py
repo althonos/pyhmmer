@@ -58,6 +58,8 @@ from .utils import peekable, singledispatchmethod
 _Q = typing.TypeVar("_Q")
 # the target type for the pipeline
 _T = typing.TypeVar("_T")
+# the result type for the pipeline
+_R = typing.TypeVar("_R")
 
 # the query types for the different tasks
 _PHMMERQueryType = typing.Union[DigitalSequence, DigitalMSA]
@@ -75,7 +77,7 @@ if typing.TYPE_CHECKING:
 # --- Result class -----------------------------------------------------------
 
 
-class _Chore(typing.Generic[_Q]):
+class _Chore(typing.Generic[_Q, _R]):
     """A chore for a worker thread.
 
     Attributes:
@@ -92,16 +94,16 @@ class _Chore(typing.Generic[_Q]):
 
     query: _Q
     event: threading.Event
-    hits: typing.Optional[TopHits]
+    result: typing.Optional[_R]
     exception: typing.Optional[BaseException]
 
-    __slots__ = ("query", "event", "hits", "exception")
+    __slots__ = ("query", "event", "result", "exception")
 
     def __init__(self, query: _Q) -> None:
         """Create a new chore from the given query."""
         self.query = query
         self.event = threading.Event()
-        self.hits = None
+        self.result = None
         self.exception = None
 
     def available(self) -> bool:
@@ -112,16 +114,16 @@ class _Chore(typing.Generic[_Q]):
         """Wait for the chore to be done."""
         return self.event.wait(timeout)
 
-    def get(self) -> TopHits:
+    def get(self) -> _R:
         """Get the results of the chore, blocking if the chore was not done."""
         self.event.wait()
         if self.exception is not None:
             raise self.exception
-        return typing.cast(TopHits, self.hits)
+        return typing.cast(_R, self.result)
 
-    def complete(self, hits: TopHits) -> None:
-        """Mark the chore as done and record ``hits`` as the results."""
-        self.hits = hits
+    def complete(self, result: _R) -> None:
+        """Mark the chore as done and record ``result`` as the results."""
+        self.result = result
         self.event.set()
 
     def fail(self, exception: BaseException) -> None:
@@ -133,7 +135,7 @@ class _Chore(typing.Generic[_Q]):
 # --- Pipeline threads -------------------------------------------------------
 
 
-class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
+class _BaseWorker(typing.Generic[_Q, _T, _R], threading.Thread):
     """A generic worker thread to parallelize a pipelined search.
 
     Attributes:
@@ -173,7 +175,7 @@ class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
         self,
         targets: _T,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_Q]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_Q, _R]]]",
         query_count: multiprocessing.Value,  # type: ignore
         kill_switch: threading.Event,
         callback: typing.Optional[typing.Callable[[_Q, int], None]],
@@ -187,7 +189,7 @@ class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
         self.targets: _T = targets
         self.pipeline = pipeline_class(alphabet=alphabet, **options)
         self.query_available: threading.Semaphore = query_available
-        self.query_queue: "queue.Queue[typing.Optional[_Chore[_Q]]]" = query_queue
+        self.query_queue: "queue.Queue[typing.Optional[_Chore[_Q, _R]]]" = query_queue
         self.query_count = query_count
         self.callback: typing.Optional[typing.Callable[[_Q, int], None]] = (
             callback or self._none_callback
@@ -222,7 +224,7 @@ class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
         """Set the synchronized kill switch for all threads."""
         self.kill_switch.set()
 
-    def process(self, query: _Q) -> TopHits:
+    def process(self, query: _Q) -> _R:
         """Process a single query and return the resulting hits."""
         if isinstance(self.targets, (HMMPressedFile, SequenceFile)):
             self.targets.rewind()
@@ -232,13 +234,17 @@ class _BaseWorker(typing.Generic[_Q, _T], threading.Thread):
         return hits
 
     @abc.abstractmethod
-    def query(self, query: _Q) -> TopHits:
+    def query(self, query: _Q) -> _R:
         """Run a single query against the target database."""
         return NotImplemented
 
 
 class _SEARCHWorker(
-    _BaseWorker[_SEARCHQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]
+    _BaseWorker[
+        _SEARCHQueryType, 
+        typing.Union[DigitalSequenceBlock, SequenceFile],
+        TopHits,
+    ]
 ):
     @singledispatchmethod
     def query(self, query) -> TopHits:  # type: ignore
@@ -254,7 +260,11 @@ class _SEARCHWorker(
 
 
 class _PHMMERWorker(
-    _BaseWorker[_PHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]
+    _BaseWorker[
+        _PHMMERQueryType, 
+        typing.Union[DigitalSequenceBlock, SequenceFile],
+        TopHits,
+    ]
 ):
     @singledispatchmethod
     def query(self, query) -> TopHits:  # type: ignore
@@ -272,13 +282,17 @@ class _PHMMERWorker(
 
 
 class _JACKHMMERWorker(
-    _BaseWorker[_JACKHMMERQueryType, DigitalSequenceBlock]
+    _BaseWorker[
+        _JACKHMMERQueryType, 
+        DigitalSequenceBlock,
+        typing.Any,
+    ]
 ):
     def __init__(
         self,
         targets: DigitalSequenceBlock,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, typing.Any]]]",
         query_count: multiprocessing.Value,  # type: ignore
         kill_switch: threading.Event,
         callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]],
@@ -365,7 +379,11 @@ class _JACKHMMERWorker(
 
 
 class _NHMMERWorker(
-    _BaseWorker[_NHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]
+    _BaseWorker[
+        _NHMMERQueryType, 
+        typing.Union[DigitalSequenceBlock, SequenceFile],
+        TopHits,
+    ]
 ):
     @singledispatchmethod
     def query(self, query) -> TopHits:  # type: ignore
@@ -389,7 +407,11 @@ class _NHMMERWorker(
 
 
 class _SCANWorker(
-    _BaseWorker[DigitalSequence, typing.Union[OptimizedProfileBlock, HMMPressedFile]]
+    _BaseWorker[
+        DigitalSequence, 
+        typing.Union[OptimizedProfileBlock, HMMPressedFile],
+        TopHits,
+    ]
 ):
     @singledispatchmethod
     def query(self, query) -> TopHits:  # type: ignore
@@ -405,7 +427,7 @@ class _SCANWorker(
 # --- Search runners ---------------------------------------------------------
 
 
-class _BaseDispatcher(typing.Generic[_Q, _T], abc.ABC):
+class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
     def __init__(
         self,
         queries: typing.Iterable[_Q],
@@ -438,13 +460,13 @@ class _BaseDispatcher(typing.Generic[_Q, _T], abc.ABC):
     def _new_thread(
         self,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_Q]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_Q, _R]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
-    ) -> _BaseWorker[_Q, _T]:
+    ) -> _BaseWorker[_Q, _T, _R]:
         return NotImplemented
 
-    def _single_threaded(self) -> typing.Iterator[TopHits]:
+    def _single_threaded(self) -> typing.Iterator[_R]:
         # create the queues to pass the HMM objects around, as well as atomic
         # values that we use to synchronize the threads
         query_available = threading.Semaphore(0)
@@ -468,13 +490,13 @@ class _BaseDispatcher(typing.Generic[_Q, _T], abc.ABC):
         if isinstance(thread.targets, (SequenceFile, HMMPressedFile)):
             thread.targets.close()
 
-    def _multi_threaded(self) -> typing.Iterator[TopHits]:
+    def _multi_threaded(self) -> typing.Iterator[_R]:
         # create the semaphore which will be used to notify worker threads
         # there is a new chore available
         query_available = threading.Semaphore(0)
         # create the queues to pass the query objects around, as well as
         # atomic values that we use to synchronize the threads
-        results: typing.Deque[_Chore[_Q]] = collections.deque()
+        results: typing.Deque[_Chore[_Q, _R]] = collections.deque()
         query_queue = queue.Queue(maxsize=self.cpus)  # type: ignore
         query_count = multiprocessing.Value(ctypes.c_ulong)
         kill_switch = threading.Event()
@@ -497,7 +519,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T], abc.ABC):
             for query in self.queries:
                 # get the next query and add it to the query queue
                 query_count.value += 1
-                chore = _Chore(query)
+                chore: _Chore[_Q, _R] = _Chore(query)
                 query_queue.put(chore)  # <-- blocks if too many chores in queue
                 query_available.release()
                 results.append(chore)
@@ -521,7 +543,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T], abc.ABC):
             kill_switch.set()
             raise
 
-    def run(self) -> typing.Iterator[TopHits]:
+    def run(self) -> typing.Iterator[_R]:
         if self.cpus == 1:
             return self._single_threaded()
         else:
@@ -529,12 +551,16 @@ class _BaseDispatcher(typing.Generic[_Q, _T], abc.ABC):
 
 
 class _SEARCHDispatcher(
-    _BaseDispatcher[_SEARCHQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]
+    _BaseDispatcher[
+        _SEARCHQueryType, 
+        typing.Union[DigitalSequenceBlock, SequenceFile],
+        TopHits,
+    ]
 ):
     def _new_thread(
         self,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_SEARCHQueryType]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_SEARCHQueryType, TopHits]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _SEARCHWorker:
@@ -562,12 +588,16 @@ class _SEARCHDispatcher(
 
 
 class _PHMMERDispatcher(
-    _BaseDispatcher[_PHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]
+    _BaseDispatcher[
+        _PHMMERQueryType, 
+        typing.Union[DigitalSequenceBlock, SequenceFile],
+        TopHits,
+    ]
 ):
     def _new_thread(
         self,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_PHMMERQueryType]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_PHMMERQueryType, TopHits]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _PHMMERWorker:
@@ -596,7 +626,11 @@ class _PHMMERDispatcher(
 
 
 class _JACKHMMERDispatcher(
-    _BaseDispatcher[_JACKHMMERQueryType, DigitalSequenceBlock]
+    _BaseDispatcher[
+        _JACKHMMERQueryType, 
+        DigitalSequenceBlock,
+        typing.Any,
+    ]
 ):
     """Extend _BaseDispatcher with JackHmmer options"""
 
@@ -633,7 +667,7 @@ class _JACKHMMERDispatcher(
     def _new_thread(
         self,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, typing.Any]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _JACKHMMERWorker:
@@ -655,7 +689,11 @@ class _JACKHMMERDispatcher(
 
 
 class _NHMMERDispatcher(
-    _BaseDispatcher[_NHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]
+    _BaseDispatcher[
+        _NHMMERQueryType, 
+        typing.Union[DigitalSequenceBlock, SequenceFile],
+        TopHits,
+    ]
 ):
     def __init__(
         self,
@@ -684,7 +722,7 @@ class _NHMMERDispatcher(
     def _new_thread(
         self,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_NHMMERQueryType]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_NHMMERQueryType, TopHits]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _NHMMERWorker:
@@ -714,13 +752,15 @@ class _NHMMERDispatcher(
 
 class _SCANDispatcher(
     _BaseDispatcher[
-        DigitalSequence, typing.Union[OptimizedProfileBlock, HMMPressedFile]
+        DigitalSequence, 
+        typing.Union[OptimizedProfileBlock, HMMPressedFile],
+        TopHits,
     ]
 ):
     def _new_thread(
         self,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[DigitalSequence]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[DigitalSequence, TopHits]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _SCANWorker:
