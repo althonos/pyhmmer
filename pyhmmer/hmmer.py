@@ -272,7 +272,7 @@ class _PHMMERWorker(
 
 
 class _JACKHMMERWorker(
-    _BaseWorker[_JACKHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]]
+    _BaseWorker[_JACKHMMERQueryType, DigitalSequenceBlock]
 ):
     def __init__(
         self,
@@ -596,16 +596,14 @@ class _PHMMERDispatcher(
 
 
 class _JACKHMMERDispatcher(
-    _BaseDispatcher[
-        _JACKHMMERQueryType, typing.Union[DigitalSequenceBlock, SequenceFile]
-    ]
+    _BaseDispatcher[_JACKHMMERQueryType, DigitalSequenceBlock]
 ):
     """Extend _BaseDispatcher with JackHmmer options"""
 
     def __init__(
         self,
         queries: typing.Iterable[_JACKHMMERQueryType],
-        targets: typing.Union[DigitalSequenceBlock, SequenceFile],
+        targets: DigitalSequenceBlock,
         cpus: int = 0,
         callback: typing.Optional[
             typing.Callable[[_JACKHMMERQueryType, int], None]
@@ -616,7 +614,7 @@ class _JACKHMMERDispatcher(
         max_iterations: typing.Optional[int] = 5,
         select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
         checkpoints: bool = False,
-        **options,
+        **options,  # type: object
     ) -> None:
         super().__init__(
             queries=queries,
@@ -639,18 +637,8 @@ class _JACKHMMERDispatcher(
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _JACKHMMERWorker:
-        if isinstance(self.targets, SequenceFile):
-            assert self.targets.name is not None
-            targets = SequenceFile(
-                self.targets.name,
-                format=self.targets.format,
-                digital=True,
-                alphabet=self.alphabet,
-            )
-        else:
-            targets = self.targets  # type: ignore
         return _JACKHMMERWorker(
-            targets,
+            self.targets,
             query_available,
             query_queue,
             query_count,
@@ -984,9 +972,9 @@ def jackhmmer(
         sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A database
             of sequences to query. If you plan on using the same sequences
             several times, consider storing them into a
-            `~pyhmmer.easel.DigitalSequenceBlock` directly. If a
-            `SequenceFile` is given, profiles will be loaded iteratively
-            from disk rather than prefetched.
+            `~pyhmmer.easel.DigitalSequenceBlock` directly. `jackhmmer` does
+            not support passing a `~pyhmmer.easel.SequenceFile` at the 
+            moment.
         max_iterations (`int`): The maximum number of iterations for the search.
             Hits will be returned early if the results converge.
         select_hits (callable, optional): A function or callable object
@@ -1043,7 +1031,7 @@ def jackhmmer(
             raise ValueError("expected digital mode `SequenceFile` for targets")
         assert sequence_file.alphabet is not None
         alphabet = sequence_file.alphabet
-        targets: typing.Union[SequenceFile, DigitalSequenceBlock] = sequence_file
+        targets = typing.cast(DigitalSequenceBlock, sequence_file.read_block())
     elif isinstance(sequences, DigitalSequenceBlock):
         alphabet = sequences.alphabet
         targets = sequences
