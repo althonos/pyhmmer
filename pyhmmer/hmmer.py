@@ -286,21 +286,6 @@ class _JACKHMMERWorker(
             "Unsupported query type for `jackhmmer`: {}".format(type(query).__name__)
         )
 
-    def _iterate(
-        self, iterator, checkpoints=False
-    ) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:
-        iteration_checkpoints = ()
-        for n in range(self.max_iterations):
-            iteration = next(iterator)
-            if checkpoints:
-                iteration_checkpoints.append(iteration)
-            if iteration.converged:
-                break
-        if checkpoints:
-            return iteration_checkpoints
-        else:
-            return iteration
-
     @query.register(DigitalSequence)
     def _(self, query: DigitalSequence) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:  # type: ignore
         iterator = self.pipeline.iterate_seq(
@@ -314,6 +299,19 @@ class _JACKHMMERWorker(
             query, self.targets, self.builder, self.select_hits
         )
         return self._iterate(iterator, self.checkpoints)
+
+    def _iterate(
+        self,
+        iterator: typing.Iterable[IterationResult],
+        checkpoints: bool = False
+    ) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:
+        iteration_checkpoints = []
+        for iteration in itertools.islice(iterator, self.max_iterations):
+            if checkpoints:
+                iteration_checkpoints.append(iteration)
+            if iteration.converged:
+                break
+        return iteration_checkpoints if checkpoints else iteration
 
 
 class _NHMMERWorker(
