@@ -65,6 +65,13 @@ _SEARCHQueryType = typing.Union[HMM, Profile, OptimizedProfile]
 _NHMMERQueryType = typing.Union[_PHMMERQueryType, _SEARCHQueryType]
 _JACKHMMERQueryType = typing.Union[DigitalSequence, _SEARCHQueryType]
 
+# `typing.Literal`` is only available in Python 3.8 and later
+if typing.TYPE_CHECKING:
+    try:
+        from typing import Literal
+    except ImportError:
+        from typing_extensions import Literal  # type: ignore
+
 # --- Result class -----------------------------------------------------------
 
 
@@ -271,7 +278,7 @@ class _JACKHMMERWorker(
         self,
         max_iterations: typing.Optional[int] = 5,
         select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
-        checkpoints: typing.Optional[bool] = False,
+        checkpoints: bool = False,
         *args,
         **kwargs,
     ) -> None:
@@ -299,6 +306,30 @@ class _JACKHMMERWorker(
             query, self.targets, self.builder, self.select_hits
         )
         return self._iterate(iterator, self.checkpoints)
+
+    @typing.overload
+    def _iterate(
+        self,
+        iterator: typing.Iterable[IterationResult],
+        checkpoints: "Literal[False]"
+    ) -> IterationResult:
+        ...
+
+    @typing.overload
+    def _iterate(
+        self,
+        iterator: typing.Iterable[IterationResult],
+        checkpoints: "Literal[True]"
+    ) -> typing.Iterable[IterationResult]:
+        ...
+
+    @typing.overload
+    def _iterate(
+        self,
+        iterator: typing.Iterable[IterationResult],
+        checkpoints: bool = False
+    ) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:
+        ...
 
     def _iterate(
         self,
@@ -556,7 +587,7 @@ class _JACKHMMERDispatcher(
         self,
         max_iterations: typing.Optional[int] = 5,
         select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
-        checkpoints: typing.Optional[bool] = False,
+        checkpoints: bool = False,
         *args,
         **kwargs,
     ) -> None:
@@ -902,7 +933,7 @@ def jackhmmer(
     *,
     max_iterations: typing.Optional[int] = 5,
     select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
-    checkpoints: typing.Optional[bool] = False,
+    checkpoints: bool = False,
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
@@ -927,10 +958,11 @@ def jackhmmer(
             take a single `TopHits` argument and change the inclusion of
             individual hits with the `Hit.include` and `Hit.drop` methods.
         checkpoints (`bool`): A logical flag to return the results at each
-            iteration 'checkpoint'. If True, then an iterable of up to `max_iterations`
-            IterationResults will be returned, rather than just the final JackHmmer
-            round. This is similar to `--chkhmm` amd `--chkali` flags from hmmer3's
-            jackhmmer interface.
+            iteration 'checkpoint'. If `True`, then an iterable of up to 
+            ``max_iterations`` `~pyhmmer.plan7.IterationResult` will be 
+            returned, rather than just the final iteration. This is similar 
+            to ``--chkhmm`` amd ``--chkali`` flags from HMMER3's ``jackhmmer`` 
+            interface.
         cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
             run everything in the main thread, ``0`` to automatically
             select a suitable number (using `psutil.cpu_count`), or any
@@ -943,9 +975,10 @@ def jackhmmer(
             a default instance.
 
     Yields:
-        `~pyhmmer.plan7.IterationResult`: An *iteration result* instance for each query,
-        in the same order the queries were passed in the input. If `checkpoint` option is
-        True, the results from all iterations will also be returned.
+        `~pyhmmer.plan7.IterationResult`: An *iteration result* instance for 
+        each query, in the same order the queries were passed in the input. 
+        If ``checkpoint`` option is `True`, all iterations will be returned
+        instead of the last one.
 
     Raises:
         `~pyhmmer.errors.AlphabetMismatch`: When any of the query sequence
