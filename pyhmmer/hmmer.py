@@ -242,7 +242,7 @@ class _BaseWorker(typing.Generic[_Q, _T, _R], threading.Thread):
 
 class _SEARCHWorker(
     _BaseWorker[
-        _SEARCHQueryType, 
+        _SEARCHQueryType,
         typing.Union[DigitalSequenceBlock, SequenceFile],
         TopHits,
     ]
@@ -262,7 +262,7 @@ class _SEARCHWorker(
 
 class _PHMMERWorker(
     _BaseWorker[
-        _PHMMERQueryType, 
+        _PHMMERQueryType,
         typing.Union[DigitalSequenceBlock, SequenceFile],
         TopHits,
     ]
@@ -285,7 +285,7 @@ class _PHMMERWorker(
 class _JACKHMMERWorker(
     typing.Generic[_I],
     _BaseWorker[
-        _JACKHMMERQueryType, 
+        _JACKHMMERQueryType,
         DigitalSequenceBlock,
         _I,
     ],
@@ -382,7 +382,7 @@ class _JACKHMMERWorker(
 
 class _NHMMERWorker(
     _BaseWorker[
-        _NHMMERQueryType, 
+        _NHMMERQueryType,
         typing.Union[DigitalSequenceBlock, SequenceFile],
         TopHits,
     ]
@@ -410,7 +410,7 @@ class _NHMMERWorker(
 
 class _SCANWorker(
     _BaseWorker[
-        DigitalSequence, 
+        DigitalSequence,
         typing.Union[OptimizedProfileBlock, HMMPressedFile],
         TopHits,
     ]
@@ -554,7 +554,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
 
 class _SEARCHDispatcher(
     _BaseDispatcher[
-        _SEARCHQueryType, 
+        _SEARCHQueryType,
         typing.Union[DigitalSequenceBlock, SequenceFile],
         TopHits,
     ]
@@ -591,7 +591,7 @@ class _SEARCHDispatcher(
 
 class _PHMMERDispatcher(
     _BaseDispatcher[
-        _PHMMERQueryType, 
+        _PHMMERQueryType,
         typing.Union[DigitalSequenceBlock, SequenceFile],
         TopHits,
     ]
@@ -630,12 +630,13 @@ class _PHMMERDispatcher(
 class _JACKHMMERDispatcher(
     typing.Generic[_I],
     _BaseDispatcher[
-        _JACKHMMERQueryType, 
+        _JACKHMMERQueryType,
         DigitalSequenceBlock,
         _I,
     ]
 ):
-    """Extend _BaseDispatcher with JackHmmer options"""
+    """A dispatcher to run JackHMMER iterative searches.
+    """
 
     def __init__(
         self,
@@ -693,7 +694,7 @@ class _JACKHMMERDispatcher(
 
 class _NHMMERDispatcher(
     _BaseDispatcher[
-        _NHMMERQueryType, 
+        _NHMMERQueryType,
         typing.Union[DigitalSequenceBlock, SequenceFile],
         TopHits,
     ]
@@ -755,7 +756,7 @@ class _NHMMERDispatcher(
 
 class _SCANDispatcher(
     _BaseDispatcher[
-        DigitalSequence, 
+        DigitalSequence,
         typing.Union[OptimizedProfileBlock, HMMPressedFile],
         TopHits,
     ]
@@ -1060,7 +1061,7 @@ def jackhmmer(
             of sequences to query. If you plan on using the same sequences
             several times, consider storing them into a
             `~pyhmmer.easel.DigitalSequenceBlock` directly. `jackhmmer` does
-            not support passing a `~pyhmmer.easel.SequenceFile` at the 
+            not support passing a `~pyhmmer.easel.SequenceFile` at the
             moment.
         max_iterations (`int`): The maximum number of iterations for the search.
             Hits will be returned early if the results converge.
@@ -1069,10 +1070,10 @@ def jackhmmer(
             take a single `TopHits` argument and change the inclusion of
             individual hits with the `Hit.include` and `Hit.drop` methods.
         checkpoints (`bool`): A logical flag to return the results at each
-            iteration 'checkpoint'. If `True`, then an iterable of up to 
-            ``max_iterations`` `~pyhmmer.plan7.IterationResult` will be 
-            returned, rather than just the final iteration. This is similar 
-            to ``--chkhmm`` amd ``--chkali`` flags from HMMER3's ``jackhmmer`` 
+            iteration 'checkpoint'. If `True`, then an iterable of up to
+            ``max_iterations`` `~pyhmmer.plan7.IterationResult` will be
+            returned, rather than just the final iteration. This is similar
+            to ``--chkhmm`` amd ``--chkali`` flags from HMMER3's ``jackhmmer``
             interface.
         cpus (`int`): The number of threads to run in parallel. Pass ``1`` to
             run everything in the main thread, ``0`` to automatically
@@ -1086,8 +1087,8 @@ def jackhmmer(
             a default instance.
 
     Yields:
-        `~pyhmmer.plan7.IterationResult`: An *iteration result* instance for 
-        each query, in the same order the queries were passed in the input. 
+        `~pyhmmer.plan7.IterationResult`: An *iteration result* instance for
+        each query, in the same order the queries were passed in the input.
         If ``checkpoint`` option is `True`, all iterations will be returned
         instead of the last one.
 
@@ -1560,9 +1561,11 @@ if __name__ == "__main__":
         return 0
 
     @contextlib.contextmanager
-    def QueryFile(queryfile, alphabet):
-        """
-        Special context manager for handling a sequence file or an HMM file.
+    def open_query_file(
+        queryfile: typing.Union[os.PathLike[str], typing.BinaryIO],
+        alphabet: Alphabet,
+    ) -> typing.Iterator[typing.Union[SequenceFile, HMMFile]]:
+        """Open either a sequence file or an HMM file.
         """
         try:
             yield SequenceFile(queryfile, digital=True, alphabet=alphabet)
@@ -1580,7 +1583,7 @@ if __name__ == "__main__":
             if database_size < available_memory * MAX_MEMORY_LOAD:
                 sequences = sequences.read_block()  # type: ignore
             # load the query sequences or HMMs iteratively
-            with QueryFile(args.queryfile, alphabet) as queries:
+            with open_query_file(args.queryfile, alphabet) as queries:
                 _, hits_list, _, _, _ = jackhmmer(queries, sequences, checkpoint=False, cpus=args.jobs)  # type: ignore
                 for hits in hits_list:
                     for hit in hits:
