@@ -701,14 +701,14 @@ class Pipeline(object):
         sequences: DigitalSequenceBlock,
         builder: typing.Optional[Builder] = None,
         select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
-    ) -> typing.Iterator[typing.Tuple[DigitalMSA, HMM, TopHits, bool]]: ...
+    ) -> IterativeSearch: ...
     def iterate_hmm(
         self,
         query: HMM,
         sequences: DigitalSequenceBlock,
         builder: typing.Optional[Builder] = None,
         select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
-    ) -> typing.Iterator[typing.Tuple[DigitalMSA, HMM, TopHits, bool]]: ...
+    ) -> IterativeSearch: ...
 
 class LongTargetsPipeline(Pipeline):
     def __init__(
