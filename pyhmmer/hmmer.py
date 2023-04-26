@@ -276,13 +276,32 @@ class _JACKHMMERWorker(
 ):
     def __init__(
         self,
+        targets: DigitalSequenceBlock,
+        query_available: threading.Semaphore,
+        query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType]]]",
+        query_count: multiprocessing.Value,  # type: ignore
+        kill_switch: threading.Event,
+        callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]],
+        options: typing.Dict[str, typing.Any],
+        pipeline_class: typing.Type[Pipeline],
+        alphabet: Alphabet,
+        builder: typing.Optional[Builder] = None,
         max_iterations: typing.Optional[int] = 5,
         select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
         checkpoints: bool = False,
-        *args,
-        **kwargs,
     ) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            targets=targets,
+            query_available=query_available,
+            query_queue=query_queue,
+            query_count=query_count,
+            kill_switch=kill_switch,
+            callback=callback,
+            options=options,
+            pipeline_class=pipeline_class,
+            alphabet=alphabet,
+            builder=builder,
+        )
         self.select_hits = select_hits
         self.max_iterations = max_iterations
         self.checkpoints = checkpoints
@@ -585,13 +604,30 @@ class _JACKHMMERDispatcher(
 
     def __init__(
         self,
+        queries: typing.Iterable[_JACKHMMERQueryType],
+        targets: typing.Union[DigitalSequenceBlock, SequenceFile],
+        cpus: int = 0,
+        callback: typing.Optional[
+            typing.Callable[[_JACKHMMERQueryType, int], None]
+        ] = None,
+        pipeline_class: typing.Type[Pipeline] = Pipeline,
+        alphabet: Alphabet = Alphabet.amino(),
+        builder: typing.Optional[Builder] = None,
         max_iterations: typing.Optional[int] = 5,
         select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
         checkpoints: bool = False,
-        *args,
-        **kwargs,
+        **options,
     ) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            queries=queries,
+            targets=targets,
+            cpus=cpus,
+            callback=callback,
+            pipeline_class=pipeline_class,
+            alphabet=alphabet,
+            builder=builder,
+            **options
+        )
         self.max_iterations = max_iterations
         self.select_hits = select_hits
         self.checkpoints = checkpoints
