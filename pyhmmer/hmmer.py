@@ -60,6 +60,7 @@ _Q = typing.TypeVar("_Q")
 _T = typing.TypeVar("_T")
 # the result type for the pipeline
 _R = typing.TypeVar("_R")
+_I = typing.TypeVar("_I")
 
 # the query types for the different tasks
 _PHMMERQueryType = typing.Union[DigitalSequence, DigitalMSA]
@@ -282,17 +283,18 @@ class _PHMMERWorker(
 
 
 class _JACKHMMERWorker(
+    typing.Generic[_I],
     _BaseWorker[
         _JACKHMMERQueryType, 
         DigitalSequenceBlock,
-        typing.Any,
-    ]
+        _I,
+    ],
 ):
     def __init__(
         self,
         targets: DigitalSequenceBlock,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, typing.Any]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, _I]]]",
         query_count: multiprocessing.Value,  # type: ignore
         kill_switch: threading.Event,
         callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]],
@@ -626,10 +628,11 @@ class _PHMMERDispatcher(
 
 
 class _JACKHMMERDispatcher(
+    typing.Generic[_I],
     _BaseDispatcher[
         _JACKHMMERQueryType, 
         DigitalSequenceBlock,
-        typing.Any,
+        _I,
     ]
 ):
     """Extend _BaseDispatcher with JackHmmer options"""
@@ -667,10 +670,10 @@ class _JACKHMMERDispatcher(
     def _new_thread(
         self,
         query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, typing.Any]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, _I]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
-    ) -> _JACKHMMERWorker:
+    ) -> _JACKHMMERWorker[_I]:
         return _JACKHMMERWorker(
             self.targets,
             query_available,
@@ -990,6 +993,50 @@ def phmmer(
 
 # --- jackhmmer -----------------------------------------------------------------
 
+@typing.overload
+def jackhmmer(
+    queries: typing.Union[_JACKHMMERQueryType, typing.Iterable[_JACKHMMERQueryType]],
+    sequences: typing.Iterable[DigitalSequence],
+    *,
+    max_iterations: typing.Optional[int] = 5,
+    select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+    checkpoints: "Literal[True]",
+    cpus: int = 0,
+    callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
+    builder: typing.Optional[Builder] = None,
+    **options,  # type: typing.Dict[str, object]
+) -> typing.Iterator[typing.Iterable[IterationResult]]:
+    ...
+
+@typing.overload
+def jackhmmer(
+    queries: typing.Union[_JACKHMMERQueryType, typing.Iterable[_JACKHMMERQueryType]],
+    sequences: typing.Iterable[DigitalSequence],
+    *,
+    max_iterations: typing.Optional[int] = 5,
+    select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+    checkpoints: "Literal[False]",
+    cpus: int = 0,
+    callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
+    builder: typing.Optional[Builder] = None,
+    **options,  # type: typing.Dict[str, object]
+) -> typing.Iterator[IterationResult]:
+    ...
+
+@typing.overload
+def jackhmmer(
+    queries: typing.Union[_JACKHMMERQueryType, typing.Iterable[_JACKHMMERQueryType]],
+    sequences: typing.Iterable[DigitalSequence],
+    *,
+    max_iterations: typing.Optional[int] = 5,
+    select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+    checkpoints: bool = False,
+    cpus: int = 0,
+    callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
+    builder: typing.Optional[Builder] = None,
+    **options,  # type: typing.Dict[str, object]
+) -> typing.Union[typing.Iterator[IterationResult], typing.Iterator[typing.Iterable[IterationResult]]]:
+    ...
 
 def jackhmmer(
     queries: typing.Union[_JACKHMMERQueryType, typing.Iterable[_JACKHMMERQueryType]],
@@ -1002,7 +1049,7 @@ def jackhmmer(
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
     **options,  # type: typing.Dict[str, object]
-) -> typing.Iterator[IterationResult]:
+) -> typing.Union[typing.Iterator[IterationResult], typing.Iterator[typing.Iterable[IterationResult]]]:
     """Search protein sequences against a sequence database.
 
     Arguments:
@@ -1079,7 +1126,7 @@ def jackhmmer(
         alphabet = _alphabet
         targets = DigitalSequenceBlock(_alphabet, sequences)
 
-    dispatcher = _JACKHMMERDispatcher(
+    dispatcher = _JACKHMMERDispatcher(  # type: ignore
         queries=queries,
         targets=targets,
         cpus=_cpus,
@@ -1534,7 +1581,7 @@ if __name__ == "__main__":
                 sequences = sequences.read_block()  # type: ignore
             # load the query sequences or HMMs iteratively
             with QueryFile(args.queryfile, alphabet) as queries:
-                _, hits_list, _, _, _ = jackhmmer(queries, sequences, cpus=args.jobs)  # type: ignore
+                _, hits_list, _, _, _ = jackhmmer(queries, sequences, checkpoint=False, cpus=args.jobs)  # type: ignore
                 for hits in hits_list:
                     for hit in hits:
                         if hit.reported:
