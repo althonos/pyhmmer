@@ -4636,7 +4636,7 @@ cdef class Offsets:
     @profile.setter
     def profile(self, object profile):
         assert self._offs != NULL
-        self._offs[0][<int> p7_offsets_e.p7_MOFFSET] = -1 if profile is None else profile
+        self._offs[0][<int> p7_offsets_e.p7_POFFSET] = -1 if profile is None else profile
 
 
 cdef class Pipeline:
