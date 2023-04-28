@@ -6240,11 +6240,10 @@ cdef class SequenceFile:
         object file,
         str format = None,
         *,
-        bint ignore_gaps = False,
         bint digital = False,
         Alphabet alphabet = None,
     ):
-        """__init__(self, file, format=None, *, ignore_gaps=False, digital=True, alphabet=None)\n--
+        """__init__(self, file, format=None, *, digital=True, alphabet=None)\n--
 
         Create a new sequence file parser wrapping the given ``file``.
 
@@ -6257,12 +6256,6 @@ cdef class SequenceFile:
                 ``genbank``, ``ddbj``, ``uniprot``, ``ncbi``, ``daemon``,
                 ``hmmpgmd``, ``fmindex``, plus any format also supported
                 by `~pyhmmer.easel.MSAFile`.
-
-        Keyword Arguments:
-            ignore_gaps (`bool`): When set to `True`, allow ignoring gap
-                characters ('-') when they are present in ungapped formats
-                such as ``fasta``. With `False`, stick to the default Easel
-                behaviour.
             digital (`bool`): Whether to read the sequences in text or digital
                 mode. This will affect the type of `Sequence` objects returned
                 later by the `read` function.
@@ -6294,22 +6287,13 @@ cdef class SequenceFile:
         .. deprecated:: 0.6.0
            The ``ignore_gaps`` keyword argument, use ``afa`` format instead.
 
+        .. versionchanged:: 0.8.0
+           Removed the ``ignore_gaps`` keyword argument.
+
         """
         cdef int   fmt
         cdef int   status
         cdef bytes fspath
-
-        # TODO: Remove in v0.7.0
-        if ignore_gaps:
-            warnings.warn(
-                (
-                  "`ignore_gaps` is deprecated and will be removed from future "
-                  "versions, use the aligned FASTA format ('afa') to read a "
-                  "FASTA file with gap characters."
-                ),
-                DeprecationWarning,
-                stacklevel=2
-            )
 
         # get format from string passed as input
         fmt = libeasel.sqio.eslSQFILE_UNKNOWN
@@ -6346,13 +6330,6 @@ cdef class SequenceFile:
                     raise EOFError("Sequence file is empty")
             elif status != libeasel.eslOK:
                 raise UnexpectedError(status, "esl_sqfile_Open")
-            # HACK(@althonos): allow ignoring the gap character if explicitly
-            #                  requested, which is normally not allowed by
-            #                  Easel for ungapped formats (althonos/pyhmmer#7).
-            if ignore_gaps:
-                status = libeasel.sqio.esl_sqio_Ignore(self._sqfp, b"-")
-                if status != libeasel.eslOK:
-                    raise UnexpectedError(status, "esl_sqio_Ignore")
             # set digital mode if requested
             if digital:
                 self.alphabet = self.guess_alphabet() if alphabet is None else alphabet
