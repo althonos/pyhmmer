@@ -3641,22 +3641,19 @@ cdef class HMMPressedFile:
 
         """
         cdef int              status
-        cdef OptimizedProfile py_om
-        cdef P7_OPROFILE*     om     = NULL
+        cdef OptimizedProfile om     = OptimizedProfile.__new__(OptimizedProfile)
 
         if self._hfp == NULL:
             raise ValueError("I/O operation on closed file.")
 
         with nogil:
-            status = p7_oprofile_ReadMSV(self._hfp, &self._alphabet._abc, &om)
+            status = p7_oprofile_ReadMSV(self._hfp, &self._alphabet._abc, &om._om)
             if status == libeasel.eslOK:
-                status = p7_oprofile_ReadRest(self._hfp, om)
+                status = p7_oprofile_ReadRest(self._hfp, om._om)
 
         if status == libeasel.eslOK:
-            py_om = OptimizedProfile.__new__(OptimizedProfile)
-            py_om.alphabet = self._alphabet # keep a reference to the alphabet
-            py_om._om = om
-            return py_om
+            om.alphabet = self._alphabet
+            return om
         elif status == libeasel.eslEOF:
             return None
         elif status == libeasel.eslEMEM:
