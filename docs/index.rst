@@ -7,7 +7,7 @@ PyHMMER |Stars|
 
 *Cython bindings and Python interface to* `HMMER3 <http://hmmer.org/>`_.
 
-|Actions| |Coverage| |PyPI| |Bioconda| |AUR| |Wheel| |Versions| |Implementations| |License| |Source| |Mirror| |Issues| |Docs| |Changelog| |Downloads| |DOI|
+|Actions| |Coverage| |PyPI| |Bioconda| |AUR| |Wheel| |Versions| |Implementations| |License| |Source| |Mirror| |Issues| |Docs| |Changelog| |Downloads| |Paper|
 
 
 .. |Actions| image:: https://img.shields.io/github/actions/workflow/status/althonos/pyhmmer/test.yml?branch=master&logo=github&style=flat-square&maxAge=300
@@ -58,8 +58,8 @@ PyHMMER |Stars|
 .. |Downloads| image:: https://img.shields.io/badge/dynamic/json?style=flat-square&color=303f9f&maxAge=86400&label=downloads&query=%24.total_downloads&url=https%3A%2F%2Fapi.pepy.tech%2Fapi%2Fprojects%2Fpyhmmer
    :target: https://pepy.tech/project/pyhmmer
 
-.. |DOI| image:: https://img.shields.io/badge/doi-10.5281%2Fzenodo.4270012-purple?style=flat-square&maxAge=86400
-   :target: https://doi.org/10.5281/zenodo.4270012
+.. |Paper| image:: https://img.shields.io/badge/paper-Bioinformatics-teal.svg?style=flat-square&maxAge=3600
+   :target: https://doi.org/10.1093/bioinformatics/btad214
 
 
 Overview
@@ -110,6 +110,15 @@ its dependencies from PyPi, or have a look at the
 :doc:`Installation page <install>` to find other ways to install ``pyhmmer``.
 
 
+Citation
+--------
+
+PyHMMER is scientific software, with a
+`published paper <https://doi.org/10.1093/bioinformatics/btad214>`_
+in the `Bioinformatics <https://academic.oup.com/bioinformatics>`_. Check the
+:doc:`Publications page <publications>` to see how to cite Pyrodigal PyHMMER.
+
+
 Library
 -------
 
@@ -120,8 +129,9 @@ Library
    Examples <examples/index>
    Performance <performance>
    Contributing <contributing>
-   API Reference <api/index>
+   Publications <publications>
    Benchmarks <benchmarks>
+   API Reference <api/index>
    Changelog <changes>
 
 

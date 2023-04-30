@@ -17,7 +17,7 @@
 [![Docs](https://img.shields.io/readthedocs/pyhmmer/latest?style=flat-square&maxAge=600)](https://pyhmmer.readthedocs.io)
 [![Changelog](https://img.shields.io/badge/keep%20a-changelog-8A0707.svg?maxAge=2678400&style=flat-square)](https://github.com/althonos/pyhmmer/blob/master/CHANGELOG.md)
 [![Downloads](https://img.shields.io/badge/dynamic/json?style=flat-square&color=303f9f&maxAge=86400&label=downloads&query=%24.total_downloads&url=https%3A%2F%2Fapi.pepy.tech%2Fapi%2Fprojects%2Fpyhmmer)](https://pepy.tech/project/pyhmmer)
-[![DOI](https://img.shields.io/badge/doi-10.5281%2Fzenodo.4270012-purple?style=flat-square&maxAge=86400)](https://doi.org/10.5281/zenodo.4270012)
+[![Paper](https://img.shields.io/badge/paper-Bioinformatics-teal.svg?style=flat-square&maxAge=3600)](https://doi.org/10.1093/bioinformatics/btad214)
 
 
 ## 🗺️ Overview
@@ -84,6 +84,20 @@ A [Bioconda](https://bioconda.github.io/) package is also available:
 ```console
 $ conda install -c bioconda pyhmmer
 ```
+
+## 🔖 Citation
+
+PyHMMER is scientific software, with a
+[published paper](https://doi.org/10.1093/bioinformatics/btad214)
+in the [Bioinformatics](https://academic.oup.com/bioinformatics). Please
+cite both [PyHMMER](https://doi.org/10.21105/joss.04296)
+and [HMMER](http://hmmer.org) if you are using it in
+an academic work, for instance as:
+
+> PyHMMER (Larralde *et al.*, 2023), a Python library binding to HMMER (Eddy, 2011).
+
+Detailed references are available on the [Publications page](https://pyhmmer.readthedocs.io/en/stable/publications.html) of the
+[online documentation](https://pyhmmer.readthedocs.io/).
 
 
 ## 📖 Documentation

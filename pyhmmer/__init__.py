@@ -10,6 +10,12 @@ language, that provides bindings to HMMER3. It directly interacts with the
 HMMER internals, which has several advantages over CLI wrappers like
 `hmmer-py <https://pypi.org/project/hmmer/>`_.
 
+References:
+    Larralde, Martin, and Georg Zeller.
+    "PyHMMER: A Python Library Binding to HMMER for Efficient
+    Sequence Analysis". Bioinformatics, 19 April 2023, btad214.
+    :doi:`10.1093/bioinformatics/btad214`.
+
 """
 
 import collections.abc as _collections_abc
