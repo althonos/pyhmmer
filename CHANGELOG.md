@@ -6,7 +6,30 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.7.4...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.8.0...HEAD
+
+
+## [v0.8.0] - 2023-05-01
+[v0.8.0]: https://github.com/althonos/pyhmmer/compare/v0.7.4...v0.8.0
+
+PyHMMER has been accepted for publication in [Bioinformatics](https://academic.oup.com/bioinformatics). Paper can be reached [doi:10.1093/bioinformatics/btad214](https://doi.org/10.1093/bioinformatics/btad214).
+
+### Added
+- `pyhmmer.hmmer.jackhmmer` function to run several JackHMMER iterative searches in parallel using multithreading ([#35](https://github.com/althonos/pyhmmer/pull/35), by [@zdk123](https://github.com/zdk123)).
+- `HMM.to_profile` shortcut method to allocate and configure a new `Profile` object.
+
+### Fixed
+- Type annotations of `Pipeline.iterate_seq` and `Pipeline.iterate_hmm`.
+- Potential memory leak on exceptions raised by `HMMPressedFile.read`.
+- `Offsets.profile` not recording offsets properly, causing `pyhmmer.hmmer.hmmpress` to produce invalid pressed files ([#37](https://github.com/althonos/pyhmmer/issues/36)).
+
+### Changed
+- `HMM.__init__` and `HMM.sample` now take the `Alphabet` as the first argument, for consistency with the rest of the API.
+- `HMM` now require a `name` argument.
+
+### Removed
+- Deprecated `ignore_gaps` argument in `SequenceFile.__init__`.
+- Deprecated `Sequence.taxonomy_id` property.
 
 
 ## [v0.7.4] - 2023-04-14
