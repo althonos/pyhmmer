@@ -116,7 +116,7 @@ Citation
 PyHMMER is scientific software, with a
 `published paper <https://doi.org/10.1093/bioinformatics/btad214>`_
 in the `Bioinformatics <https://academic.oup.com/bioinformatics>`_. Check the
-:doc:`Publications page <publications>` to see how to cite Pyrodigal PyHMMER.
+:doc:`Publications page <publications>` to see how to cite PyHMMER.
 
 
 Library
