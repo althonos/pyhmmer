@@ -3160,6 +3160,34 @@ cdef class HMM:
         profile.configure(self, background, L=L, multihit=multihit, local=local)
         return profile
 
+    cpdef void validate(self, float tolerance=1e-4) except *:
+        """validate(self, tolerance=1e-4)\n--
+
+        Validate the HMM agains the Plan7 structural constraints.
+
+        HMMs created with PyHMMER are always valid, whether they come from
+        a `~pyhmmer.plan7.Builder` or from the `HMM` constructor. However,
+        it is possible to manually edit the emission scores and transition
+        probabilities, and the structural constrains may not hold. Call 
+        this method to make sure the HMM is valid after you are done editing
+        it.
+
+        Arguments:
+            tolerance (`float`): The tolerance with which to check that the
+                transition probabilities sum to 1.
+
+        Raises:
+            `ValueError`: When the HMM fails validation.
+
+        .. versionadded:: 0.8.1
+
+        """
+        cdef char[eslERRBUFSIZE] errbuf
+        
+        if libhmmer.p7_hmm.p7_hmm_Validate(self._hmm, errbuf, tolerance) != libeasel.eslOK:
+            err_msg = errbuf.decode("utf-8", "replace")
+            raise ValueError(f"Invalid HMM: {err_msg}")
+
     cpdef void write(self, object fh, bint binary=False) except *:
         """write(self, fh, binary=False)\n--
 
@@ -8574,14 +8602,11 @@ cdef class TraceAligner:
             raise ValueError(f"Sequences and traces lengths mismatch ({nseq} sequences, {ntr} traces)")
         elif nseq == 0:
             return msa
-
         # check alphabet
         if not hmm.alphabet._eq(sequences.alphabet):
             raise AlphabetMismatch(hmm.alphabet, sequences.alphabet)
         # check HMM validity, otherwise the function may segfault
-        if libhmmer.p7_hmm.p7_hmm_Validate(hmm._hmm, errbuf, 1e-3) != libeasel.eslOK:
-            err_msg = errbuf.decode("utf-8", "replace")
-            raise ValueError(f"Invalid HMM: {err_msg}")
+        hmm.validate()
 
         # make the alignments
         with nogil:

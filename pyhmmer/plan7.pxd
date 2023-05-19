@@ -163,6 +163,7 @@ cdef class HMM:
     cpdef void scale(self, double scale, bint exponential=?)
     cpdef void set_composition(self)
     cpdef Profile to_profile(self,  Background background=?,  int L=*,  bint multihit =*,  bint local=*)
+    cpdef void validate(self, float tolerance=*) except *
     cpdef void write(self, object fh, bint binary=*) except *
     cpdef void zero(self)
 
