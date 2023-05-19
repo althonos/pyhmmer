@@ -6,13 +6,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.8.1...HEAD
+
+
+## [v0.8.1] - 2023-05-19
+[v0.8.1]: https://github.com/althonos/pyhmmer/compare/v0.8.0...v0.8.1
+
+### Added
+- `HMM.validate` method to ensure a HMM holds HMMER structural constraints.
+- `plan7.Transitions` enum with transition names for indexing `HMM.transition_probabilities`.
 
 
 ## [v0.8.0] - 2023-05-01
 [v0.8.0]: https://github.com/althonos/pyhmmer/compare/v0.7.4...v0.8.0
 
-PyHMMER has been accepted for publication in [Bioinformatics](https://academic.oup.com/bioinformatics). Paper can be reached [doi:10.1093/bioinformatics/btad214](https://doi.org/10.1093/bioinformatics/btad214).
+PyHMMER has been accepted for publication in [Bioinformatics](https://academic.oup.com/bioinformatics). Paper can be reached at [doi:10.1093/bioinformatics/btad214](https://doi.org/10.1093/bioinformatics/btad214).
 
 ### Added
 - `pyhmmer.hmmer.jackhmmer` function to run several JackHMMER iterative searches in parallel using multithreading ([#35](https://github.com/althonos/pyhmmer/pull/35), by [@zdk123](https://github.com/zdk123)).
@@ -90,7 +98,7 @@ PyHMMER has been accepted for publication in [Bioinformatics](https://academic.o
 - `name` attribute to `HMMFile`, `HMMPressedFile`, `MSAFile` and `SequenceFile` to expose the path of a file (when it was created from path).
 - `local` property to `Profile` and `OptimizedProfile`, indicating whether a profile is in local or global mode.
 - `multihit` property to `Profile` and `OptimizedProfile`, indicating whether a profile is in unihit or multihit mode, with a setter taking care of the reconfiguration.
-- `Domain.included` and `Domain.reported` settable properties to report the inclusion and reporting status of a single domain. 
+- `Domain.included` and `Domain.reported` settable properties to report the inclusion and reporting status of a single domain.
 - `TopHits.included` and `TopHits.reported` sized iterator to iterate only on included and reported hits.
 - `Domains.included` and `Domains.reported` sized iterator to iterate only on included and reported domains.
 
