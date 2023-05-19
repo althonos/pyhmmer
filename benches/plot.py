@@ -42,8 +42,8 @@ for result in data["results"]:
         raise ValueError(f"Unknown format: {result['command']!r}")
     result["cpu"] = int(CPU_RX.search(result["command"]).group(1))
 
-plt.figure(1, figsize=(24, 6))
-plt.subplot(1, 4, 1)
+plt.figure(1, figsize=(12, 12))
+plt.subplot(2, 2, 1)
 
 data["results"].sort(key=lambda r: (r["tool"], r["format"], r["cpu"]))
 for color, (tool, group) in zip(
@@ -77,7 +77,7 @@ plt.xlabel("CPUs")
 plt.ylabel("Time (s)")
 
 plt.figure(1, figsize=(24, 6))
-plt.subplot(1, 4, 2)
+plt.subplot(2, 2, 2)
 
 data["results"].sort(key=lambda r: (r["tool"], r["format"], r["cpu"]))
 for color, (tool, group) in zip(
@@ -123,7 +123,7 @@ for result in data["results"]:
     result["cpu"] = int(CPU_RX.search(result["command"]).group(1))
 
 # plt.figure(2, figsize=(6,6))
-plt.subplot(1, 4, 3)
+plt.subplot(2, 2, 3)
 data["results"].sort(key=lambda r: (r["tool"], r["cpu"]))
 for color, (tool, group) in zip(
     Bold_3.hex_colors[1:], itertools.groupby(data["results"], key=lambda r: r["tool"])
@@ -153,7 +153,7 @@ for result in data["results"]:
     result["cpu"] = int(CPU_RX.search(result["command"]).group(1))
 
 # plt.figure(2, figsize=(6,6))
-plt.subplot(1, 4, 4)
+plt.subplot(2, 2, 4)
 data["results"].sort(key=lambda r: (r["tool"], r["cpu"]))
 for color, (tool, group) in zip(
     Bold_3.hex_colors[1:], itertools.groupby(data["results"], key=lambda r: r["tool"])

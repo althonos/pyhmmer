@@ -13,6 +13,17 @@ and the version 33.1 of the `Pfam <https://pfam.xfam.org/>`_ HMM library contain
 the times for pressed HMMs, and dashed-lines the times for HMMs in text format.*
 
 
+v0.7.0 - 2022-12-04
+-------------------
+
+.. image:: _images/bench-v0.7.0.svg
+
+Collections for storing HMMs and Sequences were updated to allow iterating 
+without the GIL. For `hmmscan`, the `OptimizedProfileBlock` store an array 
+of semaphores to avoid concurrent reconfiguration by multiple pipeline 
+across different threads.
+
+
 v0.5.0 - 2022-03-14
 -------------------
 

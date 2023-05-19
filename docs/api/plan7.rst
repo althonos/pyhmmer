@@ -202,5 +202,5 @@ Transitions
 ^^^^^^^^^^^
 
 .. autoclass:: pyhmmer.plan7.Transitions
-   :members:
+   :members: MM, MD, MI, IM, II, DM, DD
 
