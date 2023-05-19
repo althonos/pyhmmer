@@ -152,6 +152,7 @@ import array
 import collections.abc
 import copy
 import datetime
+import enum
 import errno
 import math
 import io
@@ -2648,20 +2649,20 @@ cdef class HMM:
         per node (plus one extra row for the entry probabilities), and one
         column per transition.
 
-        Columns indices correspond to the following transitions weights:
-
-        - 0 for :math:`M_n \to M_{n+1}`
-        - 1 for :math:`M_n \to I_{n+1}`
-        - 2 for :math:`M_n \to D_{n+1}`
-        - 3 for :math:`I_n \to M_{n+1}`
-        - 4 for :math:`I_n \to I_{n+1}`
-        - 5 for :math:`D_n \to M_{n+1}`
-        - 6 for :math:`D_n \to D_{n+1}`
+        Columns correspond to the following transitions, in order:
+        :math:`M_n \to M_{n+1}`, :math:`M_n \to I_n`, :math:`M_n \to D_{n+1}`,
+        :math:`I_n \to I_n`, :math:`I_n \to I_{n+1}`, :math:`D_n \to M_{n+1}`,
+        :math: `D_n \to D_{n+1}`. Use the `~pyhmmer.plan7.Transitions` enum
+        instead of hardcoded indices to make your core more legible.
 
         Example:
             >>> t = thioesterase.transition_probabilities
-            >>> t[0, 5]  # TDM, 1 by convention
+            >>> t[1, Transitions.MM]
+            0.999...
+            >>> t[0, Transitions.DM]  # 1 by convention for the first node
             1.0
+            >>> t[-1, Transitions.MD] # 0 by convention for the last node
+            0.0
 
         Caution:
             If editing this matrix manually, note that some invariants need
@@ -2670,12 +2671,14 @@ cdef class HMM:
             probabilities between 0 and 1, and sum to 1::
 
                 >>> t = thioesterase.transition_probabilities
-                >>> t[50, 0] + t[50, 1] + t[50, 2]  # M_n probabilities
+                >>> t[50, Transitions.MM] + t[50, Transitions.MI] + t[50, Transitions.MD]
                 1.000...
-                >>> t[50, 3] + t[50, 4]  # I_n probabilities
+                >>> t[50, Transitions.IM] + t[50, Transitions.II]
                 1.000...
-                >>> t[50, 5] + t[50, 6]  # D_n probabilties
+                >>> t[50, Transitions.DM] + t[50, Transitions.DD]
                 1.000...
+
+            Consider calling `HMM.validate` after manual edition.
 
         .. versionadded:: 0.3.1
 
@@ -2711,7 +2714,8 @@ cdef class HMM:
         Caution:
             If editing this matrix manually, note that rows must contain
             valid probabilities for the HMM to be valid: each row must
-            contains values between 0 and 1, and sum to 1.
+            contains values between 0 and 1, and sum to 1. Consider
+            calling `HMM.validate` after manual edition.
 
         .. versionadded:: 0.3.1
 
@@ -2737,7 +2741,8 @@ cdef class HMM:
         Caution:
             If editing this matrix manually, note that rows must contain
             valid probabilities for the HMM to be valid: each row must
-            contains values between 0 and 1, and sum to 1.
+            contains values between 0 and 1, and sum to 1. Consider
+            calling `HMM.validate` after manual edition.
 
         .. versionadded:: 0.3.1
 
@@ -3129,23 +3134,23 @@ cdef class HMM:
             raise UnexpectedError(status, "p7_hmm_SetComposition")
 
     cpdef Profile to_profile(
-        self, 
-        Background background = None, 
-        int L = 400, 
-        bint multihit = True, 
+        self,
+        Background background = None,
+        int L = 400,
+        bint multihit = True,
         bint local = True
     ):
         """to_profile(self, background=None, L=400, multihit=True, local=True)\n--
 
         Create a new profile configured for this HMM.
 
-        This method is a shortcut for creating a new `~pyhmmer.plan7.Profile` 
-        and calling `~pyhmmer.plan7.Profile.configure` for a given HMM. 
+        This method is a shortcut for creating a new `~pyhmmer.plan7.Profile`
+        and calling `~pyhmmer.plan7.Profile.configure` for a given HMM.
         Prefer manually calling `~pyhmmer.plan7.Profile.configure` to recycle
         the profile buffer when running inside a loop.
 
         Arguments:
-            background (`~pyhmmer.plan7.Background`, optional): The null 
+            background (`~pyhmmer.plan7.Background`, optional): The null
                 background model. In `None` given, create a default one
                 for the HMM alphabet.
             L (`int`): The expected target sequence length.
@@ -3168,7 +3173,7 @@ cdef class HMM:
         HMMs created with PyHMMER are always valid, whether they come from
         a `~pyhmmer.plan7.Builder` or from the `HMM` constructor. However,
         it is possible to manually edit the emission scores and transition
-        probabilities, and the structural constrains may not hold. Call 
+        probabilities, and the structural constrains may not hold. Call
         this method to make sure the HMM is valid after you are done editing
         it.
 
@@ -3183,7 +3188,7 @@ cdef class HMM:
 
         """
         cdef char[eslERRBUFSIZE] errbuf
-        
+
         if libhmmer.p7_hmm.p7_hmm_Validate(self._hmm, errbuf, tolerance) != libeasel.eslOK:
             err_msg = errbuf.decode("utf-8", "replace")
             raise ValueError(f"Invalid HMM: {err_msg}")
@@ -8622,6 +8627,28 @@ cdef class TraceAligner:
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tracealign_Seqs")
         return msa
+
+
+class Transitions(enum.IntEnum):
+    """A helper enum for indices of the HMM transition probability matrix.
+
+    The Plan 7 model architecture used in HMMER describes a HMM which has
+    3 states and 7 transitions (hence the name) for every node of the model.
+    The HMM can transition from a *match* state (:math:`M_n`) to the next
+    match stage (:math:`M_{n+1}`), to an *insertion* state (:math:`I_n`)
+    or a *deletion* state (:math:`D_n`). However, no transition can occur
+    between a *deletion* and *insertion* state.
+
+    .. versionadded:: 0.8.1
+
+    """
+    MM = p7h_transitions_e.p7H_MM
+    MI = p7h_transitions_e.p7H_MI
+    MD = p7h_transitions_e.p7H_MD
+    IM = p7h_transitions_e.p7H_IM
+    II = p7h_transitions_e.p7H_II
+    DM = p7h_transitions_e.p7H_DM
+    DD = p7h_transitions_e.p7H_DD
 
 
 # --- Module init code -------------------------------------------------------

@@ -197,3 +197,10 @@ Offsets
 .. autoclass:: pyhmmer.plan7.Offsets
    :members:
 
+
+Transitions
+^^^^^^^^^^^
+
+.. autoclass:: pyhmmer.plan7.Transitions
+   :members:
+
