@@ -106,7 +106,7 @@ internal HMM for finding hits:
             with pyhmmer.plan7.HMMFile(src) as hmm_file:
                 # run the search pipeline and get hits with E-value <= 1e-5
                 for hits in hmmsearch(hmm_file, digital_sequences, E=1e-5):
-                    for hit in hits:
+                    for hit in hits.included:
                         is_thioredoxin[int(hit.name)] = True
 
         # return only the sequences that had at least one hit
@@ -142,8 +142,8 @@ installed, the HMMs will be installed next to the code.
 .. caution::
 
     PyPI has some size limits for uploaded files: by default, a single
-    distribution cannot be larger than 100MB. You probably will be able to
-    use this method a relatively large number of HMMs (up to a few thousands),
-    but you won't be able to upload a large HMM database such as Pfam in
+    distribution cannot be larger than 100MB. You will be able to use this
+    method a relatively small number of HMMs (up to a few thousands), but
+    you won't be able to upload a large HMM database such as Pfam in
     its entirety.
 

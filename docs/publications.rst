@@ -20,7 +20,8 @@ Users
 
 PyHMMER has been used in the following research works:
 
-- Carroll, L.M., Larralde, M., Fleck, J. S., Ponnudurai, R., Milanese, A., Cappio, E., Zeller, G., 2021. *Accurate de novo identification of biosynthetic gene clusters with GECCO* (preprint). bioRxiv. :doi:`10.1101/2021.05.03.442509`.
-- Lienhard, M., van den Beucken, T., Timmermann, B., Hochradel, M., Boerno, S., Caiment, F., Vingron, M., Herwig, R., 2021. *Long-read transcriptome sequencing analysis with IsoTools* (preprint). Genetics. :doi:`10.1101/2021.07.13.452091`.
-- Kautsar, S.A., van der Hooft, J.J.J., de Ridder, D., Medema, M.H., 2021. *BiG-SLiCE: A highly scalable tool maps the diversity of 1.2 million biosynthetic gene clusters*. GigaScience 10, giaa154. :doi:`10.1093/gigascience/giaa154`.
-- Konstantinidis, K., Ruiz-Perez, C., Gerhardt, K., Rodriguez-R, L., Jain, C., Tiedje, J., Cole, J., 2022. *FastAAI: Efficient Estimation of Genome Average Amino Acid Identity and Phylum-level relationships using Tetramers of Universal Protein* (preprint). ResearchSquare. :doi:`10.21203/rs.3.rs-1459378/v1`.
+- Carroll, L.M., M. Larralde, J.S. Fleck, R. Ponnudurai, A. Milanese, E. Cappio, G. Zeller, 2021. *Accurate de novo identification of biosynthetic gene clusters with GECCO* (preprint). bioRxiv. :doi:`10.1101/2021.05.03.442509`.
+- Lienhard, M., T. van den Beucken, B. Timmermann, M. Hochradel, S. Boerno, F. Caiment, M. Vingron, R. Herwig, 2021. *Long-read transcriptome sequencing analysis with IsoTools* (preprint). Genetics. :doi:`10.1101/2021.07.13.452091`.
+- Kautsar, S.A., J.J.J van der Hooft, D. de Ridder, M.H. Medema, 2021. *BiG-SLiCE: A highly scalable tool maps the diversity of 1.2 million biosynthetic gene clusters*. GigaScience 10, giaa154. :doi:`10.1093/gigascience/giaa154`.
+- Konstantinidis, K., C. Ruiz-Perez, K. Gerhardt, L. Rodriguez-R, C. Jain, J. Tiedje, J. Cole, 2022. *FastAAI: Efficient Estimation of Genome Average Amino Acid Identity and Phylum-level relationships using Tetramers of Universal Protein* (preprint). ResearchSquare. :doi:`10.21203/rs.3.rs-1459378/v1`.
+- Jamali, K., L. Käll, R. Zhang, A. Brown, D. Kimanius, S.H.W. Scheres, 2023. *Automated model building and protein identification in cryo-EM maps* (preprint). bioRxiv. :doi:`10.1101/2023.05.16.541002`.
