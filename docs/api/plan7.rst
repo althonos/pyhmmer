@@ -201,6 +201,19 @@ Offsets
 Transitions
 ^^^^^^^^^^^
 
-.. autoclass:: pyhmmer.plan7.Transitions
-   :members: MM, MD, MI, IM, II, DM, DD
+.. autoclass:: pyhmmer.plan7.Transitions(enum.IntEnum)
+
+   .. autoattribute:: MM
+
+   .. autoattribute:: MI
+
+   .. autoattribute:: MD
+
+   .. autoattribute:: IM
+
+   .. autoattribute:: II
+
+   .. autoattribute:: DM
+
+   .. autoattribute:: DD
 
