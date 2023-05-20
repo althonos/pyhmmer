@@ -2651,8 +2651,8 @@ cdef class HMM:
 
         Columns correspond to the following transitions, in order:
         :math:`M_n \to M_{n+1}`, :math:`M_n \to I_n`, :math:`M_n \to D_{n+1}`,
-        :math:`I_n \to I_n`, :math:`I_n \to I_{n+1}`, :math:`D_n \to M_{n+1}`,
-        :math: `D_n \to D_{n+1}`. Use the `~pyhmmer.plan7.Transitions` enum
+        :math:`I_n \to I_n`, :math:`I_n \to M_{n+1}`, :math:`D_n \to D_{n+1}`,
+        :math:`D_n \to M_{n+1}`. Use the `~pyhmmer.plan7.Transitions` enum
         instead of hardcoded indices to make your core more legible.
 
         Example:
@@ -8636,8 +8636,8 @@ class Transitions(enum.IntEnum):
     3 states and 7 transitions (hence the name) for every node of the model.
     The HMM can transition from a *match* state (:math:`M_n`) to the next
     match stage (:math:`M_{n+1}`), to an *insertion* state (:math:`I_n`)
-    or a *deletion* state (:math:`D_n`). However, no transition can occur
-    between a *deletion* and *insertion* state.
+    or a *deletion* state (:math:`D_{n+1}`). However, there are no 
+    transitions between a *deletion* and *insertion* state.
 
     .. versionadded:: 0.8.1
 
