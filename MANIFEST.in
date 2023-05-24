@@ -1,6 +1,7 @@
 
 include           README.md
 include           CHANGELOG.md
+include           CITATION.cff
 include           COPYING
 include           pyproject.toml
 recursive-include include                     *.pxd
