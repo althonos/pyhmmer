@@ -175,7 +175,7 @@ class MissingCutoffs(ValueError):
 
 
 class InvalidParameter(ValueError):
-    """An invalid paramater value was given.
+    """An invalid parameter value was given.
 
     .. versionadded:: 0.8.2
 
@@ -192,19 +192,21 @@ class InvalidParameter(ValueError):
         return f"{ty}({self.name!r}, {self.value!r}, {self.choices!r})"
 
     def __str__(self):
-        cdef str options = ""
-        cdef str hint    = self.hint
+        options = ""
+        hint = self.hint
 
         if hint is None and self.choices is not None:
             choices = [
-                x.__name__ 
-                if x is None 
-                or isinstance(x, type) 
-                else repr(x) 
+                x.__name__
+                if isinstance(x, type)
+                else repr(x)
                 for x in self.choices
             ]
-            hint = " or ".join([", ".join(choices[:-1]), choices[-1]])
+            hint = " or ".join([
+                ", ".join(choices[:len(self.choices)-1]),
+                choices[len(self.choices)-1]
+            ])
         if hint is not None:
             options = f" (expected {hint})"
-        
-        return f"Invalid {self.name!r} parameter value: {self.value!r}{hint}"
+
+        return f"Invalid {self.name!r} parameter value: {self.value!r}{options}"

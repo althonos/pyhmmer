@@ -1,7 +1,13 @@
 import unittest
 
 from pyhmmer.easel import Alphabet
-from pyhmmer.errors import UnexpectedError, AllocationError, EaselError, AlphabetMismatch
+from pyhmmer.errors import (
+    UnexpectedError,
+    AllocationError,
+    EaselError,
+    AlphabetMismatch,
+    InvalidParameter,
+)
 
 
 class TestErrors(unittest.TestCase):
@@ -37,3 +43,13 @@ class TestErrors(unittest.TestCase):
 
         err3 = AlphabetMismatch(Alphabet.dna(), Alphabet.amino())
         self.assertNotEqual(err, err3)
+
+    def test_invalid_parameters(self):
+        err = InvalidParameter("x", 1)
+        self.assertEqual(str(err), "Invalid 'x' parameter value: 1")
+
+        err = InvalidParameter("x", 1, hint="positive number")
+        self.assertEqual(str(err), "Invalid 'x' parameter value: 1 (expected positive number)")
+
+        err = InvalidParameter("x", 1, choices=["x", "y", "z", None])
+        self.assertEqual(str(err), "Invalid 'x' parameter value: 1 (expected 'x', 'y', 'z' or None)")
