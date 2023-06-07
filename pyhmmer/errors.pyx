@@ -4,6 +4,7 @@
 """
 
 cimport libeasel
+cimport libeasel.alphabet
 
 statuscode = {
     libeasel.eslOK: "eslOK",
@@ -128,7 +129,7 @@ class AlphabetMismatch(ValueError):
         return f"{type(self).__name__}({self.expected}, {self.actual})"
 
     def __str__(self):
-        return f"Expected {self.expected}, found {self.actual}"
+        return f"Expected {self.expected.type} alphabet, found {self.actual.type} alphabet"
 
     def __eq__(self, other):
         if not isinstance(other, AlphabetMismatch):

@@ -28,7 +28,7 @@ class TestErrors(unittest.TestCase):
     def test_alphabet_mismatch(self):
         err = AlphabetMismatch(Alphabet.dna(), Alphabet.rna())
         self.assertEqual(repr(err), "AlphabetMismatch(Alphabet.dna(), Alphabet.rna())")
-        self.assertEqual(str(err), "Expected Alphabet.dna(), found Alphabet.rna()")
+        self.assertEqual(str(err), "Expected DNA alphabet, found RNA alphabet")
         self.assertNotEqual(err, 1)
 
         err2 = AlphabetMismatch(Alphabet.dna(), Alphabet.rna())

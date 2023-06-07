@@ -302,6 +302,22 @@ cdef class Alphabet:
         assert self._abc != NULL
         return PyUnicode_DecodeASCII(self._abc.sym, self._abc.Kp, NULL)
 
+    @property
+    def type(self):
+        """`str`: The alphabet type, as a short string.
+
+        Example:
+            >>> Alphabet.dna().type
+            'DNA'
+            >>> Alphabet.amino().type
+            'amino'
+
+        .. versionadded:: 0.8.2
+
+        """
+        assert self._abc != NULL
+        return libeasel.alphabet.esl_abc_DecodeType(self._abc.type).decode('ascii')
+
     # --- Utils --------------------------------------------------------------
 
     cdef inline bint _eq(self, Alphabet other) nogil:
