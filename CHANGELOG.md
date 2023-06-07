@@ -6,7 +6,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.8.2...HEAD
+
+
+## [v0.8.2] - 2023-06-07
+[v0.8.2]: https://github.com/althonos/pyhmmer/compare/v0.8.1...v0.8.2
+
+### Added
+- Bracket-style `repr` implementation to `HMM`, `Profile` and `OptimizedProfile` showing model alphabet, length and name.
+- `MissingCutoffs` and `InvalidParameter` exceptions inheriting `ValueError`.
+
+### Changed
+- Replace `pthread` locks with `PyThread` API for synchronizing models in `OptimizedProfileBlock`.
+
+### Fixed
+- Sequence length extraction in `LongTargetsPipeline.search_hmm` ([#42](https://github.com/althonos/pyhmmer/issues/42)).
+- `LongTargetsPipeline.search_msa` not building a HMM with `Builder.build_msa`.
 
 
 ## [v0.8.1] - 2023-05-19
