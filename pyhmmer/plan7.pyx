@@ -174,8 +174,14 @@ import os
 import sys
 import warnings
 
-from .errors import AllocationError, UnexpectedError, AlphabetMismatch, MissingCutoffs
 from .utils import peekable, SizedIterator
+from .errors import (
+    AllocationError, 
+    UnexpectedError, 
+    AlphabetMismatch, 
+    MissingCutoffs,
+    InvalidParameter,
+)
 
 
 # --- Constants --------------------------------------------------------------
@@ -676,7 +682,11 @@ cdef class Builder:
         if _arch is not None:
             self._bld.arch_strategy = _arch
         else:
-            raise ValueError(f"Invalid value for 'architecture': {architecture}")
+            raise InvalidParameter(
+                "architecture", 
+                architecture, 
+                choices=list(BUILDER_ARCHITECTURE_STRATEGY)
+            )
 
         # set the weighting strategy
         self.weighting = weighting
@@ -684,7 +694,11 @@ cdef class Builder:
         if _weighting is not None:
             self._bld.wgt_strategy = _weighting
         else:
-            raise ValueError(f"Invalid value for 'weighting': {weighting}")
+            raise InvalidParameter(
+                "weighting", 
+                weighting, 
+                choices=list(BUILDER_WEIGHTING_STRATEGY)
+            )
 
         # set the effective sequence number strategy
         self.effective_number = effective_number
@@ -696,7 +710,11 @@ cdef class Builder:
             if _effn is not None:
                 self._bld.effn_strategy = _effn
             else:
-                raise ValueError(f"Invalid value for 'effective_number': {effective_number}")
+                raise InvalidParameter(
+                    "effective_number", 
+                    effective_number, 
+                    choices=list(BUILDER_EFFECTIVE_STRATEGY) + [int, float]
+                )
         else:
             ty = type(effective_number).__name__
             raise TypeError(f"Invalid type for 'effective_number': {ty}")
@@ -727,7 +745,7 @@ cdef class Builder:
                 else:
                     self._bld.prior = libhmmer.p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
             else:
-                raise ValueError("Invalid value for 'prior_scheme': {prior_scheme!r}")
+                raise InvalidParameter("prior_scheme", prior_scheme, choices=["laplace", "alphabet", None])
             if self._bld.prior == NULL:
                 raise AllocationError("P7_PRIOR", sizeof(P7_PRIOR))
 
@@ -791,7 +809,7 @@ cdef class Builder:
         elif window_length > 3:
             self._bld.w_len = window_length
         else:
-            raise ValueError(f"Invalid window length: {window_length!r}")
+            raise InvalidParameter("window_length", window_length, hint="integer greater than 3 or None")
 
     @property
     def window_beta(self):
@@ -804,7 +822,7 @@ cdef class Builder:
     def window_beta(self, double window_beta):
         assert self._bld != NULL
         if window_beta > 1 or window_beta < 0:
-            raise ValueError(f"Invalid window tail mass: {window_beta!r}")
+            raise InvalidParameter("window_beta", window_beta, hint="real number between 0 and 1")
         self._bld.w_beta = window_beta
 
     # --- Methods ------------------------------------------------------------
@@ -5251,7 +5269,7 @@ cdef class Pipeline:
             #
             flag = PIPELINE_BIT_CUTOFFS.get(bit_cutoffs)
             if flag is None:
-                raise ValueError(f"invalid bit cutoff: {bit_cutoffs!r}")
+                raise InvalidParameter("bit_cutoffs", bit_cutoffs, choices=list(PIPELINE_BIT_CUTOFFS) + [None])
             self._pli.use_bit_cutoffs = flag
             # save previous values before overwriting
             self._save_cutoff_parameters()
@@ -6770,12 +6788,12 @@ cdef class LongTargetsPipeline(Pipeline):
         cdef int64_t W      = pli.block_length
 
         if C <= 0:
-            raise ValueError(f"invalid context size: {C!r}")
+            raise InvalidParameter("C", C, hint="strictly positive integer")
         if W <= 0:
-            raise ValueError(f"invalid window size: {W!r}")
+            raise InvalidParameter("W", W, hint="strictly positive integer greater than C")
         if W <= C:
             # TODO: see if this is handled in nhmmer, and how to emulate it
-            raise ValueError("cannot have window size smaller than context")
+            raise InvalidParameter("W", W, hint="strictly positive integer greater than C")
 
         # configure the pipeline for the current HMM
         status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
@@ -6897,12 +6915,12 @@ cdef class LongTargetsPipeline(Pipeline):
         cdef ESL_SQ* dbsq_rc = NULL
 
         if C <= 0:
-            raise ValueError(f"invalid context size: {C!r}")
+            raise InvalidParameter("C", C, hint="strictly positive integer")
         if W <= 0:
-            raise ValueError(f"invalid window size: {W!r}")
+            raise InvalidParameter("W", W, hint="strictly positive integer greater than C")
         if W <= C:
             # TODO: see if this is handled in nhmmer, and how to emulate it?
-            raise ValueError("cannot have window size smaller than context")
+            raise InvalidParameter("W", W, hint="strictly positive integer greater than C")
 
         # configure the pipeline for the current HMM
         status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
@@ -7991,7 +8009,7 @@ cdef class TopHits:
             with nogil:
                 self._sort_by_seqidx()
         else:
-            raise ValueError("Invalid value for `by` argument: {!r}".format(by))
+            raise InvalidParameter("by", by, choices=["key", "seqidx"])
 
     cpdef bint is_sorted(self, str by="key") except *:
         """is_sorted(self, by="key")\n--
@@ -8008,7 +8026,7 @@ cdef class TopHits:
         elif by == "seqidx":
             return self._th.is_sorted_by_seqidx
         else:
-            raise ValueError("Invalid value for `by` argument: {!r}".format(by))
+            raise InvalidParameter("by", by, choices=["key", "seqidx"])
 
     cpdef MSA to_msa(
         self,
@@ -8188,7 +8206,7 @@ cdef class TopHits:
                     &self._pli,
                 )
             else:
-                raise ValueError("Invalid hits tabular format: {!r}".format(format))
+                raise InvalidParameter("format", format, choices=["targets", "domains", "pfam"])
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, fname)
         finally:

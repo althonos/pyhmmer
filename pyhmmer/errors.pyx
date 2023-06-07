@@ -91,7 +91,7 @@ class EaselError(RuntimeError):
         self.message = message
 
     def __repr__(self):
-        cdef str ty = type(self.__name__)
+        cdef str ty = type(self).__name__
         return f"{ty}({self.code!r}, {self.message!r})"
 
     def __str__(self):
@@ -127,7 +127,7 @@ class AlphabetMismatch(ValueError):
         self.actual = actual
 
     def __repr__(self):
-        cdef str ty = type(self.__name__)
+        cdef str ty = type(self).__name__
         return f"{ty}({self.expected!r}, {self.actual!r})"
 
     def __str__(self):
@@ -148,7 +148,7 @@ class ServerError(RuntimeError):
         self.message = message
 
     def __repr__(self):
-        cdef str ty = type(self.__name__)
+        cdef str ty = type(self).__name__
         return f"{ty}({self.code!r}, {self.message!r})"
 
     def __str__(self):
@@ -162,18 +162,49 @@ class ServerError(RuntimeError):
 class MissingCutoffs(ValueError):
     """The model is missing bitscore cutoffs required by the pipeline.
 
-    Attributes:
-        model (`pyhmmer.plan7.OptimizedProfile`): The optimized profile that
-            is missing the bitscore cutoffs.
-        cutoff (`str`): The name of the cutoff requested by the pipeline.
-
     .. versionadded:: 0.8.2
 
     """
 
     def __repr__(self):
-        cdef str ty = type(self.__name__)
+        cdef str ty = type(self).__name__
         return f"{ty}()"
 
     def __str__(self):
         return f"Model is missing bitscore cutoff required by pipeline"
+
+
+class InvalidParameter(ValueError):
+    """An invalid paramater value was given.
+
+    .. versionadded:: 0.8.2
+
+    """
+
+    def __init__(self, str name, object value, *, list choices=None, str hint=None):
+        self.name = name
+        self.value = value
+        self.choices = choices
+        self.hint = hint
+
+    def __repr__(self):
+        cdef str ty = type(self).__name__
+        return f"{ty}({self.name!r}, {self.value!r}, {self.choices!r})"
+
+    def __str__(self):
+        cdef str options = ""
+        cdef str hint    = self.hint
+
+        if hint is None and self.choices is not None:
+            choices = [
+                x.__name__ 
+                if x is None 
+                or isinstance(x, type) 
+                else repr(x) 
+                for x in self.choices
+            ]
+            hint = " or ".join([", ".join(choices[:-1]), choices[-1]])
+        if hint is not None:
+            options = f" (expected {hint})"
+        
+        return f"Invalid {self.name!r} parameter value: {self.value!r}{hint}"

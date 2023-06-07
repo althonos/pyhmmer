@@ -104,7 +104,7 @@ import pickle
 import sys
 import warnings
 
-from .errors import AllocationError, UnexpectedError, AlphabetMismatch
+from .errors import AllocationError, UnexpectedError, AlphabetMismatch, InvalidParameter
 from .utils import peekable
 
 # --- Constants --------------------------------------------------------------
@@ -510,9 +510,9 @@ cdef class GeneticCode:
         cdef int status
 
         if not nucleotide_alphabet.is_nucleotide():
-            raise ValueError(f"Invalid nucleotide alphabet {nucleotide_alphabet!r}")
+            raise InvalidParameter("nucleotide_alphabet", nucleotide_alphabet, "nucleotide alphabet")
         if not amino_alphabet.is_amino():
-            raise ValueError(f"Invalid amino alphabet {amino_alphabet!r}")
+            raise InvalidParameter("amino_alphabet", amino_alphabet, "amino alphabet")
 
         self._gcode = libeasel.gencode.esl_gencode_Create(nucleotide_alphabet._abc, amino_alphabet._abc)
         if self._gcode == NULL:
@@ -547,7 +547,7 @@ cdef class GeneticCode:
         assert self._gcode != NULL
         status = libeasel.gencode.esl_gencode_Set(self._gcode, translation_table)
         if status == libeasel.eslENOTFOUND:
-            raise ValueError(f"Invalid translation table: {translation_table!r}")
+            raise InvalidParameter("translation_table", translation_table, hint="translation table code")
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_gencode_Set")
 
@@ -3460,7 +3460,7 @@ cdef class MSA:
         cdef FILE*  file
 
         if format not in MSA_FILE_FORMATS:
-            raise ValueError("Invalid MSA format: {!r}".format(format))
+            raise InvalidParameter("format", format, choices=list(MSA_FILE_FORMATS))
 
         fmt = MSA_FILE_FORMATS[format]
         file = fopen_obj(fh, mode="w")
@@ -6067,9 +6067,9 @@ cdef class SequenceFile:
         cdef int fmt = libeasel.sqio.eslSQFILE_UNKNOWN
         if format is not None:
             format_ = format.lower()
-            if format_ not in cls._FORMATS:
-                raise ValueError("Invalid sequence format: {!r}".format(format))
-            fmt = cls._FORMATS[format_]
+            if format_ not in SEQUENCE_FILE_FORMATS:
+                raise InvalidParameter("format", format, choices=list(SEQUENCE_FILE_FORMATS))
+            fmt = SEQUENCE_FILE_FORMATS[format_]
 
         cdef int status = libeasel.sqio.esl_sqio_Parse(
             <char*> &buffer[0],
@@ -6326,7 +6326,7 @@ cdef class SequenceFile:
         if format is not None:
             format_ = format.lower()
             if format_ not in SEQUENCE_FILE_FORMATS:
-                raise ValueError("Invalid sequence format: {!r}".format(format))
+                raise InvalidParameter("format", format, choices=list(SEQUENCE_FILE_FORMATS))
             fmt = SEQUENCE_FILE_FORMATS[format_]
 
         # open the given filename
