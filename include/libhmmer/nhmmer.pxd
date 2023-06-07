@@ -1,5 +1,6 @@
-from libc.stdint cimport uint64_t
+from libc.stdint cimport int64_t, uint64_t
 from libc.stdlib cimport calloc, malloc, realloc, free
+from libc.stdio cimport printf
 
 cimport libeasel
 from libhmmer.p7_tophits cimport P7_TOPHITS
@@ -8,17 +9,17 @@ from capacity cimport new_capacity
 
 
 ctypedef struct ID_LENGTH:
-    int id
-    int length
+    int64_t id
+    int64_t length
 
 
 ctypedef struct ID_LENGTH_LIST:
-    ID_LENGTH *id_lengths
-    int        count
-    int        size
+    ID_LENGTH* id_lengths
+    size_t     count
+    size_t     size
 
 
-cdef inline ID_LENGTH_LIST* idlen_list_init(int size) nogil:
+cdef inline ID_LENGTH_LIST* idlen_list_init(size_t size) nogil:
     cdef ID_LENGTH_LIST* l = <ID_LENGTH_LIST*> malloc(sizeof(ID_LENGTH_LIST))
     if l != NULL:
         l.count = 0
@@ -35,7 +36,7 @@ cdef inline void idlen_list_destroy(ID_LENGTH_LIST* l) nogil:
             free(l.id_lengths)
         free(l)
 
-cdef inline int idlen_list_add(ID_LENGTH_LIST* l, int id, int L) nogil:
+cdef inline int idlen_list_add(ID_LENGTH_LIST* l, int64_t id, int64_t L) nogil:
     if l.count > 0 and l.id_lengths[l.count - 1].id == id:
         l.id_lengths[l.count - 1].length = L
     else:
@@ -51,7 +52,7 @@ cdef inline int idlen_list_add(ID_LENGTH_LIST* l, int id, int L) nogil:
 
 cdef inline int idlen_list_assign(ID_LENGTH_LIST* l, P7_TOPHITS* th) nogil:
     cdef uint64_t i
-    cdef int      j = 0
+    cdef int64_t  j = 0
     for i in range(th.N):
         while j < l.count and th.hit[i].seqidx != l.id_lengths[j].id:
             j += 1

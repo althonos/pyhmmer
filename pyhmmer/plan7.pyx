@@ -6743,7 +6743,6 @@ cdef class LongTargetsPipeline(Pipeline):
         cdef int     status
         cdef int     nres
         cdef size_t  t
-        cdef int64_t index  = 0
         cdef int64_t j      = 0
         cdef int64_t rem    = 0
         cdef int64_t i      = 0
@@ -6773,10 +6772,10 @@ cdef class LongTargetsPipeline(Pipeline):
         # run the inner loop on all sequences
         for t in range(n_targets):
             # record length
-            libhmmer.nhmmer.idlen_list_add(idlens, index, sq[t].L)
+            libhmmer.nhmmer.idlen_list_add(idlens, t, sq[t].L)
 
             # initialize the sequence window storage
-            tmpsq.idx = index
+            tmpsq.idx = t
             tmpsq.L = -1
             libeasel.sq.esl_sq_SetAccession(tmpsq, sq[t].acc)
             libeasel.sq.esl_sq_SetName(tmpsq, sq[t].name)
