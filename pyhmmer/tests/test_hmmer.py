@@ -10,7 +10,7 @@ import pkg_resources
 
 import pyhmmer
 from pyhmmer.plan7 import Pipeline, HMMFile, HMMPressedFile, TopHits, Hit
-from pyhmmer.easel import Alphabet, MSAFile, SequenceFile, TextSequence
+from pyhmmer.easel import Alphabet, DigitalMSA, MSAFile, SequenceFile, TextSequence
 
 
 class _TestSearch(metaclass=abc.ABCMeta):
@@ -534,6 +534,36 @@ class TestNhmmer(unittest.TestCase):
         self.assertEqual(len(hits.reported), 1)
         with self.table("bmyD3.tbl") as table:
             self.assertTableEqual(hits, table)
+
+
+    def test_bmyd_msa_bgc_block(self):
+        alphabet = Alphabet.dna()
+
+        path = pkg_resources.resource_filename(__name__, "data/seqs/bmyD.fna")
+        with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
+            query = DigitalMSA(alphabet, name=b"bmyD", sequences=[next(seqs_file)])
+
+        path = pkg_resources.resource_filename(__name__, "data/seqs/BGC0001090.gbk")
+        with SequenceFile(
+            path, "genbank", digital=True, alphabet=alphabet
+        ) as seqs_file:
+            seqs = seqs_file.read_block()
+
+        hits = next(pyhmmer.nhmmer(query, seqs, cpus=1))
+        self.assertEqual(len(hits), 1)
+
+
+    def test_bmyd_msa_bgc_file(self):
+        alphabet = Alphabet.dna()
+
+        path = pkg_resources.resource_filename(__name__, "data/seqs/bmyD.fna")
+        with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
+            query = DigitalMSA(alphabet, name=b"bmyD", sequences=[next(seqs_file)])
+
+        path = pkg_resources.resource_filename(__name__, "data/seqs/BGC0001090.gbk")
+        with SequenceFile(path, "genbank", digital=True, alphabet=alphabet) as seqs:
+            hits = list(pyhmmer.nhmmer(query, seqs, cpus=1))[0]
+            self.assertEqual(len(hits.reported), 1)
 
     def test_bmyd_hmm_bgc_block(self):
         alphabet = Alphabet.dna()

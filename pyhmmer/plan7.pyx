@@ -6730,7 +6730,7 @@ cdef class LongTargetsPipeline(Pipeline):
         if not self.alphabet._eq(query.alphabet):
             raise AlphabetMismatch(self.alphabet, query.alphabet)
         builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
-        cdef HMM hmm = builder.build(query, self.background)[0]
+        cdef HMM hmm = builder.build_msa(query, self.background)[0]
         assert hmm._hmm.max_length != -1
         if isinstance(sequences, DigitalSequenceBlock):
             return self.search_hmm[DigitalSequenceBlock](hmm, sequences)
