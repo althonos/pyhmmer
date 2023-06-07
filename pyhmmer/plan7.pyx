@@ -449,6 +449,10 @@ cdef class Background:
     def __copy__(self):
         return self.copy()
 
+    def __repr__(self):
+        cdef str ty = type(self).__name__
+        return f"{ty}({self.alphabet!r}, uniform={self.uniform!r})"
+
     # --- Properties ---------------------------------------------------------
 
     @property
