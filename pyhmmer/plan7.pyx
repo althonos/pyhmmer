@@ -176,9 +176,9 @@ import warnings
 
 from .utils import peekable, SizedIterator
 from .errors import (
-    AllocationError, 
-    UnexpectedError, 
-    AlphabetMismatch, 
+    AllocationError,
+    UnexpectedError,
+    AlphabetMismatch,
     MissingCutoffs,
     InvalidParameter,
 )
@@ -687,8 +687,8 @@ cdef class Builder:
             self._bld.arch_strategy = _arch
         else:
             raise InvalidParameter(
-                "architecture", 
-                architecture, 
+                "architecture",
+                architecture,
                 choices=list(BUILDER_ARCHITECTURE_STRATEGY)
             )
 
@@ -699,8 +699,8 @@ cdef class Builder:
             self._bld.wgt_strategy = _weighting
         else:
             raise InvalidParameter(
-                "weighting", 
-                weighting, 
+                "weighting",
+                weighting,
                 choices=list(BUILDER_WEIGHTING_STRATEGY)
             )
 
@@ -709,19 +709,14 @@ cdef class Builder:
         if isinstance(effective_number, (int, float)):
             self._bld.effn_strategy = p7_effnchoice_e.p7_EFFN_SET
             self._bld.eset = effective_number
-        elif isinstance(effective_number, str):
-            _effn = BUILDER_EFFECTIVE_STRATEGY.get(effective_number)
-            if _effn is not None:
-                self._bld.effn_strategy = _effn
-            else:
-                raise InvalidParameter(
-                    "effective_number", 
-                    effective_number, 
-                    choices=list(BUILDER_EFFECTIVE_STRATEGY) + [int, float]
-                )
+        elif isinstance(effective_number, str) and effective_number in BUILDER_EFFECTIVE_STRATEGY:
+            self._bld.effn_strategy = BUILDER_EFFECTIVE_STRATEGY[effective_number]
         else:
-            ty = type(effective_number).__name__
-            raise TypeError(f"Invalid type for 'effective_number': {ty}")
+            raise InvalidParameter(
+                "effective_number",
+                effective_number,
+                choices=list(BUILDER_EFFECTIVE_STRATEGY) + [int, float]
+            )
 
         # set the RE target if given one, otherwise the default
         # is alphabet dependent
@@ -930,7 +925,7 @@ cdef class Builder:
             hmm.command_line = " ".join(sys.argv)
         elif status == libeasel.eslEINVAL:
             msg = self._bld.errbuf.decode("utf-8", "replace")
-            raise ValueError("Could not build HMM: {}".format(msg))
+            raise ValueError(f"Could not build HMM: {msg}")
         else:
             raise UnexpectedError(status, "p7_SingleBuilder")
 
@@ -1032,7 +1027,7 @@ cdef class Builder:
             hmm.command_line = " ".join(sys.argv)
         elif status == libeasel.eslEINVAL:
             msg = self._bld.errbuf.decode("utf-8", "replace")
-            raise ValueError("Could not build HMM: {}".format(msg))
+            raise ValueError(f"Could not build HMM: {msg}")
         else:
             raise UnexpectedError(status, "p7_Builder")
 
@@ -6411,7 +6406,7 @@ cdef class LongTargetsPipeline(Pipeline):
         elif strand == "crick":
             self._pli.strands = p7_strands_e.p7_STRAND_BOTTOMONLY
         else:
-            raise ValueError(f"invalid strand: {strand!r}")
+            raise InvalidParameter("strand", strand, choices=["watson", "crick", None])
 
     # --- Methods ------------------------------------------------------------
 
@@ -6442,7 +6437,7 @@ cdef class LongTargetsPipeline(Pipeline):
             elif cutoff == "trusted":
                 argv.append("--cut_tc")
             else:
-                raise ValueError(f"Unknown bit cutoffs: {cutoff!r}")
+                raise InvalidParameter("bit_cutoffs", cutoff, choices=["gathering", "trusted", "noise"])
         else:
             # options controlling reporting thresholds
             if self._pli.by_E:
