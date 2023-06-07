@@ -27,8 +27,8 @@ class TestErrors(unittest.TestCase):
 
     def test_alphabet_mismatch(self):
         err = AlphabetMismatch(Alphabet.dna(), Alphabet.rna())
-        self.assertEqual(repr(err), "AlphabetMismatch(pyhmmer.easel.Alphabet.dna(), pyhmmer.easel.Alphabet.rna())")
-        self.assertEqual(str(err), "Expected pyhmmer.easel.Alphabet.dna(), found pyhmmer.easel.Alphabet.rna()")
+        self.assertEqual(repr(err), "AlphabetMismatch(Alphabet.dna(), Alphabet.rna())")
+        self.assertEqual(str(err), "Expected Alphabet.dna(), found Alphabet.rna()")
         self.assertNotEqual(err, 1)
 
         err2 = AlphabetMismatch(Alphabet.dna(), Alphabet.rna())

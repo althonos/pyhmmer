@@ -221,17 +221,16 @@ cdef class Alphabet:
 
         cdef type   ty   = type(self)
         cdef str    name = ty.__name__
-        cdef str    mod  = ty.__module__
 
         if self._abc.type == libeasel.alphabet.eslRNA:
-            return f"{mod}.{name}.rna()"
+            return f"{name}.rna()"
         elif self._abc.type == libeasel.alphabet.eslDNA:
-            return f"{mod}.{name}.dna()"
+            return f"{name}.dna()"
         elif self._abc.type == libeasel.alphabet.eslAMINO:
-            return f"{mod}.{name}.amino()"
+            return f"{name}.amino()"
         else:
-            return "{}.{name}({!r}, K={!r}, Kp={!r})".format(
-                mod,
+            return "{}({!r}, K={!r}, Kp={!r})".format(
+                name,
                 self._abc.sym.decode('ascii'),
                 self._abc.K,
                 self._abc.Kp
@@ -363,7 +362,7 @@ cdef class Alphabet:
         Example:
             >>> alphabet = easel.Alphabet.dna()
             >>> alphabet.encode("ACGT")
-            pyhmmer.easel.VectorU8([0, 1, 2, 3])
+            VectorU8([0, 1, 2, 3])
 
         .. versionadded:: 0.6.3
 
@@ -463,6 +462,8 @@ cdef class GeneticCode:
 
     """
 
+    # --- Magic methods ------------------------------------------------------
+
     def __cinit__(self):
         self._gcode = NULL
 
@@ -505,6 +506,15 @@ cdef class GeneticCode:
         self.nucleotide_alphabet = nucleotide_alphabet
         self.translation_table = translation_table
 
+    def __repr__(self):
+        cdef str ty = type(self).__name__
+        if self.nucleotide_alphabet.is_dna():
+            return f"{ty}({self.translation_table!r})"
+        else:
+            return f"{ty}({self.translation_table!r}, nucleotide_alphabet={self.nucleotide_alphabet!r})"
+
+    # --- Properties ---------------------------------------------------------
+
     @property
     def translation_table(self):
         """`int`: The translation table in use.
@@ -532,6 +542,8 @@ cdef class GeneticCode:
         assert self._gcode != NULL
         return self._gcode.desc.decode('ascii')
 
+    # --- Utils --------------------------------------------------------------
+
     cdef void _translate(
         self,
         const ESL_DSQ* seq,
@@ -553,6 +565,8 @@ cdef class GeneticCode:
             if aa == -1:
                 raise ValueError(f"Failed to translate codon at index {j!r}")
             out[i] = aa
+
+    # --- Methods ------------------------------------------------------------
 
     cpdef VectorU8 translate(self, const ESL_DSQ[::1] sequence):
         """translate(self, sequence)\n--
@@ -615,9 +629,9 @@ cdef class Bitfield:
         a given length with all fields set to :math:`0` or :math:`1`::
 
             >>> Bitfield.zeros(4)
-            pyhmmer.easel.Bitfield([False, False, False, False])
+            Bitfield([False, False, False, False])
             >>> Bitfield.ones(4)
-            pyhmmer.easel.Bitfield([True, True, True, True])
+            Bitfield([True, True, True, True])
 
         Use indexing to access and edit individual bits::
 
@@ -741,10 +755,8 @@ cdef class Bitfield:
         return NotImplemented
 
     def __repr__(self):
-        cdef type ty   = type(self)
-        cdef str  name = ty.__name__
-        cdef str  mod  = ty.__module__
-        return f"{mod}.{name}({list(self)!r})"
+        cdef str ty = type(self).__name__
+        return f"{ty}({list(self)!r})"
 
     def __reduce_ex__(self, int protocol):
         assert self._b != NULL
@@ -1283,10 +1295,8 @@ cdef class Vector:
             buffer.internal = NULL
 
     def __repr__(self):
-        cdef type ty   = type(self)
-        cdef str  name = ty.__name__
-        cdef str  mod  = ty.__module__
-        return f"{mod}.{name}({list(self)!r})"
+        cdef str ty = type(self).__name__
+        return f"{ty}({list(self)!r})"
 
     def __sizeof__(self):
         return self._n * self.itemsize + sizeof(self)
@@ -1432,36 +1442,36 @@ cdef class VectorF(Vector):
         3.0
         >>> v[0] = v[-1] = 4.0
         >>> v
-        pyhmmer.easel.VectorF([4.0, 2.0, 4.0])
+        VectorF([4.0, 2.0, 4.0])
 
     Slices are also supported, and they do not copy data (use the
     `~pyhmmer.easel.VectorF.copy` method to allocate a new vector)::
 
         >>> v = VectorF(range(6))
         >>> v[2:5]
-        pyhmmer.easel.VectorF([2.0, 3.0, 4.0])
+        VectorF([2.0, 3.0, 4.0])
         >>> v[2:-1] = 10.0
         >>> v
-        pyhmmer.easel.VectorF([0.0, 1.0, 10.0, 10.0, 10.0, 5.0])
+        VectorF([0.0, 1.0, 10.0, 10.0, 10.0, 5.0])
 
     Addition and multiplication is supported for scalars, in place or not::
 
         >>> v = VectorF([1.0, 2.0, 3.0])
         >>> v += 1
         >>> v
-        pyhmmer.easel.VectorF([2.0, 3.0, 4.0])
+        VectorF([2.0, 3.0, 4.0])
         >>> v * 3
-        pyhmmer.easel.VectorF([6.0, 9.0, 12.0])
+        VectorF([6.0, 9.0, 12.0])
 
     Pairwise operations can also be performed, but only on vectors of
     the same dimension and precision::
 
         >>> v = VectorF([1.0, 2.0, 3.0])
         >>> v * v
-        pyhmmer.easel.VectorF([1.0, 4.0, 9.0])
+        VectorF([1.0, 4.0, 9.0])
         >>> v += VectorF([3.0, 4.0, 5.0])
         >>> v
-        pyhmmer.easel.VectorF([4.0, 6.0, 8.0])
+        VectorF([4.0, 6.0, 8.0])
         >>> v *= VectorF([1.0])
         Traceback (most recent call last):
           ...
@@ -2425,10 +2435,8 @@ cdef class Matrix:
 
     def __repr__(self):
         cdef Vector row
-        cdef type   ty   = type(self)
-        cdef str    name = ty.__name__
-        cdef str    mod  = ty.__module__
-        return f"{mod}.{name}({[list(row) for row in self]!r})"
+        cdef str    ty  = type(self).__name__
+        return f"{ty}({[list(row) for row in self]!r})"
 
     def __sizeof__(self):
         return (
@@ -2568,14 +2576,14 @@ cdef class MatrixF(Matrix):
         >>> m = MatrixF.zeros(2, 2)
         >>> m[0, 0] = 3.0
         >>> m
-        pyhmmer.easel.MatrixF([[3.0, 0.0], [0.0, 0.0]])
+        MatrixF([[3.0, 0.0], [0.0, 0.0]])
 
     Indexing can also be performed at the row-level to get a `VectorF`
     without copying the underlying data::
 
         >>> m = MatrixF([ [1.0, 2.0], [3.0, 4.0] ])
         >>> m[0]
-        pyhmmer.easel.VectorF([1.0, 2.0])
+        VectorF([1.0, 2.0])
 
     Objects of this type support the buffer protocol, and can be viewed
     as a `numpy.ndarray` with two dimensions using the `numpy.asarray`
@@ -4197,14 +4205,16 @@ cdef class MSAFile:
         return msa
 
     def __repr__(self):
-        cdef type ty   = type(self)
-        cdef str  name = ty.__name__
-        cdef str  mod  = ty.__module__
-        cdef list args = [repr(self._file), repr(self.format)]
-        if self.digital:
-            args.append(f"digital={self.digital}")
-            args.append(f"alphabet={self.alphabet!r}")
-        return f"{mod}.{name}({', '.join(args)})"
+        cdef str  name = type(self).__name__
+        cdef list args = [
+            f"format={self.format!r}",
+            f"digital={self.digital}",
+            f"alphabet={self.alphabet!r}"
+        ]
+        if self.name is None:
+            return f"<{name} file={self.file!r} {' '.join(args)}>"
+        else:
+            return f"{name}({self.name!r}, {', '.join(args)})"
 
     # --- Properties ---------------------------------------------------------
 
@@ -4256,7 +4266,7 @@ cdef class MSAFile:
         Example:
             >>> with MSAFile("tests/data/msa/laccase.clw") as mf:
             ...     mf.guess_alphabet()
-            pyhmmer.easel.Alphabet.amino()
+            Alphabet.amino()
 
         """
         cdef int      ty
@@ -4382,7 +4392,7 @@ cdef class Randomness:
         cdef type ty   = type(self)
         cdef str  name = ty.__name__
         cdef str  mod  = ty.__module__
-        return f"{mod}.{name}({self._rng.seed!r}, fast={self.fast!r})"
+        return f"{name}({self._rng.seed!r}, fast={self.fast!r})"
 
     def __getstate__(self):
         return self.getstate()
@@ -6363,14 +6373,16 @@ cdef class SequenceFile:
         return seq
 
     def __repr__(self):
-        cdef type ty   = type(self)
-        cdef str  name = ty.__name__
-        cdef str  mod  = ty.__module__
-        cdef list args = [repr(self._file), repr(self.format)]
-        if self.digital:
-            args.append(f"digital={self.digital}")
-            args.append(f"alphabet={self.alphabet!r}")
-        return f"{mod}.{name}({', '.join(args)})"
+        cdef str  name = type(self).__name__
+        cdef list args = [
+            f"format={self.format!r}",
+            f"digital={self.digital}",
+            f"alphabet={self.alphabet!r}"
+        ]
+        if self.name is None:
+            return f"<{name} file={self.file!r} {' '.join(args)}>"
+        else:
+            return f"{name}({self.name!r}, {', '.join(args)})"
 
     # --- Properties ---------------------------------------------------------
 
@@ -6425,10 +6437,10 @@ cdef class SequenceFile:
         Example:
             >>> with SequenceFile("tests/data/seqs/bmyD.fna") as sf:
             ...     sf.guess_alphabet()
-            pyhmmer.easel.Alphabet.dna()
+            Alphabet.dna()
             >>> with SequenceFile("tests/data/seqs/LuxC.faa") as sf:
             ...     sf.guess_alphabet()
-            pyhmmer.easel.Alphabet.amino()
+            Alphabet.amino()
 
         .. versionadded:: 0.6.3
 

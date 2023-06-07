@@ -1094,10 +1094,8 @@ cdef class Cutoffs:
         return c
 
     def __repr__(self):
-        ty = type(self).__name__
-        return "<Pfam score cutoffs of {!r}>".format(
-            self._owner,
-        )
+        cdef str ty = type(self).__name__
+        return f"<{ty} of {self._owner!r}>"
 
     def __eq__(self, object other):
         if isinstance(other, Cutoffs):
@@ -1620,10 +1618,8 @@ cdef class EvalueParameters:
         return ev
 
     def __repr__(self):
-        ty = type(self).__name__
-        return "<e-value parameters of {!r}>".format(
-            self._owner,
-        )
+        cdef str ty = type(self).__name__
+        return f"<{ty} of {self._owner!r}>"
 
     def __eq__(self, object other):
         if isinstance(other, EvalueParameters):
@@ -2214,6 +2210,10 @@ cdef class HMM:
     def __dealloc__(self):
         libhmmer.p7_hmm.p7_hmm_Destroy(self._hmm)
 
+    def __repr__(self):
+        cdef str ty = type(self).__name__
+        return f"<{ty} alphabet={self.alphabet!r} M={self.M!r} name={self.name!r}>"
+
     def __eq__(self, object other):
         assert self._hmm != NULL
 
@@ -2720,8 +2720,8 @@ cdef class HMM:
             1 probability for the first symbol, and 0 for the rest::
 
                 >>> hmm = HMM(easel.Alphabet.dna(), 100, b"test")
-                >>> hmm.match_emissions[0]
-                pyhmmer.easel.VectorF([1.0, 0.0, 0.0, 0.0])
+                >>> hmm.match_emissions
+                MatrixF([[1.0, 0.0, 0.0, 0.0], ...])
 
         Caution:
             If editing this matrix manually, note that rows must contain
@@ -3430,6 +3430,13 @@ cdef class HMMFile:
             warnings.warn("unclosed HMM file", ResourceWarning)
             self.close()
 
+    def __repr__(self):
+        cdef str ty = type(self).__name__
+        if self._name is not None:
+            return f"{ty}({self._name!r})"
+        else:
+            return f"<{ty} file={self._file!r}>"
+
     def __enter__(self):
         return self
 
@@ -3444,12 +3451,6 @@ cdef class HMMFile:
         if hmm is None:
             raise StopIteration()
         return hmm
-
-    def __repr__(self):
-        cdef type ty   = type(self)
-        cdef str  name = ty.__name__
-        cdef str  mod  = ty.__module__
-        return f"{mod}.{name}({self._file!r}, db={self.is_pressed()!r})"
 
     # --- Properties ---------------------------------------------------------
 
@@ -3658,8 +3659,13 @@ cdef class HMMPressedFile:
         return om
 
     def __repr__(self):
+
         cdef str ty = type(self).__name__
-        return f"{ty}({self.name!r})"
+        cdef str mod = type(self).__module__
+        if self._hmmfile._name is not None:
+            return f"{ty}({self._hmmfile._name!r})"
+        else:
+            return f"<{ty} file={self._hmmfile._file!r}>"
 
     def __enter__(self):
         return self
@@ -3971,6 +3977,10 @@ cdef class OptimizedProfile:
 
     def __dealloc__(self):
         p7_oprofile.p7_oprofile_Destroy(self._om)
+
+    def __repr__(self):
+        cdef str ty = type(self).__name__
+        return f"<{ty} alphabet={self.alphabet!r} M={self.M!r} name={self.name!r}>"
 
     def __copy__(self):
         return self.copy()
@@ -4678,13 +4688,8 @@ cdef class Offsets:
         return copy
 
     def __repr__(self):
-        ty = type(self).__name__
-        return "<offsets of {!r} model={!r} filter={!r} profile={!r}>".format(
-            self._owner,
-            self.model,
-            self.filter,
-            self.profile,
-        )
+        cdef str ty = type(self).__name__
+        return f"<{ty} model={self.model!r} filter={self.filter!r} profile={self.profile!r}>"
 
     # --- Properties ---------------------------------------------------------
 
@@ -6997,6 +7002,10 @@ cdef class Profile:
     def __dealloc__(self):
         libhmmer.p7_profile.p7_profile_Destroy(self._gm)
 
+    def __repr__(self):
+        cdef str ty = type(self).__name__
+        return f"<{ty} alphabet={self.alphabet!r} M={self.M!r} name={self.name!r}>"
+
     def __copy__(self):
         return self.copy()
 
@@ -8364,6 +8373,10 @@ cdef class Trace:
         else:
             raise UnexpectedError(status, "p7_trace_Compare")
 
+    def __repr__(self):
+        cdef str ty = type(self).__name__
+        return f"<{ty} M={self.M!r} L={self.L!r}>"
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -8650,7 +8663,7 @@ class Transitions(enum.IntEnum):
     3 states and 7 transitions (hence the name) for every node of the model.
     The HMM can transition from a *match* state (:math:`M_n`) to the next
     match stage (:math:`M_{n+1}`), to an *insertion* state (:math:`I_n`)
-    or a *deletion* state (:math:`D_{n+1}`). However, there are no 
+    or a *deletion* state (:math:`D_{n+1}`). However, there are no
     transitions between a *deletion* and *insertion* state.
 
     .. versionadded:: 0.8.1
