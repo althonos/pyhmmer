@@ -154,6 +154,10 @@ IF UNAME_SYSNAME == "Linux":
 ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
     include "fileobj/bsd.pxi"
 
+# NOTE(@althonos): PY_LOCK_ACQUIRED is not exposed by PyPy
+IF SYS_IMPLEMENTATION_NAME == "pypy":
+    DEF PY_LOCK_ACQUIRED = 1
+
 # --- Python imports ---------------------------------------------------------
 
 import array
