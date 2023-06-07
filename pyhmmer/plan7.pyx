@@ -174,7 +174,7 @@ import os
 import sys
 import warnings
 
-from .errors import AllocationError, UnexpectedError, AlphabetMismatch
+from .errors import AllocationError, UnexpectedError, AlphabetMismatch, MissingCutoffs
 from .utils import peekable, SizedIterator
 
 
@@ -4199,7 +4199,7 @@ cdef class OptimizedProfile:
 
     @property
     def cutoffs(self):
-        """`~plan7.Cutoffs`: The bitscore cutoffs for this profile, if any.
+        """`~plan7.Cutoffs`: The bitscore cutoffs for this profile.
         """
         assert self._om != NULL
         cdef Cutoffs cutoffs = Cutoffs.__new__(Cutoffs)
@@ -5557,7 +5557,7 @@ cdef class Pipeline:
                     hits._th,
                 )
             else:
-                raise NotImplementedError("search_hmm")
+                raise NotImplementedError("Pipeline.search_hmm")
             # sort hits and set bookkeeping attributes
             hits._sort_by_key()
             hits._threshold(self)
@@ -5740,7 +5740,7 @@ cdef class Pipeline:
         # configure the pipeline for the current HMM
         status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
         if status == libeasel.eslEINVAL:
-            raise ValueError("model does not have bit score thresholds expected by the pipeline")
+            raise MissingCutoffs()
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_pli_NewModel")
 
@@ -5759,7 +5759,7 @@ cdef class Pipeline:
             # run the pipeline on the target sequence
             status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, sq[t], NULL, th)
             if status == libeasel.eslEINVAL:
-                raise ValueError("model does not have bit score thresholds expected by the pipeline")
+                raise MissingCutoffs()
             elif status == libeasel.eslERANGE:
                 raise OverflowError("numerical overflow in the optimized vector implementation")
             elif status != libeasel.eslOK:
@@ -5807,7 +5807,7 @@ cdef class Pipeline:
             # configure the pipeline for the current HMM
             status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
             if status == libeasel.eslEINVAL:
-                raise ValueError("model does not have bit score thresholds expected by the pipeline")
+                raise MissingCutoffs()
             elif status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_pli_NewModel")
             # run the inner loop on all sequences
@@ -5836,7 +5836,7 @@ cdef class Pipeline:
                 # run the pipeline on the target sequence
                 status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, dbsq, NULL, th)
                 if status == libeasel.eslEINVAL:
-                    raise ValueError("model does not have bit score thresholds expected by the pipeline")
+                    raise MissingCutoffs()
                 elif status == libeasel.eslERANGE:
                     raise OverflowError("numerical overflow in the optimized vector implementation")
                 elif status != libeasel.eslOK:
@@ -5986,7 +5986,7 @@ cdef class Pipeline:
                 # run the pipeline on the query sequence
                 status = libhmmer.p7_pipeline.p7_Pipeline(pli, om[t], bg, sq, NULL, th)
                 if status == libeasel.eslEINVAL:
-                    raise ValueError("model does not have bit score thresholds expected by the pipeline")
+                    raise MissingCutoffs()
                 elif status == libeasel.eslERANGE:
                     raise OverflowError("numerical overflow in the optimized vector implementation")
                 elif status != libeasel.eslOK:
@@ -6042,7 +6042,7 @@ cdef class Pipeline:
                 # run the pipeline on the query sequence
                 status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, sq, NULL, th)
                 if status == libeasel.eslEINVAL:
-                    raise ValueError("model does not have bit score thresholds expected by the pipeline")
+                    raise MissingCutoffs()
                 elif status == libeasel.eslERANGE:
                     raise OverflowError("numerical overflow in the optimized vector implementation")
                 elif status != libeasel.eslOK:
@@ -6319,7 +6319,7 @@ cdef class LongTargetsPipeline(Pipeline):
         """
         # check that a nucleotide alphabet is given
         if not alphabet.is_nucleotide():
-            raise ValueError(f"Expected nucleotide alphabet, found {alphabet!r}")
+            raise AlphabetMismatch(Alphabet.dna(), alphabet)
         # create the pipeline
         super().__init__(alphabet, background, F1=F1, F2=F2, F3=F3, **kwargs)
         # set the options for long targets
@@ -6629,7 +6629,7 @@ cdef class LongTargetsPipeline(Pipeline):
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "idlen_list_assign")
             # remove target duplicates from the hits (using the ones with best E-value)
-            libhmmer.p7_tophits.p7_tophits_RemoveDuplicates(hits._th, True)#self._pli.use_bit_cutoffs)
+            libhmmer.p7_tophits.p7_tophits_RemoveDuplicates(hits._th, True)
             # sort hits, threshold and record pipeline configuration
             hits._sort_by_key()
             hits._threshold(self)
@@ -6780,7 +6780,7 @@ cdef class LongTargetsPipeline(Pipeline):
         # configure the pipeline for the current HMM
         status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
         if status == libeasel.eslEINVAL:
-            raise ValueError("model does not have bit score thresholds expected by the pipeline")
+            raise MissingCutoffs()
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_pli_NewModel")
 
@@ -6838,7 +6838,7 @@ cdef class LongTargetsPipeline(Pipeline):
                     # run the pipeline on the forward strand
                     status = libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, tmpsq, p7_complementarity_e.p7_NOCOMPLEMENT, NULL, NULL, NULL)
                     if status == libeasel.eslEINVAL:
-                        raise ValueError("model does not have bit score thresholds expected by the pipeline")
+                        raise MissingCutoffs()
                     elif status == libeasel.eslERANGE:
                         raise OverflowError("numerical overflow in the optimized vector implementation")
                     elif status != libeasel.eslOK:
@@ -6855,7 +6855,7 @@ cdef class LongTargetsPipeline(Pipeline):
                     # run the pipeline on the reverse strand
                     status = libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, tmpsq, p7_complementarity_e.p7_COMPLEMENT, NULL, NULL, NULL)
                     if status == libeasel.eslEINVAL:
-                        raise ValueError("model does not have bit score thresholds expected by the pipeline")
+                        raise MissingCutoffs()
                     elif status == libeasel.eslERANGE:
                         raise OverflowError("numerical overflow in the optimized vector implementation")
                     elif status != libeasel.eslOK:
@@ -6907,7 +6907,7 @@ cdef class LongTargetsPipeline(Pipeline):
         # configure the pipeline for the current HMM
         status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
         if status == libeasel.eslEINVAL:
-            raise ValueError("model does not have bit score thresholds expected by the pipeline")
+            raise MissingCutoffs()
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_pli_NewModel")
 
@@ -7141,7 +7141,7 @@ cdef class Profile:
 
     @property
     def cutoffs(self):
-        """`~plan7.Cutoffs`: The bitscore cutoffs for this profile, if any.
+        """`~plan7.Cutoffs`: The bitscore cutoffs for this profile.
         """
         assert self._gm != NULL
         cdef Cutoffs cutoffs = Cutoffs.__new__(Cutoffs)
@@ -8535,9 +8535,7 @@ cdef class TraceAligner:
         if not hmm.alphabet._eq(sequences.alphabet):
             raise AlphabetMismatch(hmm.alphabet, sequences.alphabet)
         # check HMM validity, otherwise the function may segfault
-        if libhmmer.p7_hmm.p7_hmm_Validate(hmm._hmm, errbuf, 1e-3) != libeasel.eslOK:
-            err_msg = errbuf.decode("utf-8", "replace")
-            raise ValueError(f"Invalid HMM: {err_msg}")
+        hmm.validate(tolerance=1e-3)
 
         # allocate the return array of traces and create empty traces
         traces._ntraces = nseq

@@ -65,16 +65,16 @@ class AllocationError(MemoryError):
     """A memory error that is caused by an unsuccessful allocation.
     """
 
-    def __init__(self, str ctype, int itemsize, int count=1):
+    def __init__(self, str ctype, size_t itemsize, size_t count=1):
         self.ctype = ctype
         self.itemsize = itemsize
         self.count = count
 
     def __repr__(self):
-        cdef str typename = type(self).__name__
+        cdef str ty = type(self).__name__
         if self.count == 1:
-            return f"{typename}({self.ctype!r}, {self.itemsize})"
-        return f"{typename}({self.ctype!r}, {self.itemsize}, {self.count})"
+            return f"{ty}({self.ctype!r}, {self.itemsize})"
+        return f"{ty}({self.ctype!r}, {self.itemsize}, {self.count})"
 
     def __str__(self):
         if self.count == 1:
@@ -91,7 +91,8 @@ class EaselError(RuntimeError):
         self.message = message
 
     def __repr__(self):
-        return "{}({!r}, {!r})".format(type(self).__name__, self.code, self.message)
+        cdef str ty = type(self.__name__)
+        return f"{ty}({self.code!r}, {self.message!r})"
 
     def __str__(self):
         return "Error raised from C code: {}, {} (status code {})".format(
@@ -126,7 +127,8 @@ class AlphabetMismatch(ValueError):
         self.actual = actual
 
     def __repr__(self):
-        return f"{type(self).__name__}({self.expected}, {self.actual})"
+        cdef str ty = type(self.__name__)
+        return f"{ty}({self.expected!r}, {self.actual!r})"
 
     def __str__(self):
         return f"Expected {self.expected.type} alphabet, found {self.actual.type} alphabet"
@@ -146,7 +148,8 @@ class ServerError(RuntimeError):
         self.message = message
 
     def __repr__(self):
-        return "{}({!r}, {!r})".format(type(self).__name__, self.code, self.message)
+        cdef str ty = type(self.__name__)
+        return f"{ty}({self.code!r}, {self.message!r})"
 
     def __str__(self):
         return "Error in server: {}, {} (status code {})".format(
@@ -154,3 +157,23 @@ class ServerError(RuntimeError):
             statuscode.get(self.code, "<unknown>"),
             self.code,
         )
+
+
+class MissingCutoffs(ValueError):
+    """The model is missing bitscore cutoffs required by the pipeline.
+
+    Attributes:
+        model (`pyhmmer.plan7.OptimizedProfile`): The optimized profile that
+            is missing the bitscore cutoffs.
+        cutoff (`str`): The name of the cutoff requested by the pipeline.
+
+    .. versionadded:: 0.8.2
+
+    """
+
+    def __repr__(self):
+        cdef str ty = type(self.__name__)
+        return f"{ty}()"
+
+    def __str__(self):
+        return f"Model is missing bitscore cutoff required by pipeline"
