@@ -27,7 +27,15 @@ from libc.stdio cimport fprintf, FILE, stdout, fclose
 from libc.string cimport memset, memcpy, memmove, strdup, strndup, strlen, strcmp, strncpy
 from libc.time cimport ctime, strftime, time, time_t, tm, localtime_r
 from unicode cimport PyUnicode_DATA, PyUnicode_KIND, PyUnicode_READ, PyUnicode_READY, PyUnicode_GET_LENGTH
-from pthread_mutex cimport pthread_mutex_t, pthread_mutex_lock, pthread_mutex_unlock, pthread_mutex_destroy, pthread_mutex_init
+from cpython.pythread cimport (
+    PyThread_type_lock,
+    PyThread_allocate_lock,
+    PyThread_free_lock,
+    PyThread_acquire_lock,
+    PyThread_release_lock,
+    WAIT_LOCK,
+    PY_LOCK_ACQUIRED,
+)
 
 cimport libeasel
 cimport libeasel.sq
@@ -4376,16 +4384,18 @@ cdef class OptimizedProfileBlock:
             if self._block == NULL:
                 raise AllocationError("P7_OM_BLOCK", sizeof(P7_OM_BLOCK))
         if self._locks == NULL:
-            self._locks = <pthread_mutex_t*> calloc(8, sizeof(pthread_mutex_t))
+            self._locks = <PyThread_type_lock*> calloc(8, sizeof(PyThread_type_lock))
             if self._locks == NULL:
-                raise AllocationError("pthread_mutex_t", sizeof(pthread_mutex_t), 8)
+                raise AllocationError("PyThread_type_lock", sizeof(PyThread_type_lock), 8)
+            for i in range(self._block.listSize):
+                self._locks[i] = PyThread_allocate_lock()
         self.clear()
         self.extend(iterable)
 
     def __dealloc__(self):
         if self._locks != NULL:
-            for i in range(self._block.count):
-                pthread_mutex_destroy(&self._locks[i])
+            for i in range(self._block.listSize):
+                PyThread_free_lock(self._locks[i])
             free(self._locks)
         if self._block != NULL:
             # avoid a double free of the sequence contents
@@ -4463,7 +4473,8 @@ cdef class OptimizedProfileBlock:
         return (
                 sizeof(self)
             +   sizeof(P7_OM_BLOCK)
-            +   self._block.listSize * sizeof(pthread_mutex_t)
+            +   self._block.listSize * sizeof(PyThread_type_lock*)
+            +   self._block.listSize * sizeof(PyThread_type_lock)
             +   self._block.listSize * sizeof(P7_OPROFILE*)
         )
 
@@ -4482,17 +4493,17 @@ cdef class OptimizedProfileBlock:
 
         with nogil:
             self._block.list = <P7_OPROFILE**> realloc(self._block.list, capacity * sizeof(P7_OPROFILE*))
-            self._locks = <pthread_mutex_t*> realloc(self._locks, capacity * sizeof(pthread_mutex_t))
+            self._locks = <PyThread_type_lock*> realloc(self._locks, capacity * sizeof(PyThread_type_lock))
+        if self._locks == NULL:
+            raise AllocationError("PyThread_type_lock", sizeof(PyThread_type_lock), capacity)
+        else:
+            for i in range(self._block.listSize, capacity):
+                self._locks[i] = PyThread_allocate_lock()
         if self._block.list == NULL:
             self._block.listSize = 0
             raise AllocationError("P7_OPROFILE*", sizeof(P7_OPROFILE*), capacity)
         else:
             self._block.listSize = capacity
-        if self._locks == NULL:
-            raise AllocationError("pthread_mutex_t", sizeof(pthread_mutex_t), capacity)
-        # for i in range(self._block.count, self._block.listSize):
-        #     self._block.list[i] = NULL
-
 
     # --- Python methods -----------------------------------------------------
 
@@ -4507,7 +4518,6 @@ cdef class OptimizedProfileBlock:
             raise AlphabetMismatch(self.alphabet, optimized_profile.alphabet)
         if self._block.count == self._block.listSize:
             self._allocate(self._block.count)
-        pthread_mutex_init(&self._locks[self._block.count], NULL)
         self._storage.append(optimized_profile)
         self._block.list[self._block.count] = optimized_profile._om
         self._block.count += 1
@@ -4625,11 +4635,11 @@ cdef class OptimizedProfileBlock:
             raise AllocationError("P7_OM_BLOCK", sizeof(P7_OM_BLOCK))
         memcpy(new._block.list, self._block.list, self._block.count * sizeof(ESL_SQ*))
         new._block.count = self._block.count
-        new._locks = <pthread_mutex_t*> calloc(self._block.count, sizeof(pthread_mutex_t))
+        new._locks = <PyThread_type_lock*> calloc(self._block.count, sizeof(PyThread_type_lock))
         if new._locks == NULL:
-            raise AllocationError("pthread_mutex_t", sizeof(pthread_mutex_t), new._block.count)
-        for i in range(new._block.count):
-            pthread_mutex_init(&new._locks[i], NULL)
+            raise AllocationError("PyThread_type_lock", sizeof(PyThread_type_lock), new._block.count)
+        for i in range(new._block.listSize):
+            new._locks[i] = PyThread_allocate_lock()
         return new
 
 
@@ -5929,13 +5939,13 @@ cdef class Pipeline:
 
     @staticmethod
     cdef int _scan_loop(
-              P7_PIPELINE*     pli,
-        const ESL_SQ*          sq,
-              P7_BG*           bg,
-              P7_OPROFILE**    om,
-        const size_t           n_targets,
-              P7_TOPHITS*      th,
-              pthread_mutex_t* locks,
+              P7_PIPELINE*        pli,
+        const ESL_SQ*             sq,
+              P7_BG*              bg,
+              P7_OPROFILE**       om,
+        const size_t              n_targets,
+              P7_TOPHITS*         th,
+              PyThread_type_lock* locks,
     ) nogil except 1:
         cdef int    status
         cdef size_t t
@@ -5957,9 +5967,10 @@ cdef class Pipeline:
             # use a critical section here because `p7_oprofile_ReconfigLength`
             # will modify the optimized profile, so there is a risk of data race
             # if the scan loop is run in parallel on the same target profiles.
+            # configure the profile
+            if PyThread_acquire_lock(locks[t], WAIT_LOCK) != PY_LOCK_ACQUIRED:
+                raise RuntimeError("Failed to acquire lock")
             try:
-                # configure the profile
-                pthread_mutex_lock(&locks[t])
                 status = p7_oprofile.p7_oprofile_ReconfigLength(om[t], sq.n)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
@@ -5972,7 +5983,7 @@ cdef class Pipeline:
                 elif status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_Pipeline")
             finally:
-                pthread_mutex_unlock(&locks[t])
+                PyThread_release_lock(locks[t])
             # clear pipeline for reuse for next target
             libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
 
