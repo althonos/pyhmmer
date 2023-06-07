@@ -709,14 +709,18 @@ cdef class Builder:
         if isinstance(effective_number, (int, float)):
             self._bld.effn_strategy = p7_effnchoice_e.p7_EFFN_SET
             self._bld.eset = effective_number
-        elif isinstance(effective_number, str) and effective_number in BUILDER_EFFECTIVE_STRATEGY:
+        elif isinstance(effective_number, str):
+            effn = BUILDER_EFFECTIVE_STRATEGY.get(effective_number)
+            if effn is None:
+                raise InvalidParameter(
+                    "effective_number",
+                    effective_number,
+                    choices=list(BUILDER_EFFECTIVE_STRATEGY) + [int, float]
+                )
             self._bld.effn_strategy = BUILDER_EFFECTIVE_STRATEGY[effective_number]
         else:
-            raise InvalidParameter(
-                "effective_number",
-                effective_number,
-                choices=list(BUILDER_EFFECTIVE_STRATEGY) + [int, float]
-            )
+            ty = type(effective_number).__name__
+            raise TypeError(f"Expected str, int or float, found {ty}")
 
         # set the RE target if given one, otherwise the default
         # is alphabet dependent
@@ -1099,7 +1103,7 @@ cdef class Cutoffs:
             self._is_profile = False
         else:
             ty = type(owner).__name__
-            raise TypeError("expected Profile or HMM, found {ty}")
+            raise TypeError(f"expected Profile or HMM, found {ty}")
 
     def __copy__(self):
         cdef Cutoffs c
@@ -1626,7 +1630,7 @@ cdef class EvalueParameters:
             self._owner = owner
         else:
             ty = type(owner).__name__
-            raise TypeError("expected Profile or HMM, found {ty}")
+            raise TypeError(f"expected Profile or HMM, found {ty}")
 
     def __copy__(self):
         cdef EvalueParameters ev = EvalueParameters.__new__(EvalueParameters)
@@ -4695,7 +4699,7 @@ cdef class Offsets:
             self._owner = owner
         else:
             ty = type(owner).__name__
-            raise TypeError("expected Profile or OptimizedProfile, found {ty}")
+            raise TypeError(f"expected Profile or OptimizedProfile, found {ty}")
 
     def __copy__(self):
         assert self._offs != NULL
