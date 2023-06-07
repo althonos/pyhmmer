@@ -44,3 +44,19 @@ ServerError
 .. autoexception:: ServerError(RuntimeError)
    :special-members: __init__
    :members:
+
+
+MissingCutoffs
+--------------
+
+.. autoexception:: MissingCutoffs(ValueError)
+   :special-members: __init__
+   :members:
+
+
+InvalidParameter
+----------------
+
+.. autoexception:: InvalidParameter(ValueError)
+   :special-members: __init__
+   :members:
