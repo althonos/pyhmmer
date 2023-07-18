@@ -19,18 +19,18 @@ one is available, or from source after compiling the Cython code :
 
 .. code:: console
 
-	$ pip install --user pyhmmer
+    $ pip install --user pyhmmer
 
 Conda
 ^^^^^
 
-Pronto is also available as a `recipe <https://anaconda.org/bioconda/pyhmmer>`_
+PyHMMER is also available as a `recipe <https://anaconda.org/bioconda/pyhmmer>`_
 in the `bioconda <https://bioconda.github.io/>`_ channel. To install, simply
 use the ``conda`` installer:
 
 .. code:: console
 
-	 $ conda install -c bioconda pyhmmer
+     $ conda install -c bioconda pyhmmer
 
 
 Arch User Repository
@@ -45,7 +45,7 @@ Steps to install on ArchLinux depend on your `AUR helper <https://wiki.archlinux
 
 .. code:: console
 
-   $ aura -A python-pyhmmer
+    $ aura -A python-pyhmmer
 
 
 .. EMBL Package Registry
@@ -69,8 +69,13 @@ the repository and install the repository by running (with the admin rights):
 
 .. code:: console
 
-	$ pip install -U git+https://github.com/althonos/pyhmmer
+    $ pip install -U git+https://github.com/althonos/pyhmmer
 
+
+.. caution::
+
+    Keep in mind this will install always try to install the latest commit,
+    which may not even build, so consider using a versioned release instead.
 
 An experimental branch for platforms with Arm NEON support (either `armv7`
 or `aarch64`) can be installed the same way. Note that Arm is not officially
@@ -79,13 +84,7 @@ the moment:
 
 .. code:: console
 
-	$ pip install -U git+https://github.com/althonos/pyhmmer@neon-support
-
-
-.. caution::
-
-    Keep in mind this will install always try to install the latest commit,
-    which may not even build, so consider using a versioned release instead.
+    $ pip install -U git+https://github.com/althonos/pyhmmer@neon-support
 
 
 GitHub + ``setuptools``
@@ -97,10 +96,10 @@ build dependencies (mainly `Cython <https://pypi.org/project/cython>`_):
 
 .. code:: console
 
-	$ git clone --recursive https://github.com/althonos/pyhmmer
-	$ cd pyhmmer
-	$ python setup.py build
-	# python setup.py install
+    $ git clone --recursive https://github.com/althonos/pyhmmer
+    $ cd pyhmmer
+    $ python setup.py build
+    # python setup.py install
 
 .. Danger::
 
