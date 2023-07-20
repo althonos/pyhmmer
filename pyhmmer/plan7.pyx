@@ -7435,6 +7435,8 @@ cdef class TopHits:
         cdef Hit       hit    = Hit.__new__(Hit, self, 0)
         cdef list      unsrt  = []
         cdef list      hits   = []
+        cdef list      hits_nincluded = []
+        cdef list      hits_nreported = []
 
         hit.hits = self
         for i in range(self._th.N):
@@ -7445,12 +7447,17 @@ cdef class TopHits:
         for i in range(self._th.N):
             offset = (<ptrdiff_t> self._th.hit[i] - <ptrdiff_t> &self._th.unsrt[0]) // sizeof(P7_HIT)
             hits.append(offset)
+            hits_nreported.append(self._th.hit[i].nreported)
+            hits_nincluded.append(self._th.hit[i].nincluded)
+
 
         return {
             "qname": self._qname,
             "qacc": self._qacc,
             "unsrt": unsrt,
             "hit": hits,
+            "hits_nincluded": hits_nincluded,
+            "hits_nreported": hits_nreported,
             "Nalloc": self._th.Nalloc,
             "N": self._th.N,
             "nreported": self._th.nreported,
@@ -7546,6 +7553,8 @@ cdef class TopHits:
         assert len(state["hit"]) == <Py_ssize_t> self._th.N
         for i, offset in enumerate(state["hit"]):
             self._th.hit[i] = &self._th.unsrt[offset]
+            self._th.hit[i].nreported = state["hits_nreported"][i]
+            self._th.hit[i].nincluded = state["hits_nincluded"][i]
 
         # deserialize hits
         assert len(state["unsrt"]) == <Py_ssize_t> self._th.N
