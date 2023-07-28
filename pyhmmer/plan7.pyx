@@ -8302,6 +8302,8 @@ cdef class TopHits:
                     raise UnexpectedError(status, "p7_pipeline_Merge")
 
         # reset nincluded/nreports before thresholding
+        # TODO(@althonos, @zdk123): Replace with `p7_tophits_Threshold` as implemented 
+        #                  in EddyRivasLab/hmmer#307 when formally released. 
         for i in range(merged._th.N):
             merged._th.hit[i].nincluded = 0
             merged._th.hit[i].nreported = 0
