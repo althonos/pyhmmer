@@ -7456,8 +7456,6 @@ cdef class TopHits:
             "qacc": self._qacc,
             "unsrt": unsrt,
             "hit": hits,
-            "hits_nincluded": hits_nincluded,
-            "hits_nreported": hits_nreported,
             "Nalloc": self._th.Nalloc,
             "N": self._th.N,
             "nreported": self._th.nreported,
@@ -7536,8 +7534,6 @@ cdef class TopHits:
 
         # copy numbers
         self._th.N = self._th.Nalloc = state["N"]
-        self._th.nreported = state["nreported"]
-        self._th.nincluded = state["nincluded"]
         self._th.is_sorted_by_seqidx = state["is_sorted_by_seqidx"]
         self._th.is_sorted_by_sortkey = state["is_sorted_by_sortkey"]
 
@@ -7553,8 +7549,6 @@ cdef class TopHits:
         assert len(state["hit"]) == <Py_ssize_t> self._th.N
         for i, offset in enumerate(state["hit"]):
             self._th.hit[i] = &self._th.unsrt[offset]
-            self._th.hit[i].nreported = state["hits_nreported"][i]
-            self._th.hit[i].nincluded = state["hits_nincluded"][i]
 
         # deserialize hits
         assert len(state["unsrt"]) == <Py_ssize_t> self._th.N
@@ -8307,6 +8301,11 @@ cdef class TopHits:
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_pipeline_Merge")
 
+        # reset nincluded/nreports before thresholding
+        for i in range(merged._th.N):
+            merged._th.hit[i].nincluded = 0
+            merged._th.hit[i].nreported = 0
+                
         # threshold the merged hits with new values
         status = libhmmer.p7_tophits.p7_tophits_Threshold(merged._th, &merged._pli)
         if status != libeasel.eslOK:
