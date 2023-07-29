@@ -7435,8 +7435,6 @@ cdef class TopHits:
         cdef Hit       hit    = Hit.__new__(Hit, self, 0)
         cdef list      unsrt  = []
         cdef list      hits   = []
-        cdef list      hits_nincluded = []
-        cdef list      hits_nreported = []
 
         hit.hits = self
         for i in range(self._th.N):
@@ -7447,9 +7445,6 @@ cdef class TopHits:
         for i in range(self._th.N):
             offset = (<ptrdiff_t> self._th.hit[i] - <ptrdiff_t> &self._th.unsrt[0]) // sizeof(P7_HIT)
             hits.append(offset)
-            hits_nreported.append(self._th.hit[i].nreported)
-            hits_nincluded.append(self._th.hit[i].nincluded)
-
 
         return {
             "qname": self._qname,
@@ -7534,6 +7529,8 @@ cdef class TopHits:
 
         # copy numbers
         self._th.N = self._th.Nalloc = state["N"]
+        self._th.nreported = state["nreported"]
+        self._th.nincluded = state["nincluded"]
         self._th.is_sorted_by_seqidx = state["is_sorted_by_seqidx"]
         self._th.is_sorted_by_sortkey = state["is_sorted_by_sortkey"]
 
@@ -8301,7 +8298,7 @@ cdef class TopHits:
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_pipeline_Merge")
 
-        # reset nincluded/nreports before thresholding
+        # Reset nincluded/nreports before thresholding
         # TODO(@althonos, @zdk123): Replace with `p7_tophits_Threshold` as implemented 
         #                  in EddyRivasLab/hmmer#307 when formally released. 
         for i in range(merged._th.N):
