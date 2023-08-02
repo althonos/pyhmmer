@@ -7373,7 +7373,6 @@ cdef class TopHits:
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
-        self._init = False
         self._th = NULL
         self._qname = None
         self._qacc = None

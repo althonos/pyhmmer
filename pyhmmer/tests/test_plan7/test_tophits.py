@@ -70,16 +70,20 @@ class TestTopHits(unittest.TestCase):
                 getattr(h2, attr),
                 "attribute {!r} differs".format(attr)
             )
-        self.assertEqual(len(h1.domains), len(h2.domains))
-        self.assertEqual(len(h1.domains.reported), len(h2.domains.reported))
-#        self.assertEqual(len(h1.domains.included), len(h2.domains.included))
         for d1, d2 in zip(h1.domains, h2.domains):
             self.assertDomainEqual(d1, d2)
+        self.assertEqual(len(h1.domains), len(h2.domains))
+        self.assertEqual(len(h1.domains.reported), len(h2.domains.reported))
+        self.assertEqual(len(h1.domains.included), len(h2.domains.included))
+        self.assertEqual(sum(d.reported for d in h1.domains), sum(d.reported for d in h2.domains))
+        self.assertEqual(sum(d.included for d in h1.domains), sum(d.included for d in h2.domains))
 
     def assertHitsEqual(self, hits1, hits2):
         self.assertEqual(hits1.query_name, hits2.query_name)
         self.assertEqual(hits1.query_accession, hits2.query_accession)
         self.assertEqual(len(hits1), len(hits2))
+        self.assertEqual(len(hits1.included), len(hits2.included))
+        self.assertEqual(len(hits1.reported), len(hits2.reported))
         for h1, h2 in zip(hits1, hits2):
             self.assertHitEqual(h1, h2)
 
@@ -95,9 +99,14 @@ class TestTopHits(unittest.TestCase):
 
         cls.pipeline = Pipeline(alphabet=cls.hmm.alphabet)
         cls._hits = cls.pipeline.search_hmm(cls.hmm, cls.seqs)
-    
+
     def setUp(self):
         self.hits = self._hits.copy()
+
+    def test_mode(self):
+        pipeline = Pipeline(alphabet=self.hmm.alphabet)
+        search_hits = pipeline.search_hmm(self.hmm, self.seqs)
+        self.assertEqual(search_hits.mode, "search")
 
     def test_bool(self):
         self.assertFalse(pyhmmer.plan7.TopHits())
@@ -166,39 +175,92 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(merged_empty.domZ, 0.0)
 
         merged = empty.merge(self.hits)
+        self.assertEqual(merged.query_name, self.hits.query_name)
+        self.assertEqual(merged.query_accession, self.hits.query_accession)
+        self.assertEqual(merged.E, self.hits.E)
         self.assertHitsEqual(merged, self.hits)
-
 
     def test_merge_pipeline(self):
         pipeline = Pipeline(alphabet=self.hmm.alphabet)
-        hits1 = pipeline.search_hmm(self.hmm, self.seqs[:1000])
-        hits2 = pipeline.search_hmm(self.hmm, self.seqs[1000:2000])
-        hits3 = pipeline.search_hmm(self.hmm, self.seqs[2000:])
 
+        hits1 = pipeline.search_hmm(self.hmm, self.seqs[:1000])
         self.assertEqual(hits1.Z, 1000)
+        hits2 = pipeline.search_hmm(self.hmm, self.seqs[1000:2000])
         self.assertEqual(hits2.Z, 1000)
+        hits3 = pipeline.search_hmm(self.hmm, self.seqs[2000:])
         self.assertEqual(hits3.Z, len(self.seqs) - 2000)
-        self.assertEqual(len(hits1) + len(hits2) + len(hits3), len(self.hits))
 
         merged = hits1.merge(hits2, hits3)
+        self.assertEqual(merged.mode, "search")
 
-        self.assertEqual(merged.searched_sequences, self.hits.searched_sequences)
-        self.assertEqual(merged.searched_models, self.hits.searched_models)
-        self.assertEqual(merged.Z, self.hits.Z)
-        self.assertEqual(merged.domZ, self.hits.domZ)
-        self.assertHitsEqual(merged, self.hits)
+        hits = pipeline.search_hmm(self.hmm, self.seqs)
+        self.assertEqual(len(hits1) + len(hits2) + len(hits3), len(hits))
+        self.assertEqual(len(merged), len(hits))
 
-        hits1_reported = [len(hit.domains.reported) for hit in hits1]
-        hits1_included = [len(hit.domains.included) for hit in hits1]
-        hits2_reported = [len(hit.domains.reported) for hit in hits2]
-        hits2_included = [len(hit.domains.included) for hit in hits2]
-        hits3_reported = [len(hit.domains.reported) for hit in hits3]
-        hits3_included = [len(hit.domains.included) for hit in hits3]
-        hits_nreported = sum(hits1_reported) + sum(hits2_reported) + sum(hits3_reported)
-        hits_nincluded = sum(hits1_included) + sum(hits2_included) + sum(hits3_included)
+        self.assertEqual(merged.searched_sequences, hits.searched_sequences)
+        self.assertEqual(merged.Z, hits.Z)
+        self.assertEqual(merged.domZ, hits.domZ)
+        self.assertEqual(merged.query_name, hits.query_name)
+        self.assertEqual(merged.query_accession, hits.query_accession)
+        self.assertEqual(merged.E, hits.E)
+        self.assertEqual(merged.domE, hits.domE)
 
-        self.assertEqual(sum([len(hit.domains.included) for hit in merged]), hits_nincluded)
-        self.assertEqual(sum([len(hit.domains.reported) for hit in merged]), hits_nreported)
+        for hit in merged:
+            nincluded = sum(domain.included for domain in hit.domains)
+            self.assertEqual(nincluded, len(hit.domains.included))
+            nreported = sum(domain.reported for domain in hit.domains)
+            self.assertEqual(nreported, len(hit.domains.reported))
+
+        self.assertHitsEqual(merged, hits)
+
+        # number of reported & included hits in the final merged hits may be
+        # different of the sum here, because we used E-value thresholds, which
+        # are affected by how many hits were effectively reported
+
+    def test_merge_pipeline_byscore(self):
+        pipeline = Pipeline(alphabet=self.hmm.alphabet, T=10.0, domT=10.0, incT=10.0, incdomT=10.0)
+
+        hits1 = pipeline.search_hmm(self.hmm, self.seqs[:1000])
+        self.assertEqual(hits1.Z, 1000)
+        hits2 = pipeline.search_hmm(self.hmm, self.seqs[1000:2000])
+        self.assertEqual(hits2.Z, 1000)
+        hits3 = pipeline.search_hmm(self.hmm, self.seqs[2000:])
+        self.assertEqual(hits3.Z, len(self.seqs) - 2000)
+
+        merged = hits1.merge(hits2, hits3)
+        self.assertEqual(merged.mode, "search")
+
+        hits = pipeline.search_hmm(self.hmm, self.seqs)
+        self.assertEqual(len(hits1) + len(hits2) + len(hits3), len(hits))
+        self.assertEqual(len(merged), len(hits))
+
+        self.assertEqual(merged.searched_sequences, hits.searched_sequences)
+        self.assertEqual(merged.Z, hits.Z)
+        self.assertEqual(merged.domZ, hits.domZ)
+        self.assertEqual(merged.query_name, hits.query_name)
+        self.assertEqual(merged.query_accession, hits.query_accession)
+        self.assertEqual(merged.E, hits.E)
+        self.assertEqual(merged.domE, hits.domE)
+
+        for hit in merged:
+            nincluded = sum(domain.included for domain in hit.domains)
+            self.assertEqual(nincluded, len(hit.domains.included))
+            nreported = sum(domain.reported for domain in hit.domains)
+            self.assertEqual(nreported, len(hit.domains.reported))
+
+        self.assertHitsEqual(merged, hits)
+
+        # number of reported & included hits in the final merged hits should
+        # be equal to the sum of reported & included hits in each sub hits,
+        # because we used bitscore thresholds, which are independent of
+        # the number of hits
+
+        reported = lambda hits: sum(len(hit.domains.reported) for hit in hits)
+        included = lambda hits: sum(len(hit.domains.reported) for hit in hits)
+        hits_nreported = reported(hits1) + reported(hits2) + reported(hits3)
+        hits_nincluded = included(hits1) + included(hits2) + included(hits3)
+        self.assertEqual(reported(merged), hits_nreported)
+        self.assertEqual(included(merged), hits_nincluded)
 
     def test_merged_pipeline_fixed_Z(self):
         pipeline = Pipeline(alphabet=self.hmm.alphabet, Z=200.0)
@@ -301,11 +363,11 @@ class TestTopHits(unittest.TestCase):
     def test_manual_report(self):
         self.assertEqual(len(self.hits.reported), 22)
         self.assertTrue(self.hits[0].reported)
-        
+
         self.hits[0].reported = False
         self.assertEqual(len(self.hits.reported), 21)
         self.assertFalse(self.hits[0].reported)
-        
+
         self.hits[0].reported = True
         self.assertEqual(len(self.hits.reported), 22)
         self.assertTrue(self.hits[0].reported)
@@ -315,13 +377,13 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(len(self.hits.reported), 22)
         self.assertTrue(self.hits[0].included)
         self.assertTrue(self.hits[0].reported)
-        
+
         self.hits[0].included = False
         self.assertEqual(len(self.hits.included), 14)
         self.assertEqual(len(self.hits.reported), 22)
         self.assertFalse(self.hits[0].included)
         self.assertTrue(self.hits[0].reported)
-        
+
         self.hits[0].included = True
         self.assertEqual(len(self.hits.included), 15)
         self.assertEqual(len(self.hits.reported), 22)
@@ -333,14 +395,14 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(len(self.hits.reported), 22)
         self.assertTrue(self.hits[0].included)
         self.assertTrue(self.hits[0].reported)
-        
+
         self.hits[0].dropped = True
         self.assertEqual(len(self.hits.included), 14)
         self.assertEqual(len(self.hits.reported), 22)
         self.assertTrue(self.hits[0].dropped)
         self.assertFalse(self.hits[0].included)
         self.assertTrue(self.hits[0].reported)
-        
+
         self.hits[0].dropped = False
         self.assertEqual(len(self.hits.included), 14)
         self.assertEqual(len(self.hits.reported), 22)
@@ -353,14 +415,14 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(len(self.hits.reported), 22)
         self.assertTrue(self.hits[0].included)
         self.assertTrue(self.hits[0].reported)
-        
+
         self.hits[0].duplicate = True
         self.assertEqual(len(self.hits.included), 14)
         self.assertEqual(len(self.hits.reported), 21)
         self.assertFalse(self.hits[0].included)
         self.assertFalse(self.hits[0].reported)
         self.assertTrue(self.hits[0].duplicate)
-        
+
         self.hits[0].duplicate = False
         self.assertEqual(len(self.hits.included), 14)
         self.assertEqual(len(self.hits.reported), 21)
