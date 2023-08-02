@@ -52,7 +52,7 @@ cdef extern from "hmmer.h" nogil:
         bint do_alignment_score_calc
         P7_DOMAINDEF* ddef
 
-        int by_E
+        bint by_E
         double E
         double T
         bint dom_by_E

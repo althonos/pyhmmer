@@ -7373,6 +7373,7 @@ cdef class TopHits:
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
+        self._init = False
         self._th = NULL
         self._qname = None
         self._qacc = None
@@ -7607,6 +7608,15 @@ cdef class TopHits:
         self._pli.block_length = state["pipeline"]["block_length"]
 
     # --- Properties ---------------------------------------------------------
+
+    @property
+    def mode(self):
+        """`str`: Whether the hits were obtained in ``scan`` or ``search`` mode.
+
+        .. versionadded:: 0.9.0
+
+        """
+        return "search" if self._pli.mode == p7_pipemodes_e.p7_SEARCH_SEQS else "scan"
 
     @property
     def query_name(self):
@@ -7850,6 +7860,37 @@ cdef class TopHits:
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tophits_SortBySeqidxAndAlipos")
         return 0
+
+    cdef void _check_threshold_parameters(self, const P7_PIPELINE* other) except *:
+        # check comparison counters are consistent
+        if self._pli.long_targets and not other.long_targets:
+            raise ValueError("Trying to merge a `TopHits` from a long targets pipeline to a `TopHits` from a regular pipeline.")
+        if self._pli.Z_setby != other.Z_setby:
+            raise ValueError("Trying to merge `TopHits` with `Z` values obtained with different methods.")
+        elif self._pli.Z_setby != p7_zsetby_e.p7_ZSETBY_NTARGETS and self._pli.Z != other.Z:
+            raise ValueError("Trying to merge `TopHits` obtained from pipelines manually configured to different `Z` values.")
+        if self._pli.domZ_setby != other.domZ_setby:
+            raise ValueError("Trying to merge `TopHits` with `domZ` values obtained with different methods.")
+        elif self._pli.domZ_setby != p7_zsetby_e.p7_ZSETBY_NTARGETS and self._pli.domZ != other.domZ:
+            raise ValueError("Trying to merge `TopHits` obtained from pipelines manually configured to different `domZ` values.")
+        # check threshold modes are consistent
+        if self._pli.by_E != other.by_E:
+            raise ValueError("Trying to merge `TopHits` obtained from pipelines with different reporting threshold modes")
+        elif self._pli.dom_by_E != other.dom_by_E:
+            raise ValueError("Trying to merge `TopHits` obtained from pipelines with different domain reporting threshold modes")
+        elif self._pli.inc_by_E != other.inc_by_E:
+            raise ValueError("Trying to merge `TopHits` obtained from pipelines with different inclusion threshold modes")
+        elif self._pli.incdom_by_E != other.incdom_by_E:
+            raise ValueError("Trying to merge `TopHits` obtained from pipelines with different domain inclusion threshold modes")
+        # check inclusion and reporting threshold are the same
+        if (self._pli.by_E and self._pli.E != other.E) or (not self._pli.by_E and self._pli.T != other.T):
+            raise ValueError("Trying to merge `TopHits` obtained from pipelines with different reporting thresholds.")
+        elif (self._pli.inc_by_E and self._pli.incE != other.incE) or (not self._pli.inc_by_E and self._pli.incT != other.incT):
+            raise ValueError("Trying to merge `TopHits` obtained from pipelines with different inclusion thresholds.")
+        elif (self._pli.dom_by_E and self._pli.domE != other.domE) or (not self._pli.dom_by_E and self._pli.domT != other.domT):
+            raise ValueError("Trying to merge `TopHits` obtained from pipelines with different domain reporting thresholds.")
+        elif (self._pli.incdom_by_E and self._pli.incdomE != other.incdomE) or (not self._pli.incdom_by_E and self._pli.incdomT != other.incdomT):
+            raise ValueError("Trying to merge `TopHits` obtained from pipelines with different domain inclusion thresholds.")
 
     # --- Methods ------------------------------------------------------------
 
@@ -8262,30 +8303,25 @@ cdef class TopHits:
         for other in others:
             assert other._th != NULL
 
-            # check that the hits can be merged together
-            if self._pli.long_targets and not other._pli.long_targets:
-                raise ValueError("Trying to merge a `TopHits` from a long targets pipeline to a `TopHits` from a regular pipeline.")
-            if self._pli.Z_setby != other._pli.Z_setby:
-                raise ValueError("Trying to merge `TopHits` with `Z` values obtained with different methods.")
-            elif self._pli.Z_setby != p7_zsetby_e.p7_ZSETBY_NTARGETS and self._pli.Z != other._pli.Z:
-                raise ValueError("Trying to merge `TopHits` obtained from pipelines manually configured to different `Z` values.")
-            if self._pli.domZ_setby != other._pli.domZ_setby:
-                raise ValueError("Trying to merge `TopHits` with `domZ` values obtained with different methods.")
-            elif self._pli.domZ_setby != p7_zsetby_e.p7_ZSETBY_NTARGETS and self._pli.domZ != other._pli.domZ:
-                raise ValueError("Trying to merge `TopHits` obtained from pipelines manually configured to different `domZ` values.")
-
-            # copy query name and accession if merging into an empty, otherwise
-            # check that names/accessions are consistent
-            if merged._th.N == 0:
-                merged._qname = other._qname
-                merged._qacc = other._qacc
-            elif merged._qname != other._qname or merged._qacc != other._qacc:
-                raise ValueError("Trying to merge `TopHits` obtained from different queries")
-
             # copy hits (`p7_tophits_Merge` effectively destroys the old storage
             # but because of Python references we cannot be sure that the data is
             # not referenced anywhere else)
             other_copy = other.copy()
+
+            # just store the copy if merging inside an empty uninitialized `TopHits`
+            if merged._th.N == 0 and merged._qname is None and merged._qacc is None:
+                merged._qname = other._qname
+                merged._qacc = other._qacc
+                memcpy(&merged._pli, &other_copy._pli, sizeof(P7_PIPELINE))
+                merged._th, other_copy._th = other_copy._th, merged._th
+                continue
+
+            # check that names/accessions are consistent
+            if merged._qname != other._qname or merged._qacc != other._qacc:
+                raise ValueError("Trying to merge `TopHits` obtained from different queries")
+
+            # check that the parameters are the same
+            merged._check_threshold_parameters(&other._pli)
 
             # merge everything
             with nogil:
@@ -8299,12 +8335,17 @@ cdef class TopHits:
                     raise UnexpectedError(status, "p7_pipeline_Merge")
 
         # Reset nincluded/nreports before thresholding
-        # TODO(@althonos, @zdk123): Replace with `p7_tophits_Threshold` as implemented 
-        #                  in EddyRivasLab/hmmer#307 when formally released. 
+        # TODO(@althonos, @zdk123): Replace with `p7_tophits_Threshold` as implemented
+        #                  in EddyRivasLab/hmmer#307 when formally released.
         for i in range(merged._th.N):
+            merged._th.hit[i].flags &= (~p7_hitflags_e.p7_IS_REPORTED)
+            merged._th.hit[i].flags &= (~p7_hitflags_e.p7_IS_INCLUDED)
             merged._th.hit[i].nincluded = 0
             merged._th.hit[i].nreported = 0
-                
+            for j in range(merged._th.hit[i].ndom):
+                merged._th.hit[i].dcl[j].is_reported = False
+                merged._th.hit[i].dcl[j].is_included = False
+
         # threshold the merged hits with new values
         status = libhmmer.p7_tophits.p7_tophits_Threshold(merged._th, &merged._pli)
         if status != libeasel.eslOK:

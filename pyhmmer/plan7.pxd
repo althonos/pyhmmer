@@ -427,6 +427,7 @@ cdef class TopHits:
     cdef int _threshold(self, Pipeline pipeline) nogil except 1
     cdef int _sort_by_key(self) nogil except 1
     cdef int _sort_by_seqidx(self) nogil except 1
+    cdef void _check_threshold_parameters(self, const P7_PIPELINE* other) except *
 
     cpdef TopHits copy(self)
     cpdef int compare_ranking(self, KeyHash) except -1
