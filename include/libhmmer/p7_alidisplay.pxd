@@ -6,9 +6,9 @@ from libeasel.random cimport ESL_RANDOMNESS
 from libeasel.sq cimport ESL_SQ
 from libhmmer.p7_trace cimport P7_TRACE
 
-IF HMMER_IMPL == "VMX":
+if HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
-ELIF HMMER_IMPL == "SSE":
+elif HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
 
@@ -50,27 +50,27 @@ cdef extern from "hmmer.h" nogil:
         char* mem
     ctypedef p7_alidisplay_s P7_ALIDISPLAY
 
-    P7_ALIDISPLAY *p7_alidisplay_Create(const P7_TRACE *tr, int which, const P7_OPROFILE *om, const ESL_SQ *sq, const ESL_SQ *ntsq);
-    P7_ALIDISPLAY *p7_alidisplay_Create_empty();
-    P7_ALIDISPLAY *p7_alidisplay_Clone(const P7_ALIDISPLAY *ad);
-    size_t         p7_alidisplay_Sizeof(const P7_ALIDISPLAY *ad);
-    int            p7_alidisplay_Serialize(const P7_ALIDISPLAY *obj, uint8_t **buf, uint32_t *n, uint32_t *nalloc);
-    int            p7_alidisplay_Deserialize(const uint8_t *buf, uint32_t *n, P7_ALIDISPLAY *ret_obj);
-    int            p7_alidisplay_Serialize_old(P7_ALIDISPLAY *ad);
-    int            p7_alidisplay_Deserialize_old(P7_ALIDISPLAY *ad);
-    void           p7_alidisplay_Destroy(P7_ALIDISPLAY *ad);
-    char           p7_alidisplay_EncodePostProb(float p);
-    float          p7_alidisplay_DecodePostProb(char pc);
-    char           p7_alidisplay_EncodeAliPostProb(float p, float hi, float med, float lo);
+    P7_ALIDISPLAY *p7_alidisplay_Create(const P7_TRACE *tr, int which, const P7_OPROFILE *om, const ESL_SQ *sq, const ESL_SQ *ntsq)
+    P7_ALIDISPLAY *p7_alidisplay_Create_empty()
+    P7_ALIDISPLAY *p7_alidisplay_Clone(const P7_ALIDISPLAY *ad)
+    size_t         p7_alidisplay_Sizeof(const P7_ALIDISPLAY *ad)
+    int            p7_alidisplay_Serialize(const P7_ALIDISPLAY *obj, uint8_t **buf, uint32_t *n, uint32_t *nalloc)
+    int            p7_alidisplay_Deserialize(const uint8_t *buf, uint32_t *n, P7_ALIDISPLAY *ret_obj)
+    int            p7_alidisplay_Serialize_old(P7_ALIDISPLAY *ad)
+    int            p7_alidisplay_Deserialize_old(P7_ALIDISPLAY *ad)
+    void           p7_alidisplay_Destroy(P7_ALIDISPLAY *ad)
+    char           p7_alidisplay_EncodePostProb(float p)
+    float          p7_alidisplay_DecodePostProb(char pc)
+    char           p7_alidisplay_EncodeAliPostProb(float p, float hi, float med, float lo)
 
-    int            p7_alidisplay_Backconvert(const P7_ALIDISPLAY *ad, const ESL_ALPHABET *abc, ESL_SQ **ret_sq, P7_TRACE **ret_tr);
-    int            p7_alidisplay_Sample(ESL_RANDOMNESS *rng, int N, P7_ALIDISPLAY **ret_ad);
-    int            p7_alidisplay_Dump(FILE *fp, const P7_ALIDISPLAY *ad);
-    int            p7_alidisplay_Compare(const P7_ALIDISPLAY *ad1, const P7_ALIDISPLAY *ad2);
+    int            p7_alidisplay_Backconvert(const P7_ALIDISPLAY *ad, const ESL_ALPHABET *abc, ESL_SQ **ret_sq, P7_TRACE **ret_tr)
+    int            p7_alidisplay_Sample(ESL_RANDOMNESS *rng, int N, P7_ALIDISPLAY **ret_ad)
+    int            p7_alidisplay_Dump(FILE *fp, const P7_ALIDISPLAY *ad)
+    int            p7_alidisplay_Compare(const P7_ALIDISPLAY *ad1, const P7_ALIDISPLAY *ad2)
 
 # The GIL may be held there in case the FILE* is a Python file object
 cdef extern from "hmmer.h":
 
-    int            p7_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, P7_PIPELINE *pli);
-    int            p7_translated_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, P7_PIPELINE *pli);
-    int            p7_nontranslated_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, int show_accessions);
+    int            p7_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, P7_PIPELINE *pli)
+    int            p7_translated_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, P7_PIPELINE *pli)
+    int            p7_nontranslated_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, int show_accessions)

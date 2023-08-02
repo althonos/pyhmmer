@@ -7,10 +7,10 @@ from libhmmer.p7_spensemble cimport P7_SPENSEMBLE
 from libhmmer.p7_trace cimport P7_TRACE
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 
-IF HMMER_IMPL == "VMX":
+if HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx.p7_omx cimport P7_OMX
     from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
-ELIF HMMER_IMPL == "SSE":
+elif HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_omx cimport P7_OMX
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 

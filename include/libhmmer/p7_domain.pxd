@@ -25,9 +25,9 @@ cdef extern from "hmmer.h" nogil:
         float* scores_per_pos
         P7_ALIDISPLAY* ad
 
-    P7_DOMAIN *p7_domain_Create_empty();
-    void p7_domain_Destroy(P7_DOMAIN *obj);
-    int p7_domain_Serialize(const P7_DOMAIN *obj, uint8_t **buf, uint32_t *n, uint32_t *nalloc);
-    int p7_domain_Deserialize(const uint8_t *buf, uint32_t *n, P7_DOMAIN *ret_obj);
-    int p7_domain_TestSample(ESL_RAND64 *rng, P7_DOMAIN **ret_obj);
-    int p7_domain_Compare(P7_DOMAIN *first, P7_DOMAIN *second, double atol, double rtol);
+    P7_DOMAIN *p7_domain_Create_empty()
+    void p7_domain_Destroy(P7_DOMAIN *obj)
+    int p7_domain_Serialize(const P7_DOMAIN *obj, uint8_t **buf, uint32_t *n, uint32_t *nalloc)
+    int p7_domain_Deserialize(const uint8_t *buf, uint32_t *n, P7_DOMAIN *ret_obj)
+    int p7_domain_TestSample(ESL_RAND64 *rng, P7_DOMAIN **ret_obj)
+    int p7_domain_Compare(P7_DOMAIN *first, P7_DOMAIN *second, double atol, double rtol)

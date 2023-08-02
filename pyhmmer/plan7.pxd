@@ -23,10 +23,10 @@ from libhmmer.p7_tophits cimport P7_TOPHITS
 from libhmmer.p7_trace cimport P7_TRACE
 from libhmmer.nhmmer cimport ID_LENGTH_LIST
 
-IF HMMER_IMPL == "VMX":
+if HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx.p7_omx cimport P7_OM_BLOCK
     from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
-ELIF HMMER_IMPL == "SSE":
+elif HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_omx cimport P7_OM_BLOCK
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 

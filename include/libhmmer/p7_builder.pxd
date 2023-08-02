@@ -14,15 +14,15 @@ from libhmmer.p7_prior cimport P7_PRIOR
 from libhmmer.p7_profile cimport P7_PROFILE
 from libhmmer.p7_trace cimport P7_TRACE
 
-IF HMMER_IMPL == "VMX":
+if HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
-ELIF HMMER_IMPL == "SSE":
+elif HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
 
 cdef extern from "hmmer.h" nogil:
 
-    cdef double p7_DEFAULT_WINDOW_BETA
+    const double p7_DEFAULT_WINDOW_BETA
 
     cdef enum p7_archchoice_e:
         p7_ARCH_FAST = 0

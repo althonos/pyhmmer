@@ -4,13 +4,13 @@ from libc.stdio cimport FILE
 
 cdef extern from "hmmer.h" nogil:
 
-    cdef size_t p7G_NSCELLS = 3
+    const size_t p7G_NSCELLS
     cdef enum p7g_scells_e:
         p7G_M = 0
         p7G_I = 1
         p7G_D = 2
 
-    cdef size_t p7G_NXCELLS = 5
+    const size_t p7G_NXCELLS
     cdef enum p7g_xcells_e:
         p7G_E  = 0
         p7G_N  = 1

@@ -12,10 +12,10 @@ from libhmmer.p7_tophits cimport P7_TOPHITS
 from libhmmer.p7_hmmfile cimport P7_HMMFILE
 from libhmmer.p7_scoredata cimport P7_SCOREDATA
 
-IF HMMER_IMPL == "VMX":
+if HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx.p7_omx cimport P7_OMX
     from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
-ELIF HMMER_IMPL == "SSE":
+elif HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_omx cimport P7_OMX
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 
@@ -107,7 +107,7 @@ cdef extern from "hmmer.h" nogil:
         bint show_alignments
 
         P7_HMMFILE   *hfp
-        char          errbuf[eslERRBUFSIZE];
+        char          errbuf[eslERRBUFSIZE]
 
 
     P7_PIPELINE *p7_pipeline_Create(const ESL_GETOPTS *go, int M_hint, int L_hint, int long_targets, p7_pipemodes_e mode)

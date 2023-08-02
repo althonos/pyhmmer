@@ -86,7 +86,7 @@ from libhmmer.p7_prior cimport P7_PRIOR
 from libhmmer.nhmmer cimport ID_LENGTH_LIST
 from capacity cimport new_capacity
 
-IF HMMER_IMPL == "VMX":
+if HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init
     from libhmmer.impl_vmx.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
     from libhmmer.impl_vmx.p7_omx cimport (
@@ -102,7 +102,7 @@ IF HMMER_IMPL == "VMX":
         p7_oprofile_Sizeof,
         p7_oprofile_Destroy,
     )
-ELIF HMMER_IMPL == "SSE":
+elif HMMER_IMPL == "SSE":
     from libhmmer.impl_sse cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7O_EXTRA_SB
     from libhmmer.impl_sse.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
     from libhmmer.impl_sse.p7_omx cimport (
@@ -4373,12 +4373,12 @@ cdef class OptimizedProfile:
         .. versionadded:: 0.4.0
 
         """
-        IF HMMER_IMPL == "SSE":
-            assert self._om != NULL
+        assert self._om != NULL
+        
+        cdef float score
+        cdef int status
 
-            cdef float score
-            cdef int status
-
+        if HMMER_IMPL == "SSE":
             if self.alphabet != seq.alphabet:
                 raise AlphabetMismatch(self.alphabet, seq.alphabet)
             with nogil:
@@ -4391,7 +4391,7 @@ cdef class OptimizedProfile:
                 return None
             else:
                 raise UnexpectedError(status, "p7_SSVFilter")
-        ELSE:
+        else:
             raise NotImplementedError(f"p7_SSVFilter is not available on {HMMER_IMPL} platforms")
 
 cdef class OptimizedProfileBlock:
