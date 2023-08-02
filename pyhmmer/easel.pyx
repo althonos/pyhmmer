@@ -387,7 +387,7 @@ cdef class Alphabet:
 
         # make sure the unicode string is in canonical form,
         # --> won't be needed anymore in Python 3.12
-        IF SYS_VERSION_INFO_MAJOR <= 3 and SYS_VERSION_INFO_MINOR < 12:
+        if SYS_VERSION_INFO_MAJOR <= 3 and SYS_VERSION_INFO_MINOR < 12:
             PyUnicode_READY(sequence)
 
         cdef size_t   i
@@ -434,14 +434,17 @@ cdef class Alphabet:
 
         cdef libeasel.ESL_DSQ x
         cdef size_t           i
+        cdef object           decoded
+        cdef int              kind
+        cdef char*            data
         cdef size_t           length  = sequence.shape[0]
 
         # NB(@althonos): Compatibility code for PyPy 3.6, which does
         #                not support directly writing to a string. Remove
         #                when Python 3.6 support is dropped.
-        IF SYS_VERSION_INFO_MAJOR <= 3 and SYS_VERSION_INFO_MINOR <= 7 and SYS_IMPLEMENTATION_NAME == "pypy":
-            cdef bytes decoded = PyBytes_FromStringAndSize(NULL, length)
-            cdef char* data    = PyBytes_AsString(decoded)
+        if SYS_VERSION_INFO_MAJOR <= 3 and SYS_VERSION_INFO_MINOR <= 7 and SYS_IMPLEMENTATION_NAME == "pypy":
+            decoded = PyBytes_FromStringAndSize(NULL, length)
+            data    = PyBytes_AsString(decoded)
 
             with nogil:
                 for i in range(length):
@@ -453,10 +456,10 @@ cdef class Alphabet:
 
             return decoded.decode('ascii')
 
-        ELSE:
-            cdef str   decoded = PyUnicode_New(length, 0x7F)
-            cdef int   kind    = PyUnicode_KIND(decoded)
-            cdef void* data    = PyUnicode_DATA(decoded)
+        else:
+            decoded = PyUnicode_New(length, 0x7F)
+            kind    = PyUnicode_KIND(decoded)
+            data    = <char*> PyUnicode_DATA(decoded)
 
             with nogil:
                 for i in range(length):
@@ -1296,17 +1299,17 @@ cdef class Vector:
         buffer.shape = self._shape
         buffer.suboffsets = NULL
 
-        IF SYS_IMPLEMENTATION_NAME == "pypy":
+        if SYS_IMPLEMENTATION_NAME == "pypy":
             buffer.internal = PyMem_Malloc(sizeof(Py_ssize_t))
             if buffer.internal == NULL:
                 raise AllocationError("ssize_t", sizeof(Py_ssize_t))
             buffer.strides = <Py_ssize_t*> buffer.internal
             buffer.strides[0] = self.strides[0]
-        ELSE:
+        else:
             buffer.strides = NULL
 
     def __releasebuffer__(self, Py_buffer* buffer):
-        IF SYS_IMPLEMENTATION_NAME == "pypy":
+        if SYS_IMPLEMENTATION_NAME == "pypy":
             PyMem_Free(buffer.internal)
             buffer.internal = NULL
 
@@ -2434,18 +2437,18 @@ cdef class Matrix:
         buffer.shape = self._shape
         buffer.suboffsets = NULL
 
-        IF SYS_IMPLEMENTATION_NAME == "pypy":
+        if SYS_IMPLEMENTATION_NAME == "pypy":
             buffer.internal = PyMem_Malloc(2*sizeof(Py_ssize_t))
             if buffer.internal == NULL:
                 raise AllocationError("Py_ssize_t", sizeof(Py_ssize_t), 2)
             buffer.strides = <Py_ssize_t*> buffer.internal
             buffer.strides[0] = self.strides[0]
             buffer.strides[1] = self.strides[1]
-        ELSE:
+        else:
             buffer.strides = NULL
 
     def __releasebuffer__(self, Py_buffer* buffer):
-        IF SYS_IMPLEMENTATION_NAME == "pypy":
+        if SYS_IMPLEMENTATION_NAME == "pypy":
             PyMem_Free(buffer.internal)
             buffer.internal = NULL
 
