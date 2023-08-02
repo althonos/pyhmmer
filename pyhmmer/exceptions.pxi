@@ -24,7 +24,7 @@ from .errors import EaselError
 
 # We register a custom exception handler so that the program should not crash,
 # but simply raise an exception, while chaining
-cdef void py_handler(int errcode, int use_errno, char* sourcefile, int sourceline, char* format, va_list argp) nogil except *:
+cdef void py_handler(int errcode, int use_errno, char* sourcefile, int sourceline, char* format, va_list argp) except * nogil:
     cdef PyObject*  type
     cdef PyObject*  value
     cdef PyObject*  traceback

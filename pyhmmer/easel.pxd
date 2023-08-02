@@ -25,7 +25,7 @@ from libeasel cimport ESL_DSQ
 cdef class Alphabet:
     cdef ESL_ALPHABET* _abc
 
-    cdef int _init_default(self, int ty) nogil except 1
+    cdef int _init_default(self, int ty) except 1 nogil
     cdef inline bint _eq(self, Alphabet other) nogil
 
     cpdef bint is_dna(self)
@@ -49,7 +49,7 @@ cdef class GeneticCode:
         int64_t seqlen,
         ESL_DSQ* out,
         int64_t outlen
-    ) nogil except *
+    ) except * nogil
 
     cpdef VectorU8 translate(self, const ESL_DSQ[::1] sequence)
 
@@ -138,7 +138,7 @@ cdef class _MSASequences:
 cdef class MSA:
     cdef ESL_MSA* _msa
 
-    cdef int _rehash(self) nogil except 1
+    cdef int _rehash(self) except 1 nogil
     cpdef uint32_t checksum(self)
     cpdef void write(self, object fh, str format) except *
 
@@ -148,7 +148,7 @@ cdef class _TextMSASequences(_MSASequences):
 
 
 cdef class TextMSA(MSA):
-    cdef int _set_sequence(self, int idx, ESL_SQ* seq) nogil except 1
+    cdef int _set_sequence(self, int idx, ESL_SQ* seq) except 1 nogil
     cpdef TextMSA copy(self)
     cpdef DigitalMSA digitize(self, Alphabet alphabet)
 
@@ -160,7 +160,7 @@ cdef class _DigitalMSASequences(_MSASequences):
 cdef class DigitalMSA(MSA):
     cdef readonly Alphabet alphabet
 
-    cdef int _set_sequence(self, int idx, ESL_SQ* seq) nogil except 1
+    cdef int _set_sequence(self, int idx, ESL_SQ* seq) except 1 nogil
     cpdef DigitalMSA copy(self)
     cpdef TextMSA textize(self)
 

@@ -296,7 +296,7 @@ cdef class Pipeline:
         const ESL_SQ**     sq,
         const size_t       n_targets,
               P7_TOPHITS*  th,
-    ) nogil except 1
+    ) except 1 nogil
     @staticmethod
     cdef  int  _search_loop_file(
               P7_PIPELINE* pli,
@@ -304,7 +304,7 @@ cdef class Pipeline:
               P7_BG*       bg,
               ESL_SQFILE*  sqfp,
               P7_TOPHITS*  th,
-    ) nogil except 1
+    ) except 1 nogil
 
     cpdef TopHits scan_seq(
         self,
@@ -320,7 +320,7 @@ cdef class Pipeline:
         const size_t              n_targets,
               P7_TOPHITS*         th,
               PyThread_type_lock* locks,
-    ) nogil except 1
+    ) except 1 nogil
     @staticmethod
     cdef int _scan_loop_file(
               P7_PIPELINE*     pli,
@@ -328,7 +328,7 @@ cdef class Pipeline:
               P7_BG*           bg,
               P7_HMMFILE*      hfp,
               P7_TOPHITS*      th,
-    ) nogil except 1
+    ) except 1 nogil
 
     cpdef IterativeSearch iterate_hmm(
         self,
@@ -376,7 +376,7 @@ cdef class LongTargetsPipeline(Pipeline):
               P7_TOPHITS*     th,
               P7_SCOREDATA*   scoredata,
               ID_LENGTH_LIST* idlens
-    ) nogil except 1
+    ) except 1 nogil
     @staticmethod
     cdef int _search_loop_longtargets_file(
         P7_PIPELINE*  pli,
@@ -386,7 +386,7 @@ cdef class LongTargetsPipeline(Pipeline):
         P7_TOPHITS*   th,
         P7_SCOREDATA* scoredata,
         ID_LENGTH_LIST* idlens
-    ) nogil except 1
+    ) except 1 nogil
     cpdef TopHits scan_seq(
         self,
         DigitalSequence query,
@@ -424,9 +424,9 @@ cdef class TopHits:
     cpdef dict __getstate__(self)
     cpdef object __setstate__(self, dict state)
 
-    cdef int _threshold(self, Pipeline pipeline) nogil except 1
-    cdef int _sort_by_key(self) nogil except 1
-    cdef int _sort_by_seqidx(self) nogil except 1
+    cdef int _threshold(self, Pipeline pipeline) except 1 nogil
+    cdef int _sort_by_key(self) except 1 nogil
+    cdef int _sort_by_seqidx(self) except 1 nogil
     cdef void _check_threshold_parameters(self, const P7_PIPELINE* other) except *
 
     cpdef TopHits copy(self)

@@ -164,7 +164,7 @@ cdef class Alphabet:
 
     # --- Default constructors -----------------------------------------------
 
-    cdef int _init_default(self, int ty) nogil except 1:
+    cdef int _init_default(self, int ty) except 1 nogil:
         if self._abc != NULL:
             libeasel.alphabet.esl_alphabet_Destroy(self._abc)
         self._abc = libeasel.alphabet.esl_alphabet_Create(ty)
@@ -566,7 +566,7 @@ cdef class GeneticCode:
         int64_t seqlen,
         ESL_DSQ* out,
         int64_t outlen
-    ) nogil except *:
+    ) except * nogil:
         cdef int     aa
         cdef int64_t i
         cdef int64_t j
@@ -3414,7 +3414,7 @@ cdef class MSA:
 
     # --- Utils --------------------------------------------------------------
 
-    cdef int _rehash(self) nogil except 1:
+    cdef int _rehash(self) except 1 nogil:
         """Rehash the sequence names for faster lookup.
         """
         cdef int status = libeasel.msa.esl_msa_Hash(self._msa)
@@ -3710,7 +3710,7 @@ cdef class TextMSA(MSA):
 
     # --- Utils --------------------------------------------------------------
 
-    cdef int _set_sequence(self, int idx, ESL_SQ* seq) nogil except 1:
+    cdef int _set_sequence(self, int idx, ESL_SQ* seq) except 1 nogil:
         # assert seq.seq != NULL
 
         cdef int status
@@ -3960,7 +3960,7 @@ cdef class DigitalMSA(MSA):
 
     # --- Utils --------------------------------------------------------------
 
-    cdef int _set_sequence(self, int idx, ESL_SQ* seq) nogil except 1:
+    cdef int _set_sequence(self, int idx, ESL_SQ* seq) except 1 nogil:
         # assert seq.dsq != NULL
 
         cdef int status

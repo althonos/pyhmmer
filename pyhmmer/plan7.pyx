@@ -5735,7 +5735,7 @@ cdef class Pipeline:
         const ESL_SQ**     sq,
         const size_t       n_targets,
               P7_TOPHITS*  th,
-    ) nogil except 1:
+    ) except 1 nogil:
         """_search_loop(pli, om, bg, sq, n_targets, th)\n--
 
         Run the low-level search loop while the GIL is released.
@@ -5798,7 +5798,7 @@ cdef class Pipeline:
               P7_BG*       bg,
               ESL_SQFILE*  sqfp,
               P7_TOPHITS*  th,
-    ) nogil except 1:
+    ) except 1 nogil:
         """_search_loop_file(pli, om, bg, sqfp, th)\n--
 
         Run the low-level search loop while the GIL is released.
@@ -5976,7 +5976,7 @@ cdef class Pipeline:
         const size_t              n_targets,
               P7_TOPHITS*         th,
               PyThread_type_lock* locks,
-    ) nogil except 1:
+    ) except 1 nogil:
         cdef int    status
         cdef size_t t
 
@@ -6027,7 +6027,7 @@ cdef class Pipeline:
               P7_BG*           bg,
               P7_HMMFILE*      hfp,
               P7_TOPHITS*      th,
-    ) nogil except 1:
+    ) except 1 nogil:
         cdef int           status
         cdef P7_OPROFILE*  om
         cdef ESL_ALPHABET* abc    = NULL
@@ -6780,7 +6780,7 @@ cdef class LongTargetsPipeline(Pipeline):
               P7_TOPHITS*     th,
               P7_SCOREDATA*   scoredata,
               ID_LENGTH_LIST* idlens
-    ) nogil except 1:
+    ) except 1 nogil:
         cdef int     status
         cdef int     nres
         cdef size_t  t
@@ -6903,7 +6903,7 @@ cdef class LongTargetsPipeline(Pipeline):
         P7_TOPHITS*     th,
         P7_SCOREDATA*   scoredata,
         ID_LENGTH_LIST* idlens
-    ) nogil except 1:
+    ) except 1 nogil:
         cdef int     status
         #cdef int     nres
         #cdef size_t  t
@@ -7832,7 +7832,7 @@ cdef class TopHits:
 
     # --- Utils --------------------------------------------------------------
 
-    cdef int _threshold(self, Pipeline pipeline) nogil except 1:
+    cdef int _threshold(self, Pipeline pipeline) except 1 nogil:
         # threshold the top hits with the given pipeline numbers
         cdef int status = libhmmer.p7_tophits.p7_tophits_Threshold(self._th, pipeline._pli)
         if status != libeasel.eslOK:
@@ -7848,13 +7848,13 @@ cdef class TopHits:
         self._pli.hfp = NULL
         return 0
 
-    cdef int _sort_by_key(self) nogil except 1:
+    cdef int _sort_by_key(self) except 1 nogil:
         cdef int status = libhmmer.p7_tophits.p7_tophits_SortBySortkey(self._th)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tophits_SortBySortkey")
         return 0
 
-    cdef int _sort_by_seqidx(self) nogil except 1:
+    cdef int _sort_by_seqidx(self) except 1 nogil:
         cdef int status = libhmmer.p7_tophits.p7_tophits_SortBySeqidxAndAlipos(self._th)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tophits_SortBySeqidxAndAlipos")
