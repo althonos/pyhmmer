@@ -77,7 +77,7 @@ cdef ssize_t fread_obj_readinto(void *cookie, char *buf, size_t size) except -1:
     try:
         return obj.readinto(mem.cast('B'))
     except TypeError:
-        # NB: on PyPy, `obj.readinto` sometimes complains that the memoryview 
+        # NB: on PyPy, `obj.readinto` sometimes complains that the memoryview
         #     is not a byte-like object when you cast it to `unsigned char*`.
         return obj.readinto(mem)
 

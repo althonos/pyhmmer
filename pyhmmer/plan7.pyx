@@ -26,15 +26,20 @@ from libc.stdint cimport uint8_t, uint32_t, int64_t
 from libc.stdio cimport fprintf, FILE, stdout, fclose
 from libc.string cimport memset, memcpy, memmove, strdup, strndup, strlen, strcmp, strncpy
 from libc.time cimport ctime, strftime, time, time_t, tm, localtime_r
-from unicode cimport PyUnicode_DATA, PyUnicode_KIND, PyUnicode_READ, PyUnicode_READY, PyUnicode_GET_LENGTH
+from cpython.unicode cimport (
+    PyUnicode_DATA,
+    PyUnicode_KIND,
+    PyUnicode_READ,
+    PyUnicode_GET_LENGTH,
+)
 from cpython.pythread cimport (
     PyThread_type_lock,
     PyThread_allocate_lock,
     PyThread_free_lock,
     PyThread_acquire_lock,
     PyThread_release_lock,
+    PyLockStatus,
     WAIT_LOCK,
-    PY_LOCK_ACQUIRED,
 )
 
 cimport libeasel
@@ -153,10 +158,6 @@ IF UNAME_SYSNAME == "Linux":
     include "fileobj/linux.pxi"
 ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
     include "fileobj/bsd.pxi"
-
-# NOTE(@althonos): PY_LOCK_ACQUIRED is not exposed by PyPy
-IF SYS_IMPLEMENTATION_NAME == "pypy":
-    DEF PY_LOCK_ACQUIRED = 1
 
 # --- Python imports ---------------------------------------------------------
 
@@ -4374,7 +4375,7 @@ cdef class OptimizedProfile:
 
         """
         assert self._om != NULL
-        
+
         cdef float score
         cdef int status
 
@@ -5998,7 +5999,7 @@ cdef class Pipeline:
             # will modify the optimized profile, so there is a risk of data race
             # if the scan loop is run in parallel on the same target profiles.
             # configure the profile
-            if PyThread_acquire_lock(locks[t], WAIT_LOCK) != PY_LOCK_ACQUIRED:
+            if not PyThread_acquire_lock(locks[t], WAIT_LOCK):
                 raise RuntimeError("Failed to acquire lock")
             try:
                 status = p7_oprofile.p7_oprofile_ReconfigLength(om[t], sq.n)

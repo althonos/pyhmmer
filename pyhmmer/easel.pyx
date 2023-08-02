@@ -25,13 +25,19 @@ from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.memoryview cimport PyMemoryView_FromMemory
 from cpython.ref cimport Py_INCREF
 from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
-from cpython.unicode cimport PyUnicode_DecodeASCII
 from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t, SIZE_MAX
 from libc.stdio cimport fclose
 from libc.stdlib cimport calloc, malloc, realloc, free
 from libc.string cimport memcmp, memcpy, memmove, memset, strdup, strlen, strncpy
 from posix.types cimport off_t
-from unicode cimport PyUnicode_New, PyUnicode_DATA, PyUnicode_KIND, PyUnicode_WRITE, PyUnicode_READY, PyUnicode_READ, Py_UCS4
+from cpython.unicode cimport (
+    PyUnicode_New,
+    PyUnicode_DecodeASCII,
+    PyUnicode_DATA,
+    PyUnicode_KIND,
+    PyUnicode_WRITE,
+    PyUnicode_READ,
+)
 
 cimport libeasel
 cimport libeasel.alphabet
@@ -385,11 +391,6 @@ cdef class Alphabet:
         """
         assert self._abc != NULL
 
-        # make sure the unicode string is in canonical form,
-        # --> won't be needed anymore in Python 3.12
-        if SYS_VERSION_INFO_MAJOR <= 3 and SYS_VERSION_INFO_MINOR < 12:
-            PyUnicode_READY(sequence)
-
         cdef size_t   i
         cdef Py_UCS4  c
         cdef size_t   length  = len(sequence)
@@ -398,13 +399,12 @@ cdef class Alphabet:
         cdef VectorU8 encoded = VectorU8.zeros(length)
         cdef uint8_t* buffer  = <uint8_t*> encoded._data
 
-        with nogil:
-            for i in range(length):
-                c = PyUnicode_READ(kind, data, i)
-                if libeasel.alphabet.esl_abc_CIsValid(self._abc, c):
-                    buffer[i] = libeasel.alphabet.esl_abc_DigitizeSymbol(self._abc, c)
-                else:
-                    raise ValueError(f"Invalid alphabet character in text sequence: {c}")
+        for i in range(length):
+            c = PyUnicode_READ(kind, data, i)
+            if libeasel.alphabet.esl_abc_CIsValid(self._abc, c):
+                buffer[i] = libeasel.alphabet.esl_abc_DigitizeSymbol(self._abc, c)
+            else:
+                raise ValueError(f"Invalid alphabet character in text sequence: {c}")
 
         return encoded
 
@@ -461,13 +461,12 @@ cdef class Alphabet:
             kind    = PyUnicode_KIND(decoded)
             data    = <char*> PyUnicode_DATA(decoded)
 
-            with nogil:
-                for i in range(length):
-                    x = sequence[i]
-                    if libeasel.alphabet.esl_abc_XIsValid(self._abc, x):
-                        PyUnicode_WRITE(kind, data, i, self._abc.sym[x])
-                    else:
-                        raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
+            for i in range(length):
+                x = sequence[i]
+                if libeasel.alphabet.esl_abc_XIsValid(self._abc, x):
+                    PyUnicode_WRITE(kind, data, i, self._abc.sym[x])
+                else:
+                    raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
 
             return decoded
 
