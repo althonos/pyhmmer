@@ -1,7 +1,7 @@
 # build dependencies
 setuptools >=46.4
 wheel >=0.34.0
-cython ~=0.29.16
+cython ~=3.0
 
 # run dependencies
 psutil ~=5.0
