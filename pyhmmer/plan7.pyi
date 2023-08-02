@@ -37,6 +37,7 @@ EFFECTIVE = Literal["entropy", "exp", "clust", "none"]
 PRIOR_SCHEME = Literal["laplace", "alphabet"]
 STRAND = Literal["watson", "crick"]
 HITS_FORMAT = Literal["targets", "domain", "pfam"]
+HITS_MODE = Literal["search", "scan"]
 
 class Alignment(collections.abc.Sized):
     domain: Domain
@@ -826,6 +827,8 @@ class TopHits(typing.Sequence[Hit]):
     def __iadd__(self, other: TopHits) -> TopHits: ...
     def __getstate__(self) -> typing.Dict[str, object]: ...
     def __setstate__(self, state: typing.Dict[str, object]) -> None: ...
+    @property
+    def mode(self) -> HITS_MODE: ...
     @property
     def query_name(self) -> typing.Optional[bytes]: ...
     @property
