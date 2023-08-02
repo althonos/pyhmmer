@@ -68,10 +68,6 @@ cdef class Alignment:
     cdef readonly Domain domain
     cdef P7_ALIDISPLAY* _ad
 
-    cpdef VectorU8 __getstate__(self)
-    cpdef object __setstate__(self, uint8_t[::1] state)
-
-
 cdef class Background:
     cdef readonly bint     uniform
     cdef readonly Alphabet alphabet
@@ -118,10 +114,6 @@ cdef class Domain:
     cdef readonly Hit hit
     cdef P7_DOMAIN* _dom
 
-    cpdef VectorU8 __getstate__(self)
-    cpdef object __setstate__(self, uint8_t[::1] state)
-
-
 cdef class Domains:
     cdef readonly Hit hit
 
@@ -139,18 +131,12 @@ cdef class Hit:
     cdef readonly TopHits hits
     cdef P7_HIT* _hit
 
-    cpdef VectorU8 __getstate__(self)
-    cpdef object __setstate__(self, uint8_t[::1] state)
-
 
 cdef class HMM:
     cdef P7_HMM* _hmm
     # a reference to the Alphabet Python object to avoid deallocation of the
     # inner ESL_ALPHABET; the Python object provides reference counting for free
     cdef readonly Alphabet          alphabet
-
-    cpdef dict __getstate__(self)
-    cpdef object __setstate__(self, dict state)
 
     cdef void _initialize(self) nogil
 
@@ -419,10 +405,6 @@ cdef class TopHits:
     cdef P7_TOPHITS* _th
     cdef bytes       _qname
     cdef bytes       _qacc
-
-    cpdef tuple __reduce__(self)
-    cpdef dict __getstate__(self)
-    cpdef object __setstate__(self, dict state)
 
     cdef int _threshold(self, Pipeline pipeline) except 1 nogil
     cdef int _sort_by_key(self) except 1 nogil

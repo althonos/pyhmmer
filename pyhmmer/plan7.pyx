@@ -278,7 +278,7 @@ cdef class Alignment:
 
         return buffer.getvalue().decode("ascii")
 
-    cpdef VectorU8 __getstate__(self):
+    def __getstate__(self):
         cdef int       status
         cdef uint32_t  n      = 0
         cdef uint32_t  nalloc = 0
@@ -296,7 +296,7 @@ cdef class Alignment:
         vec._data = <void*> buffer
         return vec
 
-    cpdef object __setstate__(self, uint8_t[::1] state):
+    def __setstate__(self, uint8_t[::1] state):
         cdef int      status
         cdef uint32_t offset = 0
 
@@ -1392,7 +1392,7 @@ cdef class Domain:
         self.hit = hit
         self.alignment = Alignment(self)
 
-    cpdef VectorU8 __getstate__(self):
+    def __getstate__(self):
         assert self._dom != NULL
 
         cdef int       status
@@ -1412,7 +1412,7 @@ cdef class Domain:
         vec._data = <void*> buffer
         return vec
 
-    cpdef object __setstate__(self, uint8_t[::1] state):
+    def __setstate__(self, uint8_t[::1] state):
         cdef int      status
         cdef uint32_t offset = 0
 
@@ -1823,7 +1823,7 @@ cdef class Hit:
         self.hits = hits
         self._hit = hits._th.hit[index]
 
-    cpdef VectorU8 __getstate__(self):
+    def __getstate__(self):
         assert self._hit != NULL
 
         cdef int       status
@@ -1843,7 +1843,7 @@ cdef class Hit:
         vec._data = <void*> buffer
         return vec
 
-    cpdef object __setstate__(self, uint8_t[::1] state):
+    def __setstate__(self, uint8_t[::1] state):
         cdef int      status
         cdef uint32_t offset = 0
 
@@ -2312,7 +2312,7 @@ cdef class HMM:
     def __reduce__(self):
         return HMM, (self.alphabet, self.M, self.name), self.__getstate__()
 
-    cpdef dict __getstate__(self):
+    def __getstate__(self):
         assert self._hmm != NULL
 
         cdef dict   state
@@ -2365,7 +2365,7 @@ cdef class HMM:
 
         return state
 
-    cpdef object __setstate__(self, dict state):
+    def __setstate__(self, dict state):
         assert self._hmm != NULL
 
         cdef int                 i
@@ -7425,10 +7425,10 @@ cdef class TopHits:
     def __add__(TopHits self, TopHits other):
         return self.merge(other)
 
-    cpdef tuple __reduce__(self):
+    def __reduce__(self):
         return TopHits, (), self.__getstate__()
 
-    cpdef dict __getstate__(self):
+    def __getstate__(self):
         assert self._th != NULL
 
         cdef size_t    i
@@ -7507,7 +7507,7 @@ cdef class TopHits:
             }
         }
 
-    cpdef object __setstate__(self, dict state):
+    def __setstate__(self, dict state):
         cdef int      status
         cdef size_t   i
         cdef uint32_t n
