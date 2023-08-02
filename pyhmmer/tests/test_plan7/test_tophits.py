@@ -44,7 +44,7 @@ class TestTopHits(unittest.TestCase):
             "envelope_score",
             "c_evalue",
             "i_evalue",
-            "pvalue"
+            "pvalue",
         ):
             self.assertEqual(
                 getattr(d1, attr),
@@ -71,6 +71,8 @@ class TestTopHits(unittest.TestCase):
                 "attribute {!r} differs".format(attr)
             )
         self.assertEqual(len(h1.domains), len(h2.domains))
+        self.assertEqual(len(h1.domains.reported), len(h2.domains.reported))
+#        self.assertEqual(len(h1.domains.included), len(h2.domains.included))
         for d1, d2 in zip(h1.domains, h2.domains):
             self.assertDomainEqual(d1, d2)
 
@@ -166,6 +168,7 @@ class TestTopHits(unittest.TestCase):
         merged = empty.merge(self.hits)
         self.assertHitsEqual(merged, self.hits)
 
+
     def test_merge_pipeline(self):
         pipeline = Pipeline(alphabet=self.hmm.alphabet)
         hits1 = pipeline.search_hmm(self.hmm, self.seqs[:1000])
@@ -178,11 +181,24 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(len(hits1) + len(hits2) + len(hits3), len(self.hits))
 
         merged = hits1.merge(hits2, hits3)
+
         self.assertEqual(merged.searched_sequences, self.hits.searched_sequences)
         self.assertEqual(merged.searched_models, self.hits.searched_models)
         self.assertEqual(merged.Z, self.hits.Z)
         self.assertEqual(merged.domZ, self.hits.domZ)
         self.assertHitsEqual(merged, self.hits)
+
+        hits1_reported = [len(hit.domains.reported) for hit in hits1]
+        hits1_included = [len(hit.domains.included) for hit in hits1]
+        hits2_reported = [len(hit.domains.reported) for hit in hits2]
+        hits2_included = [len(hit.domains.included) for hit in hits2]
+        hits3_reported = [len(hit.domains.reported) for hit in hits3]
+        hits3_included = [len(hit.domains.included) for hit in hits3]
+        hits_nreported = sum(hits1_reported) + sum(hits2_reported) + sum(hits3_reported)
+        hits_nincluded = sum(hits1_included) + sum(hits2_included) + sum(hits3_included)
+
+        self.assertEqual(sum([len(hit.domains.included) for hit in merged]), hits_nincluded)
+        self.assertEqual(sum([len(hit.domains.reported) for hit in merged]), hits_nreported)
 
     def test_merged_pipeline_fixed_Z(self):
         pipeline = Pipeline(alphabet=self.hmm.alphabet, Z=200.0)
