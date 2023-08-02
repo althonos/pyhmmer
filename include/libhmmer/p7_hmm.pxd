@@ -15,7 +15,7 @@ cdef extern from "hmmer.h" nogil:
     const size_t p7_NOFFSETS
     const size_t p7_MAXABET
 
-    const size_t p7H_NTRANSITIONS = 7
+    const size_t p7H_NTRANSITIONS
     cdef enum p7h_transitions_e:
         p7H_MM = 0
         p7H_MI = 1
