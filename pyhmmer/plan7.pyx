@@ -5314,13 +5314,10 @@ cdef class Pipeline:
         self._pli.inc_by_E = self._cutoff_save['inc_by_E']
         self._pli.incdom_by_E = self._cutoff_save['incdom_by_E']
 
-    cdef P7_OPROFILE* _get_om_from_query(self, object query, int L = L_HINT) except NULL:
+    cdef P7_OPROFILE* _get_om_from_query(self, SearchQuery query, int L) except NULL:
         assert self._pli != NULL
 
-        if isinstance(query, OptimizedProfile):
-            return (<OptimizedProfile> query)._om
-
-        if isinstance(query, HMM):
+        if SearchQuery is HMM:
             # reallocate the profile if it is too small, otherwise just clear it
             if self.profile._gm.allocM < query.M:
                 libhmmer.p7_profile.p7_profile_Destroy(self.profile._gm)
@@ -5332,9 +5329,8 @@ cdef class Pipeline:
             # configure the profile from the query HMM
             self.profile.configure(<HMM> query, self.background, L)
             # use the local profile as a query
-            query = self.profile
-
-        if isinstance(query, Profile):
+            return self._get_om_from_query[Profile](self.profile, L)
+        if SearchQuery is Profile:
             # reallocate the optimized profile if it is too small
             if self.opt._om.allocM < query.M:
                 p7_oprofile.p7_oprofile_Destroy(self.opt._om)
@@ -5344,11 +5340,9 @@ cdef class Pipeline:
             # convert the profile to an optimized one
             self.opt.convert(self.profile)
             # use the temporary optimized profile
-            return self.opt._om
-
-        else:
-            ty = type(query).__name__
-            raise TypeError(f"Expected HMM, Profile or OptimizedProfile, found {ty}")
+            return self._get_om_from_query[OptimizedProfile](self.opt, L)
+        if SearchQuery is OptimizedProfile:
+            return query._om
 
     # --- Methods ------------------------------------------------------------
 
@@ -5486,7 +5480,7 @@ cdef class Pipeline:
 
     cpdef TopHits search_hmm(
         self,
-        object query,
+        SearchQuery query,
         SearchTargets sequences
     ):
         """search_hmm(self, query, sequences)\n--
@@ -5553,7 +5547,7 @@ cdef class Pipeline:
         else:
             L = self.L_HINT
         # get the optimized profile from the query
-        om = self._get_om_from_query(query, L=L)
+        om = self._get_om_from_query(query, L)
 
         with nogil:
             # make sure the pipeline is set to search mode and ready for a new HMM
@@ -5595,7 +5589,7 @@ cdef class Pipeline:
     cpdef TopHits search_msa(
         self,
         DigitalMSA query,
-        object sequences,
+        SearchTargets sequences,
         Builder builder = None,
     ):
         """search_msa(self, query, sequences, builder=None)\n--
@@ -5654,18 +5648,12 @@ cdef class Pipeline:
         builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
         # build the HMM and the profile from the query MSA
         hmm, profile, opt = builder.build_msa(query, self.background)
-        if isinstance(sequences, DigitalSequenceBlock):
-            return self.search_hmm[DigitalSequenceBlock](opt, sequences)
-        elif isinstance(sequences, SequenceFile):
-            return self.search_hmm[SequenceFile](opt, sequences)
-        else:
-            ty = type(sequences).__name__
-            raise TypeError(f"Expected DigitalSequenceBlock or SequenceFile, found {ty}")
+        return self.search_hmm[OptimizedProfile, SearchTargets](opt, sequences)
 
     cpdef TopHits search_seq(
         self,
         DigitalSequence query,
-        object sequences,
+        SearchTargets sequences,
         Builder builder = None,
     ):
         """search_seq(self, query, sequences, builder=None)\n--
@@ -5719,13 +5707,7 @@ cdef class Pipeline:
         builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
         # build the HMM and the profile from the query sequence
         hmm, profile, opt = builder.build(query, self.background)
-        if isinstance(sequences, DigitalSequenceBlock):
-            return self.search_hmm[DigitalSequenceBlock](opt, sequences)
-        elif isinstance(sequences, SequenceFile):
-            return self.search_hmm[SequenceFile](opt, sequences)
-        else:
-            ty = type(sequences).__name__
-            raise TypeError(f"Expected DigitalSequenceBlock or SequenceFile, found {ty}")
+        return self.search_hmm[OptimizedProfile, SearchTargets](opt, sequences)
 
     @staticmethod
     cdef int _search_loop(
@@ -6283,8 +6265,6 @@ cdef class LongTargetsPipeline(Pipeline):
 
     """
 
-
-
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
@@ -6414,6 +6394,38 @@ cdef class LongTargetsPipeline(Pipeline):
         else:
             raise InvalidParameter("strand", strand, choices=["watson", "crick", None])
 
+    # --- Utils ----------------------------------------------------------------
+
+    cdef P7_OPROFILE* _get_om_from_query(self, SearchQuery query, int L) except NULL:
+        assert self._pli != NULL
+
+        if SearchQuery is HMM:
+            # reallocate the profile if it is too small, otherwise just clear it
+            if self.profile._gm.allocM < query.M:
+                libhmmer.p7_profile.p7_profile_Destroy(self.profile._gm)
+                self.profile._gm = libhmmer.p7_profile.p7_profile_Create(query.M, self.alphabet._abc)
+                if self.profile._gm == NULL:
+                    raise AllocationError("P7_PROFILE", sizeof(P7_OPROFILE))
+            else:
+                self.profile.clear()
+            # configure the profile from the query HMM
+            self.profile.configure(<HMM> query, self.background, L)
+            # use the local profile as a query
+            return self._get_om_from_query[Profile](self.profile, L)
+        if SearchQuery is Profile:
+            # reallocate the optimized profile if it is too small
+            if self.opt._om.allocM < query.M:
+                p7_oprofile.p7_oprofile_Destroy(self.opt._om)
+                self.opt._om = p7_oprofile.p7_oprofile_Create(query.M, self.alphabet._abc)
+                if self.opt._om == NULL:
+                    raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
+            # convert the profile to an optimized one
+            self.opt.convert(self.profile)
+            # use the temporary optimized profile
+            return self._get_om_from_query[OptimizedProfile](self.opt, L)
+        if SearchQuery is OptimizedProfile:
+            return query._om
+    
     # --- Methods ------------------------------------------------------------
 
     cpdef list arguments(self):
@@ -6539,7 +6551,7 @@ cdef class LongTargetsPipeline(Pipeline):
 
     cpdef TopHits search_hmm(
         self,
-        object query,
+        SearchQuery query,
         SearchTargets sequences
     ):
         """search_hmm(self, query, sequences)\n--
@@ -6603,7 +6615,7 @@ cdef class LongTargetsPipeline(Pipeline):
         else:
             L = self.L_HINT
         # get the optimized profile from the query
-        om = self._get_om_from_query(query, L=L)
+        om = self._get_om_from_query(query, L)
 
         with nogil:
             # make sure the pipeline is set to search mode and ready for a new HMM
@@ -6675,7 +6687,7 @@ cdef class LongTargetsPipeline(Pipeline):
     cpdef TopHits search_seq(
         self,
         DigitalSequence query,
-        object sequences,
+        SearchTargets sequences,
         Builder builder = None,
     ):
         """search_seq(self, query, sequences, builder=None)\n--
@@ -6713,18 +6725,12 @@ cdef class LongTargetsPipeline(Pipeline):
         builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
         cdef HMM hmm = builder.build(query, self.background)[0]
         assert hmm._hmm.max_length != -1
-        if isinstance(sequences, DigitalSequenceBlock):
-            return self.search_hmm[DigitalSequenceBlock](hmm, sequences)
-        elif isinstance(sequences, SequenceFile):
-            return self.search_hmm[SequenceFile](hmm, sequences)
-        else:
-            ty = type(sequences).__name__
-            raise TypeError(f"Expected DigitalSequenceBlock or SequenceFile, found {ty}")
+        return self.search_hmm[HMM, SearchTargets](hmm, sequences)
 
     cpdef TopHits search_msa(
         self,
         DigitalMSA query,
-        object sequences,
+        SearchTargets sequences,
         Builder builder = None,
     ):
         """search_msa(self, query, sequences, builder=None)\n--
@@ -6764,13 +6770,7 @@ cdef class LongTargetsPipeline(Pipeline):
         builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
         cdef HMM hmm = builder.build_msa(query, self.background)[0]
         assert hmm._hmm.max_length != -1
-        if isinstance(sequences, DigitalSequenceBlock):
-            return self.search_hmm[DigitalSequenceBlock](hmm, sequences)
-        elif isinstance(sequences, SequenceFile):
-            return self.search_hmm[SequenceFile](hmm, sequences)
-        else:
-            ty = type(sequences).__name__
-            raise TypeError(f"Expected DigitalSequenceBlock or SequenceFile, found {ty}")
+        return self.search_hmm[HMM, SearchTargets](hmm, sequences)
 
     @staticmethod
     cdef int _search_loop_longtargets(
