@@ -106,6 +106,7 @@ class build_ext(_build_ext):
                 "SYS_VERSION_INFO_MINOR": sys.version_info.minor,
                 "SYS_VERSION_INFO_MICRO": sys.version_info.micro,
                 "SYS_BYTEORDER": sys.byteorder,
+                "PLATFORM_UNAME_SYSTEM": platform.uname().system,
             }
         }
         if hmmer_impl is not None:
@@ -714,6 +715,7 @@ extensions = [
         libraries=["easel"],
         define_macros=platform_define_macros,
         extra_compile_args=platform_compile_args,
+        depends=glob.glob(os.path.join("pyhmmer", "fileobj", "*.h")),
     ),
     Extension(
         "pyhmmer.plan7",
@@ -721,6 +723,7 @@ extensions = [
         libraries=["hmmer", "easel", "divsufsort"],
         define_macros=platform_define_macros,
         extra_compile_args=platform_compile_args,
+        depends=glob.glob(os.path.join("pyhmmer", "fileobj", "*.h")),
     ),
     Extension(
         "pyhmmer.daemon",

@@ -8,13 +8,6 @@ to facilitate the development of biological software in C. It is used by
 
 """
 
-# --- C declarations ---------------------------------------------------------
-
-IF UNAME_SYSNAME == "Linux":
-    include "fileobj/linux.pxi"
-ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
-    include "fileobj/bsd.pxi"
-
 # --- C imports --------------------------------------------------------------
 
 cimport cython
@@ -26,7 +19,7 @@ from cpython.memoryview cimport PyMemoryView_FromMemory
 from cpython.ref cimport Py_INCREF
 from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t, SIZE_MAX
-from libc.stdio cimport fclose
+from libc.stdio cimport fclose, FILE
 from libc.stdlib cimport calloc, malloc, realloc, free
 from libc.string cimport memcmp, memcpy, memmove, memset, strdup, strlen, strncpy
 from posix.types cimport off_t
@@ -94,8 +87,12 @@ from .reexports.esl_sqio_ascii cimport (
     fileheader_hmmpgmd,
 )
 
-include "exceptions.pxi"
+if PLATFORM_UNAME_SYSTEM == "Linux":
+    from .fileobj.linux cimport fileobj_linux_open as fopen_obj
+elif PLATFORM_UNAME_SYSTEM == "Darwin" or PLATFORM_UNAME_SYSTEM.endswith("BSD"):
+    from .fileobj.bsd cimport fileobj_bsd_open as fopen_obj
 
+include "exceptions.pxi"
 
 # --- Python imports ---------------------------------------------------------
 
@@ -3465,7 +3462,7 @@ cdef class MSA:
             raise InvalidParameter("format", format, choices=list(MSA_FILE_FORMATS))
 
         fmt = MSA_FILE_FORMATS[format]
-        file = fopen_obj(fh, mode="w")
+        file = fopen_obj(fh, "w")
         status = libeasel.msafile.esl_msafile_Write(file, self._msa, fmt)
         fclose(file)
 
@@ -4080,7 +4077,7 @@ cdef class MSAFile:
         cdef int          status
         cdef ESL_BUFFER*  buffer  = NULL
         cdef ESL_MSAFILE* msaf    = NULL
-        cdef FILE*        fp      = fopen_obj(fh)
+        cdef FILE*        fp      = fopen_obj(fh, "r")
         cdef bytes        fh_repr = repr(fh).encode("ascii")
 
         try:
@@ -4818,7 +4815,7 @@ cdef class Sequence:
         assert self._sq != NULL
 
         cdef int    status
-        cdef FILE*  file   = fopen_obj(fh, mode="w")
+        cdef FILE*  file   = fopen_obj(fh, "w")
 
         status = libeasel.sqio.ascii.esl_sqascii_WriteFasta(file, self._sq, False)
         fclose(file)
@@ -6108,7 +6105,7 @@ cdef class SequenceFile:
         cdef int               status
         cdef ESL_SQFILE*       sqfp    = NULL
         cdef ESL_SQASCII_DATA* ascii   = NULL
-        cdef FILE*             fp      = fopen_obj(fh)
+        cdef FILE*             fp      = fopen_obj(fh, "r")
         cdef bytes             fh_repr = repr(fh).encode("ascii")
 
         # bail out early if format is not supported

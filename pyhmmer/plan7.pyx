@@ -22,7 +22,7 @@ from libc.math cimport exp, ceil
 from libc.stddef cimport ptrdiff_t
 from libc.stdio cimport printf, rewind
 from libc.stdlib cimport calloc, malloc, realloc, free, llabs
-from libc.stdint cimport uint8_t, uint32_t, int64_t
+from libc.stdint cimport uint8_t, uint32_t, uint64_t, int64_t
 from libc.stdio cimport fprintf, FILE, stdout, fclose
 from libc.string cimport memset, memcpy, memmove, strdup, strndup, strlen, strcmp, strncpy
 from libc.time cimport ctime, strftime, time, time_t, tm, localtime_r
@@ -152,12 +152,13 @@ from .reexports.p7_hmmfile cimport (
     v3f_magic
 )
 
+if PLATFORM_UNAME_SYSTEM == "Linux":
+    from .fileobj.linux cimport fileobj_linux_open as fopen_obj
+elif PLATFORM_UNAME_SYSTEM == "Darwin" or PLATFORM_UNAME_SYSTEM.endswith("BSD"):
+    from .fileobj.bsd cimport fileobj_bsd_open as fopen_obj
+
 include "exceptions.pxi"
 
-IF UNAME_SYSNAME == "Linux":
-    include "fileobj/linux.pxi"
-ELIF UNAME_SYSNAME == "Darwin" or UNAME_SYSNAME.endswith("BSD"):
-    include "fileobj/bsd.pxi"
 
 # --- Python imports ---------------------------------------------------------
 
@@ -3245,7 +3246,7 @@ cdef class HMM:
         cdef FILE*   file
         cdef P7_HMM* hm     = self._hmm
 
-        file = fopen_obj(fh, mode="w")
+        file = fopen_obj(fh, "w")
 
         if binary:
             status = libhmmer.p7_hmmfile.p7_hmmfile_WriteBinary(file, -1, hm)
@@ -3320,7 +3321,7 @@ cdef class HMMFile:
             raise AllocationError("P7_HMMFILE", sizeof(P7_HMMFILE))
 
         # store options
-        hfp.f            = fopen_obj(fh_)
+        hfp.f            = fopen_obj(fh_, "r")
         hfp.do_gzip      = False
         hfp.do_stdin     = False
         hfp.newly_opened = True
@@ -4299,8 +4300,8 @@ cdef class OptimizedProfile:
 
         assert self._om != NULL
 
-        pfp = fopen_obj(fh_profile, mode="w")
-        ffp = fopen_obj(fh_filter, mode="w")
+        pfp = fopen_obj(fh_profile, "w")
+        ffp = fopen_obj(fh_filter, "w")
         status = p7_oprofile_Write(ffp, pfp, self._om)
         if status == libeasel.eslOK:
             fclose(ffp)
@@ -8218,7 +8219,7 @@ cdef class TopHits:
         cdef char* qname  = unk if self._qname is None else <char*> self._qname
         cdef char* qacc   = unk if self._qacc is None else <char*> self._qacc
 
-        file = fopen_obj(fh, mode="w")
+        file = fopen_obj(fh, "w")
         try:
             if format == "targets":
                 fname = "p7_tophits_TabularTargets"
