@@ -53,6 +53,9 @@ import warnings
 
 # --- Cython classes ---------------------------------------------------------
 
+cdef str      DEFAULT_ADDRESS = "127.0.0.1"
+cdef uint16_t DEFAULT_PORT    = 51371
+
 cdef class Client:
     """A `socket`-based client to communicate with a HMMER daemon server.
 
@@ -94,9 +97,6 @@ cdef class Client:
     .. versionadded:: 0.6.0
 
     """
-
-    DEF DEFAULT_ADDRESS = "127.0.0.1"
-    DEF DEFAULT_PORT    = 51371
 
     # --- Magic methods ------------------------------------------------------
 

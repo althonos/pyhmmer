@@ -4750,6 +4750,16 @@ cdef class Offsets:
         self._offs[0][<int> p7_offsets_e.p7_POFFSET] = -1 if profile is None else profile
 
 
+cdef double   DEFAULT_F1      = 0.02
+cdef double   DEFAULT_F2      = 1e-3
+cdef double   DEFAULT_F3      = 1e-5
+cdef uint32_t DEFAULT_SEED    = 42
+cdef double   DEFAULT_E       = 10.0
+cdef double   DEFAULT_DOME    = 10.0
+cdef double   DEFAULT_INCE    = 0.01
+cdef double   DEFAULT_INCDOME = 0.01
+cdef size_t   HMMER_TARGET_LIMIT = 100000
+
 cdef class Pipeline:
     """An HMMER3 accelerated sequence/profile comparison pipeline.
 
@@ -4784,18 +4794,6 @@ cdef class Pipeline:
        Added the ``randomness`` attribute.
 
     """
-
-
-    DEF DEFAULT_SEED    = 42
-    DEF DEFAULT_F1      = 0.02
-    DEF DEFAULT_F2      = 1e-3
-    DEF DEFAULT_F3      = 1e-5
-    DEF DEFAULT_E       = 10.0
-    DEF DEFAULT_DOME    = 10.0
-    DEF DEFAULT_INCE    = 0.01
-    DEF DEFAULT_INCDOME = 0.01
-
-    DEF HMMER_TARGET_LIMIT = 100000
 
     M_HINT = 100         # default model size
     L_HINT = 100         # default sequence size
@@ -6254,6 +6252,14 @@ cdef class Pipeline:
         return IterativeSearch(self, builder, query, sequences, select_hits)
 
 
+cdef double DEFAULT_LONG_F1           = 0.02
+cdef double DEFAULT_LONG_F2           = 3e-3
+cdef double DEFAULT_LONG_F3           = 3e-5
+cdef int    DEFAULT_LONG_B1           = 100
+cdef int    DEFAULT_LONG_B2           = 240
+cdef int    DEFAULT_LONG_B3           = 1000
+cdef int    DEFAULT_LONG_BLOCK_LENGTH = 0x40000
+
 cdef class LongTargetsPipeline(Pipeline):
     """An HMMER3 pipeline tuned for long targets.
 
@@ -6277,13 +6283,7 @@ cdef class LongTargetsPipeline(Pipeline):
 
     """
 
-    DEF DEFAULT_F1           = 0.02
-    DEF DEFAULT_F2           = 3e-3
-    DEF DEFAULT_F3           = 3e-5
-    DEF DEFAULT_B1           = 100
-    DEF DEFAULT_B2           = 240
-    DEF DEFAULT_B3           = 1000
-    DEF DEFAULT_BLOCK_LENGTH = 0x40000
+
 
     # --- Magic methods ------------------------------------------------------
 
@@ -6298,14 +6298,14 @@ cdef class LongTargetsPipeline(Pipeline):
         Alphabet alphabet,
         Background background = None,
         *,
-        double F1=DEFAULT_F1,
-        double F2=DEFAULT_F2,
-        double F3=DEFAULT_F3,
+        double F1=DEFAULT_LONG_F1,
+        double F2=DEFAULT_LONG_F2,
+        double F3=DEFAULT_LONG_F3,
         str strand=None,
-        int B1=DEFAULT_B1,
-        int B2=DEFAULT_B2,
-        int B3=DEFAULT_B3,
-        int block_length=DEFAULT_BLOCK_LENGTH,
+        int B1=DEFAULT_LONG_B1,
+        int B2=DEFAULT_LONG_B2,
+        int B3=DEFAULT_LONG_B3,
+        int block_length=DEFAULT_LONG_BLOCK_LENGTH,
         **kwargs,
     ):
         """__init__(self, alphabet, background=None, *, F1=0.02, F2=3e-3, F3=3e-5, strand=None, B1=100, B2=240, B3=1000, block_length=0x40000, **kwargs)\n--
@@ -6476,23 +6476,23 @@ cdef class LongTargetsPipeline(Pipeline):
                 argv.append("--incdomT")
                 argv.append(str(self._pli.incdomT))
 
-        if self._pli.F1 != DEFAULT_F1:
+        if self._pli.F1 != DEFAULT_LONG_F1:
             argv.append("--F1")
             argv.append(str(self.F1))
-        if self._pli.F2 != DEFAULT_F2:
+        if self._pli.F2 != DEFAULT_LONG_F2:
             argv.append("--F2")
             argv.append(str(self.F2))
-        if self._pli.F3 != DEFAULT_F3:
+        if self._pli.F3 != DEFAULT_LONG_F3:
             argv.append("--F3")
             argv.append(str(self.F3))
 
-        if self._pli.B1 != DEFAULT_B1:
+        if self._pli.B1 != DEFAULT_LONG_B1:
             argv.append("--B1")
             argv.append(str(self.B1))
-        if self._pli.B2 != DEFAULT_B2:
+        if self._pli.B2 != DEFAULT_LONG_B2:
             argv.append("--B2")
             argv.append(str(self.B2))
-        if self._pli.B3 != DEFAULT_B3:
+        if self._pli.B3 != DEFAULT_LONG_B3:
             argv.append("--B3")
             argv.append(str(self.B3))
 
@@ -6512,7 +6512,7 @@ cdef class LongTargetsPipeline(Pipeline):
             argv.append("--seed")
             argv.append(str(self._seed))
 
-        if self._pli.block_length != DEFAULT_BLOCK_LENGTH:
+        if self._pli.block_length != DEFAULT_LONG_BLOCK_LENGTH:
             argv.append("--block_length")
             argv.append(str(self._pli.block_length))
 

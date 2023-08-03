@@ -14,7 +14,7 @@ from libhmmer.p7_bg cimport P7_BG
 from libhmmer.p7_builder cimport P7_BUILDER
 from libhmmer.p7_domain cimport P7_DOMAIN
 from libhmmer.p7_hit cimport P7_HIT
-from libhmmer.p7_hmm cimport P7_HMM
+from libhmmer.p7_hmm cimport P7_HMM, p7_NOFFSETS, p7_NEVPARAM, p7_NCUTOFFS
 from libhmmer.p7_hmmfile cimport P7_HMMFILE
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e
 from libhmmer.p7_profile cimport P7_PROFILE
@@ -42,12 +42,6 @@ from .easel cimport (
     VectorU8,
     SequenceFile,
 )
-
-
-cdef extern from "hmmer.h" nogil:
-    DEF p7_NOFFSETS = 3
-    DEF p7_NEVPARAM = 6
-    DEF p7_NCUTOFFS = 6
 
 
 # --- Fused types ------------------------------------------------------------
