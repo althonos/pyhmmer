@@ -6,7 +6,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.8.2...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.9.0...HEAD
+
+
+## [v0.9.0] - 2023-08-03
+[v0.9.0]: https://github.com/althonos/pyhmmer/compare/v0.8.2...v0.9.0
+
+### Added
+- `TopHits.mode` property showing from which pipeline mode (*search* or *scan*) the hits were obtained.
+
+### Changed
+- Updated the code for Cython `v3.0`.
+
+### Fixed
+- `TopHits.merge` not properly handling inclusion and reporting for domains ([#46](https://github.com/althonos/pyhmmer/issues/46), [#47](https://github.com/althonos/pyhmmer/pull/47), by [@zdk123](https://github.com/zdk123)).
 
 
 ## [v0.8.2] - 2023-06-07
