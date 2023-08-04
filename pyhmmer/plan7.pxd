@@ -54,11 +54,6 @@ ctypedef fused SearchTargets:
     SequenceFile
     DigitalSequenceBlock
 
-ctypedef fused SearchQuery:
-    HMM
-    Profile
-    OptimizedProfile
-
 
 # --- Cython classes ---------------------------------------------------------
 
@@ -252,25 +247,25 @@ cdef class Pipeline:
 
     cdef int _save_cutoff_parameters(self) except 1
     cdef int _restore_cutoff_parameters(self) except 1
-    cdef P7_OPROFILE* _get_om_from_query(self, SearchQuery query, int L) except NULL
+    cdef P7_OPROFILE* _get_om_from_query(self, object query, int L = *) except NULL
     cpdef list    arguments(self)
     cpdef void    clear(self)
 
     cpdef TopHits search_hmm(
         self,
-        SearchQuery query,
-        SearchTargets sequences,
+        object query,
+        SearchTargets sequences
     )
     cpdef TopHits search_msa(
         self,
         DigitalMSA query,
-        SearchTargets sequences,
+        object sequences,
         Builder builder = ?
     )
     cpdef TopHits search_seq(
         self,
         DigitalSequence query,
-        SearchTargets sequences,
+        object sequences,
         Builder builder = ?
     )
     @staticmethod
@@ -334,23 +329,21 @@ cdef class Pipeline:
 cdef class LongTargetsPipeline(Pipeline):
     cdef ID_LENGTH_LIST* _idlens
 
-    cdef P7_OPROFILE* _get_om_from_query(self, SearchQuery query, int L) except NULL
-
     cpdef TopHits search_hmm(
         self,
-        SearchQuery query,
+        object query,
         SearchTargets sequences
     )
     cpdef TopHits search_msa(
         self,
         DigitalMSA query,
-        SearchTargets sequences,
+        object sequences,
         Builder builder = ?
     )
     cpdef TopHits search_seq(
         self,
         DigitalSequence query,
-        SearchTargets sequences,
+        object sequences,
         Builder builder = ?
     )
     @staticmethod
