@@ -18,7 +18,7 @@ if HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
 elif HMMER_IMPL == "SSE":
     from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
-ELIF HMMER_IMPL == "NEON":
+elif HMMER_IMPL == "NEON":
     from libhmmer.impl_neon.p7_oprofile cimport P7_OPROFILE
 
 
