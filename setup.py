@@ -430,7 +430,7 @@ class configure(_build_clib):
             if os.path.isfile(binfile):
                 os.remove(binfile)
 
-    def _check_simd_generic(self, name, program, platform_compile_args=()):
+    def _check_simd_generic(self, name, program, platform_args=()):
         _eprint('checking whether compiler can build', name, 'code', end="... ")
 
         base = "have_{}".format(name)
@@ -444,8 +444,8 @@ class configure(_build_clib):
 
         try:
             self.mkpath(self.build_temp)
-            objects = self.compiler.compile([testfile], extra_preargs=platform_compile_args)
-            self.compiler.link_executable(objects, base, extra_preargs=platform_compile_args, output_dir=self.build_temp)
+            objects = self.compiler.compile([testfile], extra_preargs=platform_args)
+            self.compiler.link_executable(objects, base, extra_preargs=platform_args, output_dir=self.build_temp)
             subprocess.run([binfile], check=True)
         except CompileError:
             _eprint("no")
@@ -454,10 +454,10 @@ class configure(_build_clib):
             _eprint("yes, but cannot run code")
             return True  # assume we are cross-compiling, and still build
         else:
-            if not platform_compile_args:
+            if not platform_args:
                 _eprint("yes")
             else:
-                _eprint("yes, with {}".format(" ".join(platform_compile_args)))
+                _eprint("yes, with {}".format(" ".join(platform_args)))
             return True
         finally:
             os.remove(testfile)
@@ -478,6 +478,7 @@ class configure(_build_clib):
                     return (x == 1) ? 0 : 1;
                 }}
             """,
+            platform_args=[] if "64" in self.target_machine else ["-mfpu=neon"]
         )
 
     def _check_sse2(self):
