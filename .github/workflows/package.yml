@@ -7,173 +7,158 @@ on:
 
 jobs:
 
-  wheel-linux:
-    runs-on: ubuntu-latest
-    name: Build Linux wheels
+  wheel-linux-aarch64:
+    name: Build Linux wheels (Aarch64)
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
-        include:
-        - python-version: 3.6
-          pyo3-python: /opt/python/cp36-cp36m/bin/python
-          manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
-        - python-version: 3.7
-          pyo3-python: /opt/python/cp37-cp37m/bin/python
-          manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
-        - python-version: 3.8
-          pyo3-python: /opt/python/cp38-cp38/bin/python
-          manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
-        - python-version: 3.9
-          pyo3-python: /opt/python/cp39-cp39/bin/python
-          manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
-        - python-version: '3.10'
-          pyo3-python: /opt/python/cp310-cp310/bin/python
-          manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
-        - python-version: '3.11'
-          pyo3-python: /opt/python/cp311-cp311/bin/python
-          manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
-        - python-version: pypy-3.7
-          pyo3-python: /opt/python/pp37-pypy37_pp73/bin/python
-          manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
-        - python-version: pypy-3.8
-          pyo3-python: /opt/python/pp38-pypy38_pp73/bin/python
-          manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
-        - python-version: pypy-3.9
-          pyo3-python: /opt/python/pp39-pypy39_pp73/bin/python
-          manylinux-img: quay.io/pypa/manylinux_2_24_x86_64
+        python-tag:
+        - cp36-manylinux_aarch64
+        - cp37-manylinux_aarch64
+        - cp38-manylinux_aarch64
+        - cp39-manylinux_aarch64
+        - cp310-manylinux_aarch64
+        - cp311-manylinux_aarch64
+        - pp37-manylinux_aarch64
+        - pp38-manylinux_aarch64
+        - pp39-manylinux_aarch64
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
+    - name: Set up QEMU
+      id: qemu
+      uses: docker/setup-qemu-action@v2
+      with:
+        platforms: all
     - name: Build manylinux wheels
-      uses: addnab/docker-run-action@v2
+      uses: pypa/cibuildwheel@v2.11.3
+      env:
+        CIBW_ARCHS: aarch64
+        CIBW_BUILD: ${{ matrix.python-tag }}
+        CIBW_BUILD_VERBOSITY: 2
+        CIBW_BEFORE_BUILD: pip install cython
+        CIBW_TEST_COMMAND: python -m unittest pyhmmer.tests -vv
+        CIBW_TEST_REQUIRES: importlib-resources
       with:
-        image: ${{ matrix.manylinux-img }}
-        options: -v ${{ github.workspace }}:/io -e TERM=$TERM
-        shell: bash
-        run: |
-          ${{ matrix.pyo3-python }} -m pip install -U -r /io/.github/workflows/requirements.txt
-          ${{ matrix.pyo3-python }} -m pip wheel --no-deps -vv /io -w /tmp
-          for whl in /tmp/*.whl; do ${{ matrix.pyo3-python }} -m auditwheel repair $whl -w /io/dist; done
-    - name: Store built wheels
-      uses: actions/upload-artifact@v2
+        output-dir: dist
+    - uses: actions/upload-artifact@v3
       with:
-        name: dist
+        name: wheels
         path: dist/*
 
-  test-linux:
-    runs-on: ubuntu-latest
-    name: Test Linux wheels
-    needs:
-    - wheel-linux
+  wheel-linux-x86_64:
+    name: Build Linux wheels (x86-64)
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
-        python-version:
-        - 3.7
-        - 3.8
-        - 3.9
-        - '3.10'
-        - '3.11'
+        python-tag:
+        - cp36-manylinux_x86_64
+        - cp37-manylinux_x86_64
+        - cp38-manylinux_x86_64
+        - cp39-manylinux_x86_64
+        - cp310-manylinux_x86_64
+        - cp311-manylinux_x86_64
+        - pp37-manylinux_x86_64
+        - pp38-manylinux_x86_64
+        - pp39-manylinux_x86_64
     steps:
-    - name: Setup Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Download built wheels
-      uses: actions/download-artifact@v2
-      with:
-          name: dist
-          path: dist
-    - name: Update pip to latest version
-      run: python -m pip install -U pip setuptools wheel
-    - name: Install requirements
-      run: python -m pip install psutil
-    - name: Install built wheel
-      run: python -m pip install --no-index --find-links=dist pyhmmer
-    - name: Run tests without coverage
-      run: python -m unittest pyhmmer.tests -vv
-
-  wheel-osx:
-    runs-on: macos-latest
-    name: Build OSX wheels
-    strategy:
-      matrix:
-        python-version:
-        - 3.7
-        - 3.8
-        - 3.9
-        - '3.10'
-        - '3.11'
-        - pypy-3.7
-        - pypy-3.8
-        - pypy-3.9
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
-    - name: Cache Python requirements
-      uses: actions/cache@v2
+    - uses: actions-rs/toolchain@v1
       with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ matrix.python-version }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-    - name: Cache built C files
-      uses: actions/cache@v2
+        toolchain: stable
+        override: true
+    - name: Build manylinux wheels
+      uses: pypa/cibuildwheel@v2.11.3
+      env:
+        CIBW_ARCHS: x86_64
+        CIBW_BUILD: ${{ matrix.python-tag }}
+        CIBW_BEFORE_BUILD: pip install cython
+        CIBW_BUILD_VERBOSITY: 2
+        CIBW_TEST_COMMAND: python -m unittest pyhmmer.tests -vv
+        CIBW_TEST_REQUIRES: importlib-resources
       with:
-        path: build
-        key: ${{ runner.os }}-build-${{ hashFiles('Prodigal/*') }}
-        restore-keys: |
-          ${{ runner.os }}-build-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+        output-dir: dist
+    - uses: actions/upload-artifact@v3
       with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install Python requirements
-      run: python -m pip install -r .github/workflows/requirements.txt
-    - name: Build wheel distribution
-      run: python setup.py bdist_wheel
-    - name: Store built wheels
-      uses: actions/upload-artifact@v2
-      with:
-        name: dist
+        name: wheels
         path: dist/*
 
-  test-osx:
-    runs-on: macos-latest
-    name: Test OSX wheels
-    needs:
-    - wheel-osx
+  wheel-macos-x86_64:
+    name: Build MacOS wheels (x86-64)
+    runs-on: macOS-11
     strategy:
       matrix:
-        python-version:
-        - 3.7
-        - 3.8
-        - 3.9
-        - '3.10'
-        - '3.11'
-        - pypy-3.7
-        - pypy-3.8
-        - pypy-3.9
+        python-tag:
+        - cp36-macosx_x86_64
+        - cp37-macosx_x86_64
+        - cp38-macosx_x86_64
+        - cp39-macosx_x86_64
+        - cp310-macosx_x86_64
+        - cp311-macosx_x86_64
+        - pp37-macosx_x86_64
+        - pp38-macosx_x86_64
+        - pp39-macosx_x86_64
     steps:
-    - name: Setup Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+    - uses: actions/checkout@v3
       with:
-        python-version: ${{ matrix.python-version }}
-    - name: Download built wheels
-      uses: actions/download-artifact@v2
+        submodules: true
+    - uses: actions-rs/toolchain@v1
       with:
-          name: dist
-          path: dist
-    - name: Update pip to latest version
-      run: python -m pip install -U pip setuptools wheel
-    - name: Install requirements
-      run: python -m pip install psutil
-    - name: Install built wheel
-      run: python -m pip install --no-index --find-links=dist pyhmmer
-    - name: Run tests without coverage
-      run: python -m unittest pyhmmer.tests -vv
+        toolchain: stable
+        override: true
+    - name: Build manylinux wheels
+      uses: pypa/cibuildwheel@v2.11.3
+      env:
+        CIBW_ARCHS: x86_64
+        CIBW_BUILD: ${{ matrix.python-tag }}
+        CIBW_BEFORE_BUILD: pip install cython
+        CIBW_BUILD_VERBOSITY: 2
+        CIBW_TEST_COMMAND: python -m unittest pyhmmer.tests -vv
+        CIBW_TEST_REQUIRES: importlib-resources
+      with:
+        output-dir: dist
+    - uses: actions/upload-artifact@v3
+      with:
+        name: wheels
+        path: dist/*
+
+  wheel-macos-aarch64:
+    name: Build MacOS wheels (Aarch64)
+    runs-on: macOS-11
+    strategy:
+      matrix:
+        python-tag:
+        - cp38-macosx_arm64
+        - cp39-macosx_arm64
+        - cp310-macosx_arm64
+        - cp311-macosx_arm64
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+        target: aarch64-apple-darwin
+    - name: Build manylinux wheels
+      uses: pypa/cibuildwheel@v2.11.3
+      env:
+        CIBW_ARCHS: arm64
+        CIBW_BUILD: ${{ matrix.python-tag }}
+        CIBW_BEFORE_BUILD: pip install cython
+        CIBW_BUILD_VERBOSITY: 2
+        CIBW_TEST_COMMAND: python -m unittest pyhmmer.tests -vv
+        CIBW_TEST_REQUIRES: importlib-resources
+      with:
+        output-dir: dist
+    - uses: actions/upload-artifact@v3
+      with:
+        name: wheels
+        path: dist/*
 
   sdist:
     runs-on: ubuntu-latest
@@ -183,10 +168,10 @@ jobs:
       uses: actions/checkout@v2
       with:
         submodules: true
-    - name: Set up Python 3.9
+    - name: Set up Python 3.11
       uses: actions/setup-python@v2
       with:
-        python-version: 3.9
+        python-version: 3.11
     - name: Install build requirements
       run: python -m pip install -r .github/workflows/requirements.txt
     - name: Build wheel distribution
@@ -194,8 +179,30 @@ jobs:
     - name: Store built wheels
       uses: actions/upload-artifact@v2
       with:
-        name: dist
+        name: wheels
         path: dist/*
+
+  test-sdist:
+    runs-on: ubuntu-latest
+    name: Test source distribution
+    needs:
+    - sdist
+    steps:
+    - name: Setup Python 3.11
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.11'
+    - name: Download built wheels
+      uses: actions/download-artifact@v2
+      with:
+          name: wheels
+          path: dist/
+    - name: Update pip to latest version
+      run: python -m pip install -U pip setuptools wheel
+    - name: Install built wheel
+      run: python -m pip install --no-binary pyhmmer --find-links=dist pyhmmer
+    - name: Run tests without coverage
+      run: python -m unittest pyhmmer.tests -vv
 
   upload:
     environment: PyPI
@@ -203,15 +210,16 @@ jobs:
     name: Upload
     needs:
     - sdist
-    - wheel-linux
-    - test-linux
-    - wheel-osx
-    - test-osx
+    - test-sdist
+    - wheel-linux-aarch64
+    - wheel-linux-x86_64
+    - wheel-macos-x86_64
+    - wheel-macos-aarch64
     steps:
     - name: Download built distributions
       uses: actions/download-artifact@v2
       with:
-          name: dist
+          name: wheels
           path: dist
     - name: Publish distributions to PyPI
       if: startsWith(github.ref, 'refs/tags/v')
