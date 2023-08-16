@@ -92,7 +92,7 @@ from libhmmer.nhmmer cimport ID_LENGTH_LIST
 from capacity cimport new_capacity
 
 if HMMER_IMPL == "VMX":
-    from libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init
+    from libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init, p7O_EXTRA_SB
     from libhmmer.impl_vmx.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
     from libhmmer.impl_vmx.p7_omx cimport (
         P7_OM_BLOCK,
@@ -122,6 +122,22 @@ elif HMMER_IMPL == "SSE":
         p7_oprofile_Dump,
         p7_oprofile_Sizeof,
         p7_oprofile_Destroy
+    )
+elif HMMER_IMPL == "NEON":
+    from libhmmer.impl_neon cimport p7_oprofile, p7_omx, impl_Init, p7O_EXTRA_SB
+    from libhmmer.impl_neon.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
+    from libhmmer.impl_neon.p7_omx cimport (
+        P7_OM_BLOCK,
+        p7_oprofile_CreateBlock,
+        p7_oprofile_DestroyBlock,
+    )
+    from libhmmer.impl_neon.p7_oprofile cimport (
+        P7_OPROFILE,
+        p7O_NQB,
+        p7_oprofile_Compare,
+        p7_oprofile_Dump,
+        p7_oprofile_Sizeof,
+        p7_oprofile_Destroy,
     )
 
 from .easel cimport (

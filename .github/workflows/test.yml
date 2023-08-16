@@ -6,7 +6,7 @@ on:
 
 jobs:
 
-  test_linux:
+  test_linux_x86:
     name: Test (Linux)
     runs-on: ubuntu-latest
     env:
@@ -82,7 +82,40 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         verbose: true
 
-  test_osx:
+  test_linux_arm64:
+    name: Test (Linux, arm64)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-tag:
+        - cp310-manylinux_aarch64
+        - cp311-manylinux_aarch64
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+    - name: Set up QEMU
+      id: qemu
+      uses: docker/setup-qemu-action@v2
+      with:
+        platforms: all
+    - name: Build manylinux wheels
+      uses: pypa/cibuildwheel@v2.11.3
+      env:
+        CIBW_ARCHS: aarch64
+        CIBW_BUILD: ${{ matrix.python-tag }}
+        CIBW_BUILD_VERBOSITY: 2
+        CIBW_BEFORE_BUILD: pip install cython
+        CIBW_TEST_COMMAND: python -m unittest pyhmmer.tests -vv
+        CIBW_TEST_REQUIRES: importlib-resources
+      with:
+        output-dir: dist
+    - uses: actions/upload-artifact@v3
+      with:
+        name: wheels
+        path: dist/*
+
+  test_osx_x86:
     name: Test (OSX)
     runs-on: macos-latest
     env:
