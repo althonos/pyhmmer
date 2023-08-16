@@ -120,6 +120,7 @@ jobs:
     runs-on: macos-latest
     env:
       OS: OSX
+      _PYTHON_HOST_PLATFORM: macosx-10.9-x86_64
     strategy:
       matrix:
         include:

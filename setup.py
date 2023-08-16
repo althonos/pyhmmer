@@ -129,18 +129,16 @@ class build_ext(_build_ext):
         self.target_system = _detect_target_system(self.plat_name)
         self.target_cpu = _detect_target_cpu(self.plat_name)
         # transfer arguments to the build_clib method
-        self._clib_cmd = self.get_finalized_command("build_clib")
+        self._clib_cmd = self.distribution.get_command_obj("build_clib", True)
         self._clib_cmd.debug = self.debug
         self._clib_cmd.force = self.force
         self._clib_cmd.verbose = self.verbose
         self._clib_cmd.define = self.define
         self._clib_cmd.include_dirs = self.include_dirs
-        # self._clib_cmd.compiler = self.compiler
         self._clib_cmd.parallel = self.parallel
         self._clib_cmd.plat_name = self.plat_name
-        self._clib_cmd.target_machine = self.target_machine
-        self._clib_cmd.target_system = self.target_system
-        self._clib_cmd.target_cpu = self.target_cpu
+        self._clib_cmd.finalize_options()
+
 
     def _check_getid(self):
         _eprint('checking whether `PyInterpreterState_GetID` is available')
@@ -193,12 +191,12 @@ class build_ext(_build_ext):
         if not self.distribution.have_run.get("build_clib", False):
             self._clib_cmd.run()
 
-        # # check a platform-specific implementation of HMMER was selected
-        # # depending on the detected machine
-        # if hmmer_impl is None:
-        #     raise RuntimeError('Could not select implementation for CPU architecture: "{}"'.format(machine))
-        # else:
-        # _eprint('Building HMMER with', self._clib_cmd.hmmer_impl, 'for CPU architecture:', repr(self.target_machine))
+        # check a platform-specific implementation of HMMER was selected
+        # depending on the detected machine
+        if self._clib_cmd.hmmer_impl is None:
+            raise RuntimeError('Could not select implementation for CPU architecture: "{}"'.format(machine))
+        else:
+            _eprint('Building HMMER with', self._clib_cmd.hmmer_impl, 'for CPU architecture:', repr(self.target_machine))
 
         # use debug directives with Cython if building in debug mode
         cython_args = {
@@ -215,8 +213,6 @@ class build_ext(_build_ext):
                 "HMMER_IMPL": self._clib_cmd.hmmer_impl,
             }
         }
-        if hmmer_impl is not None:
-            cython_args["compile_time_env"]["HMMER_IMPL"] = hmmer_impl
         if self.force:
             cython_args["force"] = True
         if self.debug:
@@ -818,58 +814,6 @@ class clean(_clean):
 # --- C static libraries -----------------------------------------------------
 
 # fmt: off
-hmmer_sources = [
-    os.path.join("vendor", "hmmer", "src", basename)
-    for basename in [
-        "build.c", "cachedb.c", "cachedb_shard.c", "emit.c", "errors.c",
-    	"evalues.c", "eweight.c", "generic_decoding.c", "generic_fwdback.c",
-    	"generic_fwdback_chk.c", "generic_fwdback_banded.c", "generic_null2.c",
-    	"generic_msv.c", "generic_optacc.c", "generic_stotrace.c",
-        "generic_viterbi.c", "generic_vtrace.c", "h2_io.c", "heatmap.c",
-    	"hmmlogo.c", "hmmdmstr.c", "hmmdmstr_shard.c", "hmmd_search_status.c",
-        "hmmdwrkr.c", "hmmdwrkr_shard.c", "hmmdutils.c", "hmmer.c", "logsum.c",
-        "modelconfig.c", "modelstats.c", "mpisupport.c", "seqmodel.c",
-        "tracealign.c", "p7_alidisplay.c", "p7_bg.c", "p7_builder.c",
-        "p7_domain.c", "p7_domaindef.c", "p7_gbands.c", "p7_gmx.c",
-        "p7_gmxb.c", "p7_gmxchk.c", "p7_hit.c", "p7_hmm.c", "p7_hmmcache.c",
-    	"p7_hmmd_search_stats.c", "p7_hmmfile.c", "p7_hmmwindow.c",
-    	"p7_pipeline.c", "p7_prior.c", "p7_profile.c", "p7_spensemble.c",
-    	"p7_tophits.c", "p7_trace.c", "p7_scoredata.c", "hmmpgmd2msa.c",
-    	"fm_alphabet.c", "fm_general.c", "fm_sse.c", "fm_ssv.c",
-    ]
-]
-
-# # HMMER3 is only supported on x86 CPUs with SSE, and big endian PowerPC
-# # (see https://github.com/EddyRivasLab/hmmer/issues/142)
-# machine = platform.machine().lower()
-# if machine.startswith('ppc') and not machine.endswith('le'):
-#     hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_vmx", "*.c")))
-#     hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_vmx", "vitscore.c"))
-#     hmmer_impl = "VMX"
-#     platform_define_macros = [("eslENABLE_VMX", 1)]
-#     platform_compile_args = ["-maltivec"]
-# elif machine.startswith(("x86", "amd", "i386", "i686")):
-#     hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_sse", "*.c")))
-#     hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_sse", "vitscore.c"))
-#     hmmer_impl = "SSE"
-#     platform_define_macros = [("eslENABLE_SSE", 1)]
-#     platform_compile_args = ["-msse4.1"]
-# elif machine.lower().startswith(("arm", "aarch")):
-#     hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_neon", "*.c")))
-#     hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_neon", "vitscore.c"))
-#     hmmer_impl = "NEON"
-#     platform_define_macros = [("eslENABLE_NEON", 1)]
-#     platform_compile_args = [] if "64" in machine else ["-mfpu=neon"]
-# else:
-#     _eprint('pyHMMER is not supported on CPU architecture:', repr(machine))
-#     platform_define_macros = []
-#     platform_compile_args = []
-#     hmmer_impl = None
-
-platform_define_macros = []
-platform_compile_args = []
-hmmer_impl = None
-
 libraries = [
     Library(
         "divsufsort",
@@ -882,7 +826,26 @@ libraries = [
     ),
     Library(
         "hmmer",
-        sources=hmmer_sources,
+        sources=[
+            os.path.join("vendor", "hmmer", "src", basename)
+            for basename in [
+                "build.c", "cachedb.c", "cachedb_shard.c", "emit.c", "errors.c",
+                "evalues.c", "eweight.c", "generic_decoding.c", "generic_fwdback.c",
+                "generic_fwdback_chk.c", "generic_fwdback_banded.c", "generic_null2.c",
+                "generic_msv.c", "generic_optacc.c", "generic_stotrace.c",
+                "generic_viterbi.c", "generic_vtrace.c", "h2_io.c", "heatmap.c",
+                "hmmlogo.c", "hmmdmstr.c", "hmmdmstr_shard.c", "hmmd_search_status.c",
+                "hmmdwrkr.c", "hmmdwrkr_shard.c", "hmmdutils.c", "hmmer.c", "logsum.c",
+                "modelconfig.c", "modelstats.c", "mpisupport.c", "seqmodel.c",
+                "tracealign.c", "p7_alidisplay.c", "p7_bg.c", "p7_builder.c",
+                "p7_domain.c", "p7_domaindef.c", "p7_gbands.c", "p7_gmx.c",
+                "p7_gmxb.c", "p7_gmxchk.c", "p7_hit.c", "p7_hmm.c", "p7_hmmcache.c",
+                "p7_hmmd_search_stats.c", "p7_hmmfile.c", "p7_hmmwindow.c",
+                "p7_pipeline.c", "p7_prior.c", "p7_profile.c", "p7_spensemble.c",
+                "p7_tophits.c", "p7_trace.c", "p7_scoredata.c", "hmmpgmd2msa.c",
+                "fm_alphabet.c", "fm_general.c", "fm_sse.c", "fm_ssv.c",
+            ]
+        ],
         include_dirs=[
             os.path.join("vendor", "easel"),
             os.path.join("vendor", "hmmer", "src"),
@@ -904,24 +867,18 @@ extensions = [
         "pyhmmer.easel",
         [os.path.join("pyhmmer", "easel.pyx")],
         libraries=["easel"],
-        define_macros=platform_define_macros,
-        extra_compile_args=platform_compile_args,
         depends=glob.glob(os.path.join("pyhmmer", "fileobj", "*.h")),
     ),
     Extension(
         "pyhmmer.plan7",
         [os.path.join("pyhmmer", "plan7.pyx")],
         libraries=["hmmer", "easel", "divsufsort"],
-        define_macros=platform_define_macros,
-        extra_compile_args=platform_compile_args,
         depends=glob.glob(os.path.join("pyhmmer", "fileobj", "*.h")),
     ),
     Extension(
         "pyhmmer.daemon",
         [os.path.join("pyhmmer", "daemon.pyx")],
         libraries=["hmmer", "easel", "divsufsort"],
-        define_macros=platform_define_macros,
-        extra_compile_args=platform_compile_args,
     )
 ]
 
