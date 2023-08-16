@@ -10,7 +10,9 @@ import os
 import platform
 import re
 import sys
+import sysconfig
 import subprocess
+import tempfile
 from pprint import pprint
 
 import setuptools # always import setuptools first
@@ -47,6 +49,48 @@ def _patch_osx_compiler(compiler):
             flags.pop(i)
             flags.pop(i-1)
 
+def _detect_target_machine(platform):
+    if platform == "win32":
+        return "x86"
+    return platform.rsplit("-", 1)[-1]
+
+def _detect_target_cpu(platform):
+    machine = _detect_target_machine(platform)
+    if re.match("^mips", machine):
+        return "mips"
+    elif re.match("^(aarch64|arm64)$", machine):
+        return "aarch64"
+    elif re.match("^arm", machine):
+        return "arm"
+    elif re.match("(x86_64)|(x86)|(AMD64|amd64)|(^i.86$)", machine):
+        return "x86"
+    elif re.match("^(powerpc|ppc)", machine):
+        return "ppc"
+    return None
+
+def _detect_target_system(platform):
+    if platform.startswith("win"):
+        return "windows"
+    elif platform.startswith("macos"):
+        return "macos"
+    elif platform.startswith("linux"):
+        return "linux_or_android"
+    elif platform.startswith("freebsd"):
+        return "freebsd"
+    return None
+
+
+# --- Library with platform-specific code ------------------------------------
+
+class Library(setuptools.extension.Library):
+
+    def __init__(self, *args, **kwargs):
+        self._needs_stub = False
+        self.platform_sources = kwargs.pop("platform_sources", {})
+        self.platform_define_macros = kwargs.pop("platform_define_macros", {})
+        self.platform_compile_args = kwargs.pop("platform_compile_args", {})
+        super().__init__(*args, **kwargs)
+
 # --- `setup.py` commands ----------------------------------------------------
 
 class sdist(_sdist):
@@ -69,23 +113,43 @@ class build_ext(_build_ext):
     """A `build_ext` that disables optimizations if compiled in debug mode.
     """
 
+    def initialize_options(self):
+        _build_ext.initialize_options(self)
+        self.target_machine = None
+        self.target_system = None
+        self.target_cpu = None
+
     def finalize_options(self):
         _build_ext.finalize_options(self)
-        self._clib_cmd = self.get_finalized_command("build_clib")
-        self._clib_cmd.force = self.force
-        self._clib_cmd.debug = self.debug
+        # detect if parallel build is enabled
         if self.parallel == 0:
             self.parallel = os.cpu_count()
+        # detect platform options
+        self.target_machine = _detect_target_machine(self.plat_name)
+        self.target_system = _detect_target_system(self.plat_name)
+        self.target_cpu = _detect_target_cpu(self.plat_name)
+        # transfer arguments to the build_clib method
+        self._clib_cmd = self.get_finalized_command("build_clib")
+        self._clib_cmd.debug = self.debug
+        self._clib_cmd.force = self.force
+        self._clib_cmd.verbose = self.verbose
+        self._clib_cmd.define = self.define
+        self._clib_cmd.include_dirs = self.include_dirs
+        # self._clib_cmd.compiler = self.compiler
+        self._clib_cmd.parallel = self.parallel
+        self._clib_cmd.plat_name = self.plat_name
+        self._clib_cmd.target_machine = self.target_machine
+        self._clib_cmd.target_system = self.target_system
+        self._clib_cmd.target_cpu = self.target_cpu
 
     def _check_getid(self):
         _eprint('checking whether `PyInterpreterState_GetID` is available')
 
-        base = "have_getid"
-        testfile = os.path.join(self.build_temp, "{}.c".format(base))
+        self.mkpath(self.build_temp)
+        fd, testfile = tempfile.mkstemp(prefix="have_getid", dir=self.build_temp, suffix=".c")
         objects = []
 
-        self.mkpath(self.build_temp)
-        with open(testfile, "w") as f:
+        with os.fdopen(fd, "w") as f:
             f.write("""
             #include <stdint.h>
             #include <stdlib.h>
@@ -103,7 +167,6 @@ class build_ext(_build_ext):
             flags = ["-Werror=implicit-function-declaration"]
 
         try:
-            self.mkpath(self.build_temp)
             objects = self.compiler.compile([testfile], extra_postargs=flags)
         except CompileError:
             _eprint("no")
@@ -112,27 +175,30 @@ class build_ext(_build_ext):
             _eprint("yes")
             return True
         finally:
-            os.remove(testfile)
+            if os.path.exists(testfile):
+                os.remove(testfile)
             for obj in filter(os.path.isfile, objects):
                 os.remove(obj)
+
+    # --- Build code ---
 
     def run(self):
         # check `cythonize` is available
         if isinstance(cythonize, ImportError):
             raise RuntimeError("Cython is required to run `build_ext` command") from cythonize
-
         # check the CPU architecture could be detected
-        global machine
-        if machine is None:
+        if self.target_machine is None:
             raise RuntimeError("Could not detect CPU architecture with `platform.machine`")
+        # compile the C library if not done already
+        if not self.distribution.have_run.get("build_clib", False):
+            self._clib_cmd.run()
 
-        # check a platform-specific implementation of HMMER was selected
-        # depending on the detected machine
-        global hmmer_impl
-        if hmmer_impl is None:
-            raise RuntimeError('Could not select implementation for CPU architecture: "{}"'.format(machine))
-        else:
-            _eprint('Building HMMER with', hmmer_impl, 'for CPU architecture:', repr(machine))
+        # # check a platform-specific implementation of HMMER was selected
+        # # depending on the detected machine
+        # if hmmer_impl is None:
+        #     raise RuntimeError('Could not select implementation for CPU architecture: "{}"'.format(machine))
+        # else:
+        # _eprint('Building HMMER with', self._clib_cmd.hmmer_impl, 'for CPU architecture:', repr(self.target_machine))
 
         # use debug directives with Cython if building in debug mode
         cython_args = {
@@ -146,6 +212,7 @@ class build_ext(_build_ext):
                 "SYS_VERSION_INFO_MICRO": sys.version_info.micro,
                 "SYS_BYTEORDER": sys.byteorder,
                 "PLATFORM_UNAME_SYSTEM": platform.uname().system,
+                "HMMER_IMPL": self._clib_cmd.hmmer_impl,
             }
         }
         if hmmer_impl is not None:
@@ -173,18 +240,23 @@ class build_ext(_build_ext):
         for ext in self.extensions:
             ext._needs_stub = False
 
-        # # update the compiler include and link dirs to use the
-        # # temporary build folder so that the platform-specific headers
-        # # and static libs can be found
-
-        # check the libraries have been built already
-        if not self.distribution.have_run["build_clib"]:
-            self._clib_cmd.run()
-
         # build the extensions as normal
         _build_ext.run(self)
 
+    def build_extensions(self):
+        # make sure the PyInterpreterState_GetID() function is available
+        if self._check_getid():
+            for ext in self.extensions:
+                ext.define_macros.append(("HAS_PYINTERPRETERSTATE_GETID", 1))
+        # build the extensions as normal
+        _build_ext.build_extensions(self)
+
     def build_extension(self, ext):
+        # show the compiler being used
+        _eprint("building", ext.name, "for", self.plat_name, "with", self.compiler.compiler_type, "compiler")
+
+        # setup HMMER implementation-specific flags
+        self._clib_cmd._setup_impl(ext)
         # update compile flags if compiling in debug mode
         if self.debug:
             if self.compiler.compiler_type in {"unix", "cygwin", "mingw32"}:
@@ -200,11 +272,8 @@ class build_ext(_build_ext):
             if self.compiler.compiler_type in {"unix", "cygwin", "mingw32"}:
                 ext.extra_compile_args.append("-Wno-unused-variable")
         # remove universal binary CFLAGS from the compiler if any
-        if platform.system() == "Darwin":
+        if self.target_system == "macos":
             _patch_osx_compiler(self.compiler)
-        # make sure the PyInterpreterState_GetID() function is available
-        if self._check_getid():
-            ext.define_macros.append(("HAS_PYINTERPRETERSTATE_GETID", 1))
 
         # update link and include directories
         ext.include_dirs.append(self._clib_cmd.build_clib)
@@ -268,6 +337,22 @@ class configure(_build_clib):
         "sysctl": ["NULL", "0", "NULL", "NULL", "NULL", "0"],
         "times": ["NULL"],
     }
+
+    def initialize_options(self):
+        _build_clib.initialize_options(self)
+        self.target_machine = None
+        self.target_system = None
+        self.target_cpu = None
+        self.plat_name = None
+
+    def finalize_options(self):
+        _build_clib.finalize_options(self)
+        # detect platform options
+        if self.plat_name is None:
+            self.plat_name = sysconfig.get_platform()
+        self.target_machine = _detect_target_machine(self.plat_name)
+        self.target_system = _detect_target_system(self.plat_name)
+        self.target_cpu = _detect_target_cpu(self.plat_name)
 
     # --- Compatibility with base `build_clib` command ---
 
@@ -424,7 +509,7 @@ class configure(_build_clib):
         self.mkpath(self.build_clib)
 
         # remove universal binary CFLAGS from the compiler if any
-        if platform.system() == "Darwin":
+        if self.target_system == "macos":
             _patch_osx_compiler(self.compiler)
 
         # run the `configure_library` method sequentially on each library,
@@ -529,14 +614,40 @@ class build_clib(_build_clib):
     def initialize_options(self):
         _build_clib.initialize_options(self)
         self.parallel = None
+        self.target_machine = None
+        self.target_system = None
+        self.target_cpu = None
+        self.hmmer_impl = None
+        self.plat_name = None
 
     def finalize_options(self):
         _build_clib.finalize_options(self)
         self._configure_cmd = self.get_finalized_command("configure")
         self._configure_cmd.force = self.force
+        self._configure_cmd.plat_name = self.plat_name
+        self._configure_cmd.target_machine = self.target_machine
+        self._configure_cmd.target_system = self.target_system
+        self._configure_cmd.target_cpu = self.target_cpu
+        # detect if parallel build is enabled
         if self.parallel is not None:
             self.parallel = int(self.parallel)
-
+        if self.parallel == 0:
+            self.parallel = os.cpu_count()
+        # detect platform options
+        if self.plat_name is None:
+            self.plat_name = sysconfig.get_platform()
+        self.target_machine = _detect_target_machine(self.plat_name)
+        self.target_system = _detect_target_system(self.plat_name)
+        self.target_cpu = _detect_target_cpu(self.plat_name)
+        # detect HMMER implementation
+        if self.hmmer_impl is None:
+            if self.target_machine.startswith('ppc') and not self.target_machine.endswith('le'):
+                self.hmmer_impl = "VMX"
+            elif self.target_machine.startswith(("x86", "amd", "i386", "i686")):
+                self.hmmer_impl = "SSE"
+            elif self.target_machine.lower().startswith(("arm", "aarch")):
+                self.hmmer_impl = "NEON"
+                
     # --- Compatibility with base `build_clib` command ---
 
     def check_library_list(self, libraries):
@@ -555,35 +666,55 @@ class build_clib(_build_clib):
 
     # --- Build code ---
 
-    def run(self):
-        # make sure the C headers were generated already
-        if not self.distribution.have_run["configure"]:
-            self._configure_cmd.run()
+    def _setup_impl(self, library):
+        if self.hmmer_impl == "VMX":
+            library.define_macros.append(("eslENABLE_VMX", 1))
+            library.extra_compile_args.append("-maltivec")
+            library.extra_link_args.append("-maltivec")
+        elif self.hmmer_impl == "SSE":
+            library.define_macros.append(("eslENABLE_SSE", 1))
+        elif self.hmmer_impl == "NEON":
+            library.define_macros.append(("eslENABLE_NEON", 1))
+            if "64" not in self.target_machine:
+                library.extra_compile_args.append("-mfpu=neon")
+                library.extra_link_args.append("-mfpu=neon")
 
+    def _patch_easel(self, library):
         # patch the `esl_sqio_ascii.c` so we can use functions it otherwise
         # declares as `static`
-        libeasel = self.get_library("easel")
-        old = next(src for src in libeasel.sources if src.endswith("esl_sqio_ascii.c"))
+        old = next(src for src in library.sources if src.endswith("esl_sqio_ascii.c"))
         new = os.path.join(self.build_temp, "esl_sqio_ascii.c")
         self.make_file([old], new, self.destatic, (old, new))
-        libeasel.sources.remove(old)
-        libeasel.sources.append(new)
+        library.sources.remove(old)
+        library.sources.append(new)
+        # add implementation-specific flags and definitions
+        self._setup_impl(library)
 
+    def _patch_hmmer(self, library):
         # patch the `p7_hmmfile.c` so that we can use functions it otherwise
         # declares as `static`
-        libhmmer = self.get_library("hmmer")
-        old = next(src for src in libhmmer.sources if src.endswith("p7_hmmfile.c"))
+        old = next(src for src in library.sources if src.endswith("p7_hmmfile.c"))
         new = os.path.join(self.build_temp, "p7_hmmfile.c")
         self.make_file([old], new, self.destatic, (old, new))
-        libhmmer.sources.remove(old)
-        libhmmer.sources.append(new)
+        library.sources.remove(old)
+        library.sources.append(new)
+        # add implementation-specific sources
+        impl_folder = "impl_{}".format(self.hmmer_impl.lower())
+        library.sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", impl_folder, "*.c")))
+        library.sources.remove(os.path.join("vendor", "hmmer", "src", impl_folder, "vitscore.c"))
+        # add implementation-specific flags and definitions
+        self._setup_impl(library)
 
+    def run(self):
+        # make sure the C headers were generated already
+        if not self.distribution.have_run.get("configure", False):
+            self._configure_cmd.run()
         # build the libraries normally
         _build_clib.run(self)
 
     def build_libraries(self, libraries):
         # remove universal binary CFLAGS from the compiler if any
-        if platform.system() == "Darwin":
+        if self.target_system == "macos":
             _patch_osx_compiler(self.compiler)
         # build extensions sequentially
         self.mkpath(self.build_clib)
@@ -596,6 +727,12 @@ class build_clib(_build_clib):
             )
 
     def build_library(self, library):
+        # update define macros
+        if library.name == "easel":
+            self._patch_easel(library)
+        elif library.name == "hmmer":
+            self._patch_hmmer(library)
+
         # update compile flags if compiling in debug or release mode
         if self.debug:
             if self.compiler.compiler_type in {"unix", "cygwin", "mingw32"}:
@@ -702,32 +839,36 @@ hmmer_sources = [
     ]
 ]
 
-# HMMER3 is only supported on x86 CPUs with SSE, and big endian PowerPC
-# (see https://github.com/EddyRivasLab/hmmer/issues/142)
-machine = platform.machine().lower()
-if machine.startswith('ppc') and not machine.endswith('le'):
-    hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_vmx", "*.c")))
-    hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_vmx", "vitscore.c"))
-    hmmer_impl = "VMX"
-    platform_define_macros = [("eslENABLE_VMX", 1)]
-    platform_compile_args = ["-maltivec"]
-elif machine.startswith(("x86", "amd", "i386", "i686")):
-    hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_sse", "*.c")))
-    hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_sse", "vitscore.c"))
-    hmmer_impl = "SSE"
-    platform_define_macros = [("eslENABLE_SSE", 1)]
-    platform_compile_args = ["-msse4.1"]
-elif machine.lower().startswith(("arm", "aarch")):
-    hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_neon", "*.c")))
-    hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_neon", "vitscore.c"))
-    hmmer_impl = "NEON"
-    platform_define_macros = [("eslENABLE_NEON", 1)]
-    platform_compile_args = [] if "64" in machine else ["-mfpu=neon"]
-else:
-    _eprint('pyHMMER is not supported on CPU architecture:', repr(machine))
-    platform_define_macros = []
-    platform_compile_args = []
-    hmmer_impl = None
+# # HMMER3 is only supported on x86 CPUs with SSE, and big endian PowerPC
+# # (see https://github.com/EddyRivasLab/hmmer/issues/142)
+# machine = platform.machine().lower()
+# if machine.startswith('ppc') and not machine.endswith('le'):
+#     hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_vmx", "*.c")))
+#     hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_vmx", "vitscore.c"))
+#     hmmer_impl = "VMX"
+#     platform_define_macros = [("eslENABLE_VMX", 1)]
+#     platform_compile_args = ["-maltivec"]
+# elif machine.startswith(("x86", "amd", "i386", "i686")):
+#     hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_sse", "*.c")))
+#     hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_sse", "vitscore.c"))
+#     hmmer_impl = "SSE"
+#     platform_define_macros = [("eslENABLE_SSE", 1)]
+#     platform_compile_args = ["-msse4.1"]
+# elif machine.lower().startswith(("arm", "aarch")):
+#     hmmer_sources.extend(glob.glob(os.path.join("vendor", "hmmer", "src", "impl_neon", "*.c")))
+#     hmmer_sources.remove(os.path.join("vendor", "hmmer", "src", "impl_neon", "vitscore.c"))
+#     hmmer_impl = "NEON"
+#     platform_define_macros = [("eslENABLE_NEON", 1)]
+#     platform_compile_args = [] if "64" in machine else ["-mfpu=neon"]
+# else:
+#     _eprint('pyHMMER is not supported on CPU architecture:', repr(machine))
+#     platform_define_macros = []
+#     platform_compile_args = []
+#     hmmer_impl = None
+
+platform_define_macros = []
+platform_compile_args = []
+hmmer_impl = None
 
 libraries = [
     Library(
@@ -738,14 +879,10 @@ libraries = [
         "easel",
         sources=glob.glob(os.path.join("vendor", "easel", "*.c")),
         include_dirs=[os.path.join("vendor", "easel")],
-        define_macros=platform_define_macros,
-        extra_compile_args=platform_compile_args,
     ),
     Library(
         "hmmer",
         sources=hmmer_sources,
-        extra_compile_args=platform_compile_args,
-        define_macros=platform_define_macros,
         include_dirs=[
             os.path.join("vendor", "easel"),
             os.path.join("vendor", "hmmer", "src"),
