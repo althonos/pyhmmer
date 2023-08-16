@@ -29,6 +29,7 @@ cdef extern from "hmmer.h" nogil:
     ctypedef p7_tophits_s P7_TOPHITS
 
     P7_TOPHITS *p7_tophits_Create()
+    P7_TOPHITS *p7_tophits_Clone(const P7_TOPHITS* h)
     int         p7_tophits_Grow(P7_TOPHITS *h)
     int         p7_tophits_CreateNextHit(P7_TOPHITS *h, P7_HIT **ret_hit)
     int         p7_tophits_Add(P7_TOPHITS *h,

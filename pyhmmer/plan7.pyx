@@ -7922,96 +7922,27 @@ cdef class TopHits:
         assert self._th != NULL
         assert self._th.N >= 0
 
-        cdef size_t     i
-        cdef size_t     j
-        cdef ptrdiff_t  diff
-        cdef P7_DOMAIN* dom_orig
-        cdef P7_DOMAIN* dom_copy
-        cdef TopHits    copy     = TopHits.__new__(TopHits)
+        cdef TopHits copy = TopHits.__new__(TopHits)
 
         # record query name and accession
         copy._qname = self._qname
         copy._qacc = self._qacc
 
-        # WARN(@althonos): there is no way to do this in the HMMER codebase
-        #                  so this is a manual implementation; make sure
-        #                  that it stays consistent if P7_TOPHITS changes!
-        # TODO(@althonos): Replace with `p7_tophits_Clone` as implemented
-        #                  in EddyRivasLab/hmmer#273 when formally released.
         with nogil:
             # copy pipeline configuration
             memcpy(&copy._pli, &self._pli, sizeof(P7_PIPELINE))
-
-            # don't use `p7_tophits_Create` here otherwise it will allocate
-            # using a default size, while we already know how large we want
-            # our buffers to be.
-            copy._th = <P7_TOPHITS*> malloc(sizeof(P7_TOPHITS))
-            if copy._th == NULL:
-                raise AllocationError("P7_TOPHITS", sizeof(P7_TOPHITS))
-
-            # copy attributes that don't need any allocation
-            copy._th.nreported = self._th.nreported
-            copy._th.nincluded = self._th.nincluded
-            copy._th.is_sorted_by_sortkey = self._th.is_sorted_by_sortkey
-            copy._th.is_sorted_by_seqidx = self._th.is_sorted_by_seqidx
-
-            # we allocate an exact size array here since we don't expect new
-            # data to be added to the copy; this means we can use the real `N`
-            # as the `Nalloc`
-            copy._th.Nalloc = copy._th.N = self._th.N
-            copy._th.unsrt = <P7_HIT*> calloc(self._th.N, sizeof(P7_HIT))
-            if copy._th.unsrt == NULL:
-                raise AllocationError("P7_HIT", sizeof(P7_HIT), self._th.N)
-
-            # here we have to copy the sorted array, which is basically an
-            # array of pointers to `unsrt`; for each sorted hit we retrieve
-            # its position in the old array and use it to set the position
-            # in the new array
-            copy._th.hit = <P7_HIT**> calloc(self._th.N, sizeof(P7_HIT*))
-            if copy._th.hit == NULL:
-                raise AllocationError("P7_HIT*", sizeof(P7_HIT*), self._th.N)
-            for i in range(<size_t> self._th.N):
-                diff = self._th.hit[i] - self._th.unsrt
-                copy._th.hit[i] = copy._th.unsrt + diff
-
-            # now copy the hits themselves, making sure to duplicate any
-            # memory owned by them get's duplicated in the process (this
-            # is a deepcopy to avoid any double free)
-            memcpy(copy._th.unsrt, self._th.unsrt, sizeof(P7_HIT) * self._th.N)
-            for i in range(<size_t> self._th.N):
-                # reallocate an owned string for the hit name, accession and description
-                if self._th.unsrt[i].name != NULL:
-                    copy._th.unsrt[i].name = strdup(self._th.unsrt[i].name)
-                    if copy._th.unsrt[i].name == NULL:
-                        raise AllocationError("char*", sizeof(char*), strlen(self._th.unsrt[i].name))
-                if self._th.unsrt[i].acc != NULL:
-                    copy._th.unsrt[i].acc = strdup(self._th.unsrt[i].acc)
-                    if copy._th.unsrt[i].acc == NULL:
-                        raise AllocationError("char*", sizeof(char*), strlen(self._th.unsrt[i].acc))
-                if self._th.unsrt[i].desc != NULL:
-                    copy._th.unsrt[i].desc = strdup(self._th.unsrt[i].desc)
-                    if copy._th.unsrt[i].desc == NULL:
-                        raise AllocationError("char*", sizeof(char*), strlen(self._th.unsrt[i].desc))
-                # copy the domain list
-                copy._th.unsrt[i].dcl = <P7_DOMAIN*> calloc(sizeof(P7_DOMAIN), copy._th.unsrt[i].ndom)
-                if copy._th.unsrt[i].dcl == NULL:
-                    raise AllocationError("P7_DOMAIN", sizeof(P7_DOMAIN), self._th.unsrt[i].ndom)
-                memcpy(copy._th.unsrt[i].dcl, self._th.unsrt[i].dcl, sizeof(P7_DOMAIN) * self._th.unsrt[i].ndom)
-                # copy domain memory
-                for j in range(<size_t> self._th.unsrt[i].ndom):
-                    dom_orig = &self._th.unsrt[i].dcl[j]
-                    dom_copy = &copy._th.unsrt[i].dcl[j]
-                    # copy scores per position
-                    if dom_orig.scores_per_pos != NULL:
-                        dom_copy.scores_per_pos = <float*> calloc(sizeof(float), dom_orig.ad.N)
-                        if dom_copy.scores_per_pos == NULL:
-                            raise AllocationError("float", sizeof(float), dom_orig.ad.N)
-                        memcpy(dom_copy.scores_per_pos, dom_orig.scores_per_pos, sizeof(float) * dom_orig.ad.N)
-                    # copy alidisplay
-                    dom_copy.ad = libhmmer.p7_alidisplay.p7_alidisplay_Clone(dom_orig.ad)
-                    if dom_copy.ad == NULL:
-                        raise AllocationError("P7_ALIDISPLAY", sizeof(P7_ALIDISPLAY))
-
+            # copy top hits
+            # WARN(@althonos): `p7_tophits_Clone` will fail when called
+            #                  on an empty P7_TOPHITS as it attempts a 
+            #                  zero-allocation of the target arrays, it
+            #                  should be reported as a bug at some point.
+            if self._th.N > 0:
+                copy._th = libhmmer.p7_tophits.p7_tophits_Clone(self._th)
+            else:
+                copy._th = libhmmer.p7_tophits.p7_tophits_Create()
+        if copy._th == NULL:
+            raise AllocationError("P7_TOPHITS", sizeof(P7_TOPHITS))
+        
         return copy
 
     cpdef int compare_ranking(self, KeyHash ranking) except -1:
