@@ -3442,10 +3442,10 @@ cdef class HMMFile:
             self._name = os.fsdecode(fspath)
             if db:
                 function = "p7_hmmfile_OpenE"
-                status = libhmmer.p7_hmmfile.p7_hmmfile_OpenE(fspath, NULL, &self._hfp, errbuf)
+                status = libhmmer.p7_hmmfile.p7_hmmfile_Open(fspath, NULL, &self._hfp, errbuf)
             else:
                 function = "p7_hmmfile_OpenENoDB"
-                status = libhmmer.p7_hmmfile.p7_hmmfile_OpenENoDB(fspath, NULL, &self._hfp, errbuf)
+                status = libhmmer.p7_hmmfile.p7_hmmfile_OpenNoDB(fspath, NULL, &self._hfp, errbuf)
         except TypeError:
             self._hfp = HMMFile._open_fileobj(file)
             status    = libeasel.eslOK
