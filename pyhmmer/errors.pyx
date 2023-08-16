@@ -6,6 +6,8 @@
 cimport libeasel
 cimport libeasel.alphabet
 
+include "_getid.pxi"
+
 statuscode = {
     libeasel.eslOK: "eslOK",
     libeasel.eslFAIL: "eslFAIL",

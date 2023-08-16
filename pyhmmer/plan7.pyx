@@ -174,6 +174,7 @@ elif PLATFORM_UNAME_SYSTEM == "Darwin" or PLATFORM_UNAME_SYSTEM.endswith("BSD"):
     from .fileobj.bsd cimport fileobj_bsd_open as fopen_obj
 
 include "exceptions.pxi"
+include "_getid.pxi"
 
 
 # --- Python imports ---------------------------------------------------------

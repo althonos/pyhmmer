@@ -43,6 +43,8 @@ from pyhmmer.easel cimport Sequence, Alphabet, MSA, KeyHash
 from pyhmmer.errors import UnexpectedError, AllocationError, ServerError
 from pyhmmer.plan7 cimport Builder, TopHits, Pipeline, HMM, Background
 
+include "_getid.pxi"
+
 
 # --- Python imports ---------------------------------------------------------
 

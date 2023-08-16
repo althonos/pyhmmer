@@ -77,6 +77,45 @@ class build_ext(_build_ext):
         if self.parallel == 0:
             self.parallel = os.cpu_count()
 
+    def _check_getid(self):
+        _eprint('checking whether `PyInterpreterState_GetID` is available')
+
+        base = "have_getid"
+        testfile = os.path.join(self.build_temp, "{}.c".format(base))
+        objects = []
+
+        self.mkpath(self.build_temp)
+        with open(testfile, "w") as f:
+            f.write("""
+            #include <stdint.h>
+            #include <stdlib.h>
+            #include <Python.h>
+
+            int main(int argc, char *argv[]) {{
+                PyInterpreterState_GetID(NULL);
+                return 0;
+            }}
+            """)
+
+        if self.compiler.compiler_type == "msvc":
+            flags = ["/WX"]
+        else:
+            flags = ["-Werror=implicit-function-declaration"]
+
+        try:
+            self.mkpath(self.build_temp)
+            objects = self.compiler.compile([testfile], extra_postargs=flags)
+        except CompileError:
+            _eprint("no")
+            return False
+        else:
+            _eprint("yes")
+            return True
+        finally:
+            os.remove(testfile)
+            for obj in filter(os.path.isfile, objects):
+                os.remove(obj)
+
     def run(self):
         # check `cythonize` is available
         if isinstance(cythonize, ImportError):
@@ -160,10 +199,12 @@ class build_ext(_build_ext):
             ext.define_macros.append(("CYTHON_WITHOUT_ASSERTIONS", 1))
             if self.compiler.compiler_type in {"unix", "cygwin", "mingw32"}:
                 ext.extra_compile_args.append("-Wno-unused-variable")
-
         # remove universal binary CFLAGS from the compiler if any
         if platform.system() == "Darwin":
             _patch_osx_compiler(self.compiler)
+        # make sure the PyInterpreterState_GetID() function is available
+        if self._check_getid():
+            ext.define_macros.append(("HAS_PYINTERPRETERSTATE_GETID", 1))
 
         # update link and include directories
         ext.include_dirs.append(self._clib_cmd.build_clib)
