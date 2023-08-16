@@ -6,7 +6,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.0...HEAD
+
+
+## [v0.10.0] - 2023-08-16
+[v0.10.0]: https://github.com/althonos/pyhmmer/compare/v0.9.0...v0.10.0
+
+### Added
+- Support for compiling wheels for Aarch64 and NEON-enabled Arm platforms.
+
+### Changed
+- Updated HMMER to [`v3.4`](https://github.com/EddyRivasLab/hmmer/releases/tag/hmmer-3.4).
+- Updated Easel to [`v0.49`](https://github.com/EddyRivasLab/easel/releases/tag/easel-0.49).
+- Use [`cibuildwheel`](https://github.com/pypa/cibuildwheel) to build wheel distributions.
+
+### Fixed
+- Patch missing `PyInterpreterState_GetID` preventing the package from working on PyPy 3.9.
 
 
 ## [v0.9.0] - 2023-08-03
