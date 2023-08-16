@@ -113,21 +113,11 @@ class build_ext(_build_ext):
     """A `build_ext` that disables optimizations if compiled in debug mode.
     """
 
-    def initialize_options(self):
-        _build_ext.initialize_options(self)
-        self.target_machine = None
-        self.target_system = None
-        self.target_cpu = None
-
     def finalize_options(self):
         _build_ext.finalize_options(self)
         # detect if parallel build is enabled
         if self.parallel == 0:
             self.parallel = os.cpu_count()
-        # detect platform options
-        self.target_machine = _detect_target_machine(self.plat_name)
-        self.target_system = _detect_target_system(self.plat_name)
-        self.target_cpu = _detect_target_cpu(self.plat_name)
         # transfer arguments to the build_clib method
         self._clib_cmd = self.distribution.get_command_obj("build_clib", True)
         self._clib_cmd.debug = self.debug
@@ -139,6 +129,21 @@ class build_ext(_build_ext):
         self._clib_cmd.plat_name = self.plat_name
         self._clib_cmd.finalize_options()
 
+    @property
+    def target_machine(self):
+        return self._clib_cmd.target_machine
+
+    @property
+    def target_system(self):
+        return self._clib_cmd.target_system
+
+    @property
+    def target_cpu(self):
+        return self._clib_cmd.target_cpu
+
+    @property
+    def hmmer_impl(self):
+        return self._clib_cmd.hmmer_impl
 
     def _check_getid(self):
         _eprint('checking whether `PyInterpreterState_GetID` is available')
@@ -340,6 +345,7 @@ class configure(_build_clib):
         self.target_system = None
         self.target_cpu = None
         self.plat_name = None
+        self.hmmer_impl = None
 
     def finalize_options(self):
         _build_clib.finalize_options(self)
@@ -349,6 +355,15 @@ class configure(_build_clib):
         self.target_machine = _detect_target_machine(self.plat_name)
         self.target_system = _detect_target_system(self.plat_name)
         self.target_cpu = _detect_target_cpu(self.plat_name)
+        # detect HMMER implementation
+        if self.target_machine.startswith('ppc') and not self.target_machine.endswith('le'):
+            self.hmmer_impl = "VMX"
+        elif self.target_machine.startswith(("x86", "amd", "i386", "i686")):
+            self.hmmer_impl = "SSE"
+        elif self.target_machine.lower().startswith(("arm", "aarch")):
+            self.hmmer_impl = "NEON"
+        else:
+            self.hmmer_impl = None
 
     # --- Compatibility with base `build_clib` command ---
 
@@ -415,7 +430,7 @@ class configure(_build_clib):
             if os.path.isfile(binfile):
                 os.remove(binfile)
 
-    def _check_simd_generic(self, name, program):
+    def _check_simd_generic(self, name, program, platform_compile_args=()):
         _eprint('checking whether compiler can build', name, 'code', end="... ")
 
         base = "have_{}".format(name)
@@ -560,14 +575,12 @@ class configure(_build_clib):
             defines["WORDS_BIGENDIAN"] = 1
 
         # check platform flags
-        global hmmer_impl
-        platform_supported = False
-        if hmmer_impl is not None:
-            if hmmer_impl == "SSE":
+        if self.hmmer_impl is not None:
+            if self.hmmer_impl == "SSE":
                 supported_feature = self._check_sse2()
-            elif hmmer_impl == "VMX":
+            elif self.hmmer_impl == "VMX":
                 supported_feature = self._check_vmx()
-            elif hmmer_impl == "NEON":
+            elif self.hmmer_impl == "NEON":
                 supported_feature = self._check_neon()
             else:
                 supported_feature = False
@@ -610,39 +623,34 @@ class build_clib(_build_clib):
     def initialize_options(self):
         _build_clib.initialize_options(self)
         self.parallel = None
-        self.target_machine = None
-        self.target_system = None
-        self.target_cpu = None
-        self.hmmer_impl = None
-        self.plat_name = None
 
     def finalize_options(self):
         _build_clib.finalize_options(self)
-        self._configure_cmd = self.get_finalized_command("configure")
+        self._configure_cmd = self.distribution.get_command_obj("configure", True)
         self._configure_cmd.force = self.force
         self._configure_cmd.plat_name = self.plat_name
-        self._configure_cmd.target_machine = self.target_machine
-        self._configure_cmd.target_system = self.target_system
-        self._configure_cmd.target_cpu = self.target_cpu
+        self._configure_cmd.finalize_options()
         # detect if parallel build is enabled
         if self.parallel is not None:
             self.parallel = int(self.parallel)
         if self.parallel == 0:
             self.parallel = os.cpu_count()
-        # detect platform options
-        if self.plat_name is None:
-            self.plat_name = sysconfig.get_platform()
-        self.target_machine = _detect_target_machine(self.plat_name)
-        self.target_system = _detect_target_system(self.plat_name)
-        self.target_cpu = _detect_target_cpu(self.plat_name)
-        # detect HMMER implementation
-        if self.hmmer_impl is None:
-            if self.target_machine.startswith('ppc') and not self.target_machine.endswith('le'):
-                self.hmmer_impl = "VMX"
-            elif self.target_machine.startswith(("x86", "amd", "i386", "i686")):
-                self.hmmer_impl = "SSE"
-            elif self.target_machine.lower().startswith(("arm", "aarch")):
-                self.hmmer_impl = "NEON"
+
+    @property
+    def target_machine(self):
+        return self._configure_cmd.target_machine
+
+    @property
+    def target_system(self):
+        return self._configure_cmd.target_system
+
+    @property
+    def target_cpu(self):
+        return self._configure_cmd.target_cpu
+
+    @property
+    def hmmer_impl(self):
+        return self._configure_cmd.hmmer_impl
                 
     # --- Compatibility with base `build_clib` command ---
 
