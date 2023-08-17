@@ -6,7 +6,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.1...HEAD
+
+
+## [v0.10.1] - 2023-08-17
+[v0.10.1]: https://github.com/althonos/pyhmmer/compare/v0.10.0...v0.10.1
+
+### Added
+- `HMM.set_consensus` method to set the consensus for a method or compute it from the emission probabilities.
+
+### Fixed
+- Platform detection for MacOS and Armv7 platforms in `setup.py`.
+- `pyhmmer.plan7.HMM` constructor setting a consensus string forcefully.
 
 
 ## [v0.10.0] - 2023-08-16
