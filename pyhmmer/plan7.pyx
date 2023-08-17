@@ -2239,14 +2239,6 @@ cdef class HMM:
             self._initialize()
         self.name = name
 
-        # FIXME(@althonos): Remove following block when
-        # https://github.com/EddyRivasLab/hmmer/pull/236
-        # is merged and released in a new HMMER version
-        cdef int status = libhmmer.p7_hmm.p7_hmm_SetConsensus(self._hmm, NULL)
-        if status != libeasel.eslOK:
-            raise UnexpectedError(status, "p7_hmm_SetConsensus")
-        self._hmm.flags &= ~libhmmer.p7_hmm.p7H_CONS
-
     def __dealloc__(self):
         libhmmer.p7_hmm.p7_hmm_Destroy(self._hmm)
 
