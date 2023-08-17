@@ -624,10 +624,13 @@ class build_clib(_build_clib):
     def initialize_options(self):
         _build_clib.initialize_options(self)
         self.parallel = None
+        self.plat_name = None
 
     def finalize_options(self):
         _build_clib.finalize_options(self)
         self._configure_cmd = self.distribution.get_command_obj("configure", True)
+        self._configure_cmd.debug = self.debug
+        self._configure_cmd.verbose = self.verbose
         self._configure_cmd.force = self.force
         self._configure_cmd.plat_name = self.plat_name
         self._configure_cmd.finalize_options()
