@@ -144,7 +144,8 @@ cdef class HMM:
     cpdef double mean_match_relative_entropy(self, Background background) except *
     cpdef void renormalize(self)
     cpdef void scale(self, double scale, bint exponential=?)
-    cpdef void set_composition(self)
+    cpdef void set_composition(self) except *
+    cpdef void set_consensus(self, DigitalSequence sequence=?) except *
     cpdef Profile to_profile(self,  Background background=?,  int L=*,  bint multihit =*,  bint local=*)
     cpdef void validate(self, float tolerance=*) except *
     cpdef void write(self, object fh, bint binary=*) except *

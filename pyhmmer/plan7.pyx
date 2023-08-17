@@ -3161,7 +3161,7 @@ cdef class HMM:
             func = "p7_hmm_ScaleExponential" if exponential else "p7_hmm_Scale"
             raise UnexpectedError(status, func)
 
-    cpdef void set_composition(self):
+    cpdef void set_composition(self) except *:
         """set_composition(self)\n--
 
         Calculate and set the model composition.
@@ -3176,6 +3176,50 @@ cdef class HMM:
             status = libhmmer.p7_hmm.p7_hmm_SetComposition(self._hmm)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_hmm_SetComposition")
+
+    cpdef void set_consensus(self, DigitalSequence sequence = None) except *:
+        """set_consensus(self)\n--
+
+        Set the model consensus sequence.
+
+        If given a sequence, the HMM is assumed to originate from a 
+        single-sequence model, and the sequence is used as the consensus.
+        Otherwise, the consensus is computed by extracting the consensus
+        at each position. 
+        
+        Residues in the consensus sequence are uppercased when their emission 
+        probabilities are above an arbitrary, alphabet-specific threshold 
+        (:math:`0.9` for nucleotide alphabets, :math:`0.5` for protein).
+
+        Arguments:
+            sequence (`~pyhmmer.easel.DigitalSequence`): A sequence in 
+                digital mode with :math:`M` residues and the same 
+                alphabet as the HMM.
+
+        Raises:
+            `ValueError`: When given a sequence with the wrong length.
+            `~pyhmmer.errors.AlphabetMismatch`: When given a sequence in 
+                the wrong alphabet.
+
+        .. versionadded:: 0.10.1
+
+        """
+        assert self._hmm != NULL
+
+        cdef int     status
+        cdef ESL_SQ* sq     = NULL
+        
+        if sequence is not None:
+            sq = sequence._sq
+            if sequence.alphabet != self.alphabet:
+                raise AlphabetMismatch(self.alphabet, sequence.alphabet)
+            if sq.n < self.M:
+                raise ValueError(f"Expected `DigitalSequence` of length {self.M!r}, found {sq.n!r}")
+
+        with nogil:
+            status = libhmmer.p7_hmm.p7_hmm_SetConsensus(self._hmm, sq)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_hmm_SetConsensus")
 
     cpdef Profile to_profile(
         self,

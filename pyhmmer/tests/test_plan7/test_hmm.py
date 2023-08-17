@@ -9,8 +9,8 @@ import tempfile
 import pkg_resources
 
 import pyhmmer
-from pyhmmer.errors import EaselError
-from pyhmmer.easel import Alphabet, SequenceFile, VectorF
+from pyhmmer.errors import EaselError, AlphabetMismatch
+from pyhmmer.easel import Alphabet, SequenceFile, VectorF, TextSequence
 from pyhmmer.plan7 import HMM, HMMFile, Pipeline
 
 
@@ -114,6 +114,29 @@ class TestHMM(unittest.TestCase):
         # if the HMM is fully configured, the consensus should be as
         # long as the number of nodes
         self.assertEqual(len(self.hmm.consensus), self.hmm.M)
+
+    def test_set_consensus(self):
+        abc = Alphabet.dna()
+        hmm = HMM(abc, 100, b"test")
+        self.assertIs(hmm.consensus, None)
+        hmm.set_consensus()
+        self.assertIsNot(hmm.consensus, None)
+        self.assertEqual(len(hmm.consensus), hmm.M)
+
+        seq = TextSequence(sequence="A"*hmm.M)
+        hmm.set_consensus(seq.digitize(hmm.alphabet))
+        self.assertEqual(hmm.consensus, seq.sequence)
+    
+    def test_set_consensus_error(self):
+        dna = Alphabet.dna()
+        prot = Alphabet.amino()
+        hmm = HMM(dna, 100, b"test")
+        with self.assertRaises(AlphabetMismatch):
+            seq = TextSequence(sequence="Y"*hmm.M).digitize(prot)
+            hmm.set_consensus(seq)
+        with self.assertRaises(ValueError):
+            seq = TextSequence(sequence="A"*(hmm.M - 1)).digitize(dna)
+            hmm.set_consensus(seq)
 
     def test_write(self):
         buffer = io.BytesIO()
@@ -284,3 +307,4 @@ class TestHMM(unittest.TestCase):
         self.assertIs(hmm.cutoffs.trusted, None)
         self.assertIs(hmm.cutoffs.trusted1, None)
         self.assertIs(hmm.cutoffs.trusted2, None)
+
