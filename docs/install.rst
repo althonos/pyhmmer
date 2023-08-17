@@ -3,10 +3,17 @@ Installation
 
 .. note::
 
-    Wheels are provided for Linux and OSX x86-64 platforms, but other machines
-    will have to build the wheel from the source distribution. Building
-    ``pyhmmer`` involves compiling HMMER3 and Easel, which requires a C compiler
-    to be available.
+    Wheels are provided for Linux and MacOS on x86-64 and NEON-enabled Arm platforms, 
+    but other machines will have to build the wheel from the source distribution. 
+    Building ``pyhmmer`` involves compiling HMMER3 and Easel, which requires a 
+    C compiler to be available.
+
+.. hint::
+
+    Windows is not supported by HMMER, so it is not possible to build PyHMMER
+    on Windows as the moment. Consider using a Python install inside the 
+    `Windows Subsystem for Linux <https://learn.microsoft.com/en-us/windows/wsl/install>`_
+    if you need PyHMMER on a Windows computer.
 
 
 PyPi
@@ -20,6 +27,7 @@ one is available, or from source after compiling the Cython code :
 .. code:: console
 
     $ pip install --user pyhmmer
+    
 
 Conda
 ^^^^^
@@ -48,17 +56,20 @@ Steps to install on ArchLinux depend on your `AUR helper <https://wiki.archlinux
     $ aura -A python-pyhmmer
 
 
-.. EMBL Package Registry
-.. ^^^^^^^^^^^^^^^^^^^^^
-..
-.. You can also install ``manylinux`` wheels built from the latest commit that
-.. passed the unit tests. Those bleeding-edge releases are available in the GitLab
-.. Package Registry hosted on the EMBL ``git`` server. Just instruct ``pip`` to
-.. use an extra index URL as follow:
-..
-.. .. code:: console
-..
-..   $ pip install --user pyhmmer --extra-index-url https://git.embl.de/api/v4/projects/3638/packages/pypi/simple
+Piwheels
+^^^^^^^^
+
+PyHMMER works on Raspberry Pi computers (with NEON vectorization enabled), 
+and pre-built wheels are compiled for `armv7l` on 
+`piwheels <https://www.piwheels.org/project/pyhmmer/>`_.
+Run the following command to install these instead of compiling from source:
+
+.. code:: console
+
+   $ pip3 install pyhmmer --extra-index-url https://www.piwheels.org/simple
+
+Check the `piwheels documentation <https://www.piwheels.org/faq.html>`_ for 
+more information.
 
 
 GitHub + ``pip``
@@ -71,20 +82,10 @@ the repository and install the repository by running (with the admin rights):
 
     $ pip install -U git+https://github.com/althonos/pyhmmer
 
-
 .. caution::
 
     Keep in mind this will install always try to install the latest commit,
     which may not even build, so consider using a versioned release instead.
-
-An experimental branch for platforms with Arm NEON support (either `armv7`
-or `aarch64`) can be installed the same way. Note that Arm is not officially
-supported by HMMER yet, so the Arm port is provided without warranty at
-the moment:
-
-.. code:: console
-
-    $ pip install -U git+https://github.com/althonos/pyhmmer@neon-support
 
 
 GitHub + ``setuptools``
