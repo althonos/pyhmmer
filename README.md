@@ -70,14 +70,13 @@ and `hmmalign`.*
 ## 🔧 Installing
 
 `pyhmmer` can be installed from [PyPI](https://pypi.org/project/pyhmmer/),
-which hosts some pre-built CPython wheels for x86-64 Linux, as well as the
-code required to compile from source with Cython:
+which hosts some pre-built CPython wheels for Linux and MacOS on x86-64 and Arm64, as well as the code required to compile from source with Cython:
 ```console
 $ pip install pyhmmer
 ```
 
 Compilation for UNIX PowerPC is not tested in CI, but should work out of the
-box. Other architectures (e.g. Arm) and OSes (e.g. Windows) are not
+box. Note than non-UNIX operating systems (such as Windows) are not
 supported by HMMER.
 
 A [Bioconda](https://bioconda.github.io/) package is also available:

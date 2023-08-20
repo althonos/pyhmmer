@@ -6,7 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.1...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.2...HEAD
+
+
+## [v0.10.2] - 2023-08-20
+[v0.10.2]: https://github.com/althonos/pyhmmer/compare/v0.10.1...v0.10.2
+
+### Fixed
+- Invalid buffer write in `DigitalSequenceBlock.translate` ([#50](https://github.com/althonos/pyhmmer/issues/50)).
 
 
 ## [v0.10.1] - 2023-08-17
