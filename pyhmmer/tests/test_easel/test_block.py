@@ -316,7 +316,7 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
         )
         seq3 = self._new_sequence(
             b"seq3",
-            "ATGCTG",
+            "ATTCTGATGATA",
         )
 
         block = self._new_block([seq1, seq2, seq3])
@@ -326,7 +326,7 @@ class TestDigitalSequenceBlock(_TestSequenceBlock, unittest.TestCase):
         # test sequences
         self.assertEqual(prots[0].sequence, "ML")
         self.assertEqual(prots[1].sequence, "MP")
-        self.assertEqual(prots[2].sequence, "ML")
+        self.assertEqual(prots[2].sequence, "ILMI")
         # test names
         self.assertEqual(prots[0].name, b"seq1")
         self.assertEqual(prots[1].name, b"seq2")
