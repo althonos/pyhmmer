@@ -5915,7 +5915,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
                 ntlen = self._refs[i].n
                 aalen = proteins._refs[i].n
                 genetic_code._translate(&self._refs[i].dsq[1], ntlen, &proteins._refs[i].dsq[1], aalen)
-                protein._sq.dsq[0] = protein._sq.dsq[aalen+1] = libeasel.eslDSQ_SENTINEL
+                proteins._refs[i].dsq[0] = proteins._refs[i].dsq[aalen+1] = libeasel.eslDSQ_SENTINEL
 
         proteins._largest = self._largest
         return proteins
