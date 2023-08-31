@@ -168,6 +168,12 @@ Alphabet
 .. autoclass:: pyhmmer.easel.Alphabet
    :members:
 
+GeneticCode
+^^^^^^^^^^^
+
+.. autoclass:: pyhmmer.easel.GeneticCode
+   :members:
+
 Randomness
 ^^^^^^^^^^
 
