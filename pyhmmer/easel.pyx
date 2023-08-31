@@ -1,5 +1,5 @@
 # coding: utf-8
-# cython: language_level=3, linetrace=True
+# cython: language_level=3, binding=True, linetrace=True, embedsignature=False
 """High-level interface to the Easel C library.
 
 Easel is a library developed by the `Eddy/Rivas Lab <http://eddylab.org/>`_
@@ -178,10 +178,7 @@ cdef class Alphabet:
 
     @classmethod
     def amino(cls):
-        """amino(cls)\n--
-
-        Create a default amino-acid alphabet.
-
+        """Create a default amino-acid alphabet.
         """
         cdef Alphabet alphabet = Alphabet.__new__(Alphabet)
         alphabet._init_default(libeasel.alphabet.eslAMINO)
@@ -189,10 +186,7 @@ cdef class Alphabet:
 
     @classmethod
     def dna(cls):
-        """dna(cls)\n--
-
-        Create a default DNA alphabet.
-
+        """Create a default DNA alphabet.
         """
         cdef Alphabet alphabet = Alphabet.__new__(Alphabet)
         alphabet._init_default(libeasel.alphabet.eslDNA)
@@ -200,10 +194,7 @@ cdef class Alphabet:
 
     @classmethod
     def rna(cls):
-        """rna(cls)\n--
-
-        Create a default RNA alphabet.
-
+        """Create a default RNA alphabet.
         """
         cdef Alphabet alphabet = Alphabet.__new__(Alphabet)
         alphabet._init_default(libeasel.alphabet.eslRNA)
@@ -330,37 +321,25 @@ cdef class Alphabet:
     # --- Methods ------------------------------------------------------------
 
     cpdef bint is_dna(self):
-        """is_dna(self)\n--
-
-        Check whether the `Alphabet` object is a DNA alphabet.
-
+        """Check whether the `Alphabet` object is a DNA alphabet.
         """
         assert self._abc != NULL
         return self._abc.type == libeasel.alphabet.eslDNA
 
     cpdef bint is_rna(self):
-        """is_rna(self)\n--
-
-        Check whether the `Alphabet` object is a RNA alphabet.
-
+        """Check whether the `Alphabet` object is a RNA alphabet.
         """
         assert self._abc != NULL
         return self._abc.type == libeasel.alphabet.eslRNA
 
     cpdef bint is_amino(self):
-        """is_amino(self)\n--
-
-        Check whether the `Alphabet` object is a protein alphabet.
-
+        """Check whether the `Alphabet` object is a protein alphabet.
         """
         assert self._abc != NULL
         return self._abc.type == libeasel.alphabet.eslAMINO
 
     cpdef bint is_nucleotide(self):
-        """is_nucleotide(self)\n--
-
-        Check whether the `Alphabet` object is a nucleotide alphabet.
-
+        """Check whether the `Alphabet` object is a nucleotide alphabet.
         """
         assert self._abc != NULL
         return (
@@ -369,9 +348,7 @@ cdef class Alphabet:
         )
 
     cpdef VectorU8 encode(self, str sequence):
-        """encode(self, sequence)\n--
-
-        Encode a raw text sequence into its digital representation.
+        """Encode a raw text sequence into its digital representation.
 
         Arguments:
             sequence (`str`): A raw sequence in text format.
@@ -407,9 +384,7 @@ cdef class Alphabet:
         return encoded
 
     cpdef str decode(self, const libeasel.ESL_DSQ[::1] sequence):
-        """decode(self, sequence)\n--
-
-        Decode a raw digital sequence into its textual representation.
+        """Decode a raw digital sequence into its textual representation.
 
         Arguments:
             sequence (`object`, *buffer-like*): A raw sequence in digital
@@ -585,9 +560,7 @@ cdef class GeneticCode:
     # --- Methods ------------------------------------------------------------
 
     cpdef VectorU8 translate(self, const ESL_DSQ[::1] sequence):
-        """translate(self, sequence)\n--
-
-        Translate a raw nucleotide sequence into a protein.
+        """Translate a raw nucleotide sequence into a protein.
 
         Arguments:
             sequence (`object`, *buffer-like*): A raw sequence in digital
@@ -664,9 +637,7 @@ cdef class Bitfield:
 
     @classmethod
     def zeros(cls, size_t n):
-        """zeros(cls, n, /)\n--
-
-        Create a new bitfield of size ``n`` with all elements set to `False`.
+        """Create a new bitfield of size ``n`` with all elements set to `False`.
 
         .. versionadded:: 0.7.0
 
@@ -682,9 +653,7 @@ cdef class Bitfield:
 
     @classmethod
     def ones(cls, size_t n):
-        """ones(cls, n, /)\n--
-
-        Create a new bitfield of size ``n`` with all elements set to `True`.
+        """Create a new bitfield of size ``n`` with all elements set to `True`.
 
         .. versionadded:: 0.7.0
 
@@ -847,9 +816,7 @@ cdef class Bitfield:
     # --- Methods ------------------------------------------------------------
 
     cpdef size_t count(self, bint value=1):
-        """count(self, value=True)\n--
-
-        Count the number occurrences of ``value`` in the bitfield.
+        """Count the number occurrences of ``value`` in the bitfield.
 
         If no argument is given, counts the number of `True` occurences.
 
@@ -869,9 +836,7 @@ cdef class Bitfield:
         return count_ if value else self._b.nb - count_
 
     cpdef Bitfield copy(self):
-        """copy(self)\n--
-
-        Return a copy of this bitfield object.
+        """Return a copy of this bitfield object.
 
         .. versionadded:: 0.7.0
 
@@ -883,9 +848,7 @@ cdef class Bitfield:
         return copy
 
     cpdef void toggle(self, int index) except *:
-        """toggle(self, index)\n--
-
-        Switch the value of one single bit.
+        """Switch the value of one single bit.
 
         Example:
             >>> bitfield = Bitfield.zeros(8)
@@ -1110,9 +1073,7 @@ cdef class KeyHash:
     # --- Methods ------------------------------------------------------------
 
     cpdef int add(self, bytes key) except -1:
-        """add(self, item)\n--
-
-        Add a new key to the hash table, and return its index.
+        """Add a new key to the hash table, and return its index.
 
         If ``key`` was already in the hash table, the previous index is
         returned::
@@ -1149,10 +1110,7 @@ cdef class KeyHash:
             raise UnexpectedError(status, "esl_keyhash_Store")
 
     cpdef void clear(self) except *:
-        """clear(self)\n--
-
-        Remove all entries from the collection.
-
+        """Remove all entries from the collection.
         """
         cdef int status
         with nogil:
@@ -1161,9 +1119,7 @@ cdef class KeyHash:
             raise UnexpectedError(status, "esl_keyhash_Reuse")
 
     cpdef KeyHash copy(self):
-        """copy(self)\n--
-
-        Create and return an exact copy of this mapping.
+        """Create and return an exact copy of this mapping.
 
         Example:
             >>> kh = KeyHash()
@@ -1197,10 +1153,7 @@ cdef class Vector:
 
     @classmethod
     def zeros(cls, int n):
-        """zeros(cls, n)\n--
-
-        Create a vector of size ``n`` filled with zeros.
-
+        """Create a vector of size ``n`` filled with zeros.
         """
         cdef Vector       vec      = cls([])
         cdef size_t       itemsize = vec.itemsize
@@ -1222,10 +1175,7 @@ cdef class Vector:
 
     @classmethod
     def _from_raw_bytes(cls, object buffer, int n, str byteorder):
-        f"""_from_raw_bytes(cls, buffer, n, byteorder)\n--
-
-        Create a new vector using the given bytes to fill its contents.
-
+        f"""Create a new vector using the given bytes to fill its contents.
         """
         cdef const uint8_t[::1] bytes
         cdef Vector             vec      = cls.zeros(n)
@@ -1384,9 +1334,7 @@ cdef class Vector:
     # --- Methods ------------------------------------------------------------
 
     def argmax(self):
-        """argmax(self)\n--
-
-        Return index of the maximum element in the vector.
+        """Return index of the maximum element in the vector.
 
         Raises:
             `ValueError`: When called on an empty vector.
@@ -1394,9 +1342,7 @@ cdef class Vector:
         """
 
     def argmin(self):
-        """argmin(self)\n--
-
-        Return index of the minimum element in the vector.
+        """Return index of the minimum element in the vector.
 
         Raises:
             `ValueError`: When called on an empty vector.
@@ -1404,16 +1350,11 @@ cdef class Vector:
         """
 
     def copy(self):
-        """copy(self)\n--
-
-        Create a copy of the vector, allocating a new buffer.
-
+        """Create a copy of the vector, allocating a new buffer.
         """
 
     def max(self):
-        """max(self)\n--
-
-        Return value of the maximum element in the vector.
+        """Return value of the maximum element in the vector.
 
         Raises:
             `ValueError`: When called on an empty vector.
@@ -1421,9 +1362,7 @@ cdef class Vector:
         """
 
     def min(self):
-        """min(self)\n--
-
-        Return value of the minimum element in the vector.
+        """Return value of the minimum element in the vector.
 
         Raises:
             `ValueError`: When called on an empty vector.
@@ -1431,17 +1370,11 @@ cdef class Vector:
         """
 
     def reverse(self):
-        """reverse(self)\n--
-
-        Reverse the vector, in place.
-
+        """Reverse the vector, in place.
         """
 
     def sum(self):
-        """sum(self)\n--
-
-        Returns the scalar sum of all elements in the vector.
-
+        """Returns the scalar sum of all elements in the vector.
         """
 
 
@@ -1510,6 +1443,11 @@ cdef class VectorF(Vector):
     # --- Magic methods ------------------------------------------------------
 
     def __init__(self, object iterable = ()):
+        """__init__(self, iterable=())\n--
+
+        Create a new float vector from the given data.
+
+        """
         cdef int        n
         cdef size_t     i
         cdef float      item
@@ -1802,9 +1740,7 @@ cdef class VectorF(Vector):
         return new
 
     cpdef float entropy(self) except *:
-        """entropy(self)\n--
-
-        Compute the Shannon entropy of the vector.
+        """Compute the Shannon entropy of the vector.
 
         The Shannon entropy of a probability vector is defined as:
 
@@ -1846,9 +1782,7 @@ cdef class VectorF(Vector):
             return libeasel.vec.esl_vec_FMin(<float*> self._data, self._n)
 
     cpdef object normalize(self):
-        """normalize(self)\n--
-
-        Normalize a vector so that all elements sum to 1.
+        """Normalize a vector so that all elements sum to 1.
 
         Caution:
             If sum is zero, sets all elements to :math:`\\frac{1}{n}`,
@@ -1861,9 +1795,7 @@ cdef class VectorF(Vector):
         return None
 
     cpdef float relative_entropy(self, VectorF other) except *:
-        """relative_entropy(self, other)\n--
-
-        Compute the relative entropy between two probability vectors.
+        """Compute the relative entropy between two probability vectors.
 
         The Shannon relative entropy of two probability vectors :math:`p`
         and :math:`q`, also known as the Kullback-Leibler divergence, is
@@ -1911,9 +1843,7 @@ cdef class VectorF(Vector):
         return None
 
     cpdef float sum(self):
-        """sum(self)\n--
-
-        Returns the scalar sum of all elements in the vector.
+        """Returns the scalar sum of all elements in the vector.
 
         Float summations use `Kahan's algorithm <https://w.wiki/4Wa5>`_, in
         order to minimize roundoff error accumulation. Additionally, they
@@ -1943,6 +1873,11 @@ cdef class VectorU8(Vector):
     # --- Magic methods ------------------------------------------------------
 
     def __init__(self, object iterable = ()):
+        """__init__(self, iterable=())\n--
+
+        Create a new byte vector from the given data.
+
+        """
         cdef int          n
         cdef size_t       i
         cdef uint8_t      item
@@ -2284,9 +2219,7 @@ cdef class VectorU8(Vector):
         return None
 
     cpdef uint8_t sum(self):
-        """sum(self)\n--
-
-        Returns the scalar sum of all elements in the vector.
+        """Returns the scalar sum of all elements in the vector.
 
         Caution:
             The sum is wrapping::
@@ -2320,10 +2253,7 @@ cdef class Matrix:
 
     @classmethod
     def zeros(cls, int m, int n):
-        """zeros(cls, m, n)\n--
-
-        Create a new :math:`m \\times n` matrix filled with zeros.
-
+        """Create a new :math:`m \\times n` matrix filled with zeros.
         """
         cdef int    i
         cdef Matrix mat      = cls([])
@@ -2363,10 +2293,7 @@ cdef class Matrix:
 
     @classmethod
     def _from_raw_bytes(cls, buffer, int m, int n, str byteorder):
-        """_from_raw_bytes(cls, buffer, m, n, byteorder)\n--
-
-        Create a new matrix using the given bytes to fill its contents.
-
+        """Create a new matrix using the given bytes to fill its contents.
         """
         cdef const uint8_t[::1] bytes
         cdef Matrix             mat      = cls.zeros(m, n)
@@ -2529,9 +2456,7 @@ cdef class Matrix:
     # --- Methods ------------------------------------------------------------
 
     def argmax(self):
-        """argmax(self)\n--
-
-        Return the coordinates of the maximum element in the matrix.
+        """Return the coordinates of the maximum element in the matrix.
 
         Raises:
             `ValueError`: When called on an empty matrix.
@@ -2539,9 +2464,7 @@ cdef class Matrix:
         """
 
     def argmin(self):
-        """argmin(self)\n--
-
-        Return the coordinates of the minimum element in the matrix.
+        """Return the coordinates of the minimum element in the matrix.
 
         Raises:
             `ValueError`: When called on an empty matrix.
@@ -2549,16 +2472,11 @@ cdef class Matrix:
         """
 
     def copy(self):
-        """copy(self)\n--
-
-        Create a copy of the matrix, allocating a new buffer.
-
+        """Create a copy of the matrix, allocating a new buffer.
         """
 
     def max(self):
-        """max(self)\n--
-
-        Return the value of the maximum element in the matrix.
+        """Return the value of the maximum element in the matrix.
 
         Raises:
             `ValueError`: When called on an empty matrix.
@@ -2566,9 +2484,7 @@ cdef class Matrix:
         """
 
     def min(self):
-        """min(self)\n--
-
-        Return the value of the minimum element in the matrix.
+        """Return the value of the minimum element in the matrix.
 
         Raises:
             `ValueError`: When called on an empty matrix.
@@ -2576,10 +2492,7 @@ cdef class Matrix:
         """
 
     def sum(self):
-        """sum(self)\n--
-
-        Return the sum of all elements in the matrix.
-
+        """Return the sum of all elements in the matrix.
         """
 
 
@@ -3426,10 +3339,7 @@ cdef class MSA:
     # --- Methods ------------------------------------------------------------
 
     cpdef uint32_t checksum(self):
-        """checksum(self)\n--
-
-        Calculate a 32-bit checksum for the multiple sequence alignment.
-
+        """Calculate a 32-bit checksum for the multiple sequence alignment.
         """
         cdef uint32_t checksum = 0
         cdef int status
@@ -3441,9 +3351,7 @@ cdef class MSA:
             raise UnexpectedError(status, "esl_msa_Checksum")
 
     cpdef void write(self, object fh, str format) except *:
-        """write(self, fh, format)\n--
-
-        Write the multiple sequence alignement to a file handle.
+        """Write the multiple sequence alignement to a file handle.
 
         Arguments:
             fh (`io.IOBase`): A Python file handle, opened in binary mode.
@@ -3736,10 +3644,7 @@ cdef class TextMSA(MSA):
     # --- Methods ------------------------------------------------------------
 
     cpdef TextMSA copy(self):
-        """copy(self)\n--
-
-        Duplicate the text sequence alignment, and return the copy.
-
+        """Duplicate the text sequence alignment, and return the copy.
         """
         assert self._msa != NULL
         assert not (self._msa.flags & libeasel.msa.eslMSA_DIGITAL)
@@ -3753,9 +3658,7 @@ cdef class TextMSA(MSA):
         return new
 
     cpdef DigitalMSA digitize(self, Alphabet alphabet):
-        """digitize(self, alphabet)\n--
-
-        Convert the text alignment to a digital alignment using ``alphabet``.
+        """Convert the text alignment to a digital alignment using ``alphabet``.
 
         Returns:
             `DigitalMSA`: An alignment in digital mode containing the same
@@ -3986,10 +3889,7 @@ cdef class DigitalMSA(MSA):
     # --- Methods ------------------------------------------------------------
 
     cpdef DigitalMSA copy(self):
-        """copy(self)\n--
-
-        Duplicate the digital sequence alignment, and return the copy.
-
+        """Duplicate the digital sequence alignment, and return the copy.
         """
         assert self._msa != NULL
         assert self._msa.flags & libeasel.msa.eslMSA_DIGITAL
@@ -4004,9 +3904,7 @@ cdef class DigitalMSA(MSA):
         return new
 
     cpdef TextMSA textize(self):
-        """textize(self)\n--
-
-        Convert the digital alignment to a text alignment.
+        """Convert the digital alignment to a text alignment.
 
         Returns:
             `TextMSA`: A copy of the alignment in text-mode.
@@ -4062,9 +3960,7 @@ cdef class MSAFile:
 
     @staticmethod
     cdef ESL_MSAFILE* _open_fileobj(object fh, int fmt) except NULL:
-        """_open_fileobj(fh, fmt)\n--
-
-        Get an ``ESL_MSAFILE*`` to read MSA from the file-like object ``fh``.
+        """Get an ``ESL_MSAFILE*`` to read MSA from the file-like object ``fh``.
 
         Adapted from the ``esl_msafile_Open`` function in ``esl_msafile.c``.
 
@@ -4257,18 +4153,13 @@ cdef class MSAFile:
     # --- Methods ------------------------------------------------------------
 
     cpdef void close(self):
-        """close(self)\n--
-
-        Close the file and free the resources used by the parser.
-
+        """Close the file and free the resources used by the parser.
         """
         libeasel.msafile.esl_msafile_Close(self._msaf)
         self._msaf = NULL
 
     cpdef Alphabet guess_alphabet(self):
-        """guess_alphabet(self)\n--
-
-        Guess the alphabet of an open `MSAFile`.
+        """Guess the alphabet of an open `MSAFile`.
 
         This method tries to guess the alphabet of a multiple-alignment file
         by inspecting the first entry in the file. It returns the alphabet,
@@ -4309,9 +4200,7 @@ cdef class MSAFile:
             raise UnexpectedError(status, "esl_msafile_GuessAlphabet")
 
     cpdef MSA read(self):
-        """read(self)\n--
-
-        Read the next alignment from the file.
+        """Read the next alignment from the file.
 
         Returns:
             `MSA`: The next alignment in the file, or `None` if all the
@@ -4433,10 +4322,7 @@ cdef class Randomness:
     # --- Methods ------------------------------------------------------------
 
     def getstate(self):
-        """getstate(self)\n--
-
-        Get a tuple containing the current state.
-
+        """Get a tuple containing the current state.
         """
         assert self._rng != NULL
         if self.fast:
@@ -4445,10 +4331,7 @@ cdef class Randomness:
             return ( False, self._rng.seed, self._rng.mti, [self._rng.mt[x] for x in range(624)] )
 
     def setstate(self, tuple state):
-        """setstate(self, state)\n--
-
-        Restores the state of the random number generator.
-
+        """Restores the state of the random number generator.
         """
         assert self._rng != NULL
 
@@ -4463,9 +4346,7 @@ cdef class Randomness:
                 self._rng.mt[x] = state[3][x]
 
     cpdef void seed(self, object n=None) except *:
-        """seed(n=None)\n--
-
-        Reinitialize the random number generator with the given seed.
+        """Reinitialize the random number generator with the given seed.
 
         Arguments:
             n (`int`, optional): The seed to use. If ``0`` or `None`, an
@@ -4483,10 +4364,7 @@ cdef class Randomness:
             raise UnexpectedError(status, "esl_randomness_Init")
 
     cpdef Randomness copy(self):
-        """copy(self)\n--
-
-        Return a copy of the random number generator in the same exact state.
-
+        """Return a copy of the random number generator in the same exact state.
         """
         assert self._rng != NULL
 
@@ -4499,18 +4377,13 @@ cdef class Randomness:
         return new
 
     cpdef double random(self):
-        """random(self)\n--
-
-        Generate a uniform random deviate on :math:`\\left[ 0, 1 \\right)`.
-
+        """Generate a uniform random deviate on :math:`\\left[ 0, 1 \\right)`.
         """
         assert self._rng != NULL
         return libeasel.random.esl_random(self._rng)
 
     cpdef double normalvariate(self, double mu, double sigma):
-        """normalvariate(self, mu, sigma)\n--
-
-        Generate a Gaussian-distributed sample.
+        """Generate a Gaussian-distributed sample.
 
         Arguments:
             mu (`float`): The mean of the Gaussian being sampled.
@@ -4760,20 +4633,14 @@ cdef class Sequence:
     # --- Abstract methods ---------------------------------------------------
 
     def copy(self):
-        """copy(self)\n--
-
-        Duplicate the sequence, and return the copy.
-
+        """Duplicate the sequence, and return the copy.
         """
         raise NotImplementedError("Sequence.copy")
 
     # --- Methods ------------------------------------------------------------
 
     cpdef uint32_t checksum(self):
-        """checksum(self)\n--
-
-        Calculate a 32-bit checksum for the sequence.
-
+        """Calculate a 32-bit checksum for the sequence.
         """
         assert self._sq != NULL
 
@@ -4788,10 +4655,7 @@ cdef class Sequence:
             raise UnexpectedError(status, "esl_sq_Checksum")
 
     cpdef void clear(self) except *:
-        """clear(self)\n--
-
-        Reinitialize the sequence for re-use.
-
+        """Reinitialize the sequence for re-use.
         """
         assert self._sq != NULL
 
@@ -4803,9 +4667,7 @@ cdef class Sequence:
             raise UnexpectedError(status, "esl_sq_Reuse")
 
     cpdef void write(self, object fh) except *:
-        """write(self, fh)\n--
-
-        Write the sequence alignement to a file handle, in FASTA format.
+        """Write the sequence alignement to a file handle, in FASTA format.
 
         Arguments:
             fh (`io.IOBase`): A Python file handle, opened in binary mode.
@@ -4886,9 +4748,7 @@ cdef class TextSequence(Sequence):
     # --- Methods ------------------------------------------------------------
 
     cpdef DigitalSequence digitize(self, Alphabet alphabet):
-        """digitize(self, alphabet)\n--
-
-        Convert the text sequence to a digital sequence using ``alphabet``.
+        """Convert the text sequence to a digital sequence using ``alphabet``.
 
         Returns:
             `DigitalSequence`: A copy of the sequence in digital mode,
@@ -4917,10 +4777,7 @@ cdef class TextSequence(Sequence):
             raise UnexpectedError(status, "esl_sq_Copy")
 
     cpdef TextSequence copy(self):
-        """copy(self)\n--
-
-        Duplicate the text sequence, and return the copy.
-
+        """Duplicate the text sequence, and return the copy.
         """
         assert self._sq != NULL
         assert libeasel.sq.esl_sq_IsText(self._sq)
@@ -4942,9 +4799,7 @@ cdef class TextSequence(Sequence):
         return new
 
     cpdef TextSequence reverse_complement(self, bint inplace=False):
-        """reverse_complement(self, inplace=False)\n--
-
-        Build the reverse complement of the sequence.
+        """Build the reverse complement of the sequence.
 
         This method assumes that the sequence alphabet is IUPAC/DNA. If the
         sequence contains any unknown letters, they will be replaced by
@@ -5112,10 +4967,7 @@ cdef class DigitalSequence(Sequence):
     # --- Methods ------------------------------------------------------------
 
     cpdef DigitalSequence copy(self):
-        """copy(self)\n--
-
-        Duplicate the digital sequence, and return the copy.
-
+        """Duplicate the digital sequence, and return the copy.
         """
         assert self._sq != NULL
         assert libeasel.sq.esl_sq_IsDigital(self._sq)
@@ -5137,9 +4989,7 @@ cdef class DigitalSequence(Sequence):
         return new
 
     cpdef TextSequence textize(self):
-        """textize(self)\n--
-
-        Convert the digital sequence to a text sequence.
+        """Convert the digital sequence to a text sequence.
 
         Returns:
             `TextSequence`: A copy of the sequence in text-mode.
@@ -5167,9 +5017,7 @@ cdef class DigitalSequence(Sequence):
         return new
 
     cpdef DigitalSequence translate(self, GeneticCode genetic_code = GeneticCode()):
-        """translate(self, genetic_code=GeneticCode())\n--
-
-        Translate the sequence using the given genetic code.
+        """Translate the sequence using the given genetic code.
 
         Arguments:
             genetic_code (`pyhmmer.easel.GeneticCode`): The genetic code to
@@ -5243,9 +5091,7 @@ cdef class DigitalSequence(Sequence):
         return protein
 
     cpdef DigitalSequence reverse_complement(self, bint inplace=False):
-        """reverse_complement(self, inplace=False)\n--
-
-        Build the reverse complement of the sequence.
+        """Build the reverse complement of the sequence.
 
         Arguments:
             inplace (`bool`): Whether or not to copy the sequence before
@@ -5393,10 +5239,7 @@ cdef class SequenceBlock:
     # --- C methods ----------------------------------------------------------
 
     cdef void _allocate(self, size_t n) except *:
-        """_allocate(self, n, /)\n--
-
-        Allocate enough storage for at least ``n`` items.
-
+        """Allocate enough storage for at least ``n`` items.
         """
         cdef size_t i
         cdef size_t capacity = new_capacity(n, self._length)
@@ -5424,10 +5267,7 @@ cdef class SequenceBlock:
         self._on_modification()
 
     cpdef void clear(self) except *:
-        """clear(self)\n--
-
-        Remove all sequences from the block.
-
+        """Remove all sequences from the block.
         """
         cdef size_t i
         self._storage.clear()
@@ -5435,10 +5275,7 @@ cdef class SequenceBlock:
         self._on_modification()
 
     cpdef void extend(self, object iterable) except *:
-        """extend(self, iterable, /)\n--
-
-        Extend block by appending sequences from the iterable.
-
+        """Extend block by appending sequences from the iterable.
         """
         cdef size_t hint = operator.length_hint(iterable)
         if self._length + hint > self._capacity:
@@ -5517,10 +5354,7 @@ cdef class SequenceBlock:
         self.pop(self._index(sequence))
 
     cpdef Sequence largest(self):
-        """largest(self)\n--
-
-        Return the largest sequence in the block.
-
+        """Return the largest sequence in the block.
         """
         cdef size_t i
 
@@ -5535,9 +5369,7 @@ cdef class SequenceBlock:
         return self._storage[self._largest]
 
     cpdef SequenceBlock copy(self):
-        """copy(self)\n--
-
-        Return a copy of the sequence block.
+        """Return a copy of the sequence block.
 
         Note:
             The sequence internally refered to by this collection are not
@@ -5600,33 +5432,22 @@ cdef class TextSequenceBlock(SequenceBlock):
     # --- Python methods -----------------------------------------------------
 
     cpdef void append(self, TextSequence sequence) except *:
-        """append(self, sequence)\n--
-
-        Append ``sequence`` at the end of the block.
-
+        """Append ``sequence`` at the end of the block.
         """
         self._append(sequence)
 
     cpdef TextSequence pop(self, ssize_t index=-1):
-        """pop(self, index=-1)\n--
-
-        Remove and return a sequence from the block (the last one by default).
-
+        """Remove and return a sequence from the block (the last one by default).
         """
         return self._pop(index)
 
     cpdef void insert(self, ssize_t index, TextSequence sequence) except *:
-        """insert(self, index, sequence)\n--
-
-        Insert a new sequence in the block before ``index``.
-
+        """Insert a new sequence in the block before ``index``.
         """
         self._insert(index, sequence)
 
     cpdef size_t index(self, TextSequence sequence, ssize_t start=0, ssize_t stop=sys.maxsize) except *:
-        """index(self, sequence, start=0, stop=sys.maxsize)\n--
-
-        Return the index of the first occurence of ``sequence``.
+        """Return the index of the first occurence of ``sequence``.
 
         Raises:
             `ValueError`: When the block does not contain ``sequence``.
@@ -5635,18 +5456,12 @@ cdef class TextSequenceBlock(SequenceBlock):
         return self._index(sequence, start, stop)
 
     cpdef void remove(self, TextSequence sequence) except *:
-        """remove(self, sequence)\n--
-
-        Remove the first occurence of the given sequence.
-
+        """Remove the first occurence of the given sequence.
         """
         self._remove(sequence)
 
     cpdef DigitalSequenceBlock digitize(self, Alphabet alphabet):
-        """digitize(self, alphabet)\n--
-
-        Create a block containing sequences from this block in digital mode.
-
+        """Create a block containing sequences from this block in digital mode.
         """
         cdef size_t               i
         cdef list                 seqs  = [ DigitalSequence(alphabet) for _ in range(self._length) ]
@@ -5659,17 +5474,12 @@ cdef class TextSequenceBlock(SequenceBlock):
         return block
 
     cpdef TextSequence largest(self):
-        """largest(self)\n--
-
-        Return the largest sequence in the block.
-
+        """Return the largest sequence in the block.
         """
         return SequenceBlock.largest(self)
 
     cpdef TextSequenceBlock copy(self):
-        """copy(self)\n--
-
-        Return a copy of the text sequence block.
+        """Return a copy of the text sequence block.
 
         Note:
             The sequence internally refered to by this collection are not
@@ -5704,7 +5514,9 @@ cdef class DigitalSequenceBlock(SequenceBlock):
         self.alphabet = alphabet
 
     def __init__(self, Alphabet alphabet not None, object iterable = ()):
-        """Create a new digital sequence block with the given alphabet.
+        """__init__(self, alphabet, iterable = ())\n--
+        
+        Create a new digital sequence block with the given alphabet.
 
         Arguments:
             alphabet (`~pyhmmer.easel.Alphabet`): The alphabet to use for all
@@ -5766,37 +5578,26 @@ cdef class DigitalSequenceBlock(SequenceBlock):
     # --- Python methods -----------------------------------------------------
 
     cpdef void append(self, DigitalSequence sequence) except *:
-        """append(self, sequence)\n--
-
-        Append ``sequence`` at the end of the block.
-
+        """Append ``sequence`` at the end of the block.
         """
         if sequence.alphabet != self.alphabet:
             raise AlphabetMismatch(self.alphabet, sequence.alphabet)
         self._append(sequence)
 
     cpdef DigitalSequence pop(self, ssize_t index=-1):
-        """pop(self, index=-1)\n--
-
-        Remove and return a sequence from the block (the last one by default).
-
+        """Remove and return a sequence from the block (the last one by default).
         """
         return self._pop(index)
 
     cpdef void insert(self, ssize_t index, DigitalSequence sequence) except *:
-        """insert(self, index, sequence)\n--
-
-        Insert a new sequence in the block before ``index``.
-
+        """Insert a new sequence in the block before ``index``.
         """
         if sequence.alphabet != self.alphabet:
             raise AlphabetMismatch(self.alphabet, sequence.alphabet)
         self._insert(index, sequence)
 
     cpdef size_t index(self, DigitalSequence sequence, ssize_t start=0, ssize_t stop=sys.maxsize) except *:
-        """index(self, sequence, start=0, stop=sys.maxsize)\n--
-
-        Return the index of the first occurence of ``sequence``.
+        """Return the index of the first occurence of ``sequence``.
 
         Raises:
             `ValueError`: When the block does not contain ``sequence``.
@@ -5807,20 +5608,14 @@ cdef class DigitalSequenceBlock(SequenceBlock):
         return self._index(sequence, start, stop)
 
     cpdef void remove(self, DigitalSequence sequence) except *:
-        """remove(self, sequence)\n--
-
-        Remove the first occurence of the given sequence.
-
+        """Remove the first occurence of the given sequence.
         """
         if sequence.alphabet != self.alphabet:
             raise AlphabetMismatch(self.alphabet, sequence.alphabet)
         self._remove(sequence)
 
     cpdef TextSequenceBlock textize(self):
-        """textize(self, alphabet)\n--
-
-        Create a block containing sequences from this block in text mode.
-
+        """Create a block containing sequences from this block in text mode.
         """
         cdef size_t            i
         cdef list              seqs  = [ TextSequence() for _ in range(self._length) ]
@@ -5833,9 +5628,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
         return block
 
     cpdef DigitalSequenceBlock translate(self, GeneticCode genetic_code = GeneticCode()):
-        """translate(self, genetic_code=GeneticCode())\n--
-
-        Translate the sequence block using the given genetic code.
+        """Translate the sequence block using the given genetic code.
 
         Arguments:
             genetic_code (`pyhmmer.easel.GeneticCode`): The genetic code to
@@ -5924,9 +5717,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
         return SequenceBlock.largest(self)
 
     cpdef DigitalSequenceBlock copy(self):
-        """copy(self)\n--
-
-        Return a copy of the digital sequence block.
+        """Return a copy of the digital sequence block.
 
         Note:
             The sequence internally refered to by this collection are not
@@ -5989,9 +5780,7 @@ cdef class SequenceFile:
         *,
         Alphabet alphabet=None
     ):
-        """parse(cls, buffer, format)\n--
-
-        Parse a sequence from a binary ``buffer`` using the given ``format``.
+        """Parse a sequence from a binary ``buffer`` using the given ``format``.
 
         Argument:
             buffer (`bytes` or byte-like buffer): A buffer containing the
@@ -6038,9 +5827,7 @@ cdef class SequenceFile:
         const unsigned char[::1] buffer,
         str format
     ):
-        """parseinto(cls, seq, buffer, format)\n--
-
-        Parse a sequence from a binary ``buffer`` into ``seq``.
+        """Parse a sequence from a binary ``buffer`` into ``seq``.
 
         Argument:
             seq (`~pyhmmer.easel.Sequence`): The sequence object into which
@@ -6087,9 +5874,7 @@ cdef class SequenceFile:
 
     @staticmethod
     cdef ESL_SQFILE* _open_fileobj(object fh, int fmt) except NULL:
-        """_open_fileobj(fh, fmt)\n--
-
-        Get an ``ESL_SQFILE*`` to read sequences from the file-like object ``fh``.
+        """Get an ``ESL_SQFILE*`` to read sequences from the file-like object ``fh``.
 
         Adapted from the ``esl_sqfile_Open`` function in ``esl_sqio.c`` and
         ``esl_sqascii_Open`` in ``esl_sqio_ascii.c`` to support using a
@@ -6428,18 +6213,13 @@ cdef class SequenceFile:
     # --- Methods ------------------------------------------------------------
 
     cpdef void close(self) except *:
-        """close(self)\n--
-
-        Close the file and free the resources used by the parser.
-
+        """Close the file and free the resources used by the parser.
         """
         libeasel.sqio.esl_sqfile_Close(self._sqfp)
         self._sqfp = NULL
 
     cpdef Alphabet guess_alphabet(self):
-        """guess_alphabet(self)\n--
-
-        Guess the alphabet of an open `SequenceFile`.
+        """Guess the alphabet of an open `SequenceFile`.
 
         This method tries to guess the alphabet of a sequence file by
         inspecting the first sequence in the file. It returns the alphabet,
@@ -6487,9 +6267,7 @@ cdef class SequenceFile:
             raise UnexpectedError(status, "esl_sqfile_GuessAlphabet")
 
     cpdef Sequence read(self, bint skip_info=False, bint skip_sequence=False):
-        """read(self, skip_info=False, skip_sequence=False)\n--
-
-        Read the next sequence from the file.
+        """Read the next sequence from the file.
 
         Arguments:
             skip_info (`bool`): Pass `True` to disable reading the sequence
@@ -6524,9 +6302,7 @@ cdef class SequenceFile:
         return self.readinto(seq, skip_info=skip_info, skip_sequence=skip_sequence)
 
     cpdef Sequence readinto(self, Sequence seq, bint skip_info=False, bint skip_sequence=False):
-        """readinto(self, seq, skip_info=False, skip_sequence=False)\n--
-
-        Read the next sequence from the file, using ``seq`` to store data.
+        """Read the next sequence from the file, using ``seq`` to store data.
 
         Arguments:
             seq (`~pyhmmer.easel.Sequence`): A sequence object to use to store
@@ -6593,9 +6369,7 @@ cdef class SequenceFile:
             raise UnexpectedError(status, funcname)
 
     cpdef SequenceBlock read_block(self, object sequences=None, object residues=None):
-        """read_block(self, max_sequences=None, max_residues=None)\n--
-
-        Read several sequences into a sequence block.
+        """Read several sequences into a sequence block.
 
         Arguments:
             sequences (`int`, *optional*): The maximum number of sequences
@@ -6668,9 +6442,7 @@ cdef class SequenceFile:
         return block
 
     cpdef void rewind(self) except *:
-        """rewind(self)\n--
-
-        Rewind the file back to the beginning.
+        """Rewind the file back to the beginning.
 
         For sequential formats, this method is supported for both *path*-based
         and *file object*-based sequence files. For multiple-sequence
@@ -6752,10 +6524,7 @@ cdef class SSIReader:
     # --- Methods ------------------------------------------------------------
 
     def file_info(self, uint16_t fd):
-        """file_info(self, fd)\n--
-
-        Retrieve the `~pyhmmer.easel.SSIReader.FileInfo` of the descriptor.
-
+        """Retrieve the `~pyhmmer.easel.SSIReader.FileInfo` of the descriptor.
         """
         cdef int   status
         cdef char* filename
@@ -6773,10 +6542,7 @@ cdef class SSIReader:
             raise UnexpectedError(status, "esl_ssi_FileInfo")
 
     def find_name(self, bytes key):
-        """find_name(self, key)\n--
-
-        Retrieve the `~pyhmmer.easel.SSIReader.Entry` for the given name.
-
+        """Retrieve the `~pyhmmer.easel.SSIReader.Entry` for the given name.
         """
         cdef uint16_t ret_fh
         cdef off_t    ret_roff
@@ -6801,10 +6567,7 @@ cdef class SSIReader:
             raise UnexpectedError(status, "esl_ssi_FindName")
 
     cpdef void close(self):
-        """close(self)\n--
-
-        Close the SSI file reader.
-
+        """Close the SSI file reader.
         """
         libeasel.ssi.esl_ssi_Close(self._ssi)
         self._ssi = NULL
@@ -6872,9 +6635,7 @@ cdef class SSIWriter:
     # --- Methods ------------------------------------------------------------
 
     cpdef uint16_t add_file(self, str filename, int format = 0) except *:
-        """add_file(self, filename, format=0)\n--
-
-        Add a new file to the index.
+        """Add a new file to the index.
 
         Arguments:
             filename (str): The name of the file to register.
@@ -6905,10 +6666,7 @@ cdef class SSIWriter:
         off_t data_offset = 0,
         int64_t record_length = 0
     ) except *:
-        """add_key(self, key, fd, record_offset, data_offset=0, record_length=0)\n--
-
-        Add a new entry to the index with the given ``key``.
-
+        """Add a new entry to the index with the given ``key``.
         """
         cdef int status
 
@@ -6925,10 +6683,7 @@ cdef class SSIWriter:
             raise UnexpectedError(status, "esl_newssi_AddKey")
 
     cpdef void add_alias(self, bytes alias, bytes key) except *:
-        """add_alias(self, alias, key)\n--
-
-        Make ``alias`` an alias of ``key`` in the index.
-
+        """Make ``alias`` an alias of ``key`` in the index.
         """
         cdef int status
 
@@ -6944,10 +6699,7 @@ cdef class SSIWriter:
             raise UnexpectedError(status, "esl_newssi_AddAlias")
 
     cpdef void close(self) except *:
-        """close(self)\n--
-
-        Close the SSI file writer.
-
+        """Close the SSI file writer.
         """
         cdef int status
 

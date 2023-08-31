@@ -1,5 +1,5 @@
 # coding: utf-8
-# cython: language_level=3, linetrace=True
+# cython: language_level=3, binding=True, linetrace=True, embedsignature=False
 """High-level interface to the Plan7 data model.
 
 Plan7 is the model architecture used by HMMER since HMMER2.
