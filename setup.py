@@ -231,7 +231,9 @@ class build_ext(_build_ext):
             cython_args["compiler_directives"]["warn.unused_result"] = True
             cython_args["compiler_directives"]["warn.multiple_declarators"] = True
             cython_args["compiler_directives"]["profile"] = True
+            cython_args["compiler_directives"]["nonecheck"] = True
         else:
+            cython_args["compiler_directives"]["emit_code_comments"] = False
             cython_args["compiler_directives"]["boundscheck"] = False
             cython_args["compiler_directives"]["wraparound"] = False
             cython_args["compiler_directives"]["cdivision"] = True
