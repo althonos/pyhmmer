@@ -1576,7 +1576,7 @@ if __name__ == "__main__":
 
     @contextlib.contextmanager
     def open_query_file(
-        queryfile: typing.Union[os.PathLike[str], typing.BinaryIO],
+        queryfile: typing.Union["os.PathLike[str]", typing.BinaryIO],
         alphabet: Alphabet,
     ) -> typing.Iterator[typing.Union[SequenceFile, HMMFile]]:
         """Open either a sequence file or an HMM file.
