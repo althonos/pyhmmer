@@ -472,6 +472,9 @@ cdef class Background:
         cdef str ty = type(self).__name__
         return f"{ty}({self.alphabet!r}, uniform={self.uniform!r})"
 
+    def __reduce__(self):
+        return type(self), (self.alphabet, self.uniform)
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -6335,8 +6338,6 @@ cdef class LongTargetsPipeline(Pipeline):
     .. versionadded:: 0.4.9
 
     """
-
-
 
     # --- Magic methods ------------------------------------------------------
 

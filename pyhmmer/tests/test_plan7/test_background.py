@@ -2,8 +2,9 @@ import copy
 import gc
 import io
 import os
-import unittest
+import pickle
 import tempfile
+import unittest
 
 from pyhmmer import easel, plan7
 
@@ -29,3 +30,12 @@ class TestBuilder(unittest.TestCase):
         self.assertEqual(bg.transition_probability, bg_copy.transition_probability)
         self.assertEqual(bg.omega, bg_copy.omega)
         self.assertEqual(list(bg.residue_frequencies), list(bg_copy.residue_frequencies))
+
+    def test_pickle(self):
+        abc = easel.Alphabet.dna()
+        bg = plan7.Background(abc)
+
+        bg2 = pickle.loads(pickle.dumps(bg))
+        self.assertEqual(bg.alphabet, bg2.alphabet)
+        self.assertEqual(bg.transition_probability, bg2.transition_probability)
+        self.assertEqual(bg.residue_frequencies, bg2.residue_frequencies)
