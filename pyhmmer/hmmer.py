@@ -158,9 +158,10 @@ class _BaseWorker(typing.Generic[_Q, _T, _R], multiprocessing.Process):
             target to search for hits, either a digital sequence block while
             in search mode, or an optimized profile block while in scan mode.
         query_queue (`multiprocessing.Queue`): The queue used to pass queries
-            between workers. 
-        result_queue (`multiprocessing.Queue`): The queue used to pass back
-            results to the main process once the query has been processed.
+            between workers.
+        result_buffer (`collections.MutableMapping`): The buffer used to
+            store results for the main process once the query has
+            been processed.
         query_count (`multiprocessing.Value`): An atomic counter storing
             the total number of queries that have currently been loaded.
             Passed to the ``callback`` so that an UI can show the total
@@ -191,7 +192,7 @@ class _BaseWorker(typing.Generic[_Q, _T, _R], multiprocessing.Process):
         targets: _T,
         query_available: multiprocessing.Semaphore,
         query_queue: "multiprocessing.Queue[typing.Optional[_Chore[_Q, _R]]]",
-        result_queue: "multiprocessing.Queue[_Chore[_Q, _R]]",
+        result_buffer: "typing.MutableMapping[int, _Chore[_Q, _R]]",
         query_count: multiprocessing.Value,  # type: ignore
         kill_switch: multiprocessing.Event,
         callback: typing.Optional[typing.Callable[[_Q, int], None]],
@@ -206,7 +207,7 @@ class _BaseWorker(typing.Generic[_Q, _T, _R], multiprocessing.Process):
         self.pipeline = pipeline_class(alphabet=alphabet, **options)
         self.query_available: multiprocessing.Semaphore = query_available
         self.query_queue: "multiprocessing.Queue[typing.Optional[_Chore[_Q, _R]]]" = query_queue
-        self.result_queue: "multiprocessing.Queue[_Chore[_Q, _R]]" = result_queue
+        self.result_buffer: "typing.MutableMapping[int, _Chore[_Q, _R]]" = result_buffer
         self.query_count = query_count
         self.callback: typing.Optional[typing.Callable[[_Q, int], None]] = (
             callback or self._none_callback
@@ -231,7 +232,7 @@ class _BaseWorker(typing.Generic[_Q, _T, _R], multiprocessing.Process):
             try:
                 hits = self.process(chore.query)
                 chore.record(hits)
-                self.result_queue.put(chore)
+                self.result_buffer[chore.index] = chore
                 chore.complete(hits)
             except BaseException as exc:
                 self.kill()
@@ -313,7 +314,7 @@ class _JACKHMMERWorker(
         targets: DigitalSequenceBlock,
         query_available: multiprocessing.Semaphore,
         query_queue: "multiprocessing.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, _I]]]",
-        result_queue: "multiprocessing.Queue[_Chore[_JACKHMMERQueryType, _R]]",
+        result_buffer: "typing.MutableMapping[int, _Chore[_JACKHMMERQueryType, _R]]",
         query_count: multiprocessing.Value,  # type: ignore
         kill_switch: multiprocessing.Event,
         callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]],
@@ -329,7 +330,7 @@ class _JACKHMMERWorker(
             targets=targets,
             query_available=query_available,
             query_queue=query_queue,
-            result_queue=result_queue,
+            result_buffer=result_buffer,
             query_count=query_count,
             kill_switch=kill_switch,
             callback=callback,
@@ -483,7 +484,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
         self,
         query_available: multiprocessing.Semaphore,
         query_queue: "multiprocessing.Queue[typing.Optional[_Chore[_Q, _R]]]",
-        result_queue: "multiprocessing.Queue[_Chore[_Q, _R]]",
+        result_buffer: "typing.MutableMapping[int, _Chore[_Q, _R]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: multiprocessing.Event,
     ) -> _BaseWorker[_Q, _T, _R]:
@@ -494,13 +495,13 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
         # values that we use to synchronize the workers
         query_available = multiprocessing.Semaphore(0)
         query_queue = multiprocessing.Queue()  # type: ignore
-        result_queue = multiprocessing.Queue() # type: ignore
+        result_buffer = {} # type: ignore
         query_count = multiprocessing.Value(ctypes.c_ulong, 0)
         kill_switch = multiprocessing.Event()
 
         # create the thread (to recycle code)
         thread = self._new_thread(
-            query_available, query_queue, result_queue, query_count, kill_switch
+            query_available, query_queue, result_buffer, query_count, kill_switch
         )
 
         # process each HMM iteratively and yield the result
@@ -525,7 +526,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
             results = queue.PriorityQueue()
 
             query_queue = manager.Queue(maxsize=self.cpus)  # type: ignore
-            result_queue = manager.Queue() # type: ignore
+            result_buffer = manager.dict() # type: ignore
             query_count = manager.Value(ctypes.c_ulong, 0)
             result_count = 0
             kill_switch = manager.Event()
@@ -534,7 +535,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
             workers = []
             for _ in range(self.cpus):
                 worker = self._new_thread(
-                    query_available, query_queue, result_queue, query_count, kill_switch
+                    query_available, query_queue, result_buffer, query_count, kill_switch
                 )
                 worker.start()
                 workers.append(worker)
@@ -552,16 +553,9 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
                     query_queue.put(chore)  # <-- blocks if too many chores in queue
                     query_available.release()
                     available.append(chore.event)
-                    # aggressively wait for the result with a very short
-                    # timeout, and exit the loop if the queue is not full
-                    while True:
-                        try:
-                            results.put(result_queue.get_nowait())
-                        except queue.Empty:
-                            break
                     # yield the results as soon as they are available
                     if available[0].is_set():
-                        result = results.get_nowait()
+                        result = result_buffer.pop(result_count)
                         assert result.index == result_count
                         yield result.get()
                         available.popleft()
@@ -576,16 +570,13 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
 
                 # yield all remaining results, in order
                 while available:
+                    available[0].wait()
                     if available[0].is_set():
-                        result = results.get_nowait()
+                        result = result_buffer.pop(result_count)
                         assert result.index == result_count
                         yield result.get()
                         available.popleft()
                         result_count += 1
-                    try:
-                        results.put(result_queue.get_nowait())
-                    except queue.Empty:
-                        continue
 
             except BaseException:
                 # make sure workers are killed to avoid being stuck,
@@ -611,7 +602,7 @@ class _SEARCHDispatcher(
         self,
         query_available: multiprocessing.Semaphore,
         query_queue: "multiprocessing.Queue[typing.Optional[_Chore[_SEARCHQueryType, TopHits]]]",
-        result_queue: "multiprocessing.Queue[typing.Optional[_Chore[_SEARCHQueryType, TopHits]]]",
+        result_buffer: "typing.MutableMapping[int, _Chore[_SEARCHQueryType, TopHits]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: multiprocessing.Event,
     ) -> _SEARCHWorker:
@@ -629,7 +620,7 @@ class _SEARCHDispatcher(
             targets,
             query_available,
             query_queue,
-            result_queue,
+            result_buffer,
             query_count,
             kill_switch,
             self.callback,
@@ -650,7 +641,7 @@ class _PHMMERDispatcher(
         self,
         query_available: multiprocessing.Semaphore,
         query_queue: "multiprocessing.Queue[typing.Optional[_Chore[_PHMMERQueryType, TopHits]]]",
-        result_queue: "multiprocessing.Queue[typing.Optional[_Chore[_PHMMERQueryType, TopHits]]]",
+        result_buffer: "typing.MutableMapping[_Chore[_PHMMERQueryType, TopHits]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: multiprocessing.Event,
     ) -> _PHMMERWorker:
@@ -668,7 +659,7 @@ class _PHMMERDispatcher(
             targets,
             query_available,
             query_queue,
-            result_queue,
+            result_buffer,
             query_count,
             kill_switch,
             self.callback,
@@ -724,7 +715,7 @@ class _JACKHMMERDispatcher(
         self,
         query_available: multiprocessing.Semaphore,
         query_queue: "multiprocessing.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, _I]]]",
-        result_queue: "multiprocessing.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, _I]]]",
+        result_buffer: "typing.MutableMapping[int, _Chore[_JACKHMMERQueryType, _I]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: multiprocessing.Event,
     ) -> _JACKHMMERWorker[_I]:
@@ -732,7 +723,7 @@ class _JACKHMMERDispatcher(
             self.targets,
             query_available,
             query_queue,
-            result_queue,
+            result_buffer,
             query_count,
             kill_switch,
             self.callback,
@@ -781,7 +772,7 @@ class _NHMMERDispatcher(
         self,
         query_available: multiprocessing.Semaphore,
         query_queue: "multiprocessing.Queue[typing.Optional[_Chore[_NHMMERQueryType, TopHits]]]",
-        result_queue: "multiprocessing.Queue[typing.Optional[_Chore[_NHMMERQueryType, TopHits]]]",
+        result_buffer: "typing.MutableMapping[int, _Chore[_NHMMERQueryType, TopHits]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: multiprocessing.Event,
     ) -> _NHMMERWorker:
@@ -799,7 +790,7 @@ class _NHMMERDispatcher(
             targets,
             query_available,
             query_queue,
-            result_queue,
+            result_buffer,
             query_count,
             kill_switch,
             self.callback,
@@ -821,7 +812,7 @@ class _SCANDispatcher(
         self,
         query_available: multiprocessing.Semaphore,
         query_queue: "multiprocessing.Queue[typing.Optional[_Chore[DigitalSequence, TopHits]]]",
-        result_queue: "multiprocessing.Queue[typing.Optional[_Chore[DigitalSequence, TopHits]]]",
+        result_buffer: "typing.MutableMapping[int, _Chore[DigitalSequence, TopHits]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: multiprocessing.Event,
     ) -> _SCANWorker:
@@ -834,7 +825,7 @@ class _SCANDispatcher(
             targets,
             query_available,
             query_queue,
-            result_queue,
+            result_buffer,
             query_count,
             kill_switch,
             self.callback,
