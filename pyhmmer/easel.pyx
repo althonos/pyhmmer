@@ -99,6 +99,7 @@ include "_getid.pxi"
 
 import abc
 import array
+import functools
 import io
 import itertools
 import os
@@ -504,6 +505,15 @@ cdef class GeneticCode:
         else:
             return f"{ty}({self.translation_table!r}, nucleotide_alphabet={self.nucleotide_alphabet!r})"
 
+    def __reduce__(self):
+        constructor = functools.partial(
+            type(self),
+            translation_table=self.translation_table,
+            nucleotide_alphabet=self.nucleotide_alphabet,
+            amino_alphabet=self.amino_alphabet
+        )
+        return constructor, ()
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -636,6 +646,29 @@ cdef class Bitfield:
     # --- Class methods ------------------------------------------------------
 
     @classmethod
+    def _from_raw_bytes(cls, object buffer, int n, str byteorder):
+        f"""Create a new bitfield using the given bytes to fill its contents.
+        """
+        cdef const uint8_t[::1] bytes
+        cdef Bitfield           bitfield = cls.zeros(n)
+        cdef object             view     = memoryview(buffer)
+
+        # fix endianness if needed
+        if byteorder != SYS_BYTEORDER:
+            newbuffer = array.array("Q")
+            newbuffer.frombytes(view)
+            newbuffer.byteswap()
+            view = memoryview(newbuffer)
+
+        # assign the items
+        bytes = view.cast("B")
+        assert bytes.shape[0] * sizeof(uint64_t) == bitfield._shape[0]
+        if n > 0:
+            with nogil:
+                memcpy(bitfield._b.b, &bytes[0], bitfield._shape[0]*sizeof(uint64_t))
+        return bitfield
+
+    @classmethod
     def zeros(cls, size_t n):
         """Create a new bitfield of size ``n`` with all elements set to `False`.
 
@@ -745,7 +778,16 @@ cdef class Bitfield:
 
     def __reduce_ex__(self, int protocol):
         assert self._b != NULL
-        return self.zeros, (len(self),), self.__getstate__()
+
+        # use out-of-band pickling (only supported since protocol 5, see
+        # https://docs.python.org/3/library/pickle.html#out-of-band-buffers)
+        if protocol >= 5:
+            buffer = pickle.PickleBuffer(self)
+        else:
+            buffer = array.array("Q")
+            buffer.frombytes(memoryview(self).cast("B"))
+
+        return self._from_raw_bytes, (buffer, self._b.nb, SYS_BYTEORDER)
 
     def __getstate__(self):
         assert self._b != NULL
@@ -5515,7 +5557,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
 
     def __init__(self, Alphabet alphabet not None, object iterable = ()):
         """__init__(self, alphabet, iterable = ())\n--
-        
+
         Create a new digital sequence block with the given alphabet.
 
         Arguments:

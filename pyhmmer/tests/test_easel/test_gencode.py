@@ -5,6 +5,7 @@ import os
 import shutil
 import unittest
 import tempfile
+import pickle
 import pkg_resources
 
 import pyhmmer
@@ -35,3 +36,9 @@ class TestGeneticCode(unittest.TestCase):
         with self.assertRaises(ValueError):
             gencode.translate(bytearray([0, 0, 0, 1, 1]))
 
+    def test_pickle(self):
+        gencode = GeneticCode(11)
+        gencode2 = pickle.loads(pickle.dumps(gencode))
+        self.assertEqual(gencode.translation_table, gencode2.translation_table)
+        self.assertEqual(gencode.nucleotide_alphabet, gencode2.nucleotide_alphabet)
+        self.assertEqual(gencode.amino_alphabet, gencode2.amino_alphabet)
