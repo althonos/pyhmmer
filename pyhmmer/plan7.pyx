@@ -101,7 +101,10 @@ if HMMER_IMPL == "VMX":
     )
     from libhmmer.impl_vmx.p7_oprofile cimport (
         P7_OPROFILE,
+        p7O_NXSTATES,
+        p7O_NXTRANS,
         p7O_NQB,
+        p7O_NQF,
         p7_oprofile_Compare,
         p7_oprofile_Dump,
         p7_oprofile_Sizeof,
@@ -117,7 +120,10 @@ elif HMMER_IMPL == "SSE":
     )
     from libhmmer.impl_sse.p7_oprofile cimport (
         P7_OPROFILE,
+        p7O_NXSTATES,
+        p7O_NXTRANS,
         p7O_NQB,
+        p7O_NQF,
         p7_oprofile_Compare,
         p7_oprofile_Dump,
         p7_oprofile_Sizeof,
@@ -133,7 +139,10 @@ elif HMMER_IMPL == "NEON":
     )
     from libhmmer.impl_neon.p7_oprofile cimport (
         P7_OPROFILE,
+        p7O_NXSTATES,
+        p7O_NXTRANS,
         p7O_NQB,
+        p7O_NQF,
         p7_oprofile_Compare,
         p7_oprofile_Dump,
         p7_oprofile_Sizeof,
@@ -4200,7 +4209,7 @@ cdef class OptimizedProfile:
 
     @property
     def tjb(self):
-        """`int`: The constant cost for a :math:`NJC` move.
+        """`int`: The constant cost for a :math:`NCJ` move.
 
         .. versionadded:: 0.4.0
 
@@ -4253,6 +4262,53 @@ cdef class OptimizedProfile:
         mat._n = mat._shape[1] = 16 * p7O_NQB(self._om.M)
         mat._owner = self
         mat._data = <void**> self._om.rbv
+        return mat
+
+    @property
+    def rfv(self):
+        """`~pyhmmer.easel.MatrixF`: The match scores for the Forward/Backward.
+
+        .. versionadded:: 0.10.3
+
+        """
+        assert self._om != NULL
+
+        cdef MatrixF mat = MatrixF.__new__(MatrixF)
+        mat._m = mat._shape[0] = self.alphabet.Kp
+        mat._n = mat._shape[1] = 4 * p7O_NQF(self._om.M)
+        mat._owner = self
+        mat._data = <void**> self._om.rfv
+        return mat
+
+    @property
+    def tfv(self):
+        """`~pyhmmer.easel.VectorF`: The transition scores for the Forward/Backard.
+
+        .. versionadded:: 0.10.3
+
+        """
+        assert self._om != NULL
+
+        cdef VectorF vec = VectorF.__new__(VectorF)
+        vec._n = vec._shape[0] = 8 * 4 * p7O_NQF(self._om.M)
+        vec._owner = self
+        vec._data = <void*> self._om.tfv
+        return vec
+
+    @property
+    def xf(self):
+        """`~pyhmmer.easel.MatrixF`: The :math:`NECJ` transition costs.
+
+        .. versionadded:: 0.10.3
+
+        """
+        assert self._om != NULL
+
+        cdef MatrixF mat = MatrixF.__new__(MatrixF)
+        mat._m = mat._shape[0] = p7O_NXSTATES
+        mat._n = mat._shape[1] = p7O_NXTRANS
+        mat._owner = self
+        mat._data = <void**> self._om.xf
         return mat
 
     @property

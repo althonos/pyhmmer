@@ -4,19 +4,10 @@ from posix.types cimport off_t
 
 from libeasel.alphabet cimport ESL_ALPHABET
 from libeasel.random cimport ESL_RANDOMNESS
+from libhmmer cimport p7_NEVPARAM, p7_NCUTOFFS, p7_NOFFSETS
 from libhmmer.p7_bg cimport P7_BG
-from libhmmer.p7_hmm cimport P7_HMM
+from libhmmer.p7_hmm cimport P7_HMM, p7_MAXABET
 from libhmmer.p7_profile cimport P7_PROFILE
-
-
-cdef extern from "p7_config.h" nogil:
-    DEF p7_MAXABET = 20
-
-
-cdef extern from "hmmer.h" nogil:
-    DEF p7_NEVPARAM = 6
-    DEF p7_NCUTOFFS = 6
-    DEF p7_NOFFSETS = 3
 
 
 cdef extern from "<arm_neon.h>":
@@ -37,19 +28,19 @@ cdef extern from "impl_neon/impl_neon.h" nogil:
     cdef int p7O_NQW(int)
     cdef int p7O_NQF(int)
 
-    DEF p7O_NXSTATES = 4
+    const size_t p7O_NXSTATES
     cdef enum p7o_xstates_e:
         p7O_E  = 0
         p7O_N  = 1
         p7O_J  = 2
         p7O_C  = 3
 
-    DEF p7O_NXTRANS = 2
+    const size_t p7O_NXTRANS
     cdef enum p7o_xtransitions_e:
         p7O_MOVE = 0
         p7O_LOOP = 1
 
-    DEF p7O_NTRANS = 8
+    const size_t p7O_NTRANS
     cdef enum p7o_tsc_e:
         p7O_BM = 0
         p7O_MM = 1
