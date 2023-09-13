@@ -7,6 +7,11 @@ cdef extern from "p7_config.h" nogil:
     const double p7_ETARGET_DNA
     const double p7_ETARGET_OTHER
 
+    const size_t p7_MAXABET
+    const size_t p7_MAXCODE
+    const size_t p7_MAX_SC_TXTLEN
+    const size_t p7_MAXDCHLET
+
 
 cdef extern from "hmmer.h" nogil:
 
@@ -52,7 +57,7 @@ cdef extern from "hmmer.h" nogil:
         p7_FOFFSET = 1
         p7_POFFSET = 2
 
-    const int p7_DEFAULT            
-    const int p7_DIGITIZE           
-    const int p7_ALL_CONSENSUS_COLS 
-    const int p7_TRIM               
+    const int p7_DEFAULT
+    const int p7_DIGITIZE
+    const int p7_ALL_CONSENSUS_COLS
+    const int p7_TRIM

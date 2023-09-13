@@ -77,7 +77,17 @@ from libeasel.getopts cimport ESL_GETOPTS, ESL_OPTIONS
 from libeasel.sq cimport ESL_SQ
 from libeasel.keyhash cimport ESL_KEYHASH
 from libeasel.fileparser cimport ESL_FILEPARSER
-from libhmmer cimport p7_LOCAL, p7_EVPARAM_UNSET, p7_CUTOFF_UNSET, p7_NEVPARAM, p7_NCUTOFFS, p7_offsets_e, p7_cutoffs_e, p7_evparams_e
+from libhmmer cimport (
+    p7_MAXABET,
+    p7_LOCAL, 
+    p7_EVPARAM_UNSET, 
+    p7_CUTOFF_UNSET, 
+    p7_NEVPARAM, 
+    p7_NCUTOFFS, 
+    p7_offsets_e, 
+    p7_cutoffs_e, 
+    p7_evparams_e,
+)
 from libhmmer.logsum cimport p7_FLogsumInit
 from libhmmer.p7_builder cimport P7_BUILDER, p7_archchoice_e, p7_wgtchoice_e, p7_effnchoice_e
 from libhmmer.p7_hmm cimport p7H_NTRANSITIONS, p7H_TC, p7H_GA, p7H_NC, p7H_MAP, p7h_transitions_e
@@ -4188,6 +4198,70 @@ cdef class OptimizedProfile:
         return (&self._om.cs[1]).decode("ascii")
 
     @property
+    def reference(self):
+        """`str` or `None`: The reference line from the alignment, if any.
+
+        This is relevant if the profile was built from a multiple sequence
+        alignment (e.g. by `Builder.build_msa`, or by an external
+        ``hmmbuild`` pipeline run).
+
+        .. versionadded:: 0.3.1
+
+        """
+        assert self._om != NULL
+        assert self._om.rf != NULL
+        if self._om.rf[0] == b'\0':
+            return None
+        return (&self._om.rf[1]).decode("ascii")
+
+    @property
+    def model_mask(self):
+        """`str` or `None`: The model mask line from the alignment, if any.
+
+        .. versionadded:: 0.3.1
+
+        """
+        assert self._om != NULL
+        assert self._om.mm != NULL
+        if self._om.mm[0] == b'\0':
+            return None
+        return (&self._om.mm[1]).decode("ascii")
+
+    # --- MSV Filter ---
+
+    @property
+    def rbv(self):
+        """`~pyhmmer.easel.MatrixU8`: The match scores for the MSV filter.
+        """
+        assert self._om != NULL
+
+        cdef MatrixU8 mat = MatrixU8.__new__(MatrixU8)
+        mat._m = mat._shape[0] = self.alphabet.Kp
+        mat._n = mat._shape[1] = 16 * p7O_NQB(self._om.M)
+        mat._owner = self
+        mat._data = <void**> self._om.rbv
+        return mat
+
+    @property
+    def sbv(self):
+        """`~pyhmmer.easel.MatrixU8`: The match scores for the SSV filter.
+
+        .. versionadded:: 0.4.0
+
+        """
+        assert self._om != NULL
+
+        cdef int nqb = p7O_NQB(self._om.M)
+        cdef int nqs = nqb + p7O_EXTRA_SB
+
+        cdef MatrixU8 mat = MatrixU8.__new__(MatrixU8)
+        mat._m = mat._shape[0] = self.alphabet.Kp
+        mat._n = mat._shape[1] = 16 * nqs
+        mat._owner = self
+        mat._data = <void**> self._om.sbv
+        return mat
+
+    @property
     def tbm(self):
         r"""`int`: The constant cost for a :math:`B \to M_k` transition.
 
@@ -4218,57 +4292,91 @@ cdef class OptimizedProfile:
         return self._om.tjb_b
 
     @property
-    def base(self):
+    def scale_b(self):
+        """`float`: The scale for MSV filter scores.
+
+        .. versionadded:: 0.11.0
+
+        """
+        assert self._om != NULL
+        return self._om.scale_b
+
+    @property
+    def base_b(self):
+        """`int`: The offset for MSV filter scores.
+
+        .. versionadded:: 0.11.0
+
+        """
         assert self._om != NULL
         return self._om.base_b
 
     @property
-    def bias(self):
+    def bias_b(self):
         """`int`: The positive bias to emission scores.
 
         .. versionadded:: 0.4.0
+
+        .. versionchanged:: 0.11.0
+            Renamed from `bias`.
 
         """
         assert self._om != NULL
         return self._om.bias_b
 
-    @property
-    def sbv(self):
-        """`~pyhmmer.easel.MatrixU8`: The match scores for the SSV filter.
+    # --- ViterbiFilter ---
 
-        .. versionadded:: 0.4.0
+    # rwv
+    # twv
+    # xv
+
+    @property
+    def scale_w(self):
+        """`float`: The scale for Viterbi filter scores.
+
+        .. versionadded:: 0.11.0
 
         """
         assert self._om != NULL
-
-        cdef int nqb = p7O_NQB(self._om.M)
-        cdef int nqs = nqb + p7O_EXTRA_SB
-
-        cdef MatrixU8 mat = MatrixU8.__new__(MatrixU8)
-        mat._m = mat._shape[0] = self.alphabet.Kp
-        mat._n = mat._shape[1] = 16 * nqs
-        mat._owner = self
-        mat._data = <void**> self._om.sbv
-        return mat
+        return self._om.scale_w
 
     @property
-    def rbv(self):
-        """`~pyhmmer.easel.MatrixU8`: The match scores for the MSV filter.
+    def base_w(self):
+        """`int`: The offset for Viterbi filter scores.
+
+        .. versionadded:: 0.11.0
+
         """
         assert self._om != NULL
+        return self._om.base_w
 
-        cdef MatrixU8 mat = MatrixU8.__new__(MatrixU8)
-        mat._m = mat._shape[0] = self.alphabet.Kp
-        mat._n = mat._shape[1] = 16 * p7O_NQB(self._om.M)
-        mat._owner = self
-        mat._data = <void**> self._om.rbv
-        return mat
+    @property
+    def ddbound_w(self):
+        """`int`: The threshold precalculated for lazy :math:`DD` evaluation.
+
+        .. versionadded:: 0.11.0
+
+        """
+        assert self._om != NULL
+        return self._om.ddbound_w
+
+    @property
+    def ncj_roundoff(self):
+        """`float`: The missing precision on :math:`NN,CC,JJ` after rounding.
+
+        .. versionadded:: 0.11.0
+
+        """
+        assert self._om != NULL
+        return self._om.ncj_roundoff
+
+    # --- Forward, Backard ---
 
     @property
     def rfv(self):
         """`~pyhmmer.easel.MatrixF`: The match scores for the Forward/Backward.
 
-        .. versionadded:: 0.10.3
+        .. versionadded:: 0.11.0
 
         """
         assert self._om != NULL
@@ -4284,7 +4392,7 @@ cdef class OptimizedProfile:
     def tfv(self):
         """`~pyhmmer.easel.VectorF`: The transition scores for the Forward/Backard.
 
-        .. versionadded:: 0.10.3
+        .. versionadded:: 0.11.0
 
         """
         assert self._om != NULL
@@ -4299,7 +4407,7 @@ cdef class OptimizedProfile:
     def xf(self):
         """`~pyhmmer.easel.MatrixF`: The :math:`NECJ` transition costs.
 
-        .. versionadded:: 0.10.3
+        .. versionadded:: 0.11.0
 
         """
         assert self._om != NULL
@@ -4311,6 +4419,8 @@ cdef class OptimizedProfile:
         mat._data = <void**> self._om.xf
         return mat
 
+    # --- Miscellaneous ---
+    
     @property
     def offsets(self):
         """`~plan7.Offsets`: The disk offsets for this optimized profile.
@@ -4342,6 +4452,21 @@ cdef class OptimizedProfile:
         cutoffs._flags = NULL
         cutoffs._is_profile = True
         return cutoffs
+
+    @property
+    def compositions(self):
+        """`~pyhmmer.easel.VectorF`: The per-model HMM filter composition.
+
+        .. versionadded:: 0.11.0
+
+        """
+        assert self._om != NULL
+
+        cdef VectorF vec = VectorF.__new__(VectorF)
+        vec._n = vec._shape[0] = p7_MAXABET
+        vec._owner = self
+        vec._data = <void*> self._om.compo
+        return vec
 
     @property
     def local(self):
