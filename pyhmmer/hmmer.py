@@ -20,7 +20,6 @@ import multiprocessing
 import os
 import operator
 import queue
-import threading
 import time
 import typing
 
@@ -84,7 +83,7 @@ class _Chore(typing.Generic[_Q, _R]):
     Attributes:
         query (`object`): The query object to be processed by the worker
             thread. Exact type depends on the pipeline type.
-        event (`threading.Event`): An event flag to set when the query
+        event (`multiprocessing.Event`): An event flag to set when the query
             is done being processed.
         hits (`pyhmmer.plan7.TopHits`): The hits obtained after processing
             the query.
@@ -94,18 +93,30 @@ class _Chore(typing.Generic[_Q, _R]):
     """
 
     query: _Q
-    event: threading.Event
+    index: int
+    event: multiprocessing.Event
     result: typing.Optional[_R]
     exception: typing.Optional[BaseException]
 
-    __slots__ = ("query", "event", "result", "exception")
+    __slots__ = ("query", "index", "event", "result", "exception")
 
-    def __init__(self, query: _Q) -> None:
+    def __init__(self, query: _Q, index: int, manager: multiprocessing.Manager) -> None:
         """Create a new chore from the given query."""
         self.query = query
-        self.event = threading.Event()
+        self.index = index
+        self.event = manager.Event()
         self.result = None
         self.exception = None
+
+    def __eq__(self, other: "_Chore[_Q, _R]") -> bool:
+        if isinstance(other, _Chore):
+            return self.index == other.index
+        return NotImplemented
+
+    def __lt__(self, other: "_Chore[_Q, _R]") -> bool:
+        if isinstance(other, _Chore):
+            return self.index < other.index
+        return NotImplemented
 
     def available(self) -> bool:
         """Return whether the chore is done and results are available."""
@@ -122,9 +133,12 @@ class _Chore(typing.Generic[_Q, _R]):
             raise self.exception
         return typing.cast(_R, self.result)
 
-    def complete(self, result: _R) -> None:
-        """Mark the chore as done and record ``result`` as the results."""
+    def record(self, result: _R) -> None:
+        """Record ``result`` as the results."""
         self.result = result
+
+    def complete(self, result: _R) -> None:
+        """Mark the chore as done."""
         self.event.set()
 
     def fail(self, exception: BaseException) -> None:
@@ -133,26 +147,26 @@ class _Chore(typing.Generic[_Q, _R]):
         self.event.set()
 
 
-# --- Pipeline threads -------------------------------------------------------
+# --- Pipeline workers -------------------------------------------------------
 
 
-class _BaseWorker(typing.Generic[_Q, _T, _R], threading.Thread):
+class _BaseWorker(typing.Generic[_Q, _T, _R], multiprocessing.Process):
     """A generic worker thread to parallelize a pipelined search.
 
     Attributes:
         targets (`DigitalSequenceBlock` or `OptimizedProfileBlock`): The
             target to search for hits, either a digital sequence block while
             in search mode, or an optimized profile block while in scan mode.
-        query_queue (`queue.Queue`): The queue used to pass queries
-            between threads. It contains the query, its index so that the
-            results can be returned in the same order, and a `_ResultBuffer`
-            where to store the result when the query has been processed.
+        query_queue (`multiprocessing.Queue`): The queue used to pass queries
+            between workers. 
+        result_queue (`multiprocessing.Queue`): The queue used to pass back
+            results to the main process once the query has been processed.
         query_count (`multiprocessing.Value`): An atomic counter storing
             the total number of queries that have currently been loaded.
             Passed to the ``callback`` so that an UI can show the total
             for a progress bar.
-        kill_switch (`threading.Event`): An event flag shared between
-            all worker threads, used to notify emergency exit.
+        kill_switch (`multiprocessing.Event`): An event flag shared between
+            all workers, used to notify emergency exit.
         callback (`callable`, optional): An optional callback to be called
             after each query has been processed. It should accept two
             arguments: the query object that was processed, and the total
@@ -175,10 +189,11 @@ class _BaseWorker(typing.Generic[_Q, _T, _R], threading.Thread):
     def __init__(
         self,
         targets: _T,
-        query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_Q, _R]]]",
+        query_available: multiprocessing.Semaphore,
+        query_queue: "multiprocessing.Queue[typing.Optional[_Chore[_Q, _R]]]",
+        result_queue: "multiprocessing.Queue[_Chore[_Q, _R]]",
         query_count: multiprocessing.Value,  # type: ignore
-        kill_switch: threading.Event,
+        kill_switch: multiprocessing.Event,
         callback: typing.Optional[typing.Callable[[_Q, int], None]],
         options: typing.Dict[str, typing.Any],
         pipeline_class: typing.Type[Pipeline],
@@ -189,8 +204,9 @@ class _BaseWorker(typing.Generic[_Q, _T, _R], threading.Thread):
         self.options = options
         self.targets: _T = targets
         self.pipeline = pipeline_class(alphabet=alphabet, **options)
-        self.query_available: threading.Semaphore = query_available
-        self.query_queue: "queue.Queue[typing.Optional[_Chore[_Q, _R]]]" = query_queue
+        self.query_available: multiprocessing.Semaphore = query_available
+        self.query_queue: "multiprocessing.Queue[typing.Optional[_Chore[_Q, _R]]]" = query_queue
+        self.result_queue: "multiprocessing.Queue[_Chore[_Q, _R]]" = result_queue
         self.query_count = query_count
         self.callback: typing.Optional[typing.Callable[[_Q, int], None]] = (
             callback or self._none_callback
@@ -211,9 +227,11 @@ class _BaseWorker(typing.Generic[_Q, _T, _R], threading.Thread):
             if chore is None:
                 break
             # process the query, making sure to capture any exception
-            # and then mark the hits as "found" using a `threading.Event`
+            # and then mark the hits as "found" using a `multiprocessing.Event`
             try:
                 hits = self.process(chore.query)
+                chore.record(hits)
+                self.result_queue.put(chore)
                 chore.complete(hits)
             except BaseException as exc:
                 self.kill()
@@ -222,7 +240,7 @@ class _BaseWorker(typing.Generic[_Q, _T, _R], threading.Thread):
             self.targets.close()
 
     def kill(self) -> None:
-        """Set the synchronized kill switch for all threads."""
+        """Set the synchronized kill switch for all workers."""
         self.kill_switch.set()
 
     def process(self, query: _Q) -> _R:
@@ -293,10 +311,11 @@ class _JACKHMMERWorker(
     def __init__(
         self,
         targets: DigitalSequenceBlock,
-        query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, _I]]]",
+        query_available: multiprocessing.Semaphore,
+        query_queue: "multiprocessing.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, _I]]]",
+        result_queue: "multiprocessing.Queue[_Chore[_JACKHMMERQueryType, _R]]",
         query_count: multiprocessing.Value,  # type: ignore
-        kill_switch: threading.Event,
+        kill_switch: multiprocessing.Event,
         callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]],
         options: typing.Dict[str, typing.Any],
         pipeline_class: typing.Type[Pipeline],
@@ -453,7 +472,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
         if cpus <= 0:
             raise ValueError("`cpus` must be strictly positive, not {!r}".format(cpus))
 
-        # reduce the number of threads if there are less queries (at best
+        # reduce the number of workers if there are less queries (at best
         # use one thread by query)
         hint = operator.length_hint(queries, -1)
         self.cpus = 1 if hint == 0 else min(cpus, hint) if hint > 0 else cpus
@@ -461,24 +480,26 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
     @abc.abstractmethod
     def _new_thread(
         self,
-        query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_Q, _R]]]",
+        query_available: multiprocessing.Semaphore,
+        query_queue: "multiprocessing.Queue[typing.Optional[_Chore[_Q, _R]]]",
+        result_queue: "multiprocessing.Queue[_Chore[_Q, _R]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
-        kill_switch: threading.Event,
+        kill_switch: multiprocessing.Event,
     ) -> _BaseWorker[_Q, _T, _R]:
         return NotImplemented
 
     def _single_threaded(self) -> typing.Iterator[_R]:
         # create the queues to pass the HMM objects around, as well as atomic
-        # values that we use to synchronize the threads
-        query_available = threading.Semaphore(0)
-        query_queue = queue.Queue()  # type: ignore
-        query_count = multiprocessing.Value(ctypes.c_ulong)
-        kill_switch = threading.Event()
+        # values that we use to synchronize the workers
+        query_available = multiprocessing.Semaphore(0)
+        query_queue = multiprocessing.Queue()  # type: ignore
+        result_queue = multiprocessing.Queue() # type: ignore
+        query_count = multiprocessing.Value(ctypes.c_ulong, 0)
+        kill_switch = multiprocessing.Event()
 
         # create the thread (to recycle code)
         thread = self._new_thread(
-            query_available, query_queue, query_count, kill_switch
+            query_available, query_queue, result_queue, query_count, kill_switch
         )
 
         # process each HMM iteratively and yield the result
@@ -493,57 +514,83 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
             thread.targets.close()
 
     def _multi_threaded(self) -> typing.Iterator[_R]:
-        # create the semaphore which will be used to notify worker threads
-        # there is a new chore available
-        query_available = threading.Semaphore(0)
-        # create the queues to pass the query objects around, as well as
-        # atomic values that we use to synchronize the threads
-        results: typing.Deque[_Chore[_Q, _R]] = collections.deque()
-        query_queue = queue.Queue(maxsize=self.cpus)  # type: ignore
-        query_count = multiprocessing.Value(ctypes.c_ulong)
-        kill_switch = threading.Event()
+        with multiprocessing.Manager() as manager:
+            # create the semaphore which will be used to notify workers
+            # there is a new chore available
+            query_available = multiprocessing.Semaphore(0)
+            # create the queues to pass the query objects around, as well as
+            # atomic values that we use to synchronize the workers
+            available: typing.Deque[_Chore[_Q, _R]] = collections.deque()
+            results = queue.PriorityQueue()
 
-        # create and launch one pipeline thread per CPU
-        threads = []
-        for _ in range(self.cpus):
-            thread = self._new_thread(
-                query_available, query_queue, query_count, kill_switch
-            )
-            thread.start()
-            threads.append(thread)
+            query_queue = manager.Queue(maxsize=self.cpus)  # type: ignore
+            result_queue = manager.Queue() # type: ignore
+            query_count = manager.Value(ctypes.c_ulong, 0)
+            result_count = 0
+            kill_switch = manager.Event()
 
-        # catch exceptions to kill threads in the background before exiting
-        try:
-            # alternate between feeding queries to the threads and
-            # yielding back results, if available. the priority is
-            # given to filling the query queue, so that no worker
-            # ever idles.
-            for query in self.queries:
-                # get the next query and add it to the query queue
-                query_count.value += 1
-                chore: _Chore[_Q, _R] = _Chore(query)
-                query_queue.put(chore)  # <-- blocks if too many chores in queue
-                query_available.release()
-                results.append(chore)
-                # aggressively wait for the result with a very short
-                # timeout, and exit the loop if the queue is not full
-                if results[0].available():
-                    yield results[0].get()
-                    results.popleft()
-            # now that we exhausted all queries, poison pill the
-            # threads so they stop on their own gracefully
-            for _ in threads:
-                query_queue.put(None)
-                query_available.release()
-            # yield all remaining results, in order
-            while results:
-                yield results[0].get()  # <-- blocks until result is available
-                results.popleft()
-        except BaseException:
-            # make sure threads are killed to avoid being stuck,
-            # e.g. after a KeyboardInterrupt, then re-raise
-            kill_switch.set()
-            raise
+            # create and launch one pipeline thread per CPU
+            workers = []
+            for _ in range(self.cpus):
+                worker = self._new_thread(
+                    query_available, query_queue, result_queue, query_count, kill_switch
+                )
+                worker.start()
+                workers.append(worker)
+
+            # catch exceptions to kill workers in the background before exiting
+            try:
+                # alternate between feeding queries to the workers and
+                # yielding back results, if available. the priority is
+                # given to filling the query queue, so that no worker
+                # ever idles.
+                for index, query in enumerate(self.queries):
+                    # get the next query and add it to the query queue
+                    query_count.value += 1
+                    chore: _Chore[_Q, _R] = _Chore(query, index, manager)
+                    query_queue.put(chore)  # <-- blocks if too many chores in queue
+                    query_available.release()
+                    available.append(chore.event)
+                    # aggressively wait for the result with a very short
+                    # timeout, and exit the loop if the queue is not full
+                    while True:
+                        try:
+                            results.put(result_queue.get_nowait())
+                        except queue.Empty:
+                            break
+                    # yield the results as soon as they are available
+                    if available[0].is_set():
+                        result = results.get_nowait()
+                        assert result.index == result_count
+                        yield result.get()
+                        available.popleft()
+                        result_count += 1
+
+                # now that we exhausted all queries, poison pill the
+                # workers so they stop on their own gracefully, and
+                # then close the queue
+                for _ in workers:
+                    query_queue.put(None)
+                    query_available.release()
+
+                # yield all remaining results, in order
+                while available:
+                    if available[0].is_set():
+                        result = results.get_nowait()
+                        assert result.index == result_count
+                        yield result.get()
+                        available.popleft()
+                        result_count += 1
+                    try:
+                        results.put(result_queue.get_nowait())
+                    except queue.Empty:
+                        continue
+
+            except BaseException:
+                # make sure workers are killed to avoid being stuck,
+                # e.g. after a KeyboardInterrupt, then re-raise
+                kill_switch.set()
+                raise
 
     def run(self) -> typing.Iterator[_R]:
         if self.cpus == 1:
@@ -561,10 +608,11 @@ class _SEARCHDispatcher(
 ):
     def _new_thread(
         self,
-        query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_SEARCHQueryType, TopHits]]]",
+        query_available: multiprocessing.Semaphore,
+        query_queue: "multiprocessing.Queue[typing.Optional[_Chore[_SEARCHQueryType, TopHits]]]",
+        result_queue: "multiprocessing.Queue[typing.Optional[_Chore[_SEARCHQueryType, TopHits]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
-        kill_switch: threading.Event,
+        kill_switch: multiprocessing.Event,
     ) -> _SEARCHWorker:
         if isinstance(self.targets, SequenceFile):
             assert self.targets.name is not None
@@ -580,6 +628,7 @@ class _SEARCHDispatcher(
             targets,
             query_available,
             query_queue,
+            result_queue,
             query_count,
             kill_switch,
             self.callback,
@@ -598,10 +647,11 @@ class _PHMMERDispatcher(
 ):
     def _new_thread(
         self,
-        query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_PHMMERQueryType, TopHits]]]",
+        query_available: multiprocessing.Semaphore,
+        query_queue: "multiprocessing.Queue[typing.Optional[_Chore[_PHMMERQueryType, TopHits]]]",
+        result_queue: "multiprocessing.Queue[typing.Optional[_Chore[_PHMMERQueryType, TopHits]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
-        kill_switch: threading.Event,
+        kill_switch: multiprocessing.Event,
     ) -> _PHMMERWorker:
         if isinstance(self.targets, SequenceFile):
             assert self.targets.name is not None
@@ -617,6 +667,7 @@ class _PHMMERDispatcher(
             targets,
             query_available,
             query_queue,
+            result_queue,
             query_count,
             kill_switch,
             self.callback,
@@ -670,15 +721,17 @@ class _JACKHMMERDispatcher(
 
     def _new_thread(
         self,
-        query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, _I]]]",
+        query_available: multiprocessing.Semaphore,
+        query_queue: "multiprocessing.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, _I]]]",
+        result_queue: "multiprocessing.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, _I]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
-        kill_switch: threading.Event,
+        kill_switch: multiprocessing.Event,
     ) -> _JACKHMMERWorker[_I]:
         return _JACKHMMERWorker(
             self.targets,
             query_available,
             query_queue,
+            result_queue,
             query_count,
             kill_switch,
             self.callback,
@@ -725,10 +778,11 @@ class _NHMMERDispatcher(
 
     def _new_thread(
         self,
-        query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_NHMMERQueryType, TopHits]]]",
+        query_available: multiprocessing.Semaphore,
+        query_queue: "multiprocessing.Queue[typing.Optional[_Chore[_NHMMERQueryType, TopHits]]]",
+        result_queue: "multiprocessing.Queue[typing.Optional[_Chore[_NHMMERQueryType, TopHits]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
-        kill_switch: threading.Event,
+        kill_switch: multiprocessing.Event,
     ) -> _NHMMERWorker:
         if isinstance(self.targets, SequenceFile):
             assert self.targets.name is not None
@@ -744,6 +798,7 @@ class _NHMMERDispatcher(
             targets,
             query_available,
             query_queue,
+            result_queue,
             query_count,
             kill_switch,
             self.callback,
@@ -763,10 +818,11 @@ class _SCANDispatcher(
 ):
     def _new_thread(
         self,
-        query_available: threading.Semaphore,
-        query_queue: "queue.Queue[typing.Optional[_Chore[DigitalSequence, TopHits]]]",
+        query_available: multiprocessing.Semaphore,
+        query_queue: "multiprocessing.Queue[typing.Optional[_Chore[DigitalSequence, TopHits]]]",
+        result_queue: "multiprocessing.Queue[typing.Optional[_Chore[DigitalSequence, TopHits]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
-        kill_switch: threading.Event,
+        kill_switch: multiprocessing.Event,
     ) -> _SCANWorker:
         if isinstance(self.targets, HMMPressedFile):
             assert self.targets.name is not None
@@ -777,6 +833,7 @@ class _SCANDispatcher(
             targets,
             query_available,
             query_queue,
+            result_queue,
             query_count,
             kill_switch,
             self.callback,
@@ -807,7 +864,7 @@ def hmmsearch(
     ``sequences`` is an `SequenceFile` object, `hmmsearch` will reopen the
     file in each thread, and load targets *iteratively* to scan with the
     query. Otherwise, it will *pre-fetch* the target sequences into a
-    `DigitalSequenceBlock` collection, and share them across threads
+    `DigitalSequenceBlock` collection, and share them across workers
     without copy. The *pre-fetching* gives much higher performance at the
     cost of extra  startup time and much higher memory consumption. You may
     want to check how much memory is available (for instance with
@@ -824,7 +881,7 @@ def hmmsearch(
             a `~pyhmmer.easel.DigitalSequenceBlock` directly. If a
             `SequenceFile` is given, profiles will be loaded iteratively
             from disk rather than prefetched.
-        cpus (`int`): The number of threads to run in parallel. Pass ``1``
+        cpus (`int`): The number of workers to run in parallel. Pass ``1``
             to run everything in the main thread, ``0`` to automatically
             select a suitable number (using `psutil.cpu_count`), or any
             positive number otherwise.
