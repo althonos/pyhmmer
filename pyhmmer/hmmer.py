@@ -329,6 +329,7 @@ class _JACKHMMERWorker(
             targets=targets,
             query_available=query_available,
             query_queue=query_queue,
+            result_queue=result_queue,
             query_count=query_count,
             kill_switch=kill_switch,
             callback=callback,
