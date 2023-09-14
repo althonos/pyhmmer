@@ -175,7 +175,6 @@ class _BaseWorker(typing.Generic[_Q, _T, _R], threading.Thread):
     def __init__(
         self,
         targets: _T,
-        query_available: threading.Semaphore,
         query_queue: "queue.Queue[typing.Optional[_Chore[_Q, _R]]]",
         query_count: multiprocessing.Value,  # type: ignore
         kill_switch: threading.Event,
@@ -189,7 +188,6 @@ class _BaseWorker(typing.Generic[_Q, _T, _R], threading.Thread):
         self.options = options
         self.targets: _T = targets
         self.pipeline = pipeline_class(alphabet=alphabet, **options)
-        self.query_available: threading.Semaphore = query_available
         self.query_queue: "queue.Queue[typing.Optional[_Chore[_Q, _R]]]" = query_queue
         self.query_count = query_count
         self.callback: typing.Optional[typing.Callable[[_Q, int], None]] = (
@@ -203,9 +201,10 @@ class _BaseWorker(typing.Generic[_Q, _T, _R], threading.Thread):
             # attempt to get the next argument, with a timeout
             # so that the thread can periodically check if it has
             # been killed, even when no queries are available
-            if not self.query_available.acquire(timeout=1):
+            try:
+                chore = self.query_queue.get(timeout=1)
+            except queue.Empty:
                 continue
-            chore = self.query_queue.get_nowait()
             # check if arguments from the queue are a poison-pill (`None`),
             # in which case the thread will stop running
             if chore is None:
@@ -293,7 +292,6 @@ class _JACKHMMERWorker(
     def __init__(
         self,
         targets: DigitalSequenceBlock,
-        query_available: threading.Semaphore,
         query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, _I]]]",
         query_count: multiprocessing.Value,  # type: ignore
         kill_switch: threading.Event,
@@ -308,7 +306,6 @@ class _JACKHMMERWorker(
     ) -> None:
         super().__init__(
             targets=targets,
-            query_available=query_available,
             query_queue=query_queue,
             query_count=query_count,
             kill_switch=kill_switch,
@@ -344,32 +341,24 @@ class _JACKHMMERWorker(
 
     @typing.overload
     def _iterate(
-        self,
-        iterator: typing.Iterable[IterationResult],
-        checkpoints: "Literal[False]"
+        self, iterator: typing.Iterable[IterationResult], checkpoints: "Literal[False]"
     ) -> IterationResult:
         ...
 
     @typing.overload
     def _iterate(
-        self,
-        iterator: typing.Iterable[IterationResult],
-        checkpoints: "Literal[True]"
+        self, iterator: typing.Iterable[IterationResult], checkpoints: "Literal[True]"
     ) -> typing.Iterable[IterationResult]:
         ...
 
     @typing.overload
     def _iterate(
-        self,
-        iterator: typing.Iterable[IterationResult],
-        checkpoints: bool = False
+        self, iterator: typing.Iterable[IterationResult], checkpoints: bool = False
     ) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:
         ...
 
     def _iterate(
-        self,
-        iterator: typing.Iterable[IterationResult],
-        checkpoints: bool = False
+        self, iterator: typing.Iterable[IterationResult], checkpoints: bool = False
     ) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:
         iteration_checkpoints = []
         for iteration in itertools.islice(iterator, self.max_iterations):
@@ -461,7 +450,6 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
     @abc.abstractmethod
     def _new_thread(
         self,
-        query_available: threading.Semaphore,
         query_queue: "queue.Queue[typing.Optional[_Chore[_Q, _R]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
@@ -471,15 +459,12 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
     def _single_threaded(self) -> typing.Iterator[_R]:
         # create the queues to pass the HMM objects around, as well as atomic
         # values that we use to synchronize the threads
-        query_available = threading.Semaphore(0)
         query_queue = queue.Queue()  # type: ignore
         query_count = multiprocessing.Value(ctypes.c_ulong)
         kill_switch = threading.Event()
 
         # create the thread (to recycle code)
-        thread = self._new_thread(
-            query_available, query_queue, query_count, kill_switch
-        )
+        thread = self._new_thread(query_queue, query_count, kill_switch)
 
         # process each HMM iteratively and yield the result
         # immediately so that the user can iterate over the
@@ -493,9 +478,6 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
             thread.targets.close()
 
     def _multi_threaded(self) -> typing.Iterator[_R]:
-        # create the semaphore which will be used to notify worker threads
-        # there is a new chore available
-        query_available = threading.Semaphore(0)
         # create the queues to pass the query objects around, as well as
         # atomic values that we use to synchronize the threads
         results: typing.Deque[_Chore[_Q, _R]] = collections.deque()
@@ -506,9 +488,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
         # create and launch one pipeline thread per CPU
         threads = []
         for _ in range(self.cpus):
-            thread = self._new_thread(
-                query_available, query_queue, query_count, kill_switch
-            )
+            thread = self._new_thread(query_queue, query_count, kill_switch)
             thread.start()
             threads.append(thread)
 
@@ -523,7 +503,6 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
                 query_count.value += 1
                 chore: _Chore[_Q, _R] = _Chore(query)
                 query_queue.put(chore)  # <-- blocks if too many chores in queue
-                query_available.release()
                 results.append(chore)
                 # aggressively wait for the result with a very short
                 # timeout, and exit the loop if the queue is not full
@@ -534,7 +513,6 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
             # threads so they stop on their own gracefully
             for _ in threads:
                 query_queue.put(None)
-                query_available.release()
             # yield all remaining results, in order
             while results:
                 yield results[0].get()  # <-- blocks until result is available
@@ -561,7 +539,6 @@ class _SEARCHDispatcher(
 ):
     def _new_thread(
         self,
-        query_available: threading.Semaphore,
         query_queue: "queue.Queue[typing.Optional[_Chore[_SEARCHQueryType, TopHits]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
@@ -578,7 +555,6 @@ class _SEARCHDispatcher(
             targets = self.targets  # type: ignore
         return _SEARCHWorker(
             targets,
-            query_available,
             query_queue,
             query_count,
             kill_switch,
@@ -598,7 +574,6 @@ class _PHMMERDispatcher(
 ):
     def _new_thread(
         self,
-        query_available: threading.Semaphore,
         query_queue: "queue.Queue[typing.Optional[_Chore[_PHMMERQueryType, TopHits]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
@@ -615,7 +590,6 @@ class _PHMMERDispatcher(
             targets = self.targets  # type: ignore
         return _PHMMERWorker(
             targets,
-            query_available,
             query_queue,
             query_count,
             kill_switch,
@@ -633,10 +607,9 @@ class _JACKHMMERDispatcher(
         _JACKHMMERQueryType,
         DigitalSequenceBlock,
         _I,
-    ]
+    ],
 ):
-    """A dispatcher to run JackHMMER iterative searches.
-    """
+    """A dispatcher to run JackHMMER iterative searches."""
 
     def __init__(
         self,
@@ -662,7 +635,7 @@ class _JACKHMMERDispatcher(
             pipeline_class=pipeline_class,
             alphabet=alphabet,
             builder=builder,
-            **options
+            **options,
         )
         self.max_iterations = max_iterations
         self.select_hits = select_hits
@@ -670,14 +643,12 @@ class _JACKHMMERDispatcher(
 
     def _new_thread(
         self,
-        query_available: threading.Semaphore,
         query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, _I]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _JACKHMMERWorker[_I]:
         return _JACKHMMERWorker(
             self.targets,
-            query_available,
             query_queue,
             query_count,
             kill_switch,
@@ -725,7 +696,6 @@ class _NHMMERDispatcher(
 
     def _new_thread(
         self,
-        query_available: threading.Semaphore,
         query_queue: "queue.Queue[typing.Optional[_Chore[_NHMMERQueryType, TopHits]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
@@ -742,7 +712,6 @@ class _NHMMERDispatcher(
             targets = self.targets  # type: ignore
         return _NHMMERWorker(
             targets,
-            query_available,
             query_queue,
             query_count,
             kill_switch,
@@ -763,7 +732,6 @@ class _SCANDispatcher(
 ):
     def _new_thread(
         self,
-        query_available: threading.Semaphore,
         query_queue: "queue.Queue[typing.Optional[_Chore[DigitalSequence, TopHits]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
@@ -775,7 +743,6 @@ class _SCANDispatcher(
             targets = self.targets  # type: ignore
         return _SCANWorker(
             targets,
-            query_available,
             query_queue,
             query_count,
             kill_switch,
@@ -994,6 +961,7 @@ def phmmer(
 
 # --- jackhmmer -----------------------------------------------------------------
 
+
 @typing.overload
 def jackhmmer(
     queries: typing.Union[_JACKHMMERQueryType, typing.Iterable[_JACKHMMERQueryType]],
@@ -1008,6 +976,7 @@ def jackhmmer(
     **options,  # type: typing.Dict[str, object]
 ) -> typing.Iterator[typing.Iterable[IterationResult]]:
     ...
+
 
 @typing.overload
 def jackhmmer(
@@ -1024,6 +993,7 @@ def jackhmmer(
 ) -> typing.Iterator[IterationResult]:
     ...
 
+
 @typing.overload
 def jackhmmer(
     queries: typing.Union[_JACKHMMERQueryType, typing.Iterable[_JACKHMMERQueryType]],
@@ -1036,8 +1006,11 @@ def jackhmmer(
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
     **options,  # type: typing.Dict[str, object]
-) -> typing.Union[typing.Iterator[IterationResult], typing.Iterator[typing.Iterable[IterationResult]]]:
+) -> typing.Union[
+    typing.Iterator[IterationResult], typing.Iterator[typing.Iterable[IterationResult]]
+]:
     ...
+
 
 def jackhmmer(
     queries: typing.Union[_JACKHMMERQueryType, typing.Iterable[_JACKHMMERQueryType]],
@@ -1050,7 +1023,9 @@ def jackhmmer(
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
     **options,  # type: typing.Dict[str, object]
-) -> typing.Union[typing.Iterator[IterationResult], typing.Iterator[typing.Iterable[IterationResult]]]:
+) -> typing.Union[
+    typing.Iterator[IterationResult], typing.Iterator[typing.Iterable[IterationResult]]
+]:
     """Search protein sequences against a sequence database.
 
     Arguments:
@@ -1579,8 +1554,7 @@ if __name__ == "__main__":
         queryfile: typing.Union["os.PathLike[str]", typing.BinaryIO],
         alphabet: Alphabet,
     ) -> typing.Iterator[typing.Union[SequenceFile, HMMFile]]:
-        """Open either a sequence file or an HMM file.
-        """
+        """Open either a sequence file or an HMM file."""
         try:
             yield SequenceFile(queryfile, digital=True, alphabet=alphabet)
         except ValueError:
