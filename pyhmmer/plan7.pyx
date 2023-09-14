@@ -79,13 +79,13 @@ from libeasel.keyhash cimport ESL_KEYHASH
 from libeasel.fileparser cimport ESL_FILEPARSER
 from libhmmer cimport (
     p7_MAXABET,
-    p7_LOCAL, 
-    p7_EVPARAM_UNSET, 
-    p7_CUTOFF_UNSET, 
-    p7_NEVPARAM, 
-    p7_NCUTOFFS, 
-    p7_offsets_e, 
-    p7_cutoffs_e, 
+    p7_LOCAL,
+    p7_EVPARAM_UNSET,
+    p7_CUTOFF_UNSET,
+    p7_NEVPARAM,
+    p7_NCUTOFFS,
+    p7_offsets_e,
+    p7_cutoffs_e,
     p7_evparams_e,
 )
 from libhmmer.logsum cimport p7_FLogsumInit
@@ -3204,23 +3204,23 @@ cdef class HMM:
 
         Set the model consensus sequence.
 
-        If given a sequence, the HMM is assumed to originate from a 
+        If given a sequence, the HMM is assumed to originate from a
         single-sequence model, and the sequence is used as the consensus.
         Otherwise, the consensus is computed by extracting the consensus
-        at each position. 
-        
-        Residues in the consensus sequence are uppercased when their emission 
-        probabilities are above an arbitrary, alphabet-specific threshold 
+        at each position.
+
+        Residues in the consensus sequence are uppercased when their emission
+        probabilities are above an arbitrary, alphabet-specific threshold
         (:math:`0.9` for nucleotide alphabets, :math:`0.5` for protein).
 
         Arguments:
-            sequence (`~pyhmmer.easel.DigitalSequence`): A sequence in 
-                digital mode with :math:`M` residues and the same 
+            sequence (`~pyhmmer.easel.DigitalSequence`): A sequence in
+                digital mode with :math:`M` residues and the same
                 alphabet as the HMM.
 
         Raises:
             `ValueError`: When given a sequence with the wrong length.
-            `~pyhmmer.errors.AlphabetMismatch`: When given a sequence in 
+            `~pyhmmer.errors.AlphabetMismatch`: When given a sequence in
                 the wrong alphabet.
 
         .. versionadded:: 0.10.1
@@ -3230,7 +3230,7 @@ cdef class HMM:
 
         cdef int     status
         cdef ESL_SQ* sq     = NULL
-        
+
         if sequence is not None:
             sq = sequence._sq
             if sequence.alphabet != self.alphabet:
@@ -3333,7 +3333,7 @@ cdef class HMM:
         else:
             raise UnexpectedError(status, "p7_hmmfile_WriteASCII")
 
-    cpdef void zero(self):
+    cpdef void zero(self) noexcept:
         """zero(self)\n--
 
         Set all parameters to zero, including model composition.
@@ -4420,7 +4420,7 @@ cdef class OptimizedProfile:
         return mat
 
     # --- Miscellaneous ---
-    
+
     @property
     def offsets(self):
         """`~plan7.Offsets`: The disk offsets for this optimized profile.
@@ -5565,6 +5565,7 @@ cdef class Pipeline:
                 if self.profile._gm == NULL:
                     raise AllocationError("P7_PROFILE", sizeof(P7_OPROFILE))
             else:
+
                 self.profile.clear()
             # configure the profile from the query HMM
             self.profile.configure(<HMM> query, self.background, L)
@@ -8152,7 +8153,7 @@ cdef class TopHits:
             memcpy(&copy._pli, &self._pli, sizeof(P7_PIPELINE))
             # copy top hits
             # WARN(@althonos): `p7_tophits_Clone` will fail when called
-            #                  on an empty P7_TOPHITS as it attempts a 
+            #                  on an empty P7_TOPHITS as it attempts a
             #                  zero-allocation of the target arrays, it
             #                  should be reported as a bug at some point.
             if self._th.N > 0:
@@ -8161,7 +8162,7 @@ cdef class TopHits:
                 copy._th = libhmmer.p7_tophits.p7_tophits_Create()
         if copy._th == NULL:
             raise AllocationError("P7_TOPHITS", sizeof(P7_TOPHITS))
-        
+
         return copy
 
     cpdef int compare_ranking(self, KeyHash ranking) except -1:

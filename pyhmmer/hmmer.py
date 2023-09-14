@@ -1486,7 +1486,7 @@ if __name__ == "__main__":
     import sys
 
     # don't load target databases in memory if they would take more than
-    # 90% of the remainining available memory (because more memory will be
+    # 80% of the remainining available memory (because more memory will be
     # needed afterwards to allocate the `TopHits` for each query)
     MAX_MEMORY_LOAD = 0.80
 

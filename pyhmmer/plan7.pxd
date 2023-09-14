@@ -149,7 +149,7 @@ cdef class HMM:
     cpdef Profile to_profile(self,  Background background=?,  int L=*,  bint multihit =*,  bint local=*)
     cpdef void validate(self, float tolerance=*) except *
     cpdef void write(self, object fh, bint binary=*) except *
-    cpdef void zero(self)
+    cpdef void zero(self) noexcept
 
 
 cdef class HMMFile:
