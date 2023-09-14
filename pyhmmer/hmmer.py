@@ -481,7 +481,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
         # create the queues to pass the query objects around, as well as
         # atomic values that we use to synchronize the threads
         results: typing.Deque[_Chore[_Q, _R]] = collections.deque()
-        query_queue = queue.Queue(maxsize=self.cpus)  # type: ignore
+        query_queue = queue.Queue(maxsize=2*self.cpus)  # type: ignore
         query_count = multiprocessing.Value(ctypes.c_ulong)
         kill_switch = threading.Event()
 
