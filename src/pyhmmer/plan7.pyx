@@ -5555,13 +5555,13 @@ cdef class Pipeline:
         self._pli.inc_by_E = self._cutoff_save['inc_by_E']
         self._pli.incdom_by_E = self._cutoff_save['incdom_by_E']
 
-    cdef P7_OPROFILE* _get_om_from_query(self, object query, int L = L_HINT) except NULL:
+    cdef P7_OPROFILE* _get_om_from_query(self, SearchQuery query, int L = L_HINT) except NULL:
         assert self._pli != NULL
 
-        if isinstance(query, OptimizedProfile):
+        if SearchQuery is OptimizedProfile:
             return (<OptimizedProfile> query)._om
 
-        if isinstance(query, HMM):
+        if SearchQuery is HMM:
             # reallocate the profile if it is too small, otherwise just clear it
             if self.profile._gm.allocM < query.M:
                 libhmmer.p7_profile.p7_profile_Destroy(self.profile._gm)
@@ -5573,9 +5573,9 @@ cdef class Pipeline:
             # configure the profile from the query HMM
             self.profile.configure(<HMM> query, self.background, L)
             # use the local profile as a query
-            query = self.profile
+            return self._get_om_from_query[Profile](self.profile, L=L)
 
-        if isinstance(query, Profile):
+        if SearchQuery is Profile:
             # reallocate the optimized profile if it is too small
             if self.opt._om.allocM < query.M:
                 p7_oprofile.p7_oprofile_Destroy(self.opt._om)
@@ -5732,7 +5732,7 @@ cdef class Pipeline:
 
     cpdef TopHits search_hmm(
         self,
-        object query,
+        SearchQuery query,
         SearchTargets sequences
     ):
         """Run the pipeline using a query HMM against a sequence database.
@@ -5773,9 +5773,9 @@ cdef class Pipeline:
 
         cdef size_t       L
         cdef str          ty
-        cdef P7_OPROFILE* om
         cdef int          status
         cdef int          allocM
+        cdef P7_OPROFILE* om     = NULL
         cdef TopHits      hits   = TopHits(query)
 
         # check that the sequence file is in digital mode
@@ -5797,7 +5797,12 @@ cdef class Pipeline:
         else:
             L = self.L_HINT
         # get the optimized profile from the query
-        om = self._get_om_from_query(query, L=L)
+        if SearchQuery is HMM:
+            om = self._get_om_from_query[HMM](query, L=L)
+        elif SearchQuery is Profile:
+            om = self._get_om_from_query[Profile](query, L=L)
+        elif SearchQuery is OptimizedProfile:
+            om = self._get_om_from_query[OptimizedProfile](query, L=L)
 
         with nogil:
             # make sure the pipeline is set to search mode and ready for a new HMM
@@ -5835,7 +5840,7 @@ cdef class Pipeline:
     cpdef TopHits search_msa(
         self,
         DigitalMSA query,
-        object sequences,
+        SearchTargets sequences,
         Builder builder = None,
     ):
         """Run the pipeline using a query alignment against a sequence database.
@@ -5893,13 +5898,7 @@ cdef class Pipeline:
         builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
         # build the HMM and the profile from the query MSA
         hmm, profile, opt = builder.build_msa(query, self.background)
-        if isinstance(sequences, DigitalSequenceBlock):
-            hits = self.search_hmm[DigitalSequenceBlock](opt, sequences)
-        elif isinstance(sequences, SequenceFile):
-            hits = self.search_hmm[SequenceFile](opt, sequences)
-        else:
-            ty = type(sequences).__name__
-            raise TypeError(f"Expected DigitalSequenceBlock or SequenceFile, found {ty}")
+        hits = self.search_hmm[OptimizedProfile, SearchTargets](opt, sequences)
         # record query metadata
         hits._query = query
         return hits
@@ -5907,7 +5906,7 @@ cdef class Pipeline:
     cpdef TopHits search_seq(
         self,
         DigitalSequence query,
-        object sequences,
+        SearchTargets sequences,
         Builder builder = None,
     ):
         """Run the pipeline using a query sequence against a sequence database.
@@ -5960,13 +5959,7 @@ cdef class Pipeline:
         builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
         # build the HMM and the profile from the query sequence
         hmm, profile, opt = builder.build(query, self.background)
-        if isinstance(sequences, DigitalSequenceBlock):
-            hits = self.search_hmm[DigitalSequenceBlock](opt, sequences)
-        elif isinstance(sequences, SequenceFile):
-            hits = self.search_hmm[SequenceFile](opt, sequences)
-        else:
-            ty = type(sequences).__name__
-            raise TypeError(f"Expected DigitalSequenceBlock or SequenceFile, found {ty}")
+        hits = self.search_hmm[OptimizedProfile, SearchTargets](opt, sequences)
         # record query metadata
         hits._query = query
         return hits
@@ -6520,6 +6513,10 @@ cdef class LongTargetsPipeline(Pipeline):
 
     """
 
+    M_HINT = 100         # default model size
+    L_HINT = 100         # default sequence size
+    _BIT_CUTOFFS = dict(PIPELINE_BIT_CUTOFFS)
+
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
@@ -6690,6 +6687,39 @@ cdef class LongTargetsPipeline(Pipeline):
         if window_beta > 1 or window_beta < 0:
             raise InvalidParameter("window_beta", window_beta, hint="real number between 0 and 1")
         self._window_beta = window_beta
+    # --- Utils --------------------------------------------------------------
+
+    cdef P7_OPROFILE* _get_om_from_query(self, SearchQuery query, int L = L_HINT) except NULL:
+        assert self._pli != NULL
+
+        if SearchQuery is OptimizedProfile:
+            return (<OptimizedProfile> query)._om
+
+        if SearchQuery is HMM:
+            # reallocate the profile if it is too small, otherwise just clear it
+            if self.profile._gm.allocM < query.M:
+                libhmmer.p7_profile.p7_profile_Destroy(self.profile._gm)
+                self.profile._gm = libhmmer.p7_profile.p7_profile_Create(query.M, self.alphabet._abc)
+                if self.profile._gm == NULL:
+                    raise AllocationError("P7_PROFILE", sizeof(P7_OPROFILE))
+            else:
+                self.profile.clear()
+            # configure the profile from the query HMM
+            self.profile.configure(<HMM> query, self.background, L)
+            # use the local profile as a query
+            return self._get_om_from_query[Profile](self.profile, L=L)
+
+        if SearchQuery is Profile:
+            # reallocate the optimized profile if it is too small
+            if self.opt._om.allocM < query.M:
+                p7_oprofile.p7_oprofile_Destroy(self.opt._om)
+                self.opt._om = p7_oprofile.p7_oprofile_Create(query.M, self.alphabet._abc)
+                if self.opt._om == NULL:
+                    raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
+            # convert the profile to an optimized one
+            self.opt.convert(self.profile)
+            # use the temporary optimized profile
+            return self.opt._om
 
     # --- Methods ------------------------------------------------------------
 
@@ -6814,7 +6844,7 @@ cdef class LongTargetsPipeline(Pipeline):
 
     cpdef TopHits search_hmm(
         self,
-        object query,
+        SearchQuery query,
         SearchTargets sequences
     ):
         """Run the pipeline using a query HMM against a sequence database.
@@ -6878,7 +6908,12 @@ cdef class LongTargetsPipeline(Pipeline):
         else:
             L = self.L_HINT
         # get the optimized profile from the query
-        om = self._get_om_from_query(query, L=L)
+        if SearchQuery is HMM:
+            om = self._get_om_from_query[HMM](query, L=L)
+        elif SearchQuery is Profile:
+            om = self._get_om_from_query[Profile](query, L=L)
+        elif SearchQuery is OptimizedProfile:
+            om = self._get_om_from_query[OptimizedProfile](query, L=L)
 
         # compute max length based on window length to use for E-values
         max_length = om.max_length
@@ -6957,7 +6992,7 @@ cdef class LongTargetsPipeline(Pipeline):
     cpdef TopHits search_seq(
         self,
         DigitalSequence query,
-        object sequences,
+        SearchTargets sequences,
         Builder builder = None,
     ):
         """Run the pipeline using a query sequence against a sequence database.
@@ -7009,21 +7044,14 @@ cdef class LongTargetsPipeline(Pipeline):
 
         hmm = builder.build(query, self.background)[0]
         assert hmm._hmm.max_length != -1
-        if isinstance(sequences, DigitalSequenceBlock):
-            hits = self.search_hmm[DigitalSequenceBlock](hmm, sequences)
-        elif isinstance(sequences, SequenceFile):
-            hits = self.search_hmm[SequenceFile](hmm, sequences)
-        else:
-            ty = type(sequences).__name__
-            raise TypeError(f"Expected DigitalSequenceBlock or SequenceFile, found {ty}")
-
+        hits = self.search_hmm[HMM, SearchTargets](hmm, sequences)
         hits._query = query
         return hits
 
     cpdef TopHits search_msa(
         self,
         DigitalMSA query,
-        object sequences,
+        SearchTargets sequences,
         Builder builder = None,
     ):
         """Run the pipeline using a query alignment against a sequence database.
@@ -7076,14 +7104,7 @@ cdef class LongTargetsPipeline(Pipeline):
 
         hmm = builder.build_msa(query, self.background)[0]
         assert hmm._hmm.max_length != -1
-        if isinstance(sequences, DigitalSequenceBlock):
-            hits = self.search_hmm[DigitalSequenceBlock](hmm, sequences)
-        elif isinstance(sequences, SequenceFile):
-            hits = self.search_hmm[SequenceFile](hmm, sequences)
-        else:
-            ty = type(sequences).__name__
-            raise TypeError(f"Expected DigitalSequenceBlock or SequenceFile, found {ty}")
-
+        hits = self.search_hmm[HMM, SearchTargets](hmm, sequences)
         hits._query = query
         return hits
 
@@ -7946,7 +7967,7 @@ cdef class TopHits:
 
         Hint:
             This property replaces the ``query_name``, ``query_accession``
-            and ``query_length`` properties that were deprecated in 
+            and ``query_length`` properties that were deprecated in
             *v0.10.15* and removed in *v0.11.0*.
 
         .. versionadded 0.10.15
