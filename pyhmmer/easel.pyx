@@ -662,7 +662,7 @@ cdef class Bitfield:
 
         # assign the items
         bytes = view.cast("B")
-        assert bytes.shape[0] * sizeof(uint64_t) == bitfield._shape[0]
+        assert bytes.shape[0] == bitfield._shape[0] * sizeof(uint64_t)
         if n > 0:
             with nogil:
                 memcpy(bitfield._b.b, &bytes[0], bitfield._shape[0]*sizeof(uint64_t))
