@@ -2719,7 +2719,7 @@ cdef class HMM:
         :math:`M_n \to M_{n+1}`, :math:`M_n \to I_n`, :math:`M_n \to D_{n+1}`,
         :math:`I_n \to I_n`, :math:`I_n \to M_{n+1}`, :math:`D_n \to D_{n+1}`,
         :math:`D_n \to M_{n+1}`. Use the `~pyhmmer.plan7.Transitions` enum
-        instead of hardcoded indices to make your core more legible.
+        instead of hardcoded indices to make your code more legible.
 
         Example:
             >>> t = thioesterase.transition_probabilities
