@@ -5105,7 +5105,7 @@ cdef class Pipeline:
             domE (`float`): The per-domain E-value threshold for reporting
                 a domain hit.
             domT (`float`, optional): The per-domain bit score threshold for
-                reporint a domain hit. *If given, takes precedence over*
+                reporting a domain hit. *If given, takes precedence over*
                 ``domE``.
             incE (`float`): The per-target E-value threshold for including
                 a hit in the resulting `TopHits`.
