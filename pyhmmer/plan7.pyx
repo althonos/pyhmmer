@@ -2719,7 +2719,7 @@ cdef class HMM:
         :math:`M_n \to M_{n+1}`, :math:`M_n \to I_n`, :math:`M_n \to D_{n+1}`,
         :math:`I_n \to I_n`, :math:`I_n \to M_{n+1}`, :math:`D_n \to D_{n+1}`,
         :math:`D_n \to M_{n+1}`. Use the `~pyhmmer.plan7.Transitions` enum
-        instead of hardcoded indices to make your core more legible.
+        instead of hardcoded indices to make your code more legible.
 
         Example:
             >>> t = thioesterase.transition_probabilities
@@ -5105,7 +5105,7 @@ cdef class Pipeline:
             domE (`float`): The per-domain E-value threshold for reporting
                 a domain hit.
             domT (`float`, optional): The per-domain bit score threshold for
-                reporint a domain hit. *If given, takes precedence over*
+                reporting a domain hit. *If given, takes precedence over*
                 ``domE``.
             incE (`float`): The per-target E-value threshold for including
                 a hit in the resulting `TopHits`.
