@@ -26,3 +26,7 @@ PyHMMER has been used in the following research works:
 - Konstantinidis, K., C. Ruiz-Perez, K. Gerhardt, L. Rodriguez-R, C. Jain, J. Tiedje, J. Cole, 2022. *FastAAI: Efficient Estimation of Genome Average Amino Acid Identity and Phylum-level relationships using Tetramers of Universal Protein* (preprint). ResearchSquare. :doi:`10.21203/rs.3.rs-1459378/v1`.
 - Jamali, K., L. Käll, R. Zhang, A. Brown, D. Kimanius, S.H.W. Scheres, 2023. *Automated model building and protein identification in cryo-EM maps* (preprint). bioRxiv. :doi:`10.1101/2023.05.16.541002`.
 - Reynolds, R., Hyun, S., Tully, B., Bien, J., Levine, N. M. *Identification of microbial metabolic functional guilds from large genomic datasets*. Front Microbiol. 2023 Jun 30;14:1197329. :doi:`10.3389/fmicb.2023.1197329` :pmid:`37455725`.
+- Komp, E., Alanzi, H. N., Francis, R., Vuong, C., Roberts, L., Mosallanejad, A., Beck, D. A. C. *Homologous Pairs of Low and High Temperature Originating Proteins Spanning the Known Prokaryotic Universe*. Sci Data 2023, 10 (1), 682. :doi:`10.1038/s41597-023-02553-w`.
+
+
+
