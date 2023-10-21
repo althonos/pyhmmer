@@ -226,3 +226,7 @@ API Reference
        pyhmmer.errors.UnexpectedError
        pyhmmer.errors.EaselError
        pyhmmer.errors.AlphabetMismatch
+       pyhmmer.errors.ServerError
+       pyhmmer.errors.MissingCutoffs
+       pyhmmer.errors.InvalidParameter
+       pyhmmer.errors.InvalidHMM

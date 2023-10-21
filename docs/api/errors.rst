@@ -60,3 +60,11 @@ InvalidParameter
 .. autoexception:: InvalidParameter(ValueError)
    :special-members: __init__
    :members:
+
+
+InvalidHMM
+----------
+
+.. autoexception:: InvalidHMM(ValueError)
+   :special-members: __init__
+   :members:

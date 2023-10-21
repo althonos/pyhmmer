@@ -8752,6 +8752,8 @@ cdef class TraceAligner:
         Raises:
             `~pyhmmer.errors.AlphabetMismatch`: when the alphabet of any
                 of the sequences does not correspond to the HMM alphabet.
+            `~pyhmmer.errors.InvalidHMM`: when given a HMM that is not
+                valid.
 
         .. versionchanged:: 0.7.0
             Targets must now be inside a `~pyhmmer.easel.DigitalSequenceBlock`.
@@ -8839,6 +8841,8 @@ cdef class TraceAligner:
         Raises:
             `~pyhmmer.errors.AlphabetMismatch`: when the alphabet of any
                 of the sequences does not correspond to the HMM alphabet.
+            `~pyhmmer.errors.InvalidHMM`: when given a HMM that is not
+                valid.
 
         .. versionchanged:: 0.7.0
             Targets must now be inside a `~pyhmmer.easel.DigitalSequenceBlock`.
