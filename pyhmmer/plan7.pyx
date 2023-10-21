@@ -8873,7 +8873,7 @@ cdef class TraceAligner:
         if not hmm.alphabet._eq(sequences.alphabet):
             raise AlphabetMismatch(hmm.alphabet, sequences.alphabet)
         # check HMM validity, otherwise the function may segfault
-        hmm.validate()
+        hmm.validate(tolerance=1e-3)
 
         # make the alignments
         with nogil:
