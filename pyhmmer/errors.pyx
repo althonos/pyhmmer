@@ -212,3 +212,27 @@ class InvalidParameter(ValueError):
             options = f" (expected {hint})"
 
         return f"Invalid {self.name!r} parameter value: {self.value!r}{options}"
+
+
+class InvalidHMM(ValueError):
+    """A value error caused by a HMM that fails validation.
+
+    .. versionadded:: 0.10.3
+
+    """
+
+    def __init__(self, object hmm, str message):
+        super().__init__(hmm, message)
+        self.message = message
+        self.hmm = hmm
+
+    def __repr__(self):
+        cdef str ty = type(self).__name__
+        return f"{ty}({self.code!r}, {self.message!r})"
+
+    def __str__(self):
+        return "HMM {!r} is invalid: {}".format(
+            self.hmm.name.decode('utf-8', 'replace'),
+            self.message
+        )
+

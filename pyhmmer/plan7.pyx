@@ -219,6 +219,7 @@ from .errors import (
     AlphabetMismatch,
     MissingCutoffs,
     InvalidParameter,
+    InvalidHMM,
 )
 
 
@@ -3301,7 +3302,7 @@ cdef class HMM:
 
         if libhmmer.p7_hmm.p7_hmm_Validate(self._hmm, errbuf, tolerance) != libeasel.eslOK:
             err_msg = errbuf.decode("utf-8", "replace")
-            raise ValueError(f"Invalid HMM: {err_msg}")
+            raise InvalidHMM(self, err_msg)
 
     cpdef void write(self, object fh, bint binary=False) except *:
         """write(self, fh, binary=False)\n--

@@ -2,6 +2,7 @@
 import typing
 
 from pyhmmer.easel import Alphabet
+from pyhmmer.plan7 import HMM
 
 statuscode: typing.Dict[int, str]
 
@@ -20,7 +21,7 @@ class AllocationError(MemoryError):
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
 
-class EaselException(RuntimeError):
+class EaselError(RuntimeError):
     code: int
     message: str
     def __init__(self, code: int, message: str) -> None: ...
@@ -47,3 +48,30 @@ class MissingCutoffs(ValueError):
     def __init__(self) -> None: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
+
+
+class InvalidParameter(ValueError):
+    name: str
+    value: object
+    choices: typing.Optional[typing.List[str]]
+    hint: typing.Optional[str]
+    def __init__(
+        self, 
+        name: str, 
+        value: object, 
+        *,
+        choices: typing.Optional[typing.List[str]], 
+        hint: typing.Optional[str]
+    ) -> None:
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
+
+class InvalidHMM(ValueError):
+    hmm: HMM
+    message: str
+    def __init__(self, hmm: HMM, message: str) -> None: ...
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...
+
+
