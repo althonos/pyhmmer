@@ -6,6 +6,9 @@ cython ~=3.0
 # run dependencies
 psutil ~=5.0
 
+# test dependencies
+importlib-resources ; python_version < '3.9'
+
 # coverage dependencies
 coverage ~=4.0 ; python_version == '3.6'
 coverage ~=7.0 ; python_version >= '3.7'
