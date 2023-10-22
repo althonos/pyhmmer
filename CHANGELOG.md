@@ -6,7 +6,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.2...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.3...HEAD
+
+
+## [v0.10.3] - 2023-10-22
+[v0.10.3]: https://github.com/althonos/pyhmmer/compare/v0.10.2...v0.10.3
+
+### Added
+- Out-of-band pickle serialization of `Bitfield` objects.
+- Getters for `float` attributes and forward/backward parameters of `OptimizedProfile`.
+- `InvalidHMM` error raised by `HMM.validate`.
+
+### Changed
+- Mark `HMM.zero` method as `noexcept`.
+- Increase size of buffer for the query queue in the `hmmer` dispatcher.
+
+### Fixed
+- Unneeded semaphore in `pyhmmer.hmmer` message passing implementation.
+- Broken assertion in `Bitfield._from_raw_bytes`.
+- Relax tolerance of HMM validation in `TraceAligner.align_traces`.
 
 
 ## [v0.10.2] - 2023-08-20
