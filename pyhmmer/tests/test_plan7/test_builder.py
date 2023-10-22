@@ -7,7 +7,6 @@ import shutil
 import sys
 import unittest
 import tempfile
-import pkg_resources
 from unittest import mock
 
 import pyhmmer
@@ -15,7 +14,8 @@ from pyhmmer.errors import EaselError, AlphabetMismatch
 from pyhmmer.easel import Alphabet, SequenceFile, MSAFile
 from pyhmmer.plan7 import HMMFile, Pipeline, Builder, Background
 
-from ..utils import HMMER_FOLDER
+from .. import __name__ as __package__
+from .utils import HMMER_FOLDER, resource_files
 
 class _TestBuilderBase(object):
 
@@ -23,7 +23,7 @@ class _TestBuilderBase(object):
     def setUpClass(cls):
         cls.testdata = os.path.join(HMMER_FOLDER, "testsuite")
 
-        cls.faa_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/PKSI.faa")
+        cls.faa_path = resource_files(__package__).joinpath("data", "seqs", "PKSI.faa")
         with SequenceFile(cls.faa_path, digital=True) as seqf:
             cls.proteins = list(seqf)
 
@@ -215,12 +215,12 @@ class TestBuilderMSA(_TestBuilderBase, unittest.TestCase):
         abc = Alphabet.amino()
         builder = Builder(alphabet=abc)
         # open the MSA
-        msa_path = pkg_resources.resource_filename("pyhmmer.tests", "data/msa/laccase.clw")
+        msa_path = resource_files(__package__).joinpath("data", "msa", "laccase.clw")
         with MSAFile(msa_path, digital=True, alphabet=abc) as msa_file:
             msa = msa_file.read()
             msa.name = b"laccase"
         # read the expected HMM
-        hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/laccase.hmm")
+        hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "laccase.hmm")
         with HMMFile(hmm_path) as hmm_file:
             hmm_hmmbuild = next(hmm_file)
             hmm_hmmbuild.creation_time = None

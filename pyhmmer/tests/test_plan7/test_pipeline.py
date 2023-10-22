@@ -6,12 +6,14 @@ import unittest
 import random
 import tempfile
 import threading
-import pkg_resources
 
 import pyhmmer
 from pyhmmer.easel import Alphabet, SequenceFile, DigitalSequence, DigitalSequenceBlock, TextSequence, TextSequenceBlock, MSAFile, DigitalMSA
 from pyhmmer.plan7 import Background, Builder, Pipeline, HMMFile, TopHits, OptimizedProfileBlock, Profile, LongTargetsPipeline
 from pyhmmer.errors import AlphabetMismatch
+
+from .. import __name__ as __package__
+from .utils import HMMER_FOLDER, resource_files
 
 
 class TestSearchPipeline(unittest.TestCase):
@@ -20,11 +22,11 @@ class TestSearchPipeline(unittest.TestCase):
     def setUpClass(cls):
         cls.alphabet = Alphabet.amino()
 
-        cls.reference_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/938293.PRJEB85.HG003687.faa")
+        cls.reference_path = resource_files(__package__).joinpath("data", "seqs", "938293.PRJEB85.HG003687.faa")
         with SequenceFile(cls.reference_path, digital=True, alphabet=cls.alphabet) as f:
             cls.references = f.read_block()
 
-        cls.msa_path = pkg_resources.resource_filename("pyhmmer.tests", "data/msa/LuxC.sto")
+        cls.msa_path = resource_files(__package__).joinpath("data", "msa", "LuxC.sto")
         with MSAFile(cls.msa_path, digital=True, alphabet=cls.alphabet) as msa_f:
             cls.msa = msa_f.read()
 
@@ -179,11 +181,11 @@ class TestScanPipeline(unittest.TestCase):
     def setUpClass(cls):
         cls.alphabet = Alphabet.amino()
 
-        seq_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/938293.PRJEB85.HG003687.faa")
+        seq_path = resource_files(__package__).joinpath("data", "seqs", "938293.PRJEB85.HG003687.faa")
         with SequenceFile(seq_path, digital=True, alphabet=cls.alphabet) as f:
             cls.references = f.read_block()
 
-        hmm_file = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/t2pks.hmm")
+        hmm_file = resource_files(__package__).joinpath("data", "hmms", "txt", "t2pks.hmm")
         with HMMFile(hmm_file) as f:
             cls.hmms = list(f)
 
@@ -217,7 +219,7 @@ class TestScanPipeline(unittest.TestCase):
     def test_scan_seq_file(self):
         seq = next(x for x in self.references if x.name == b"938293.PRJEB85.HG003687_188")
 
-        hmm_file = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/db/t2pks.hmm")
+        hmm_file = resource_files(__package__).joinpath("data", "hmms", "db", "t2pks.hmm")
         with HMMFile(hmm_file) as f:
             pipeline = Pipeline(alphabet=self.alphabet)
             hits = pipeline.scan_seq(seq, f.optimized_profiles())
@@ -231,15 +233,15 @@ class TestIteratePipeline(unittest.TestCase):
     def setUpClass(cls):
         cls.alphabet = Alphabet.amino()
 
-        seq_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/938293.PRJEB85.HG003687.faa")
+        seq_path = resource_files(__package__).joinpath("data", "seqs", "938293.PRJEB85.HG003687.faa")
         with SequenceFile(seq_path, digital=True, alphabet=cls.alphabet) as f:
             cls.references = f.read_block()
 
-        query_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/LuxC.faa")
+        query_path = resource_files(__package__).joinpath("data", "seqs", "LuxC.faa")
         with SequenceFile(query_path, digital=True, alphabet=cls.alphabet) as f:
             cls.query = next(seq for seq in f if b"P12748" in seq.name)
 
-        hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/db/t2pks.hmm")
+        hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "t2pks.hmm")
         with HMMFile(hmm_path) as hmm_file:
             cls.hmm = next(hmm for hmm in hmm_file if b"KR" in hmm.name)
 
@@ -256,7 +258,7 @@ class TestIteratePipeline(unittest.TestCase):
             self.assertEqual(search_iterator.iteration, n+1)
             self.assertEqual(iteration.iteration, n+1)
 
-            msa_path = pkg_resources.resource_filename("pyhmmer.tests", f"data/jackhmmer/p12748-{n+1}.sto")
+            msa_path = resource_files(__package__).joinpath("data", "jackhmmer", f"p12748-{n+1}.sto")
             with MSAFile(msa_path, digital=True, alphabet=self.alphabet) as msa_file:
                 ref_msa = msa_file.read()
 
@@ -285,7 +287,7 @@ class TestIteratePipeline(unittest.TestCase):
             self.assertEqual(search_iterator.iteration, n+1)
             self.assertEqual(iteration.iteration, n+1)
 
-            msa_path = pkg_resources.resource_filename("pyhmmer.tests", f"data/jackhmmer/KR-{n+1}.sto")
+            msa_path = resource_files(__package__).joinpath("data", "jackhmmer", f"KR-{n+1}.sto")
             with MSAFile(msa_path, digital=True, alphabet=self.alphabet) as msa_file:
                 ref_msa = msa_file.read()
 

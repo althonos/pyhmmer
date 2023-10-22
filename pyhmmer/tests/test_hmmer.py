@@ -6,12 +6,12 @@ import os
 import unittest
 import tempfile
 import threading
-import pkg_resources
 
 import pyhmmer
 from pyhmmer.plan7 import Pipeline, HMMFile, HMMPressedFile, TopHits, Hit
 from pyhmmer.easel import Alphabet, DigitalMSA, MSAFile, SequenceFile, TextSequence
 
+from .utils import resource_files
 
 class _TestSearch(metaclass=abc.ABCMeta):
     @abc.abstractmethod
@@ -20,25 +20,20 @@ class _TestSearch(metaclass=abc.ABCMeta):
 
     @staticmethod
     def table(name):
-        bin_stream = pkg_resources.resource_stream(
-            __name__, "data/tables/{}".format(name)
-        )
-        return io.TextIOWrapper(bin_stream)
+        path = resource_files(__package__).joinpath("data", "tables", name)
+        return path.open()
 
     @staticmethod
     def hmm_file(name):
-        path = pkg_resources.resource_filename(
-            __name__, "data/hmms/txt/{}.hmm".format(name)
-        )
+        path = resource_files(__package__).joinpath("data", "hmms", "txt", "{}.hmm".format(name))
         return HMMFile(path)
 
     @staticmethod
     def seqs_file(name, digital=False):
-        seqs_path = pkg_resources.resource_filename(
-            __name__, "data/seqs/{}.faa".format(name)
-        )
+        seqs_path = resource_files(__package__).joinpath("data", "seqs", "{}.faa".format(name))
         return SequenceFile(seqs_path, digital=digital)
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_thioestherase(self):
         # $ hmmsearch data/hmm/Thioesterase.hmm data/seqs/938293.PRJEB85.HG003687.faa
         #
@@ -94,6 +89,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
         last = hit.domains[-1]
         self.assertEqual(domain.alignment.hmm_name, last.alignment.hmm_name)
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_pf02826_file(self):
         with self.hmm_file("PF02826") as hmm_file:
             hmm = next(hmm_file)
@@ -118,6 +114,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
                 self.assertAlmostEqual(hit.bias, float(fields[6]), delta=0.1)
                 self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_pf02826_block(self):
         with self.hmm_file("PF02826") as hmm_file:
             hmm = next(hmm_file)
@@ -144,6 +141,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
                 self.assertAlmostEqual(hit.bias, float(fields[6]), delta=0.1)
                 self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_t2pks(self):
         with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
             seqs = seqs_file.read_block()
@@ -184,6 +182,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
                 # self.assertEqual(f"{domain.c_evalue:9.2g}", f"{float(fields[11]):9.2g}")
                 self.assertEqual(f"{domain.i_evalue:9.2g}", f"{float(fields[12]):9.2g}")
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_hmm_vs_optimized_profile(self):
         with self.hmm_file("PF02826") as hmm_file:
             hmm = next(hmm_file)
@@ -227,6 +226,7 @@ class TestHmmsearch(_TestSearch, unittest.TestCase):
     def get_hits(self, hmm, seqs):
         return list(pyhmmer.hmmsearch(hmm, seqs))[0]
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_background_error(self):
         # check that errors occuring in worker threads are recovered and raised
         # in the main threads (a common error is mismatching the HMM and the
@@ -236,6 +236,7 @@ class TestHmmsearch(_TestSearch, unittest.TestCase):
             hmm = next(hmm_file)
         self.assertRaises(ValueError, self.get_hits, hmm, seqs)
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_no_queries(self):
         with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
             seqs = list(seqs_file)
@@ -247,6 +248,7 @@ class TestHmmsearchSingle(TestHmmsearch, unittest.TestCase):
     def get_hits(self, hmm, seqs):
         return list(pyhmmer.hmmsearch(hmm, seqs, cpus=1))[0]
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_no_queries(self):
         with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
             seqs = list(seqs_file)
@@ -270,22 +272,14 @@ class TestHmmpress(unittest.TestCase):
             if os.path.exists(self.tmp + ext):
                 os.remove(self.tmp + ext)
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_roundtrip(self):
-        self.hmm = pkg_resources.resource_filename(
-            __name__, "data/hmms/txt/Thioesterase.hmm"
-        )
-        self.h3p = pkg_resources.resource_filename(
-            __name__, "data/hmms/db/Thioesterase.hmm.h3p"
-        )
-        self.h3m = pkg_resources.resource_filename(
-            __name__, "data/hmms/db/Thioesterase.hmm.h3m"
-        )
-        self.h3f = pkg_resources.resource_filename(
-            __name__, "data/hmms/db/Thioesterase.hmm.h3f"
-        )
-        self.h3i = pkg_resources.resource_filename(
-            __name__, "data/hmms/db/Thioesterase.hmm.h3i"
-        )
+        db_folder = resource_files(__package__).joinpath("data", "hmms", "db")
+        self.hmm = db_folder.joinpath("Thioesterase.hmm")
+        self.h3p = db_folder.joinpath("Thioesterase.hmm.h3p")
+        self.h3m = db_folder.joinpath("Thioesterase.hmm.h3m")
+        self.h3f = db_folder.joinpath("Thioesterase.hmm.h3f")
+        self.h3i = db_folder.joinpath("Thioesterase.hmm.h3f")
         with HMMFile(self.hmm) as hmms:
             n = pyhmmer.hmmer.hmmpress(hmms, self.tmp)
             self.assertEqual(n, 1)
@@ -297,22 +291,22 @@ class TestHmmpress(unittest.TestCase):
 class TestPhmmer(unittest.TestCase):
     @staticmethod
     def table(name):
-        bin_stream = pkg_resources.resource_stream(
-            __name__, "data/tables/{}".format(name)
-        )
-        return io.TextIOWrapper(bin_stream)
+        path = resource_files(__package__).joinpath("data", "tables", name)
+        return path.open()
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_no_queries(self):
         alphabet = Alphabet.amino()
-        path = pkg_resources.resource_filename(__name__, "data/seqs/PKSI.faa")
+        path = resource_files(__package__).joinpath("data", "seqs", "PKSI.faa")
         with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
             seqs = seqs_file.read_block()
         hits = pyhmmer.phmmer([], seqs, cpus=1)
         self.assertIs(None, next(hits, None))
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_pksi(self):
         alphabet = Alphabet.amino()
-        path = pkg_resources.resource_filename(__name__, "data/seqs/PKSI.faa")
+        path = resource_files(__package__).joinpath("data", "seqs", "PKSI.faa")
         with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
             seqs = seqs_file.read_block()
         hits = next(pyhmmer.phmmer(seqs[-1:], seqs, cpus=1))
@@ -345,31 +339,27 @@ class TestPhmmer(unittest.TestCase):
 class TestJackhmmer(unittest.TestCase):
     @staticmethod
     def table(name):
-        bin_stream = pkg_resources.resource_stream(
-            __name__, "data/tables/{}".format(name)
-        )
-        return io.TextIOWrapper(bin_stream)
+        path = resource_files(__package__).joinpath("data", "tables", name)
+        return path.open()
 
     @staticmethod
     def seqs_file(name, digital=False):
-        seqs_path = pkg_resources.resource_filename(
-            __name__, "data/seqs/{}.faa".format(name)
-        )
+        seqs_path = resource_files(__package__).joinpath("data", "seqs", "{}.faa".format(name))
         return SequenceFile(seqs_path, digital=digital)
 
     @staticmethod
     def hmm_file(name):
-        path = pkg_resources.resource_filename(
-            __name__, "data/hmms/txt/{}.hmm".format(name)
-        )
+        path = resource_files(__package__).joinpath("data", "hmms", "txt", "{}.hmm".format(name))
         return HMMFile(path)
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_no_queries(self):
         with self.seqs_file("PKSI", digital=True) as seqs_file:
             seqs = seqs_file.read_block()
         result = pyhmmer.jackhmmer([], seqs, cpus=1, max_iterations=1)
         self.assertIs(None, next(result, None))
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_pksi(self):
         with self.seqs_file("PKSI", digital=True) as seqs_file:
             seqs = seqs_file.read_block()
@@ -401,6 +391,7 @@ class TestJackhmmer(unittest.TestCase):
                 self.assertEqual(domain.env_from, int(fields[19]))
                 self.assertEqual(domain.env_to, int(fields[20]))
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_pksi_checkpoint(self):
         with self.seqs_file("PKSI", digital=True) as seqs_file:
             seqs = seqs_file.read_block()
@@ -418,6 +409,7 @@ class TestJackhmmer(unittest.TestCase):
         self.assertEqual(len(iterations[-1].hits), 5)
         self.assertEqual(len(iterations[-1].msa.sequences), 17)
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_thioestherase(self):
         with self.hmm_file("Thioesterase") as hmm_file:
             hmm = hmm_file.read()
@@ -462,16 +454,14 @@ class TestJackhmmer(unittest.TestCase):
 class TestNhmmer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        path = pkg_resources.resource_filename(__name__, "data/hmms/txt/bmyD.hmm")
+        path = resource_files(__package__).joinpath("data", "hmms", "txt", "bmyD.hmm")
         with HMMFile(path) as hmm_file:
             cls.bmyD = next(hmm_file)
 
     @staticmethod
     def table(name):
-        bin_stream = pkg_resources.resource_stream(
-            __name__, "data/tables/{}".format(name)
-        )
-        return io.TextIOWrapper(bin_stream)
+        path = resource_files(__package__).joinpath("data", "tables", name)
+        return path.open()
 
     def assertTableEqual(self, hits, table):
         lines = iter(filter(lambda line: not line.startswith("#"), table))
@@ -491,22 +481,24 @@ class TestNhmmer(unittest.TestCase):
                 hit.best_domain.i_evalue, float(fields[12]), delta=0.1
             )
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_no_queries(self):
         alphabet = Alphabet.dna()
-        path = pkg_resources.resource_filename(__name__, "data/seqs/BGC0001090.gbk")
+        path = resource_files(__package__).joinpath("data", "seqs", "BGC0001090.gbk")
         with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
             seqs = seqs_file.read_block()
         hits = pyhmmer.nhmmer([], seqs, cpus=1)
         self.assertIs(None, next(hits, None))
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_bmyd_seq_bgc_block(self):
         alphabet = Alphabet.dna()
 
-        path = pkg_resources.resource_filename(__name__, "data/seqs/bmyD.fna")
+        path = resource_files(__package__).joinpath("data", "seqs", "bmyD.fna")
         with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
             query = next(seqs_file)
 
-        path = pkg_resources.resource_filename(__name__, "data/seqs/BGC0001090.gbk")
+        path = resource_files(__package__).joinpath("data", "seqs", "BGC0001090.gbk")
         with SequenceFile(
             path, "genbank", digital=True, alphabet=alphabet
         ) as seqs_file:
@@ -519,14 +511,15 @@ class TestNhmmer(unittest.TestCase):
         with self.table("bmyD3.tbl") as table:
             self.assertTableEqual(hits, table)
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_bmyd_seq_bgc_file(self):
         alphabet = Alphabet.dna()
 
-        path = pkg_resources.resource_filename(__name__, "data/seqs/bmyD.fna")
+        path = resource_files(__package__).joinpath("data", "seqs", "bmyD.fna")
         with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
             query = next(seqs_file)
 
-        path = pkg_resources.resource_filename(__name__, "data/seqs/BGC0001090.gbk")
+        path = resource_files(__package__).joinpath("data", "seqs", "BGC0001090.gbk")
         with SequenceFile(path, "genbank", digital=True, alphabet=alphabet) as seqs:
             hits = list(pyhmmer.nhmmer(query, seqs, cpus=1))[0]
             hits.sort()
@@ -535,15 +528,15 @@ class TestNhmmer(unittest.TestCase):
         with self.table("bmyD3.tbl") as table:
             self.assertTableEqual(hits, table)
 
-
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_bmyd_msa_bgc_block(self):
         alphabet = Alphabet.dna()
 
-        path = pkg_resources.resource_filename(__name__, "data/seqs/bmyD.fna")
+        path = resource_files(__package__).joinpath("data", "seqs", "bmyD.fna")
         with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
             query = DigitalMSA(alphabet, name=b"bmyD", sequences=[next(seqs_file)])
 
-        path = pkg_resources.resource_filename(__name__, "data/seqs/BGC0001090.gbk")
+        path = resource_files(__package__).joinpath("data", "seqs", "BGC0001090.gbk")
         with SequenceFile(
             path, "genbank", digital=True, alphabet=alphabet
         ) as seqs_file:
@@ -552,23 +545,24 @@ class TestNhmmer(unittest.TestCase):
         hits = next(pyhmmer.nhmmer(query, seqs, cpus=1))
         self.assertEqual(len(hits), 1)
 
-
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_bmyd_msa_bgc_file(self):
         alphabet = Alphabet.dna()
 
-        path = pkg_resources.resource_filename(__name__, "data/seqs/bmyD.fna")
+        path = resource_files(__package__).joinpath("data", "seqs", "bmyD.fna")
         with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
             query = DigitalMSA(alphabet, name=b"bmyD", sequences=[next(seqs_file)])
 
-        path = pkg_resources.resource_filename(__name__, "data/seqs/BGC0001090.gbk")
+        path = resource_files(__package__).joinpath("data", "seqs", "BGC0001090.gbk")
         with SequenceFile(path, "genbank", digital=True, alphabet=alphabet) as seqs:
             hits = list(pyhmmer.nhmmer(query, seqs, cpus=1))[0]
             self.assertEqual(len(hits.reported), 1)
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_bmyd_hmm_bgc_block(self):
         alphabet = Alphabet.dna()
 
-        path = pkg_resources.resource_filename(__name__, "data/seqs/BGC0001090.gbk")
+        path = resource_files(__package__).joinpath("data", "seqs", "BGC0001090.gbk")
         with SequenceFile(
             path, "genbank", digital=True, alphabet=alphabet
         ) as seqs_file:
@@ -581,10 +575,11 @@ class TestNhmmer(unittest.TestCase):
         with self.table("bmyD1.tbl") as table:
             self.assertTableEqual(hits, table)
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_bmyd_hmm_bgc_file(self):
         alphabet = Alphabet.dna()
 
-        path = pkg_resources.resource_filename(__name__, "data/seqs/BGC0001090.gbk")
+        path = resource_files(__package__).joinpath("data", "seqs", "BGC0001090.gbk")
         with SequenceFile(
             path, "genbank", digital=True, alphabet=alphabet
         ) as seqs_file:
@@ -595,10 +590,11 @@ class TestNhmmer(unittest.TestCase):
         with self.table("bmyD1.tbl") as table:
             self.assertTableEqual(hits, table)
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_bmyd_hmm_genome_block(self):
         alphabet = Alphabet.dna()
 
-        path = pkg_resources.resource_filename(__name__, "data/seqs/CP000560.2.fna")
+        path = resource_files(__package__).joinpath("data", "seqs", "CP000560.2.fna")
         with SequenceFile(path, "fasta", digital=True, alphabet=alphabet) as seqs_file:
             seqs = seqs_file.read_block()
 
@@ -609,10 +605,11 @@ class TestNhmmer(unittest.TestCase):
         with self.table("bmyD2.tbl") as table:
             self.assertTableEqual(hits, table)
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_bmyd_hmm_genome_file(self):
         alphabet = Alphabet.dna()
 
-        path = pkg_resources.resource_filename(__name__, "data/seqs/CP000560.2.fna")
+        path = resource_files(__package__).joinpath("data", "seqs", "CP000560.2.fna")
         with SequenceFile(path, "fasta", digital=True, alphabet=alphabet) as seqs_file:
             hits = list(pyhmmer.nhmmer(self.bmyD, seqs_file, cpus=1))[0]
             hits.sort()
@@ -629,13 +626,12 @@ class TestHmmalign(unittest.TestCase):
     def tearDown(self):
         os.remove(self.tmpout)
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_luxc(self):
-        hmm_path = pkg_resources.resource_filename(__name__, "data/hmms/txt/LuxC.hmm")
-        seqs_path = pkg_resources.resource_filename(__name__, "data/seqs/LuxC.faa")
-        ref_path = pkg_resources.resource_filename(
-            __name__, "data/msa/LuxC.hmmalign.sto"
-        )
-
+        hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "LuxC.hmm")
+        seqs_path = resource_files(__package__).joinpath("data", "seqs", "LuxC.faa")
+        ref_path = resource_files(__package__).joinpath("data", "msa", "LuxC.hmmalign.sto")
+            
         with HMMFile(hmm_path) as hmm_file:
             hmm = hmm_file.read()
         with SequenceFile(seqs_path, digital=True, alphabet=hmm.alphabet) as seqs_file:
@@ -650,31 +646,20 @@ class TestHmmalign(unittest.TestCase):
 class TestHMMScan(unittest.TestCase):
     @staticmethod
     def table(name):
-        bin_stream = pkg_resources.resource_stream(
-            __name__, "data/tables/{}".format(name)
-        )
-        return io.TextIOWrapper(bin_stream)
+        path = resource_files(__package__).joinpath("data", "tables", name)
+        return path.open()
 
     @staticmethod
     def hmm_file(name):
-        path = pkg_resources.resource_filename(
-            __name__, "data/hmms/db/{}.hmm".format(name)
-        )
+        path = resource_files(__package__).joinpath("data", "hmms", "db", "{}.hmm".format(name))
         return HMMFile(path)
 
-    @staticmethod
-    def seqs_file(name, digital=False):
-        seqs_path = pkg_resources.resource_filename(
-            __name__, "data/seqs/{}.faa".format(name)
-        )
-
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_t2pks_block(self):
         # get paths to resources
-        table_path = pkg_resources.resource_filename(
-            __name__, "data/tables/t2pks.scan.tbl"
-        )
-        db_path = pkg_resources.resource_filename(__name__, "data/hmms/db/t2pks.hmm")
-        seqs_path = pkg_resources.resource_filename(__name__, "data/seqs/PKSI.faa")
+        table_path = resource_files(__package__).joinpath("data", "tables", "t2pks.scan.tbl")
+        db_path = resource_files(__package__).joinpath("data", "hmms", "db", "t2pks.hmm")
+        seqs_path = resource_files(__package__).joinpath("data", "seqs", "PKSI.faa")
 
         # load expected results from the hmmscan table
         expected = {}
@@ -707,13 +692,12 @@ class TestHMMScan(unittest.TestCase):
                     self.assertAlmostEqual(hit.bias, float(fields[6]), delta=0.1)
                     self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
 
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_t2pks_file(self):
         # get paths to resources
-        table_path = pkg_resources.resource_filename(
-            __name__, "data/tables/t2pks.scan.tbl"
-        )
-        db_path = pkg_resources.resource_filename(__name__, "data/hmms/db/t2pks.hmm")
-        seqs_path = pkg_resources.resource_filename(__name__, "data/seqs/PKSI.faa")
+        table_path = resource_files(__package__).joinpath("data", "tables", "t2pks.scan.tbl")
+        db_path = resource_files(__package__).joinpath("data", "hmms", "db", "t2pks.hmm")
+        seqs_path = resource_files(__package__).joinpath("data", "seqs", "PKSI.faa")
 
         # load expected results from the hmmscan table
         expected = {}

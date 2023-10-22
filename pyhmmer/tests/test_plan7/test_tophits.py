@@ -5,13 +5,14 @@ import pickle
 import shutil
 import unittest
 import tempfile
-import pkg_resources
 
 import pyhmmer
 from pyhmmer.errors import EaselError
 from pyhmmer.easel import SequenceFile, TextMSA, DigitalMSA
 from pyhmmer.plan7 import HMMFile, Pipeline, TopHits
 
+from .. import __name__ as __package__
+from .utils import HMMER_FOLDER, resource_files
 
 class TestTopHits(unittest.TestCase):
 
@@ -89,8 +90,8 @@ class TestTopHits(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/PF02826.hmm")
-        seqs_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/938293.PRJEB85.HG003687.faa")
+        hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "PF02826.hmm")
+        seqs_path = resource_files(__package__).joinpath("data", "seqs", "938293.PRJEB85.HG003687.faa")
 
         with HMMFile(hmm_path) as hmm_file:
             cls.hmm = hmm_file.read()
@@ -343,7 +344,8 @@ class TestTopHits(unittest.TestCase):
         self.hits.write(buffer, format="targets")
         lines = buffer.getvalue().decode().splitlines()
 
-        expected = pkg_resources.resource_string("pyhmmer.tests", "data/tables/PF02826.tbl").decode().splitlines()
+        with resource_files(__package__).joinpath("data", "tables", "PF02826.tbl").open() as f:
+            expected = f.read().splitlines()
         while expected[-1].startswith("#"):
             expected.pop()
 
@@ -354,7 +356,8 @@ class TestTopHits(unittest.TestCase):
         self.hits.write(buffer, format="domains")
         lines = buffer.getvalue().decode().splitlines()
 
-        expected = pkg_resources.resource_string("pyhmmer.tests", "data/tables/PF02826.domtbl").decode().splitlines()
+        with resource_files(__package__).joinpath("data", "tables", "PF02826.domtbl").open() as f:
+            expected = f.read().splitlines()
         while expected[-1].startswith("#"):
             expected.pop()
 

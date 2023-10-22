@@ -4,22 +4,24 @@ import os
 import shutil
 import unittest
 import tempfile
-import pkg_resources
 
 import pyhmmer
 from pyhmmer.errors import EaselError
 from pyhmmer.easel import SequenceFile, TextMSA, DigitalMSA
 from pyhmmer.plan7 import HMMFile, Pipeline, TopHits
 
+from .. import __name__ as __package__
+from .utils import HMMER_FOLDER, resource_files
+
 
 class TestHit(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/PF02826.hmm")
+        hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "PF02826.hmm")
         with HMMFile(hmm_path) as hmm_file:
             hmm = hmm_file.read()
-        seqs_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/938293.PRJEB85.HG003687.faa")
+        seqs_path = resource_files(__package__).joinpath("data", "seqs", "938293.PRJEB85.HG003687.faa")
         with SequenceFile(seqs_path, digital=True, alphabet=hmm.alphabet) as seqs_file:
             seqs = seqs_file.read_block()
         pipeline = Pipeline(alphabet=hmm.alphabet)

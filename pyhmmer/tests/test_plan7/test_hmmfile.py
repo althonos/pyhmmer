@@ -4,13 +4,14 @@ import os
 import shutil
 import unittest
 import tempfile
-import pkg_resources
 
 import pyhmmer
 from pyhmmer.errors import EaselError
 from pyhmmer.easel import SequenceFile
 from pyhmmer.plan7 import HMMFile, HMMPressedFile, Pipeline
 
+from .. import __name__ as __package__
+from .utils import HMMER_FOLDER, resource_files
 
 # --- Mixins -------------------------------------------------------------------
 
@@ -21,7 +22,7 @@ class _TestHMMFile:
 
     @classmethod
     def setUpClass(cls):
-        cls.hmms_folder = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms")
+        cls.hmms_folder = resource_files(__package__).joinpath("data", "hmms")
 
     def open_hmm(self, path):
         raise NotImplementedError()

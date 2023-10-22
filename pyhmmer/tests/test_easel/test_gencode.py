@@ -6,7 +6,6 @@ import shutil
 import unittest
 import tempfile
 import pickle
-import pkg_resources
 
 import pyhmmer
 from pyhmmer.errors import EaselError, AlphabetMismatch

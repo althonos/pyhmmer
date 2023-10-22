@@ -5,7 +5,6 @@ import os
 import shutil
 import unittest
 import tempfile
-import pkg_resources
 
 import pyhmmer
 from pyhmmer.errors import EaselError, AlphabetMismatch

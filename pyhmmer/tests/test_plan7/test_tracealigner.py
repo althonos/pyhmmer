@@ -5,18 +5,20 @@ import os
 import shutil
 import unittest
 import tempfile
-import pkg_resources
 
 import pyhmmer
 from pyhmmer.errors import EaselError, AlphabetMismatch
 from pyhmmer.easel import Alphabet, SequenceFile, DigitalMSA, TextMSA, DigitalSequenceBlock
 from pyhmmer.plan7 import HMM, HMMFile, TraceAligner, Traces
 
+from .. import __name__ as __package__
+from .utils import HMMER_FOLDER, resource_files
+
 class TestTraceAligner(unittest.TestCase):
 
     def setUp(self):
-        hmm_path = pkg_resources.resource_filename("pyhmmer.tests", "data/hmms/txt/LuxC.hmm")
-        seqs_path = pkg_resources.resource_filename("pyhmmer.tests", "data/seqs/LuxC.faa")
+        hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "LuxC.hmm")
+        seqs_path = resource_files(__package__).joinpath("data", "seqs", "LuxC.faa")
 
         with HMMFile(hmm_path) as hmm_file:
             self.hmm = next(hmm_file)
