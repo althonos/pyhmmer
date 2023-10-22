@@ -33,12 +33,12 @@ jobs:
       with:
         platforms: all
     - name: Build manylinux wheels
-      uses: pypa/cibuildwheel@v2.11.3
+      uses: pypa/cibuildwheel@v2.16.2
       env:
         CIBW_ARCHS: aarch64
         CIBW_BUILD: ${{ matrix.python-tag }}
-        CIBW_BUILD_VERBOSITY: 2
         CIBW_BEFORE_BUILD: pip install cython
+        CIBW_BUILD_VERBOSITY: 2
         CIBW_TEST_COMMAND: python -m unittest pyhmmer.tests -vv
         CIBW_TEST_REQUIRES: importlib-resources
       with:
@@ -73,7 +73,7 @@ jobs:
         toolchain: stable
         override: true
     - name: Build manylinux wheels
-      uses: pypa/cibuildwheel@v2.11.3
+      uses: pypa/cibuildwheel@v2.16.2
       env:
         CIBW_ARCHS: x86_64
         CIBW_BUILD: ${{ matrix.python-tag }}
@@ -113,7 +113,7 @@ jobs:
         toolchain: stable
         override: true
     - name: Build manylinux wheels
-      uses: pypa/cibuildwheel@v2.11.3
+      uses: pypa/cibuildwheel@v2.16.2
       env:
         CIBW_ARCHS: x86_64
         CIBW_BUILD: ${{ matrix.python-tag }}
@@ -149,7 +149,7 @@ jobs:
         override: true
         target: aarch64-apple-darwin
     - name: Build manylinux wheels
-      uses: pypa/cibuildwheel@v2.11.3
+      uses: pypa/cibuildwheel@v2.16.2
       env:
         CIBW_ARCHS: arm64
         CIBW_BUILD: ${{ matrix.python-tag }}
