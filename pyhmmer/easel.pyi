@@ -534,11 +534,12 @@ class Sequence(typing.Sized, abc.ABC):
 class TextSequence(Sequence):
     def __init__(
         self,
-        name: bytes = None,
-        description: bytes = None,
-        accession: bytes = None,
-        sequence: str = None,
-        source: bytes = None,
+        name: typing.Optional[bytes] = None,
+        description: typing.Optional[bytes] = None,
+        accession: typing.Optional[bytes] = None,
+        sequence: typing.Optional[str] = None,
+        source: typing.Optional[bytes] = None,
+        residue_markups: typing.Optional[typing.Dict[bytes, BUFFER]] = None,
     ) -> None: ...
     @property
     def sequence(self) -> str: ...
@@ -554,11 +555,12 @@ class DigitalSequence(Sequence):
     def __init__(
         self,
         alphabet: Alphabet,
-        name: bytes = None,
-        description: bytes = None,
-        accession: bytes = None,
+        name: typing.Optional[bytes] = None,
+        description: typing.Optional[bytes] = None,
+        accession: typing.Optional[bytes] = None,
         sequence: typing.Union[BUFFER, VectorU8, None] = None,
-        source: bytes = None,
+        source: typing.Optional[bytes] = None,
+        residue_markups: typing.Optional[typing.Dict[bytes, BUFFER]] = None,
     ) -> None: ...
     @property
     def sequence(self) -> VectorU8: ...

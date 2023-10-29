@@ -163,5 +163,5 @@ class IterativeSearch(pyhmmer.plan7.IterativeSearch):
         builder: Builder,
         ranges: typing.Optional[typing.List[typing.Tuple[int, int]]] = None,
         select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
-        options: typing.Dict[str, object] = None,
+        options: typing.Optional[typing.Dict[str, object]] = None,
     ) -> None: ...

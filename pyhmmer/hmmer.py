@@ -680,7 +680,7 @@ class _NHMMERDispatcher(
         ] = None,
         pipeline_class: typing.Type[Pipeline] = LongTargetsPipeline,
         alphabet: Alphabet = Alphabet.dna(),
-        builder: Builder = None,
+        builder: typing.Optional[Builder] = None,
         **options,  # type: typing.Dict[str, object]
     ) -> None:
         super().__init__(
@@ -1022,7 +1022,7 @@ def jackhmmer(
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
-    **options,  # type: typing.Dict[str, object]
+    **options,  # type: object
 ) -> typing.Union[
     typing.Iterator[IterationResult], typing.Iterator[typing.Iterable[IterationResult]]
 ]:

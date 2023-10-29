@@ -26,6 +26,7 @@ from .easel import (
     SequenceFile,
     VectorF,
     VectorU8,
+    MatrixF,
     MatrixU8,
 )
 
