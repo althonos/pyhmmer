@@ -4784,6 +4784,19 @@ cdef class TextSequence(Sequence):
         assert self._sq.desc != NULL
         assert self._sq.acc != NULL
 
+    def __reduce__(self):
+        return (
+            type(self),
+            (
+                self.name,
+                self.description,
+                self.accession,
+                self.sequence,
+                self.source,
+                self.residue_markups,
+            )
+        )
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -4992,6 +5005,20 @@ cdef class DigitalSequence(Sequence):
         assert self._sq.name != NULL
         assert self._sq.desc != NULL
         assert self._sq.acc != NULL
+
+    def __reduce__(self):
+        return (
+            type(self),
+            (
+                self.alphabet,
+                self.name,
+                self.description,
+                self.accession,
+                self.sequence,
+                self.source,
+                self.residue_markups,
+            )
+        )
 
     # --- Properties ---------------------------------------------------------
 

@@ -3,6 +3,7 @@ import copy
 import gc
 import io
 import os
+import pickle
 import unittest
 import tempfile
 import warnings
@@ -36,6 +37,24 @@ class _TestSequenceBase(abc.ABC):
         seq.description = b"a test sequence"
         self.assertEqual(seq.description, b"a test sequence")
 
+    def test_pickle(self):
+        s1 = self.Sequence(name=b"test1", sequence="GAATTC")
+        s1a = pickle.loads(pickle.dumps(s1))
+        self.assertEqual(s1.name, s1a.name)
+        self.assertEqual(s1.sequence, s1a.sequence)
+        self.assertEqual(s1.description, b"")
+        self.assertEqual(s1.residue_markups, {})
+
+        s2 = self.Sequence(
+            name=b"test2", 
+            sequence="TTCAAC", 
+            residue_markups={b"structure": b"((.))."}
+        )
+        s2a = pickle.loads(pickle.dumps(s2))
+        self.assertEqual(s2.name, s2a.name)
+        self.assertEqual(s2.sequence, s2a.sequence)
+        self.assertEqual(s2.residue_markups, s2a.residue_markups)
+
 
 class TestSequence(unittest.TestCase):
 
@@ -58,6 +77,9 @@ class TestDigitalSequence(_TestSequenceBase, unittest.TestCase):
 
     @classmethod
     def Sequence(cls, **kwargs):
+        seq = kwargs.get("sequence")
+        if seq:
+            kwargs["sequence"] = cls.abc.encode(seq)
         return easel.DigitalSequence(cls.abc, **kwargs)
 
     def test_init_kwargs(self):
