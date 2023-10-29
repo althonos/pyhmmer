@@ -37,6 +37,14 @@ class _TestSequenceBase(abc.ABC):
         seq.description = b"a test sequence"
         self.assertEqual(seq.description, b"a test sequence")
 
+    def test_setter_residue_markup(self):
+        seq = self.Sequence(sequence="ATTGC")
+        self.assertEqual(seq.residue_markups, {})
+        seq.residue_markups = {b"kind": b"DADDC"}
+        self.assertEqual(seq.residue_markups[b"kind"], b"DADDC")
+        with self.assertRaises(ValueError):
+            seq.residue_markups = {b"kind": b"D"}
+
     def test_pickle(self):
         s1 = self.Sequence(name=b"test1", sequence="GAATTC")
         s1a = pickle.loads(pickle.dumps(s1))
@@ -54,6 +62,47 @@ class _TestSequenceBase(abc.ABC):
         self.assertEqual(s2.name, s2a.name)
         self.assertEqual(s2.sequence, s2a.sequence)
         self.assertEqual(s2.residue_markups, s2a.residue_markups)
+
+    def test_copy(self):
+        seq = self.Sequence(name=b"TEST", sequence="ATGC")
+
+        # copy the sequence
+        cpy = seq.copy()
+
+        # check the copy is equal and attributes are equal
+        self.assertEqual(seq, cpy)
+        self.assertEqual(seq.name, cpy.name)
+        self.assertEqual(seq.checksum(), cpy.checksum())
+
+        # check attributes can be read even after the original object
+        # is (hopefully) deallocated, to make sure internal strings were copied
+        del seq
+        gc.collect()
+        self.assertEqual(cpy.name, b"TEST")
+
+        # check `copy.copy` works too
+        cpy2 = copy.copy(cpy)
+        self.assertEqual(cpy, cpy2)
+        self.assertEqual(cpy.name, cpy2.name)
+
+    def test_eq(self):
+        seq1 = self.Sequence(name=b"TEST", sequence="ATGC")
+        self.assertEqual(seq1, seq1)
+        self.assertNotEqual(seq1, object())
+
+        seq2 = self.Sequence(name=b"TEST", sequence="ATGC")
+        self.assertEqual(seq1, seq2)
+
+        seq3 = self.Sequence(name=b"OTHER", sequence="ATGC")
+        self.assertNotEqual(seq1, seq3)
+
+        seq4 = self.Sequence(name=b"TEST", sequence="ATGT")
+        self.assertNotEqual(seq1, seq4)
+
+    def test_eq_not_seq(self):
+        seq1 = self.Sequence(name=b"TEST", sequence="ATGC")
+        self.assertNotEqual(seq1, 1)
+        self.assertNotEqual(seq1, b"hello")
 
 
 class TestSequence(unittest.TestCase):
@@ -88,51 +137,6 @@ class TestDigitalSequence(_TestSequenceBase, unittest.TestCase):
         self.assertEqual(seq.name, b"TEST")
         self.assertEqual(bytearray(seq.sequence), arr)
         self.assertEqual(len(seq), 4)
-
-    def test_copy(self):
-        arr = bytearray([0, 1, 2, 3])
-        seq = easel.DigitalSequence(self.abc, name=b"TEST", sequence=arr)
-
-        # copy the sequence
-        cpy = seq.copy()
-
-        # check the copy is equal and attributes are equal
-        self.assertEqual(seq, cpy)
-        self.assertEqual(seq.name, cpy.name)
-        self.assertEqual(seq.checksum(), cpy.checksum())
-
-        # check attributes can be read even after the original object
-        # is (hopefully) deallocated, to make sure internal strings were copied
-        del seq
-        gc.collect()
-        self.assertEqual(cpy.name, b"TEST")
-
-        # check `copy.copy` works too
-        cpy2 = copy.copy(cpy)
-        self.assertEqual(cpy, cpy2)
-        self.assertEqual(cpy.name, cpy2.name)
-
-    def test_eq(self):
-        arr = bytearray([0, 1, 2, 3])
-        seq1 = easel.DigitalSequence(self.abc, name=b"TEST", sequence=arr)
-        self.assertEqual(seq1, seq1)
-        self.assertNotEqual(seq1, object())
-
-        seq2 = easel.DigitalSequence(self.abc, name=b"TEST", sequence=arr)
-        self.assertEqual(seq1, seq2)
-
-        seq3 = easel.DigitalSequence(self.abc, name=b"OTHER", sequence=arr)
-        self.assertNotEqual(seq1, seq3)
-
-        arr2 = bytearray([0, 1, 2, 0])
-        seq4 = easel.DigitalSequence(self.abc, name=b"TEST", sequence=arr2)
-        self.assertNotEqual(seq1, seq4)
-
-    def test_eq_not_seq(self):
-        arr = bytearray([0, 1, 2, 3])
-        seq1 = easel.DigitalSequence(self.abc, name=b"TEST", sequence=arr)
-        self.assertNotEqual(seq1, 1)
-        self.assertNotEqual(seq1, b"hello")
 
     def test_textize_roundtrip(self):
         arr = bytearray([0, 1, 2, 3])
@@ -202,47 +206,6 @@ class TestTextSequence(_TestSequenceBase, unittest.TestCase):
         self.assertEqual(seq.sequence, "ATGC")
         self.assertEqual(len(seq), 4)
 
-    def test_copy(self):
-        seq = easel.TextSequence(name=b"TEST", sequence="ATGC")
-
-        # copy the sequence
-        cpy = seq.copy()
-
-        # check the copy is equal and attributes are equal
-        self.assertEqual(seq, cpy)
-        self.assertEqual(seq.name, cpy.name)
-        self.assertEqual(seq.checksum(), cpy.checksum())
-
-        # check attributes can be read even after the original object
-        # is (hopefully) deallocated, to make sure internal strings were copied
-        del seq
-        gc.collect()
-        self.assertEqual(cpy.name, b"TEST")
-
-        # check `copy.copy` works too
-        cpy2 = copy.copy(cpy)
-        self.assertEqual(cpy, cpy2)
-        self.assertEqual(cpy.name, cpy2.name)
-
-    def test_eq(self):
-        seq1 = easel.TextSequence(name=b"TEST", sequence="ATGC")
-        self.assertEqual(seq1, seq1)
-        self.assertNotEqual(seq1, object())
-
-        seq2 = easel.TextSequence(name=b"TEST", sequence="ATGC")
-        self.assertEqual(seq1, seq2)
-
-        seq3 = easel.TextSequence(name=b"OTHER", sequence="ATGC")
-        self.assertNotEqual(seq1, seq3)
-
-        seq4 = easel.TextSequence(name=b"TEST", sequence="ATGT")
-        self.assertNotEqual(seq1, seq4)
-
-    def test_eq_not_seq(self):
-        seq1 = easel.TextSequence(name=b"TEST", sequence="ATGC")
-        self.assertNotEqual(seq1, 1)
-        self.assertNotEqual(seq1, b"hello")
-
     def test_digitize_roundtrip(self):
         seq1 = easel.TextSequence(name=b"TEST", sequence="ATGC")
         dsq1 = seq1.digitize(easel.Alphabet.dna())
@@ -279,10 +242,3 @@ class TestTextSequence(_TestSequenceBase, unittest.TestCase):
             rc = seq.reverse_complement()
             self.assertEqual(rc.sequence, "NNKNK")
 
-    def test_setter_residue_markup(self):
-        seq = easel.TextSequence(sequence="MEMLP")
-        self.assertEqual(seq.residue_markups, {})
-        seq.residue_markups = {b"kind": b"DADDC"}
-        self.assertEqual(seq.residue_markups[b"kind"], b"DADDC")
-        with self.assertRaises(ValueError):
-            seq.residue_markups = {b"kind": b"D"}
