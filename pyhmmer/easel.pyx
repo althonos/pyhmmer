@@ -4642,9 +4642,10 @@ cdef class Sequence:
 
         cdef const unsigned char[::1] tag
         cdef const unsigned char[::1] val
-        cdef       int                i
-        cdef       ssize_t            xrlen = len(xr)
-        cdef      size_t  off   = 0 if libeasel.sq.esl_sq_IsText(self._sq) else 1
+
+        cdef int     i
+        cdef ssize_t xrlen = len(xr)
+        cdef size_t  off   = 0 if libeasel.sq.esl_sq_IsText(self._sq) else 1
         cdef size_t  xrdim = self._sq.n + 2 * libeasel.sq.esl_sq_IsDigital(self._sq)
 
         # check the values have the right length before doing anything
@@ -4746,10 +4747,14 @@ cdef class TextSequence(Sequence):
         bytes accession=None,
         str   sequence=None,
         bytes source=None,
+        dict  residue_markups=None,
     ):
-        """__init__(self, name=None, description=None, accession=None, sequence=None, source=None)\n--
+        """__init__(self, name=None, description=None, accession=None, sequence=None, source=None, residue_markups=None)\n--
 
         Create a new text-mode sequence with the given attributes.
+
+        .. versionadded:: 0.10.4
+            The ``residue_markups`` argument.
 
         """
         cdef bytes sq
@@ -4771,6 +4776,8 @@ cdef class TextSequence(Sequence):
             self.description = description
         if source is not None:
             self.source = source
+        if residue_markups is not None:
+            self.residue_markups = residue_markups
 
         assert libeasel.sq.esl_sq_IsText(self._sq)
         assert self._sq.name != NULL
@@ -4914,14 +4921,15 @@ cdef class DigitalSequence(Sequence):
         self.alphabet = alphabet
 
     def __init__(self,
-              Alphabet              alphabet           not None,
-              bytes                 name        = None,
-              bytes                 description = None,
-              bytes                 accession   = None,
-        const libeasel.ESL_DSQ[::1] sequence    = None,
-              bytes                 source      = None,
+              Alphabet              alphabet      not None,
+              bytes                 name            = None,
+              bytes                 description     = None,
+              bytes                 accession       = None,
+        const libeasel.ESL_DSQ[::1] sequence        = None,
+              bytes                 source          = None,
+              dict                  residue_markups = None,
     ):
-        """__init__(self, alphabet, name=None, description=None, accession=None, sequence=None, source=None)\n--
+        """__init__(self, alphabet, name=None, description=None, accession=None, sequence=None, source=None, residue_markups=None)\n--
 
         Create a new digital-mode sequence with the given attributes.
 
@@ -4930,6 +4938,9 @@ cdef class DigitalSequence(Sequence):
                 alphabet symbol range.
 
         .. versionadded:: 0.1.4
+
+        .. versionadded:: 0.10.4
+            The ``residue_markups`` argument.
 
         """
         cdef int     status
@@ -4974,6 +4985,8 @@ cdef class DigitalSequence(Sequence):
             self.description = description
         if source is not None:
             self.source = source
+        if residue_markups is not None:
+            self.residue_markups = residue_markups
 
         assert libeasel.sq.esl_sq_IsDigital(self._sq)
         assert self._sq.name != NULL
