@@ -5511,6 +5511,9 @@ cdef class TextSequenceBlock(SequenceBlock):
                 return False
         return False
 
+    def __reduce__(self):
+        return (type(self), (), None, iter(self))
+
     # --- Python methods -----------------------------------------------------
 
     cpdef void append(self, TextSequence sequence) except *:
@@ -5656,6 +5659,9 @@ cdef class DigitalSequenceBlock(SequenceBlock):
             except ValueError:
                 return False
         return False
+
+    def __reduce__(self):
+        return (type(self), (self.alphabet,), None, iter(self))
 
     # --- Python methods -----------------------------------------------------
 

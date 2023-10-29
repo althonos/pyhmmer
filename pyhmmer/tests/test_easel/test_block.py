@@ -1,4 +1,5 @@
 import abc
+import pickle
 import unittest
 
 from pyhmmer.errors import AlphabetMismatch
@@ -241,6 +242,19 @@ class _TestSequenceBlock(abc.ABC):
         block.remove(seq3)
         self.assertEqual(len(block), 2)
         self.assertEqual(len(block_copy), 3)
+
+    def test_pickle(self):
+        seq1 = self._new_sequence(b"seq1", "ATGC")
+        seq2 = self._new_sequence(b"seq2", "ATGCA")
+        seq3 = self._new_sequence(b"seq3", "TTGA")
+
+        block = self._new_block([seq1, seq2, seq3])
+        block_pickled = pickle.loads(pickle.dumps(block))
+        
+        self.assertEqual(len(block), len(block_pickled))
+        self.assertEqual(block[0], block_pickled[0])
+        self.assertEqual(block[1], block_pickled[1])
+        self.assertEqual(block[2], block_pickled[2])
 
 
 class TestTextSequenceBlock(_TestSequenceBlock, unittest.TestCase):
