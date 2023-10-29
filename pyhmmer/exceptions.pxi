@@ -22,25 +22,33 @@ from .errors import EaselError
 
 # --- Error handler ----------------------------------------------------------
 
-# We register a custom exception handler so that the program should not crash,
-# but simply raise an exception, while chaining
-cdef void py_handler(int errcode, int use_errno, char* sourcefile, int sourceline, char* format, va_list argp) except * nogil:
+cdef object _recover_error():
     cdef PyObject*  type
     cdef PyObject*  value
     cdef PyObject*  traceback
+    if PyErr_Occurred():
+        PyErr_Fetch(&type, &value, &traceback)
+        if isinstance(<object> value, Exception):
+            return <object> value
+        else:
+            return (<object> type)(<object> value)
+    else:
+        return None
+
+cdef void _reraise_error() except *:
+    cdef object error = _recover_error()
+    if error is not None:
+        raise error
+
+# We register a custom exception handler so that the program should not crash,
+# but simply raise an exception, while chaining
+cdef void _py_handler(int errcode, int use_errno, char* sourcefile, int sourceline, char* format, va_list argp) except * nogil:
     cdef char[2048] errbuf
     cdef int        errlength
 
     with gil:
         # recover the internal error, if any
-        if PyErr_Occurred():
-            PyErr_Fetch(&type, &value, &traceback)
-            if isinstance(<object> value, Exception):
-                error = <object> value
-            else:
-                error = (<object> type)(<object> value)
-        else:
-            error = None
+        error = _recover_error()
 
         # get the error message if possible
         errlength = vsprintf(<char*> &errbuf, format, argp)
@@ -52,4 +60,4 @@ cdef void py_handler(int errcode, int use_errno, char* sourcefile, int sourcelin
         # raise the exception and hope it's collected
         raise EaselError(errcode, message) from error
 
-libeasel.esl_exception_SetHandler(<libeasel.esl_exception_handler_f> py_handler)
+libeasel.esl_exception_SetHandler(<libeasel.esl_exception_handler_f> _py_handler)

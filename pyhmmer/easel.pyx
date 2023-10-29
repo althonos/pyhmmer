@@ -3418,6 +3418,7 @@ cdef class MSA:
         fclose(file)
 
         if status != libeasel.eslOK:
+            _reraise_error()
             raise UnexpectedError(status, "esl_sqascii_WriteFasta")
 
 
@@ -4273,6 +4274,7 @@ cdef class MSAFile:
             msg = self._msaf.errmsg.decode("utf-8", "replace")
             raise ValueError("Could not parse file: {}".format(msg))
         else:
+            _reraise_error()
             raise UnexpectedError(status, "esl_msafile_Read")
 
 
@@ -4736,6 +4738,9 @@ cdef class TextSequence(Sequence):
         Use the ``sequence`` property to access the sequence letters as a
         Python string.
 
+    .. versionadded:: 0.10.4
+        `pickle` protocol support.
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -4925,6 +4930,9 @@ cdef class DigitalSequence(Sequence):
         memory view, allowing to access the individual bytes. This can be
         combined with `numpy.asarray` to get the sequence as an array with
         zero-copy.
+
+    .. versionadded:: 0.10.4
+        `pickle` protocol support.
 
     """
 
@@ -5467,6 +5475,9 @@ cdef class TextSequenceBlock(SequenceBlock):
 
     .. versionadded:: 0.7.0
 
+    .. versionadded:: 0.10.4
+        `pickle` protocol support.
+
     """
 
     # --- Magic methods ------------------------------------------------------
@@ -5590,6 +5601,9 @@ cdef class DigitalSequenceBlock(SequenceBlock):
             all sequences in the collection.
 
     .. versionadded:: 0.7.0
+
+    .. versionadded:: 0.10.4
+        `pickle` protocol support.
 
     """
 
@@ -6744,6 +6758,7 @@ cdef class SSIWriter:
         elif status == libeasel.eslERANGE:
             raise ValueError("Too many files registered in index.")
         else:
+            _reraise_error()
             raise UnexpectedError(status, "esl_newssi_AddFile")
 
     cpdef void add_key(
@@ -6768,6 +6783,7 @@ cdef class SSIWriter:
         elif status == libeasel.eslENOTFOUND:
             raise OSError("Could not open external temporary files.")
         elif status != libeasel.eslOK:
+            _reraise_error()
             raise UnexpectedError(status, "esl_newssi_AddKey")
 
     cpdef void add_alias(self, bytes alias, bytes key) except *:
@@ -6784,6 +6800,7 @@ cdef class SSIWriter:
         elif status == libeasel.eslENOTFOUND:
             raise OSError("Could not open external temporary files.")
         else:
+            _reraise_error()
             raise UnexpectedError(status, "esl_newssi_AddAlias")
 
     cpdef void close(self) except *:

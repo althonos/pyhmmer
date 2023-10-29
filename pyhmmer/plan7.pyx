@@ -3318,9 +3318,12 @@ cdef class HMM:
                 the binary HMMER3 format.
 
         """
-        cdef int     status
-        cdef FILE*   file
-        cdef P7_HMM* hm     = self._hmm
+        cdef PyObject*  type
+        cdef PyObject*  value
+        cdef PyObject*  traceback
+        cdef int        status
+        cdef FILE*      file
+        cdef P7_HMM*    hm     = self._hmm
 
         file = fopen_obj(fh, "w")
 
@@ -3332,6 +3335,7 @@ cdef class HMM:
         if status == libeasel.eslOK:
             fclose(file)
         else:
+            _reraise_error()
             raise UnexpectedError(status, "p7_hmmfile_WriteASCII")
 
     cpdef void zero(self) noexcept:
@@ -3632,6 +3636,7 @@ cdef class HMMFile:
             alphabet = libeasel.alphabet.esl_abc_DecodeType(self._alphabet.type)
             raise ValueError("HMM is not in the expected {} alphabet".format(alphabet))
         else:
+            _reraise_error()
             raise UnexpectedError(status, "p7_hmmfile_Read")
 
     cpdef void close(self) except *:
@@ -3852,6 +3857,7 @@ cdef class HMMPressedFile:
             alphabet = libeasel.alphabet.esl_abc_DecodeType(self._alphabet.type)
             raise ValueError("HMM is not in the expected {} alphabet".format(alphabet))
         else:
+            _reraise_error()
             raise UnexpectedError(status, "p7_oprofile_ReadMSV")
 
     cpdef void close(self) except *:
@@ -8421,6 +8427,7 @@ cdef class TopHits:
             else:
                 raise InvalidParameter("format", format, choices=["targets", "domains", "pfam"])
             if status != libeasel.eslOK:
+                _reraise_error()
                 raise UnexpectedError(status, fname)
         finally:
             fclose(file)
