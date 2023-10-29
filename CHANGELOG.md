@@ -6,7 +6,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.3...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.4...HEAD
+
+
+## [v0.10.4] - 2023-10-29
+[v0.10.4]: https://github.com/althonos/pyhmmer/compare/v0.10.3...v0.10.4
+
+### Added
+- `residue_markups` argument to `TextSequence` and `DigitalSequence` constructors.
+- `__reduce__` implementation to `TextSequence`, `DigitalSequence`, `TextSequenceBlock` and `DigitalSequenceBlock`.
+
+### Changed
+- Handling of `easel` I/O methods to avoid implicit GIL acquisition for error checking.
+
+### Fixed
+- Syntax errors in type annotation files.
 
 
 ## [v0.10.3] - 2023-10-22
