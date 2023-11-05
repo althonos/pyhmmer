@@ -310,3 +310,12 @@ class TestHMM(unittest.TestCase):
         self.assertIs(hmm.cutoffs.trusted1, None)
         self.assertIs(hmm.cutoffs.trusted2, None)
 
+    def test_cutoffs_pickle(self):
+        hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "PF02826.hmm")
+        with HMMFile(hmm_path) as hmm_file:
+            hmm = next(hmm_file)
+        hmm_pickled = pickle.loads(pickle.dumps(hmm))
+        self.assertTrue(hmm_pickled.cutoffs.gathering_available())
+        self.assertTrue(hmm_pickled.cutoffs.noise_available())
+        self.assertTrue(hmm_pickled.cutoffs.trusted_available())
+        self.assertEqual(hmm_pickled.cutoffs, hmm.cutoffs)

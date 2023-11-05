@@ -2972,10 +2972,11 @@ cdef class HMM:
 
     @property
     def cutoffs(self):
-        """`Cutoffs`: The bitscore cutoffs for this HMM.
+        """`~plan7.Cutoffs`: The bitscore cutoffs for this HMM.
         """
         assert self._hmm != NULL
         cdef Cutoffs cutoffs = Cutoffs.__new__(Cutoffs)
+        cutoffs._owner = self
         cutoffs._cutoffs = &self._hmm.cutoff
         cutoffs._flags = &self._hmm.flags
         cutoffs._is_profile = False
@@ -4455,6 +4456,7 @@ cdef class OptimizedProfile:
         """
         assert self._om != NULL
         cdef Cutoffs cutoffs = Cutoffs.__new__(Cutoffs)
+        cutoffs._owner = self
         cutoffs._cutoffs = &self._om.cutoff
         cutoffs._flags = NULL
         cutoffs._is_profile = True
@@ -7411,6 +7413,7 @@ cdef class Profile:
         """
         assert self._gm != NULL
         cdef Cutoffs cutoffs = Cutoffs.__new__(Cutoffs)
+        cutoffs._owner = self
         cutoffs._cutoffs = &self._gm.cutoff
         cutoffs._flags = NULL
         cutoffs._is_profile = True
