@@ -545,13 +545,13 @@ cdef class GeneticCode:
 
     # --- Utils --------------------------------------------------------------
 
-    cdef void _translate(
+    cdef int _translate(
         self,
         const ESL_DSQ* seq,
         int64_t seqlen,
         ESL_DSQ* out,
         int64_t outlen
-    ) except * nogil:
+    ) except -1 nogil:
         cdef int     aa
         cdef int64_t i
         cdef int64_t j
@@ -566,6 +566,8 @@ cdef class GeneticCode:
             if aa == -1:
                 raise ValueError(f"Failed to translate codon at index {j!r}")
             out[i] = aa
+
+        return 0
 
     # --- Methods ------------------------------------------------------------
 

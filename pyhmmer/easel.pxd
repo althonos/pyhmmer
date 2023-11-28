@@ -43,13 +43,13 @@ cdef class GeneticCode:
     cdef readonly Alphabet     nucleotide_alphabet
     cdef          ESL_GENCODE* _gcode
 
-    cdef void _translate(
+    cdef int _translate(
         self,
         const ESL_DSQ* seq,
         int64_t seqlen,
         ESL_DSQ* out,
         int64_t outlen
-    ) except * nogil
+    ) except -1 nogil
 
     cpdef VectorU8 translate(self, const ESL_DSQ[::1] sequence)
 
