@@ -61,7 +61,14 @@ PyHMMER is being used in several projects, including:
 - `GSub <https://github.com/FlorianCHA/Gsub>`_, a GUI for submitting viral
   sequences to `GenBank <https://www.ncbi.nlm.nih.gov/genbank/>`_, uses
   PyHMMER to detect potential polymerase-encoding ORFs.
--
+- `Bakta <https://github.com/oschwengers/bakta>`_, a standardised annotation
+  tool for bacterial genomes and plasmids, uses PyHMMER to annotate genes
+  with different HMM libraries such as
+  `AntiFam <https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3308159/>`_
+  or `Pfam <https://academic.oup.com/nar/article/49/D1/D412/5943818>`_.
+- `Pharokka <https://github.com/gbouras13/pharokka>`_, a rapid standardised
+  annotation tool for bacteriophage genomes and metagenomes, uses PyHMMER
+  to annotate genes with the `PHROGS <https://phrogs.lmge.uca.fr/>`_ HMMs.
 
 .. hint::
 
