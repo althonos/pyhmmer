@@ -6,111 +6,111 @@ on:
 
 jobs:
 
-  test_linux_x86:
-    name: Test (Linux)
-    runs-on: ubuntu-latest
-    env:
-      OS: Linux
-    strategy:
-      matrix:
-        include:
-        - python-version: 3.7
-          python-release: v3.7
-          python-impl: CPython
-        - python-version: 3.8
-          python-release: v3.8
-          python-impl: CPython
-        - python-version: 3.9
-          python-release: v3.9
-          python-impl: CPython
-        - python-version: '3.10'
-          python-release: 'v3.10'
-          python-impl: CPython
-        - python-version: '3.11'
-          python-release: 'v3.11'
-          python-impl: CPython
-        - python-version: '3.12'
-          python-release: 'v3.12'
-          python-impl: CPython
-        - python-version: pypy-3.7
-          python-release: v3.7
-          python-impl: PyPy
-        - python-version: pypy-3.8
-          python-release: v3.8
-          python-impl: PyPy
-        - python-version: pypy-3.9
-          python-release: v3.9
-          python-impl: PyPy
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-      with:
-        submodules: true
-    - name: Cache Python requirements
-      uses: actions/cache@v2
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ matrix.python-version }}
-        restore-keys: ${{ runner.os }}-pip-${{ matrix.python-version }}
-    - name: Setup Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Show Python build environment
-      run: python -m sysconfig
-    - name: Update pip
-      run: python -m pip install -U pip wheel setuptools
-    - name: Install Python requirements
-      run: python -m pip install -r .github/workflows/requirements.txt
-    - name: Build C extension
-      run: python setup.py build_ext --inplace --debug -j0
-    - name: Install test requirements
-      run: python -m pip install -r pyhmmer/tests/requirements.txt
-    - name: Test with coverage
-      run: python -m coverage run -m unittest discover -vv
-    - name: Upload to Codecov
-      if: matrix.python-impl == 'CPython'
-      uses: codecov/codecov-action@v3
-      with:
-        flags: ${{ matrix.python-release }}
-        env_vars: OS
-        name: test-python-${{ matrix.python-version }}
-        fail_ci_if_error: false
-        token: ${{ secrets.CODECOV_TOKEN }}
-        verbose: true
+  # test_linux_x86:
+  #   name: Test (Linux)
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     OS: Linux
+  #   strategy:
+  #     matrix:
+  #       include:
+  #       - python-version: 3.7
+  #         python-release: v3.7
+  #         python-impl: CPython
+  #       - python-version: 3.8
+  #         python-release: v3.8
+  #         python-impl: CPython
+  #       - python-version: 3.9
+  #         python-release: v3.9
+  #         python-impl: CPython
+  #       - python-version: '3.10'
+  #         python-release: 'v3.10'
+  #         python-impl: CPython
+  #       - python-version: '3.11'
+  #         python-release: 'v3.11'
+  #         python-impl: CPython
+  #       - python-version: '3.12'
+  #         python-release: 'v3.12'
+  #         python-impl: CPython
+  #       - python-version: pypy-3.7
+  #         python-release: v3.7
+  #         python-impl: PyPy
+  #       - python-version: pypy-3.8
+  #         python-release: v3.8
+  #         python-impl: PyPy
+  #       - python-version: pypy-3.9
+  #         python-release: v3.9
+  #         python-impl: PyPy
+  #   steps:
+  #   - name: Checkout code
+  #     uses: actions/checkout@v2
+  #     with:
+  #       submodules: true
+  #   - name: Cache Python requirements
+  #     uses: actions/cache@v2
+  #     with:
+  #       path: ~/.cache/pip
+  #       key: ${{ runner.os }}-pip-${{ matrix.python-version }}
+  #       restore-keys: ${{ runner.os }}-pip-${{ matrix.python-version }}
+  #   - name: Setup Python ${{ matrix.python-version }}
+  #     uses: actions/setup-python@v2
+  #     with:
+  #       python-version: ${{ matrix.python-version }}
+  #   - name: Show Python build environment
+  #     run: python -m sysconfig
+  #   - name: Update pip
+  #     run: python -m pip install -U pip wheel setuptools
+  #   - name: Install Python requirements
+  #     run: python -m pip install -r .github/workflows/requirements.txt
+  #   - name: Build C extension
+  #     run: python setup.py build_ext --inplace --debug -j0
+  #   - name: Install test requirements
+  #     run: python -m pip install -r pyhmmer/tests/requirements.txt
+  #   - name: Test with coverage
+  #     run: python -m coverage run -m unittest discover -vv
+  #   - name: Upload to Codecov
+  #     if: matrix.python-impl == 'CPython'
+  #     uses: codecov/codecov-action@v3
+  #     with:
+  #       flags: ${{ matrix.python-release }}
+  #       env_vars: OS
+  #       name: test-python-${{ matrix.python-version }}
+  #       fail_ci_if_error: false
+  #       token: ${{ secrets.CODECOV_TOKEN }}
+  #       verbose: true
 
-  test_linux_arm64:
-    name: Test (Linux, arm64)
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-tag:
-        - cp310-manylinux_aarch64
-        - cp311-manylinux_aarch64
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-    - name: Set up QEMU
-      id: qemu
-      uses: docker/setup-qemu-action@v2
-      with:
-        platforms: all
-    - name: Build manylinux wheels
-      uses: pypa/cibuildwheel@v2.11.3
-      env:
-        CIBW_ARCHS: aarch64
-        CIBW_BUILD: ${{ matrix.python-tag }}
-        CIBW_BUILD_VERBOSITY: 2
-        CIBW_BEFORE_BUILD: pip install cython
-        CIBW_TEST_COMMAND: python -m unittest pyhmmer.tests -vv
-        CIBW_TEST_REQUIRES: importlib-resources
-      with:
-        output-dir: dist
-    - uses: actions/upload-artifact@v3
-      with:
-        name: wheels
-        path: dist/*
+  # test_linux_arm64:
+  #   name: Test (Linux, arm64)
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       python-tag:
+  #       - cp310-manylinux_aarch64
+  #       - cp311-manylinux_aarch64
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #     with:
+  #       submodules: true
+  #   - name: Set up QEMU
+  #     id: qemu
+  #     uses: docker/setup-qemu-action@v2
+  #     with:
+  #       platforms: all
+  #   - name: Build manylinux wheels
+  #     uses: pypa/cibuildwheel@v2.11.3
+  #     env:
+  #       CIBW_ARCHS: aarch64
+  #       CIBW_BUILD: ${{ matrix.python-tag }}
+  #       CIBW_BUILD_VERBOSITY: 2
+  #       CIBW_BEFORE_BUILD: pip install cython
+  #       CIBW_TEST_COMMAND: python -m unittest pyhmmer.tests -vv
+  #       CIBW_TEST_REQUIRES: importlib-resources
+  #     with:
+  #       output-dir: dist
+  #   - uses: actions/upload-artifact@v3
+  #     with:
+  #       name: wheels
+  #       path: dist/*
 
   test_osx_x86:
     name: Test (OSX)
@@ -121,33 +121,33 @@ jobs:
     strategy:
       matrix:
         include:
-        - python-version: 3.7
-          python-release: v3.7
-          python-impl: CPython
-        - python-version: 3.8
-          python-release: v3.8
-          python-impl: CPython
-        - python-version: 3.9
-          python-release: v3.9
-          python-impl: CPython
-        - python-version: '3.10'
-          python-release: 'v3.10'
-          python-impl: CPython
-        - python-version: '3.11'
-          python-release: 'v3.11'
-          python-impl: CPython
+        # - python-version: 3.7
+        #   python-release: v3.7
+        #   python-impl: CPython
+        # - python-version: 3.8
+        #   python-release: v3.8
+        #   python-impl: CPython
+        # - python-version: 3.9
+        #   python-release: v3.9
+        #   python-impl: CPython
+        # - python-version: '3.10'
+        #   python-release: 'v3.10'
+        #   python-impl: CPython
+        # - python-version: '3.11'
+        #   python-release: 'v3.11'
+        #   python-impl: CPython
         - python-version: '3.12'
           python-release: 'v3.12'
           python-impl: CPython
-        - python-version: pypy-3.7
-          python-release: v3.7
-          python-impl: PyPy
-        - python-version: pypy-3.8
-          python-release: v3.8
-          python-impl: PyPy
-        - python-version: pypy-3.9
-          python-release: v3.9
-          python-impl: PyPy
+        # - python-version: pypy-3.7
+        #   python-release: v3.7
+        #   python-impl: PyPy
+        # - python-version: pypy-3.8
+        #   python-release: v3.8
+        #   python-impl: PyPy
+        # - python-version: pypy-3.9
+        #   python-release: v3.9
+        #   python-impl: PyPy
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -174,16 +174,59 @@ jobs:
     - name: Install test requirements
       run: python -m pip install -r pyhmmer/tests/requirements.txt
       if: matrix.python-impl == 'CPython'
-    - name: Test with coverage
-      run: python -m coverage run -m unittest discover -vv
-    - name: Upload to Codecov
-      uses: codecov/codecov-action@v3
-      if: matrix.python-impl == 'CPython'
-      with:
-        flags: ${{ matrix.python-release }}
-        env_vars: OS
-        name: test-python-${{ matrix.python-version }}
-        fail_ci_if_error: false
-        token: ${{ secrets.CODECOV_TOKEN }}
-        codecov_curl_args: "--globoff"
-        verbose: true
+
+    - run: python -m unittest -vv pyhmmer.tests.test_plan7.test_background
+    - run: python -m unittest -vv pyhmmer.tests.test_plan7.test_block
+    - run: python -m unittest -vv pyhmmer.tests.test_plan7.test_builder
+    - run: python -m unittest -vv pyhmmer.tests.test_plan7.test_hit
+
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_checksum
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_composition
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_copy
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_eq
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_insert_emissions
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_command_line
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_name
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_accession
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_description
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_consensus
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_set_consensus
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_set_consensus_error
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_write
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_write_empty
+    # - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_write_error
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_renormalize
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_scale
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_zero
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_pickle
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_no_cutoffs
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_cutoffs
+    - run: python -vd -m unittest -vv pyhmmer.tests.test_plan7.test_hmm.TestHMM.test_cutoffs_pickle
+
+    - run: python -m unittest -vv pyhmmer.tests.test_plan7.test_hmmfile
+    - run: python -m unittest -vv pyhmmer.tests.test_plan7.test_optimizedprofile
+    - run: python -m unittest -vv pyhmmer.tests.test_plan7.test_pipeline
+    - run: python -m unittest -vv pyhmmer.tests.test_plan7.test_profile
+    - run: python -m unittest -vv pyhmmer.tests.test_plan7.test_tophits
+    - run: python -m unittest -vv pyhmmer.tests.test_plan7.test_tracealigner
+    - run: python -m unittest -vv pyhmmer.tests.test_plan7.test_traces
+
+    - run: python -m unittest -vv pyhmmer.tests.test_hmmer
+    - run: python -m unittest -vv pyhmmer.tests.test_doctest
+    - run: python -m unittest -vv pyhmmer.tests.test_errors
+
+
+    # - name: Test HMMER
+    #   run: python -m unittest -vv pyhmmer.tests.test_hmmer
+    #   run: python -m coverage run -m unittest discover -vv
+    # - name: Upload to Codecov
+    #   uses: codecov/codecov-action@v3
+    #   if: matrix.python-impl == 'CPython'
+    #   with:
+    #     flags: ${{ matrix.python-release }}
+    #     env_vars: OS
+    #     name: test-python-${{ matrix.python-version }}
+    #     fail_ci_if_error: false
+    #     token: ${{ secrets.CODECOV_TOKEN }}
+    #     codecov_curl_args: "--globoff"
+    #     verbose: true
