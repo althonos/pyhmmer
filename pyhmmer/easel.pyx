@@ -1200,21 +1200,7 @@ cdef class Vector:
         """Create a vector of size ``n`` filled with zeros.
         """
         cdef Vector       vec      = cls([])
-        cdef size_t       itemsize = vec.itemsize
-        cdef size_t       n_alloc  = 1 if n == 0 else n
-
-        if n < 0:
-            raise ValueError("Cannot create a vector with negative size")
-
-        # NB(@althonos): malloc and calloc are not guaranteed to return a
-        #                pointer when called with a null allocation size,
-        #                so we allocate a single item instead
-        vec._n = vec._shape[0] = n
-        with nogil:
-            vec._data = <float*> calloc(n_alloc, sizeof(float))
-        if vec._data == NULL:
-            raise AllocationError("void*", sizeof(float), n_alloc)
-
+        vec._allocate(n)
         return vec
 
     @classmethod
@@ -1375,6 +1361,25 @@ cdef class Vector:
 
         """
 
+    # --- Utility ------------------------------------------------------------
+
+    cdef int _allocate(self, size_t n) except -1:
+        assert self._data == NULL
+        
+        # NB(@althonos): malloc and calloc are not guaranteed to return a
+        #                pointer when called with a null allocation size,
+        #                so we allocate a single item instead
+        cdef int n_alloc  = 1 if n == 0 else n
+        cdef int itemsize = self.itemsize
+        
+        self._n = self._shape[0] = n
+        with nogil:
+            self._data = calloc(n_alloc, itemsize)
+        if self._data == NULL:
+            raise AllocationError("uint8_t", 1, self.itemsize * n_alloc)
+        
+        return 0
+
     # --- Methods ------------------------------------------------------------
 
     def argmax(self):
@@ -1510,18 +1515,10 @@ cdef class VectorF(Vector):
         # make sure the vector has a positive size
         if n < 0:
             raise ValueError("Cannot create a vector with negative size")
-        # record the vector dimensions and strides
-        self._n = self._shape[0] = n
-        n_alloc = 1 if n == 0 else n
 
-        # NB(@althonos): malloc and calloc are not guaranteed to return a
-        #                pointer when called with a null allocation size,
-        #                so we allocate a single item instead
+        # allocate vector storage
+        self._allocate(n)
 
-        # use malloc to allocate a buffer for the vector
-        self._data = calloc(1 if n == 0 else n, sizeof(float))
-        if self._data == NULL:
-            raise AllocationError("float", sizeof(float), n_alloc)
         # try to copy the memory quickly if *iterable* implements the buffer
         # protocol, otherwise fall back to cop
         data = <float*> self._data
@@ -1940,18 +1937,10 @@ cdef class VectorU8(Vector):
         # make sure the vector has a positive size
         if n < 0:
             raise ValueError("Cannot create a vector with negative size")
-        # record the vector dimensions
-        self._n = self._shape[0] = n
-        n_alloc = 1 if n == 0 else n
+        
+        # allocate vector storage
+        self._allocate(n)
 
-        # NB(@althonos): malloc and calloc are not guaranteed to return a
-        #                pointer when called with a null allocation size,
-        #                so we allocate a single item instead
-
-        # use malloc to allocate a buffer for the vector if needed
-        self._data = calloc(n_alloc, sizeof(uint8_t))
-        if self._data == NULL:
-            raise AllocationError("uint8_t", sizeof(uint8_t), n_alloc)
         # try to copy the memory quickly if *iterable* implements the buffer
         # protocol, or fall back to copying each element with a for loop
         data = <uint8_t*> self._data

@@ -84,6 +84,8 @@ cdef class Vector:
     cdef readonly Py_ssize_t _shape[1]
     cdef void*               _data
 
+    cdef int _allocate(self, size_t n) except -1
+
 cdef class VectorF(Vector):
     cpdef int argmax(self) except -1
     cpdef int argmin(self) except -1
