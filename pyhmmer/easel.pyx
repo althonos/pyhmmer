@@ -1199,7 +1199,7 @@ cdef class Vector:
     def zeros(cls, int n):
         """Create a vector of size ``n`` filled with zeros.
         """
-        cdef Vector       vec      = cls([])
+        cdef Vector vec = cls()
         vec._allocate(n)
         return vec
 
@@ -1364,20 +1364,22 @@ cdef class Vector:
     # --- Utility ------------------------------------------------------------
 
     cdef int _allocate(self, size_t n) except -1:
-        assert self._data == NULL
-        
         # NB(@althonos): malloc and calloc are not guaranteed to return a
         #                pointer when called with a null allocation size,
         #                so we allocate a single item instead
         cdef int n_alloc  = 1 if n == 0 else n
         cdef int itemsize = self.itemsize
-        
+
+        if self._data != NULL:
+            free(self._data)
+
         self._n = self._shape[0] = n
+
         with nogil:
             self._data = calloc(n_alloc, itemsize)
         if self._data == NULL:
             raise AllocationError("uint8_t", 1, self.itemsize * n_alloc)
-        
+
         return 0
 
     # --- Methods ------------------------------------------------------------
@@ -1937,7 +1939,7 @@ cdef class VectorU8(Vector):
         # make sure the vector has a positive size
         if n < 0:
             raise ValueError("Cannot create a vector with negative size")
-        
+
         # allocate vector storage
         self._allocate(n)
 
@@ -2288,40 +2290,10 @@ cdef class Matrix:
     def zeros(cls, int m, int n):
         """Create a new :math:`m \\times n` matrix filled with zeros.
         """
-        cdef int    i
-        cdef Matrix mat      = cls([])
-        cdef size_t itemsize = mat.itemsize
-        cdef int    m_alloc
-
+        cdef Matrix mat = cls()
         if m < 0 or n < 0:
             raise ValueError("Cannot create a matrix with negative dimension")
-
-        mat
-        mat._m = mat._shape[0] = m
-        mat._n = mat._shape[1] = n
-        m_alloc = 1 if m == 0 else m
-
-        # NB(@althonos): malloc and calloc are not guaranteed to return a
-        #                pointer when called with a null allocation size, but
-        #                for consistency we'd like `self._data` not to be NULL
-        #                in any case, so we allocate an array of size 1 instead
-        #                without allocating the internal data
-
-        # allocate the array of pointers
-        mat._data    = <void**> calloc(m_alloc, sizeof(void*))
-        if mat._data == NULL:
-            raise AllocationError("void*", sizeof(void*), m_alloc)
-
-        # allocate the data array
-        if mat._m > 0:
-            mat._data[0] = calloc(m*n, itemsize)
-            if mat._data[0] == NULL:
-                raise AllocationError("void*", itemsize, m*n)
-
-        # update the pointer offsets in the array of pointers
-        for i in range(1, m):
-            mat._data[i] = mat._data[0] + i*n*itemsize
-
+        mat._allocate(m, n)
         return mat
 
     @classmethod
@@ -2486,6 +2458,45 @@ cdef class Matrix:
 
         """
 
+    # --- Utility ------------------------------------------------------------
+
+    cdef int _allocate(self, size_t m, size_t n) except -1:
+        assert self._data == NULL
+
+        # NB(@althonos): malloc and calloc are not guaranteed to return a
+        #                pointer when called with a null allocation size,
+        #                so we allocate a single item instead
+
+        cdef int i
+        cdef int m_alloc  = 1 if m == 0 else m
+        cdef int mn_alloc = 1 if m == 0 or n == 0 else m * n
+        cdef int itemsize = self.itemsize
+
+        if self._data != NULL:
+            free(self._data)
+
+        self._m = self._shape[0] = m
+        self._n = self._shape[1] = n
+
+        # allocate the pointer array
+        with nogil:
+            self._data = <void**> calloc(m_alloc, sizeof(void*))
+        if self._data == NULL:
+            raise AllocationError("void*", sizeof(void*), m_alloc)
+
+        # allocate the data array
+        with nogil:
+            self._data[0] = <void*> calloc(mn_alloc, itemsize)
+        if self._data[0] == NULL:
+            raise AllocationError("uint8_t", 1, itemsize * mn_alloc)
+
+        # update the pointer offsets in the array of pointers
+        for i in range(1, self._m):
+            self._data[i] = self._data[0] + i * self._n * itemsize
+
+        return 0
+
+
     # --- Methods ------------------------------------------------------------
 
     def argmax(self):
@@ -2566,42 +2577,32 @@ cdef class MatrixF(Matrix):
     # --- Magic methods ------------------------------------------------------
 
     def __init__(self, object iterable = ()):
-        cdef size_t  i
-        cdef size_t  j
+        cdef int     i
+        cdef int     j
+        cdef size_t  m
+        cdef size_t  n
         cdef object  row
         cdef float   val
-        cdef object  peeking = peekable(iterable)
+        cdef object  peeking
         cdef float** data    = NULL
 
         # collect iterable if it's not a `Sized` object
         if not isinstance(iterable, collections.abc.Sized):
-            iterable = [list(row) for row in iterable]
+            iterable = [array.array("f", row) for row in iterable]
 
         # make sure __init__ is only called once
         if self._data != NULL:
             raise RuntimeError("Matrix.__init__ must not be called more than once")
 
+        # allow peeking the data
+        peeking = peekable(iterable)
         # get the number of columns from the iterable
-        self._m = self._shape[0] = len(iterable)
-        if self._m < 0:
-            raise ValueError("Cannot create a matrix with a negative number of columns")
+        m = len(iterable)
         # get the number of rows from the first element of the iterable
-        self._n = self._shape[1] = 0 if self._m == 0 else len(peeking.peek())
-        if self._n < 0:
-            raise ValueError("Cannot create a matrix with a negative number of rows")
+        n = 0 if m == 0 else len(peeking.peek())
 
         # allocate the buffer
-        if self._m > 0 and self._n > 0:
-            self._data = <void**> libeasel.matrixops.esl_mat_FCreate(self._m, self._n)
-            if self._data == NULL:
-                raise AllocationError("float", sizeof(float), self._m * self._n)
-        else:
-            # NB(@althonos): malloc and calloc are not guaranteed to return a
-            #                pointer when called with a null allocation size,
-            #                so we allocate an array of one item instead
-            self._data = <void**> malloc(sizeof(float*))
-            if self._data == NULL:
-                raise AllocationError("float*", sizeof(float*), 1)
+        self._allocate(m, n)
 
         # assign the items
         data = <float**> self._data
@@ -2823,42 +2824,30 @@ cdef class MatrixU8(Matrix):
     def __init__(self, object iterable = ()):
         cdef int       i
         cdef int       j
+        cdef size_t    m
+        cdef size_t    n
         cdef object    row
         cdef uint8_t   val
+        cdef object    peeking
         cdef uint8_t** data    = NULL
-        cdef object    peeking = peekable(iterable)
-        cdef int       m_alloc
 
         # collect iterable if it's not a `Sized` object
         if not isinstance(iterable, collections.abc.Sized):
-            iterable = [list(row) for row in iterable]
+            iterable = [array.array("B", row) for row in iterable]
 
         # make sure __init__ is only called once
         if self._data != NULL:
             raise RuntimeError("Matrix.__init__ must not be called more than once")
 
+        # allow peeking the data
+        peeking = peekable(iterable)
         # get the number of columns from the iterable
-        self._m = self._shape[0] = len(iterable)
-        if self._m < 0:
-            raise ValueError("Cannot create a matrix with a negative number of columns")
+        m = len(iterable)
         # get the number of rows from the first element of the iterable
-        self._n = self._shape[1] = 0 if self._m == 0 else len(peeking.peek())
-        if self._n < 0:
-            raise ValueError("Cannot create a matrix with a negative number of rows")
+        n = 0 if m == 0 else len(peeking.peek())
 
         # allocate the buffer
-        m_alloc = 1 if self._m == 0 else self._m
-        self._data = <void**> calloc(m_alloc, sizeof(uint8_t*))
-        if self._data == NULL:
-            raise AllocationError("uint8_t*", sizeof(uint8_t*), m_alloc)
-        # allocate the data array
-        if self._m > 0 and self._n > 0:
-            self._data[0] = <void*> calloc(self._m*self._n, sizeof(uint8_t))
-            if self._data[0] == NULL:
-                raise AllocationError("uint8_t", sizeof(uint8_t), self._m * self._n)
-        # update the pointer offsets in the array of pointers
-        for i in range(1, self._m):
-            self._data[i] = self._data[0] + i * self._n
+        self._allocate(m, n)
 
         # assign the items
         data = <uint8_t**> self._data

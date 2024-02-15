@@ -114,6 +114,8 @@ cdef class Matrix:
     cdef readonly Py_ssize_t _shape[2]
     cdef void**              _data
 
+    cdef int _allocate(self, size_t m, size_t n) except -1
+
 cdef class MatrixF(Matrix):
     cpdef tuple argmax(self)
     cpdef tuple argmin(self)
