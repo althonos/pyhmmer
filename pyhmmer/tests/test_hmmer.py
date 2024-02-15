@@ -81,8 +81,10 @@ class _TestSearch(metaclass=abc.ABCMeta):
         self.assertAlmostEqual(domain.c_evalue, 6.5e-05, places=2)  # printed with %9.2g
         self.assertEqual(domain.alignment.target_from, 115)
         self.assertEqual(domain.alignment.target_to, 129)
+        self.assertEqual(domain.alignment.target_length, 261)
         self.assertEqual(domain.alignment.hmm_from, 79)
         self.assertEqual(domain.alignment.hmm_to, 93)
+        self.assertEqual(domain.alignment.hmm_length, 243)
         self.assertEqual(domain.env_from, 115)
         self.assertEqual(domain.env_to, 129)
 

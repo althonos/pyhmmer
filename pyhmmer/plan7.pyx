@@ -391,6 +391,15 @@ cdef class Alignment:
         return self._ad.model.decode('ascii')
 
     @property
+    def hmm_length(self):
+        """`int`: The length of the query HMM in the alignment.
+
+        .. versionadded:: 0.10.5
+
+        """
+        return self._ad.M
+
+    @property
     def target_from(self):
         """`int`: The start coordinate of the alignment in the target sequence.
         """
@@ -418,6 +427,15 @@ cdef class Alignment:
         """
         assert self._ad != NULL
         return self._ad.sqto
+
+    @property
+    def target_length(self):
+        """`int`: The length of the target sequence in the alignment.
+
+        .. versionadded:: 0.10.5
+
+        """
+        return self._ad.L
 
     @property
     def identity_sequence(self):
