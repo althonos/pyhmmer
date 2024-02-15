@@ -2859,7 +2859,7 @@ cdef class MatrixU8(Matrix):
 
         # allocate the buffer
         m_alloc = 1 if self._m == 0 else self._m
-        self._data = <void**> calloc(self._m, sizeof(uint8_t*))
+        self._data = <void**> calloc(m_alloc, sizeof(uint8_t*))
         if self._data == NULL:
             raise AllocationError("uint8_t*", sizeof(uint8_t*), m_alloc)
         # allocate the data array
