@@ -16,7 +16,7 @@ First launch the master process, and then the worker processes:
     $ hmmpgmd --master --seqdb db.fasta --cport 51371 --wport 51372
     $ hmmpgmd --worker 127.0.0.1 --wport 51372
 
-You can communicate to the master process after instantiating the
+You can communicate with the master process after instantiating the
 `pyhmmer.daemon.Client` class with the address of the master process and
 the port on which it listens for client/server communication::
 
@@ -358,15 +358,21 @@ cdef class Client:
 
         """
         cdef bytes    txt
-        cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
-        cdef Pipeline pli = Pipeline(abc, **options)
+        cdef TopHits  hits
+        cdef Alphabet abc  = getattr(query, "alphabet", Alphabet.amino())
+        cdef Pipeline pli  = Pipeline(abc, **options)
 
         with io.BytesIO() as buffer:
             query.write(buffer)
             buffer.write(b"\n//")
             txt = buffer.getvalue()
 
-        return self._client(txt, db, ranges, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
+        hits = self._client(txt, db, ranges, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
+        hits._qname = query.name
+        hits._qacc = query.accession
+        hits._qlen = len(query)
+
+        return hits
 
     def search_hmm(
         self,
@@ -396,14 +402,20 @@ cdef class Client:
 
         """
         cdef bytes    txt
-        cdef Pipeline pli = Pipeline(query.alphabet, **options)
+        cdef TopHits  hits
+        cdef Pipeline pli  = Pipeline(query.alphabet, **options)
 
         with io.BytesIO() as buffer:
             query.write(buffer)
             buffer.write(b"\n//")
             txt = buffer.getvalue()
 
-        return self._client(txt, db, ranges, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
+        hits = self._client(txt, db, ranges, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
+        hits._qname = query.name
+        hits._qacc = query.accession
+        hits._qlen = query.M
+
+        return hits
 
     def scan_seq(self, Sequence query, uint64_t db = 1, **options):
         """scan_seq(self, query, db=1, **options)\n--
@@ -425,15 +437,21 @@ cdef class Client:
 
         """
         cdef bytes    txt
-        cdef Alphabet abc = getattr(query, "alphabet", Alphabet.amino())
-        cdef Pipeline pli = Pipeline(abc, **options)
+        cdef TopHits  hits
+        cdef Alphabet abc  = getattr(query, "alphabet", Alphabet.amino())
+        cdef Pipeline pli  = Pipeline(abc, **options)
 
         with io.BytesIO() as buffer:
             query.write(buffer)
             buffer.write(b"\n//")
             txt = buffer.getvalue()
 
-        return self._client(txt, db, None, pli, p7_pipemodes_e.p7_SCAN_MODELS)
+        hits = self._client(txt, db, None, pli, p7_pipemodes_e.p7_SCAN_MODELS)
+        hits._qname = query.name
+        hits._qacc = query.accession
+        hits._qlen = len(query)
+
+        return hits
 
     def iterate_seq(
         self,
