@@ -1976,6 +1976,19 @@ cdef class Hit:
                 raise AllocationError("char", sizeof(char), strlen(description))
 
     @property
+    def length(self):
+        """`int`: The length of the database hit.
+
+        .. versionadded:: 0.10.5
+
+        """
+        cdef P7_DOMAIN* domain = &self._hit.dcl[self._hit.best_domain]
+        if self.hits._th.mode == p7_pipemodes_e.p7_SEARCH_SEQS:
+            return domain.ad.L
+        else:
+            return domain.ad.M
+
+    @property
     def score(self):
         """`float`: Bit score of the sequence with all domains after correction.
         """
