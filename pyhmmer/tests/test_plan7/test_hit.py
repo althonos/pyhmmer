@@ -67,6 +67,14 @@ class TestHit(unittest.TestCase):
         self.assertIs(hits[-1].accession, None)
         self.assertIs(self.hits[-1].accession, None)
 
+    def test_length_property(self):
+        hits = self.hits.copy()
+        hit = hits[-1]
+
+        self.assertEqual(hit.length, 281)
+        self.assertEqual(hits[-1].length, 281)
+        self.assertEqual(self.hits[-1].length, 281)
+
     def test_description_property(self):
         hits = self.hits.copy()
         hit = hits[-1]

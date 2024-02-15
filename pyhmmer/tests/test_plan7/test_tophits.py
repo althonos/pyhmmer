@@ -82,6 +82,7 @@ class TestTopHits(unittest.TestCase):
     def assertHitsEqual(self, hits1, hits2):
         self.assertEqual(hits1.query_name, hits2.query_name)
         self.assertEqual(hits1.query_accession, hits2.query_accession)
+        self.assertEqual(hits1.query_length, hits2.query_length)
         self.assertEqual(len(hits1), len(hits2))
         self.assertEqual(len(hits1.included), len(hits2.included))
         self.assertEqual(len(hits1.reported), len(hits2.reported))
@@ -177,6 +178,7 @@ class TestTopHits(unittest.TestCase):
 
         merged = empty.merge(self.hits)
         self.assertEqual(merged.query_name, self.hits.query_name)
+        self.assertEqual(merged.query_length, self.hits.query_length)
         self.assertEqual(merged.query_accession, self.hits.query_accession)
         self.assertEqual(merged.E, self.hits.E)
         self.assertHitsEqual(merged, self.hits)
@@ -202,6 +204,7 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(merged.Z, hits.Z)
         self.assertEqual(merged.domZ, hits.domZ)
         self.assertEqual(merged.query_name, hits.query_name)
+        self.assertEqual(merged.query_length, hits.query_length)
         self.assertEqual(merged.query_accession, hits.query_accession)
         self.assertEqual(merged.E, hits.E)
         self.assertEqual(merged.domE, hits.domE)
@@ -239,6 +242,7 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(merged.Z, hits.Z)
         self.assertEqual(merged.domZ, hits.domZ)
         self.assertEqual(merged.query_name, hits.query_name)
+        self.assertEqual(merged.query_length, hits.query_length)
         self.assertEqual(merged.query_accession, hits.query_accession)
         self.assertEqual(merged.E, hits.E)
         self.assertEqual(merged.domE, hits.domE)
@@ -338,6 +342,9 @@ class TestTopHits(unittest.TestCase):
 
     def test_query_accession(self):
         self.assertEqual(self.hits.query_accession, self.hmm.accession)
+
+    def test_query_length(self):
+        self.assertEqual(self.hits.query_length, self.hmm.M)
 
     def test_write_target(self):
         buffer = io.BytesIO()

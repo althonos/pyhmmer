@@ -403,6 +403,7 @@ cdef class TopHits:
     cdef P7_TOPHITS* _th
     cdef bytes       _qname
     cdef bytes       _qacc
+    cdef int         _qlen
 
     cdef int _threshold(self, Pipeline pipeline) except 1 nogil
     cdef int _sort_by_key(self) except 1 nogil

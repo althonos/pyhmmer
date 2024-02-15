@@ -1983,7 +1983,7 @@ cdef class Hit:
 
         """
         cdef P7_DOMAIN* domain = &self._hit.dcl[self._hit.best_domain]
-        if self.hits._th.mode == p7_pipemodes_e.p7_SEARCH_SEQS:
+        if self.hits._pli.mode == p7_pipemodes_e.p7_SEARCH_SEQS:
             return domain.ad.L
         else:
             return domain.ad.M
@@ -5861,7 +5861,8 @@ cdef class Pipeline:
             hits._sort_by_key()
             hits._threshold(self)
 
-        # record the query name and accession
+        # record the query metadata
+        hits._qlen = om.M
         if om.name != NULL:
             hits._qname = PyBytes_FromString(om.name)
         if om.acc != NULL:
@@ -6236,7 +6237,8 @@ cdef class Pipeline:
             hits._sort_by_key()
             hits._threshold(self)
 
-        # record the query name
+        # record the query metadata
+        hits._qlen = query._sq.L
         if query._sq.name != NULL:
             hits._qname = PyBytes_FromString(query._sq.name)
         if query._sq.acc != NULL:
@@ -6939,7 +6941,8 @@ cdef class LongTargetsPipeline(Pipeline):
                     hits._pli.n_output += 1
                     hits._pli.pos_output += 1 + llabs(hits._th.hit[j].dcl[0].jali - hits._th.hit[j].dcl[0].iali)
 
-        # record the query name and accession
+        # record the query metadata
+        hits._qlen = om.M
         if om.name != NULL:
             hits._qname = PyBytes_FromString(om.name)
         if om.acc != NULL:
@@ -7655,6 +7658,7 @@ cdef class TopHits:
         self._th = NULL
         self._qname = None
         self._qacc = None
+        self._qlen = -1
         memset(&self._pli, 0, sizeof(P7_PIPELINE))
 
     def __init__(self):
@@ -7728,6 +7732,7 @@ cdef class TopHits:
         return {
             "qname": self._qname,
             "qacc": self._qacc,
+            "qlen": self._qlen,
             "unsrt": unsrt,
             "hit": hits,
             "Nalloc": self._th.Nalloc,
@@ -7795,6 +7800,7 @@ cdef class TopHits:
         # record query name and accession
         self._qname = state["qname"]
         self._qacc = state["qacc"]
+        self._qlen = state["qlen"]
 
         # deallocate current data if needed
         if self._th != NULL:
@@ -7913,6 +7919,15 @@ cdef class TopHits:
 
         """
         return self._qacc
+
+    @property
+    def query_length(self):
+        """`int`: The length of the query.
+
+        .. versionadded:: 0.10.5
+
+        """
+        return self._qlen
 
     @property
     def Z(self):
@@ -8185,9 +8200,10 @@ cdef class TopHits:
 
         cdef TopHits copy = TopHits.__new__(TopHits)
 
-        # record query name and accession
+        # record query metatada
         copy._qname = self._qname
         copy._qacc = self._qacc
+        copy._qlen = self._qlen
 
         with nogil:
             # copy pipeline configuration
@@ -8522,12 +8538,13 @@ cdef class TopHits:
             if merged._th.N == 0 and merged._qname is None and merged._qacc is None:
                 merged._qname = other._qname
                 merged._qacc = other._qacc
+                merged._qlen = other._qlen
                 memcpy(&merged._pli, &other_copy._pli, sizeof(P7_PIPELINE))
                 merged._th, other_copy._th = other_copy._th, merged._th
                 continue
 
             # check that names/accessions are consistent
-            if merged._qname != other._qname or merged._qacc != other._qacc:
+            if merged._qname != other._qname or merged._qacc != other._qacc or merged._qlen != other._qlen:
                 raise ValueError("Trying to merge `TopHits` obtained from different queries")
 
             # check that the parameters are the same
