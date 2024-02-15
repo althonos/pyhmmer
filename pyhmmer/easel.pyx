@@ -2461,12 +2461,9 @@ cdef class Matrix:
     # --- Utility ------------------------------------------------------------
 
     cdef int _allocate(self, size_t m, size_t n) except -1:
-        assert self._data == NULL
-
         # NB(@althonos): malloc and calloc are not guaranteed to return a
         #                pointer when called with a null allocation size,
         #                so we allocate a single item instead
-
         cdef int i
         cdef int m_alloc  = 1 if m == 0 else m
         cdef int mn_alloc = 1 if m == 0 or n == 0 else m * n
