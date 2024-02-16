@@ -400,7 +400,7 @@ cdef class Alignment:
         return self._ad.M
 
     @property
-    def pp_line(self):
+    def posterior_probabilities(self):
         """`str`: Posterior probability annotation of the alignment.
         """
         assert self._ad != NULL
