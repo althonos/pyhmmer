@@ -316,6 +316,10 @@ cdef class Alignment:
 
         return buffer.getvalue().decode("ascii")
 
+    def __sizeof__(self):
+        assert self._ad != NULL
+        return sizeof(self) + libhmmer.p7_alidisplay.p7_alidisplay_Sizeof(self._ad)
+
     def __getstate__(self):
         cdef int       status
         cdef uint32_t  n      = 0
