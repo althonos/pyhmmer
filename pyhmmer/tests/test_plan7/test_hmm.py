@@ -3,6 +3,7 @@ import io
 import itertools
 import os
 import pickle
+import platform
 import shutil
 import unittest
 import tempfile
@@ -160,6 +161,7 @@ class TestHMM(unittest.TestCase):
         hmm.write(buffer)
         self.assertGreater(len(buffer.getvalue()), 0)
 
+    @unittest.skipIf(platform.system() == "Darwin", "segfault at exit on MacOS")
     def test_write_error(self):
         buffer = io.StringIO()
 
