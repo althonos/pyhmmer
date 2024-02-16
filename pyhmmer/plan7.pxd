@@ -7,6 +7,7 @@ from libc.stdint cimport uint8_t, uint32_t
 from posix.types cimport off_t
 from cpython.pythread cimport PyThread_type_lock
 
+from libeasel import eslINFINITY
 from libeasel.sq cimport ESL_SQ
 from libeasel.sqio cimport ESL_SQFILE
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
@@ -423,6 +424,7 @@ cdef class Trace:
     cdef P7_TRACE* _tr
 
     cpdef float expected_accuracy(self)
+    cpdef float score(self, DigitalSequence sequence, Profile profile) except *
 
 
 cdef class Traces:

@@ -71,7 +71,7 @@ cimport libhmmer.p7_tophits
 cimport libhmmer.p7_trace
 cimport libhmmer.tracealign
 cimport libhmmer.nhmmer
-from libeasel cimport eslERRBUFSIZE, eslCONST_LOG2R
+from libeasel cimport eslERRBUFSIZE, eslCONST_LOG2R, eslINFINITY
 from libeasel.alphabet cimport ESL_ALPHABET, esl_alphabet_Create, esl_abc_ValidateType
 from libeasel.getopts cimport ESL_GETOPTS, ESL_OPTIONS
 from libeasel.sq cimport ESL_SQ
@@ -402,6 +402,9 @@ cdef class Alignment:
     @property
     def posterior_probabilities(self):
         """`str`: Posterior probability annotation of the alignment.
+
+        .. versionadded:: 0.10.5
+
         """
         assert self._ad != NULL
         return self._ad.ppline.decode('ascii')
@@ -8721,6 +8724,31 @@ cdef class Trace:
         assert self._tr != NULL
         with nogil:
             return libhmmer.p7_trace.p7_trace_GetExpectedAccuracy(self._tr)
+
+    cpdef float score(self, DigitalSequence sequence, Profile profile) except *:
+        """score(self, sequence, profile)\n--
+
+        Score traceback for target sequence using given profile.
+
+        .. versionadded:: 0.10.5
+
+        """
+        assert self._tr != NULL
+        assert sequence._sq != NULL
+        assert profile._gm != NULL
+
+        cdef int   status
+        cdef float score
+
+        with nogil:
+            status = libhmmer.p7_trace.p7_trace_Score(self._tr, sequence._sq.dsq, profile._gm, &score)
+        if status == libeasel.eslEINVAL:
+            error = _recover_error()
+            raise ValueError("Invalid trace") from error
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_trace_Score")
+
+        return score
 
 
 cdef class Traces:
