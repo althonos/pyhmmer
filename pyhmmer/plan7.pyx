@@ -400,6 +400,14 @@ cdef class Alignment:
         return self._ad.M
 
     @property
+    def posterior_probabilities(self):
+        """`str`: Posterior probability annotation of the alignment.
+        """
+        assert self._ad != NULL
+        return self._ad.ppline.decode('ascii')
+
+
+    @property
     def target_from(self):
         """`int`: The start coordinate of the alignment in the target sequence.
         """

@@ -23,6 +23,7 @@ class TestTopHits(unittest.TestCase):
             "hmm_name",
             "hmm_accession",
             "hmm_sequence",
+            "posterior_probabilities",
             "target_from",
             "target_to",
             "target_name",
