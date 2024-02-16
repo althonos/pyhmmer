@@ -1261,9 +1261,7 @@ cdef class Vector:
         assert self._data != NULL
 
         if flags & PyBUF_FORMAT:
-            buffer.format = strdup(self.format.encode("utf-8"))
-            if buffer.format == NULL:
-                raise AllocationError("char", sizeof(char), len(self.format))
+            buffer.format = self._format()
         else:
             buffer.format = NULL
         buffer.buf = self._data
@@ -1362,6 +1360,9 @@ cdef class Vector:
         """
 
     # --- Utility ------------------------------------------------------------
+
+    cdef const char* _format(self) noexcept:
+        return NULL
 
     cdef int _allocate(self, size_t n) except -1:
         # NB(@althonos): malloc and calloc are not guaranteed to return a
@@ -1748,6 +1749,11 @@ cdef class VectorF(Vector):
     @property
     def format(self):
         return "f"
+
+    # --- Utility ------------------------------------------------------------
+
+    cdef const char* _format(self) noexcept:
+        return b"f"
 
     # --- Methods ------------------------------------------------------------
 
@@ -2156,6 +2162,11 @@ cdef class VectorU8(Vector):
     def format(self):
         return "B"
 
+    # --- Utility ------------------------------------------------------------
+
+    cdef const char* _format(self) noexcept:
+        return b"B"
+
     # --- Methods ------------------------------------------------------------
 
     cpdef int argmax(self) except -1:
@@ -2351,9 +2362,7 @@ cdef class Matrix:
         assert self._data != NULL
 
         if flags & PyBUF_FORMAT:
-            buffer.format = strdup(self.format.encode("utf-8"))
-            if buffer.format == NULL:
-                raise AllocationError("char", sizeof(char), len(self.format))
+            buffer.format = self._format()
         else:
             buffer.format = NULL
         buffer.buf = self._data[0]
@@ -2459,6 +2468,9 @@ cdef class Matrix:
         """
 
     # --- Utility ------------------------------------------------------------
+
+    cdef const char* _format(self) noexcept:
+        return NULL
 
     cdef int _allocate(self, size_t m, size_t n) except -1:
         # NB(@althonos): malloc and calloc are not guaranteed to return a
@@ -2753,6 +2765,11 @@ cdef class MatrixF(Matrix):
     def format(self):
         return "f"
 
+    # --- Utility ------------------------------------------------------------
+
+    cdef const char* _format(self) noexcept:
+        return b"f"
+
     # --- Methods ------------------------------------------------------------
 
     cpdef tuple argmax(self):
@@ -3010,6 +3027,11 @@ cdef class MatrixU8(Matrix):
     @property
     def format(self):
         return "B"
+
+    # --- Utility ------------------------------------------------------------
+
+    cdef const char* _format(self) noexcept:
+        return b"B"
 
     # --- Methods ------------------------------------------------------------
 

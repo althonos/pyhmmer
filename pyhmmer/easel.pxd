@@ -84,6 +84,7 @@ cdef class Vector:
     cdef readonly Py_ssize_t _shape[1]
     cdef void*               _data
 
+    cdef const char* _format(self) noexcept
     cdef int _allocate(self, size_t n) except -1
 
 cdef class VectorF(Vector):
@@ -114,6 +115,7 @@ cdef class Matrix:
     cdef readonly Py_ssize_t _shape[2]
     cdef void**              _data
 
+    cdef const char* _format(self) noexcept
     cdef int _allocate(self, size_t m, size_t n) except -1
 
 cdef class MatrixF(Matrix):
