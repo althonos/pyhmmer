@@ -6,7 +6,27 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.4...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.5...HEAD
+
+
+## [v0.10.5] - 2024-02-16
+[v0.10.5]: https://github.com/althonos/pyhmmer/compare/v0.10.4...v0.10.5
+
+### Added
+- `Alignment` properties to get the original lengths of the sequence and HMM being stored.
+- `Hit.length` property storing the length of the hit sequence (or HMM).
+- `TopHits.query_length` storing the length of the hit HMM (or query).
+- `Alignment.posterior_probabilities` property showing an encoded representation of posteriors ([#59](https://github.com/althonos/pyhmmer/pull/59), by [@arajkovic](https://github.com/arajkovic)).
+- `Trace.score` method to compute a trace score from a given profile and sequence.
+- `Alignment.__sizeof__` implementation leveraing `p7_alidisplay_SizeOf`. 
+
+### Fixed
+- `Cutoffs` proxy objects not recording their owner to prevent deallocation.
+- Avoid GIL re-acquisition in `GeneticCode.translate`.
+- Query metadata not being recorded in `Hits` obtained from `daemon.Client`.
+- Empty `MatrixU8` creation attempting zero-allocation.
+- `VectorU8.zeros` allocating 4x more memory than required.
+- Memory leak caused by string duplication in `__getbuffer__` methods of `Matrix` and `Vector` types.
 
 
 ## [v0.10.4] - 2023-10-29
