@@ -6589,14 +6589,14 @@ cdef class SSIReader:
     def __cinit__(self):
         self._ssi = NULL
 
-    def __init__(self, str file):
+    def __init__(self, object file):
         """__init__(self, file)\n--
 
         Create a new SSI file reader for the file at the given location.
 
         Arguments:
-            file (`str`): The path to a sequence/subsequence index file to
-                read.
+            file (`str`, `bytes` or `os.PathLike`): The path to a 
+                sequence/subsequence index file to read.
 
         """
         cdef int      status
@@ -6683,14 +6683,14 @@ cdef class SSIWriter:
     def __cinit__(self):
         self._newssi = NULL
 
-    def __init__(self, str file, bint exclusive = False):
+    def __init__(self, object file, bint exclusive = False):
         """__init__(self, file)\n--
 
         Create a new SSI file write for the file at the given location.
 
         Arguments:
-            file (`str`): The path to a sequence/subsequence index file to
-                write.
+            file (`str`, `bytes` or `os.PathLike`): The path to a 
+                sequence/subsequence index file to write.
             exclusive (`bool`): Whether or not to create a file if one does
                 not exist.
 
@@ -6735,12 +6735,14 @@ cdef class SSIWriter:
 
     # --- Methods ------------------------------------------------------------
 
-    cpdef uint16_t add_file(self, str filename, int format = 0) except *:
+    cpdef uint16_t add_file(self, object filename, int format = 0) except *:
         """Add a new file to the index.
 
         Arguments:
-            filename (str): The name of the file to register.
-            format (int): A format code to associate with the file, or *0*.
+            filename (`str`, `bytes` or `os.PathLike`): The name of the 
+                file to register.
+            format (`int`): A format code to associate with the file, 
+                or *0* by default.
 
         Returns:
             `int`: The filehandle associated with the new indexed file.

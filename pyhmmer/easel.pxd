@@ -306,7 +306,7 @@ cdef class SSIWriter:
     cdef void _on_write(self)
 
     cpdef void     add_alias(self, bytes alias, bytes key) except *
-    cpdef uint16_t add_file(self, str filename, int format = *) except *
+    cpdef uint16_t add_file(self, object filename, int format = *) except *
     cpdef void     add_key(
         self,
         bytes key,
