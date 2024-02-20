@@ -17,6 +17,8 @@ from pyhmmer.plan7 import HMMFile, Pipeline, Builder, Background
 from .. import __name__ as __package__
 from .utils import HMMER_FOLDER, resource_files
 
+
+@unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class _TestBuilderBase(object):
 
     @classmethod

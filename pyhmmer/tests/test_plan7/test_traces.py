@@ -14,6 +14,8 @@ from pyhmmer.plan7 import HMM, HMMFile, TraceAligner, Traces
 from .. import __name__ as __package__
 from .utils import HMMER_FOLDER, resource_files
 
+
+@unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class TestTraces(unittest.TestCase):
 
     def setUp(self):

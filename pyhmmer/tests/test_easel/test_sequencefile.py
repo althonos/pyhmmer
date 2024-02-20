@@ -8,8 +8,8 @@ from itertools import zip_longest
 
 from pyhmmer import easel
 
-from . import __name__ as __package__
-from ..utils import EASEL_FOLDER, resource_files
+from .. import __name__ as __package__
+from .utils import EASEL_FOLDER, resource_files
 
 
 class TestSequenceFile(unittest.TestCase):

@@ -14,6 +14,8 @@ from pyhmmer.plan7 import HMMFile, Pipeline, TopHits
 from .. import __name__ as __package__
 from .utils import HMMER_FOLDER, resource_files
 
+
+@unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class TestTopHits(unittest.TestCase):
 
     def assertAlignmentEqual(self, a1, a2):

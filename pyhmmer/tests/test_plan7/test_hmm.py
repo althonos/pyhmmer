@@ -17,6 +17,7 @@ from .. import __name__ as __package__
 from .utils import HMMER_FOLDER, resource_files
 
 
+@unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class TestHMM(unittest.TestCase):
 
     @classmethod

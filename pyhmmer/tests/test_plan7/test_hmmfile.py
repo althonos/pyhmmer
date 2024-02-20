@@ -135,15 +135,18 @@ class _TestT2PKS(_TestHMMFile):
 
 # --- Test cases ---------------------------------------------------------------
 
-
+@unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class TestFileobjSingle(_TestHMMFileobj, _TestThioesterase, unittest.TestCase):
     pass
 
+@unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class TestFileObjMultiple(_TestHMMFileobj, _TestT2PKS, unittest.TestCase):
     pass
 
+@unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class TestPathSingle(_TestHMMPath, _TestThioesterase, unittest.TestCase):
     pass
 
+@unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class TestPathMultiple(_TestHMMPath, _TestT2PKS, unittest.TestCase):
     pass

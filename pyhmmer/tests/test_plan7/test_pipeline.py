@@ -16,6 +16,7 @@ from .. import __name__ as __package__
 from .utils import HMMER_FOLDER, resource_files
 
 
+@unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class TestSearchPipeline(unittest.TestCase):
 
     @classmethod
@@ -175,6 +176,7 @@ class TestSearchPipeline(unittest.TestCase):
         self.assertEqual(len(hits), 0)
 
 
+@unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class TestScanPipeline(unittest.TestCase):
 
     @classmethod
@@ -227,6 +229,7 @@ class TestScanPipeline(unittest.TestCase):
         self.assertEqual(len(hits), 6)  # number found with `hmmscan`
 
 
+@unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class TestIteratePipeline(unittest.TestCase):
 
     @classmethod
@@ -298,6 +301,8 @@ class TestIteratePipeline(unittest.TestCase):
         self.assertEqual(iteration.iteration, 6)
         self.assertTrue(iteration.converged)
 
+
+@unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class TestLongTargetsPipeline(unittest.TestCase):
 
     @staticmethod
