@@ -1,5 +1,5 @@
 # coding: utf-8
-# cython: language_level=3, linetrace=True
+# cython: language_level=3
 """Common errors and status codes for the `easel` and `hmmer` modules.
 """
 

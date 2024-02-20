@@ -1,5 +1,5 @@
 # coding: utf-8
-# cython: language_level=3, binding=True, linetrace=True, embedsignature=False
+# cython: language_level=3
 """High-level interface to the Easel C library.
 
 Easel is a library developed by the `Eddy/Rivas Lab <http://eddylab.org/>`_
@@ -469,9 +469,7 @@ cdef class GeneticCode:
         Alphabet nucleotide_alphabet not None = Alphabet.dna(),
         Alphabet amino_alphabet not None = Alphabet.amino(),
     ):
-        """__init__(self, translation_table=1, *, nucleotide_alphabet=Alphabet.dna(), amino_alphabet=Alphabet.amino())\n--
-
-        Create a new genetic code for translating nucleotide sequences.
+        """Create a new genetic code for translating nucleotide sequences.
 
         Arguments:
             translation_table (`int`): The translation table to use. Check the
@@ -708,9 +706,7 @@ cdef class Bitfield:
         libeasel.bitfield.esl_bitfield_Destroy(self._b)
 
     def __init__(self, object iterable):
-        """__init__(self, iterable)\n--
-
-        Create a new bitfield from an iterable of objects.
+        """Create a new bitfield from an iterable of objects.
 
         Objects yielded by the iterable can be of any type and will be
         tested for truth before setting the corresponding field.
@@ -970,10 +966,7 @@ cdef class KeyHash:
         libeasel.keyhash.esl_keyhash_Destroy(self._kh)
 
     def __init__(self):
-        """__init__(self)\n--
-
-        Create a new empty key-hash collection.
-
+        """Create a new empty key-hash collection.
         """
         with nogil:
             if self._kh == NULL:
@@ -1241,10 +1234,7 @@ cdef class Vector:
         self._data = NULL
 
     def __init__(self, object iterable = ()):
-        """__init__(self, iterable=())\n--
-
-        Create a new vector from the given iterable of values.
-
+        """Create a new vector from the given iterable of values.
         """
         raise TypeError("Can't instantiate abstract class 'Vector'")
 
@@ -1495,10 +1485,7 @@ cdef class VectorF(Vector):
     # --- Magic methods ------------------------------------------------------
 
     def __init__(self, object iterable = ()):
-        """__init__(self, iterable=())\n--
-
-        Create a new float vector from the given data.
-
+        """Create a new float vector from the given data.
         """
         cdef int        n
         cdef size_t     i
@@ -1922,10 +1909,7 @@ cdef class VectorU8(Vector):
     # --- Magic methods ------------------------------------------------------
 
     def __init__(self, object iterable = ()):
-        """__init__(self, iterable=())\n--
-
-        Create a new byte vector from the given data.
-
+        """Create a new byte vector from the given data.
         """
         cdef int          n
         cdef size_t       i
@@ -3498,9 +3482,7 @@ cdef class TextMSA(MSA):
         object sequences=None,
         bytes author=None,
     ):
-        """__init__(self, name=None, description=None, accession=None, sequences=None, author=None)\n--
-
-        Create a new text-mode alignment with the given ``sequences``.
+        """Create a new text-mode alignment with the given ``sequences``.
 
         Arguments:
             name (`bytes`, optional): The name of the alignment, if any.
@@ -3827,9 +3809,7 @@ cdef class DigitalMSA(MSA):
         object sequences=None,
         bytes author=None,
     ):
-        """__init__(self, alphabet, name=None, description=None, accession=None, sequences=None, author=None)\n--
-
-        Create a new digital-mode alignment with the given ``sequences``.
+        """Create a new digital-mode alignment with the given ``sequences``.
 
         Arguments:
             alphabet (`Alphabet`): The alphabet of the alignmed sequences.
@@ -4057,9 +4037,7 @@ cdef class MSAFile:
         bint digital = False,
         Alphabet alphabet = None,
     ):
-        """__init__(self, file, format=None, *, digital=False, alphabet=None)\n--
-
-        Create a new MSA file parser wrapping the given ``file``.
+        """Create a new MSA file parser wrapping the given ``file``.
 
         Arguments:
             file (`str` or file-like object): Either the path to a file
@@ -4302,9 +4280,7 @@ cdef class Randomness:
         self._rng = NULL
 
     def __init__(self, object seed=None, bint fast=False):
-        """__init__(self, seed=None, fast=False)\n--
-
-        Create a new random number generator with the given seed.
+        """Create a new random number generator with the given seed.
 
         Arguments:
             seed (`int`): The seed to initialize the generator with. If ``0``
@@ -4753,9 +4729,7 @@ cdef class TextSequence(Sequence):
         bytes source=None,
         dict  residue_markups=None,
     ):
-        """__init__(self, name=None, description=None, accession=None, sequence=None, source=None, residue_markups=None)\n--
-
-        Create a new text-mode sequence with the given attributes.
+        """Create a new text-mode sequence with the given attributes.
 
         .. versionadded:: 0.10.4
             The ``residue_markups`` argument.
@@ -4949,9 +4923,7 @@ cdef class DigitalSequence(Sequence):
               bytes                 source          = None,
               dict                  residue_markups = None,
     ):
-        """__init__(self, alphabet, name=None, description=None, accession=None, sequence=None, source=None, residue_markups=None)\n--
-
-        Create a new digital-mode sequence with the given attributes.
+        """Create a new digital-mode sequence with the given attributes.
 
         Raises:
             `ValueError`: When ``sequence`` contains digits outside the
@@ -5612,9 +5584,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
         self.alphabet = alphabet
 
     def __init__(self, Alphabet alphabet not None, object iterable = ()):
-        """__init__(self, alphabet, iterable = ())\n--
-
-        Create a new digital sequence block with the given alphabet.
+        """Create a new digital sequence block with the given alphabet.
 
         Arguments:
             alphabet (`~pyhmmer.easel.Alphabet`): The alphabet to use for all
@@ -6155,9 +6125,7 @@ cdef class SequenceFile:
         bint digital = False,
         Alphabet alphabet = None,
     ):
-        """__init__(self, file, format=None, *, digital=True, alphabet=None)\n--
-
-        Create a new sequence file parser wrapping the given ``file``.
+        """Create a new sequence file parser wrapping the given ``file``.
 
         Arguments:
             file (`str` or file-like object): Either the path to a file
@@ -6590,9 +6558,7 @@ cdef class SSIReader:
         self._ssi = NULL
 
     def __init__(self, object file):
-        """__init__(self, file)\n--
-
-        Create a new SSI file reader for the file at the given location.
+        """Create a new SSI file reader for the file at the given location.
 
         Arguments:
             file (`str`, `bytes` or `os.PathLike`): The path to a 
@@ -6684,9 +6650,7 @@ cdef class SSIWriter:
         self._newssi = NULL
 
     def __init__(self, object file, bint exclusive = False):
-        """__init__(self, file)\n--
-
-        Create a new SSI file write for the file at the given location.
+        """Create a new SSI file write for the file at the given location.
 
         Arguments:
             file (`str`, `bytes` or `os.PathLike`): The path to a 

@@ -207,7 +207,12 @@ class build_ext(_build_ext):
         cython_args = {
             "include_path": ["include"],
             "nthreads": self.parallel,
-            "compiler_directives": {},
+            "compiler_directives": {
+                "binding": True,
+                "linetrace": True,
+                "embedsignature": True,
+                "embedsignature.format": "clinic",
+            },
             "compile_time_env": {
                 "SYS_IMPLEMENTATION_NAME": sys.implementation.name,
                 "SYS_VERSION_INFO_MAJOR": sys.version_info.major,

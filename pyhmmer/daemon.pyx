@@ -1,5 +1,5 @@
 # coding: utf-8
-# cython: language_level=3, linetrace=True
+# cython: language_level=3
 """Implementation of a client for the HMMER daemon.
 
 The HMMER daemon is a server daemon provided by HMMER3 to run distributed
