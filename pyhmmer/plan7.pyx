@@ -6325,7 +6325,7 @@ cdef class Pipeline:
     ) except 1 nogil:
         cdef int           status
         cdef P7_OPROFILE*  om
-        cdef ESL_ALPHABET* abc    = NULL
+        cdef ESL_ALPHABET* abc    = <ESL_ALPHABET*> sq.abc
 
         # configure the pipeline for the current sequence
         status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq)
