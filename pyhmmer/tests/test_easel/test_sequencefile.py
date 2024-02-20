@@ -8,7 +8,8 @@ from itertools import zip_longest
 
 from pyhmmer import easel
 
-from ..utils import EASEL_FOLDER
+from . import __name__ as __package__
+from ..utils import EASEL_FOLDER, resource_files
 
 
 class TestSequenceFile(unittest.TestCase):
@@ -84,10 +85,9 @@ class TestSequenceFile(unittest.TestCase):
             self.assertEqual(seq.name, b"SNRPA_DROME")
             self.assertEqual(seq.sequence, "")
 
+    @unittest.skipUnless(resource_files, "importlib.resources.files not available")
     def test_ignore_gaps(self):
-        luxc = os.path.realpath(
-            os.path.join(__file__, os.pardir, os.pardir, "data", "msa", "LuxC.faa")
-        )
+        luxc = resource_files(__package__).joinpath("data", "msa", "LuxC.faa")
         # fails if not ignoring gaps (since if contains gaps)
         with easel.SequenceFile(luxc, "fasta") as seq_file:
             self.assertRaises(ValueError, seq_file.read)
