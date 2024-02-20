@@ -10,22 +10,22 @@ import tempfile
 
 import pyhmmer
 from pyhmmer.errors import EaselError, AlphabetMismatch
-from pyhmmer.easel import Alphabet, SequenceFile, VectorF, TextSequence
+from pyhmmer.easel import Alphabet, SequenceFile, VectorF, TextSequence, Randomness
 from pyhmmer.plan7 import HMM, HMMFile, Pipeline
 
 from .. import __name__ as __package__
 from .utils import HMMER_FOLDER, resource_files
 
 
-@unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class TestHMM(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "Thioesterase.hmm")
-        with HMMFile(cls.hmm_path) as hmm_file:
-            cls.hmm = next(hmm_file)
+        abc = Alphabet.dna()
+        rng = Randomness()
+        cls.hmm = HMM.sample(abc, 100, rng)
 
+    @unittest.skipUnless(resource_files, "importlib.resources.files not available")
     def test_checksum(self):
         abc = Alphabet.dna()
         hmm = HMM(abc, 100, b"test")
@@ -130,7 +130,7 @@ class TestHMM(unittest.TestCase):
         seq = TextSequence(sequence="A"*hmm.M)
         hmm.set_consensus(seq.digitize(hmm.alphabet))
         self.assertEqual(hmm.consensus, seq.sequence)
-    
+
     def test_set_consensus_error(self):
         dna = Alphabet.dna()
         prot = Alphabet.amino()
@@ -142,14 +142,20 @@ class TestHMM(unittest.TestCase):
             seq = TextSequence(sequence="A"*(hmm.M - 1)).digitize(dna)
             hmm.set_consensus(seq)
 
+
+    @unittest.skipUnless(resource_files, "importlib.resources.files not available")
     def test_write(self):
+        hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "Thioesterase.hmm")
+        with HMMFile(hmm_path) as hmm_file:
+            hmm = next(hmm_file)
+
         buffer = io.BytesIO()
-        self.hmm.write(buffer)
+        hmm.write(buffer)
 
         self.assertNotEqual(buffer.tell(), 0)
         buffer.seek(0)
 
-        with open(self.hmm_path, "rb") as f:
+        with open(hmm_path, "rb") as f:
             # 1st line is skipped, cause it contains the format date, which will
             # obviously not be the same as the reference
             for line_written, line_ref in itertools.islice(zip(buffer, f), 1, None):
@@ -238,6 +244,7 @@ class TestHMM(unittest.TestCase):
 
         self.assertEqual(h1, h2)
 
+    @unittest.skipUnless(resource_files, "importlib.resources.files not available")
     def test_no_cutoffs(self):
         hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "Thioesterase.hmm")
         with HMMFile(hmm_path) as hmm_file:
@@ -280,6 +287,7 @@ class TestHMM(unittest.TestCase):
         self.assertEqual(hmm.cutoffs.trusted1, 15.0)
         self.assertEqual(hmm.cutoffs.trusted2, 14.0)
 
+    @unittest.skipUnless(resource_files, "importlib.resources.files not available")
     def test_cutoffs(self):
         hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "PF02826.hmm")
         with HMMFile(hmm_path) as hmm_file:
@@ -313,6 +321,7 @@ class TestHMM(unittest.TestCase):
         self.assertIs(hmm.cutoffs.trusted1, None)
         self.assertIs(hmm.cutoffs.trusted2, None)
 
+    @unittest.skipUnless(resource_files, "importlib.resources.files not available")
     def test_cutoffs_pickle(self):
         hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "PF02826.hmm")
         with HMMFile(hmm_path) as hmm_file:
