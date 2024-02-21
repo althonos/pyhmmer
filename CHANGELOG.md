@@ -6,7 +6,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.5...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.6...HEAD
+
+
+## [v0.10.6] - 2024-02-20
+[v0.10.6]: https://github.com/althonos/pyhmmer/compare/v0.10.5...v0.10.6
+
+### Added
+-  `armv7` and `aarch64` to the `PKGBUILD` architectures.
+
+### Changed
+- `SSIReader` and `SSIWriter` constructors now accept path-like objects.
+- Skip tests dependending on `importlib.resources.files` when it is not available on the host machine.
+
+### Fixed
+- Memory leak caused by alphabet allocation in `Pipeline._scan_loop_file`.
 
 
 ## [v0.10.5] - 2024-02-16
