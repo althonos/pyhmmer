@@ -233,7 +233,7 @@ jobs:
     needs: upload
     steps:
     - name: Checkout code
-      uses: actions/checkout@v1
+      uses: actions/checkout@v4
     - name: Release a Changelog
       uses: rasmus-saks/release-a-changelog-action@v1.0.1
       with:
@@ -249,18 +249,19 @@ jobs:
     - upload
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         submodules: true
     - name: Set up Python 3.10
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
     - name: Download source distribution
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
-          name: sdist
-          path: dist
+        name: sdist
+        path: dist/
+        merge-multiple: true
     - name: Extract package version
       run: "echo PKGVER=$(python setup.py --version) >> $GITHUB_ENV"
     - name: Compute SHA256 of source distribution
