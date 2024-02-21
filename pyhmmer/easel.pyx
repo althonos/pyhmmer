@@ -1251,7 +1251,7 @@ cdef class Vector:
         assert self._data != NULL
 
         if flags & PyBUF_FORMAT:
-            buffer.format = self._format()
+            buffer.format = <char*> self._format()
         else:
             buffer.format = NULL
         buffer.buf = self._data
@@ -2346,7 +2346,7 @@ cdef class Matrix:
         assert self._data != NULL
 
         if flags & PyBUF_FORMAT:
-            buffer.format = self._format()
+            buffer.format = <char*> self._format()
         else:
             buffer.format = NULL
         buffer.buf = self._data[0]
