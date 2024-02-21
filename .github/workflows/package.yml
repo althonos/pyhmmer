@@ -29,11 +29,11 @@ jobs:
         submodules: true
     - name: Set up QEMU
       id: qemu
-      uses: docker/setup-qemu-action@v2
+      uses: docker/setup-qemu-action@v3
       with:
-        platforms: all
+        platforms: arm64
     - name: Build manylinux wheels
-      uses: pypa/cibuildwheel@v2.16.2
+      uses: pypa/cibuildwheel@v2.16.5
       env:
         CIBW_ARCHS: aarch64
         CIBW_BUILD: ${{ matrix.python-tag }}
@@ -43,7 +43,7 @@ jobs:
         CIBW_TEST_REQUIRES: importlib-resources
       with:
         output-dir: dist
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: wheels
         path: dist/*
@@ -65,15 +65,11 @@ jobs:
         - pp38-manylinux_x86_64
         - pp39-manylinux_x86_64
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
     - name: Build manylinux wheels
-      uses: pypa/cibuildwheel@v2.16.2
+      uses: pypa/cibuildwheel@v2.16.5
       env:
         CIBW_ARCHS: x86_64
         CIBW_BUILD: ${{ matrix.python-tag }}
@@ -83,7 +79,7 @@ jobs:
         CIBW_TEST_REQUIRES: importlib-resources
       with:
         output-dir: dist
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: wheels
         path: dist/*
@@ -105,15 +101,11 @@ jobs:
         - pp38-macosx_x86_64
         - pp39-macosx_x86_64
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
     - name: Build manylinux wheels
-      uses: pypa/cibuildwheel@v2.16.2
+      uses: pypa/cibuildwheel@v2.16.5
       env:
         CIBW_ARCHS: x86_64
         CIBW_BUILD: ${{ matrix.python-tag }}
@@ -123,7 +115,7 @@ jobs:
         CIBW_TEST_REQUIRES: importlib-resources
       with:
         output-dir: dist
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: wheels
         path: dist/*
@@ -140,16 +132,11 @@ jobs:
         - cp311-macosx_arm64
         - cp312-macosx_arm64
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-        target: aarch64-apple-darwin
     - name: Build manylinux wheels
-      uses: pypa/cibuildwheel@v2.16.2
+      uses: pypa/cibuildwheel@v2.16.5
       env:
         CIBW_ARCHS: arm64
         CIBW_BUILD: ${{ matrix.python-tag }}
@@ -159,7 +146,7 @@ jobs:
         CIBW_TEST_REQUIRES: importlib-resources
       with:
         output-dir: dist
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: wheels
         path: dist/*
@@ -169,11 +156,11 @@ jobs:
     name: Build source distribution
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         submodules: true
     - name: Set up Python 3.11
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: 3.11
     - name: Install build requirements
@@ -181,7 +168,7 @@ jobs:
     - name: Build wheel distribution
       run: python setup.py sdist
     - name: Store built wheels
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: wheels
         path: dist/*
@@ -193,14 +180,14 @@ jobs:
     - sdist
     steps:
     - name: Setup Python 3.11
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
     - name: Download built wheels
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
-          name: wheels
-          path: dist/
+        name: wheels
+        path: dist/
     - name: Update pip to latest version
       run: python -m pip install -U pip setuptools wheel
     - name: Install built wheel
@@ -212,6 +199,8 @@ jobs:
     environment: PyPI
     runs-on: ubuntu-latest
     name: Upload
+    permissions:
+      id-token: write
     needs:
     - sdist
     - test-sdist
@@ -221,17 +210,13 @@ jobs:
     - wheel-macos-aarch64
     steps:
     - name: Download built distributions
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
-          name: wheels
-          path: dist
+        name: wheels
+        path: dist
     - name: Publish distributions to PyPI
       if: startsWith(github.ref, 'refs/tags/v')
-      uses: pypa/gh-action-pypi-publish@master
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
-        skip_existing: false
+      uses: pypa/gh-action-pypi-publish@release/v1
 
   release:
     environment: GitHub Releases
