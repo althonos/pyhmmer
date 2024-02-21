@@ -453,6 +453,7 @@ class TestJackhmmer(unittest.TestCase):
         self.assertEqual(domain.alignment.hmm_name, last.alignment.hmm_name)
 
 
+@unittest.skipUnless(resource_files, "importlib.resources not available")
 class TestNhmmer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -483,7 +484,6 @@ class TestNhmmer(unittest.TestCase):
                 hit.best_domain.i_evalue, float(fields[12]), delta=0.1
             )
 
-    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_no_queries(self):
         alphabet = Alphabet.dna()
         path = resource_files(__package__).joinpath("data", "seqs", "BGC0001090.gbk")
@@ -492,7 +492,6 @@ class TestNhmmer(unittest.TestCase):
         hits = pyhmmer.nhmmer([], seqs, cpus=1)
         self.assertIs(None, next(hits, None))
 
-    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_bmyd_seq_bgc_block(self):
         alphabet = Alphabet.dna()
 
@@ -513,7 +512,6 @@ class TestNhmmer(unittest.TestCase):
         with self.table("bmyD3.tbl") as table:
             self.assertTableEqual(hits, table)
 
-    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_bmyd_seq_bgc_file(self):
         alphabet = Alphabet.dna()
 
@@ -530,7 +528,6 @@ class TestNhmmer(unittest.TestCase):
         with self.table("bmyD3.tbl") as table:
             self.assertTableEqual(hits, table)
 
-    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_bmyd_msa_bgc_block(self):
         alphabet = Alphabet.dna()
 
@@ -547,7 +544,6 @@ class TestNhmmer(unittest.TestCase):
         hits = next(pyhmmer.nhmmer(query, seqs, cpus=1))
         self.assertEqual(len(hits), 1)
 
-    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_bmyd_msa_bgc_file(self):
         alphabet = Alphabet.dna()
 
@@ -560,7 +556,6 @@ class TestNhmmer(unittest.TestCase):
             hits = list(pyhmmer.nhmmer(query, seqs, cpus=1))[0]
             self.assertEqual(len(hits.reported), 1)
 
-    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_bmyd_hmm_bgc_block(self):
         alphabet = Alphabet.dna()
 
@@ -577,7 +572,6 @@ class TestNhmmer(unittest.TestCase):
         with self.table("bmyD1.tbl") as table:
             self.assertTableEqual(hits, table)
 
-    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_bmyd_hmm_bgc_file(self):
         alphabet = Alphabet.dna()
 
@@ -592,7 +586,6 @@ class TestNhmmer(unittest.TestCase):
         with self.table("bmyD1.tbl") as table:
             self.assertTableEqual(hits, table)
 
-    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_bmyd_hmm_genome_block(self):
         alphabet = Alphabet.dna()
 
@@ -607,7 +600,6 @@ class TestNhmmer(unittest.TestCase):
         with self.table("bmyD2.tbl") as table:
             self.assertTableEqual(hits, table)
 
-    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_bmyd_hmm_genome_file(self):
         alphabet = Alphabet.dna()
 

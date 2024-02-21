@@ -11,6 +11,7 @@ from .. import __name__ as __package__
 from .utils import resource_files
 
 
+@unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class TestSSIReader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
