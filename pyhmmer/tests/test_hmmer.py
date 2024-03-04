@@ -229,6 +229,28 @@ class TestHmmsearch(_TestSearch, unittest.TestCase):
         return list(pyhmmer.hmmsearch(hmm, seqs))[0]
 
     @unittest.skipUnless(resource_files, "importlib.resources not available")
+    def test_callback_error(self):
+
+        class MyException(Exception):
+            pass
+
+        def callback(hmm, total):
+            raise MyException("oopsie")
+
+        with self.hmm_file("Thioesterase") as hmm_file:
+            hmm = hmm_file.read()
+        with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
+            seqs = seqs_file.read_block()
+
+        hits = pyhmmer.hmmsearch(hmm, seqs, cpus=1, callback=callback)
+        with self.assertRaises(MyException):
+            hit = next(hits)
+
+        hits = pyhmmer.hmmsearch(hmm, seqs, cpus=2, callback=callback)
+        with self.assertRaises(MyException):
+            hit = next(hits)
+
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_background_error(self):
         # check that errors occuring in worker threads are recovered and raised
         # in the main threads (a common error is mismatching the HMM and the
@@ -297,6 +319,28 @@ class TestPhmmer(unittest.TestCase):
         return path.open()
 
     @unittest.skipUnless(resource_files, "importlib.resources not available")
+    def test_callback_error(self):
+
+        class MyException(Exception):
+            pass
+
+        def callback(hmm, total):
+            raise MyException("oopsie")
+
+        alphabet = Alphabet.amino()
+        path = resource_files(__package__).joinpath("data", "seqs", "PKSI.faa")
+        with SequenceFile(path, digital=True, alphabet=alphabet) as seqs_file:
+            seqs = seqs_file.read_block()
+
+        hits = pyhmmer.phmmer(seqs[-1:], seqs, cpus=1, callback=callback)
+        with self.assertRaises(MyException):
+            hit = next(hits)
+
+        hits = pyhmmer.phmmer(seqs[-1:], seqs, cpus=2, callback=callback)
+        with self.assertRaises(MyException):
+            hit = next(hits)
+
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_no_queries(self):
         alphabet = Alphabet.amino()
         path = resource_files(__package__).joinpath("data", "seqs", "PKSI.faa")
@@ -338,7 +382,14 @@ class TestPhmmer(unittest.TestCase):
                 self.assertEqual(domain.env_to, int(fields[20]))
 
 
+@unittest.skipUnless(resource_files, "importlib.resources not available")
 class TestJackhmmer(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        with cls.seqs_file("PKSI", digital=True) as seqs_file:
+            cls.pksi = seqs_file.read_block()
+
     @staticmethod
     def table(name):
         path = resource_files(__package__).joinpath("data", "tables", name)
@@ -354,17 +405,30 @@ class TestJackhmmer(unittest.TestCase):
         path = resource_files(__package__).joinpath("data", "hmms", "txt", "{}.hmm".format(name))
         return HMMFile(path)
 
-    @unittest.skipUnless(resource_files, "importlib.resources not available")
+    def test_callback_error(self):
+
+        class MyException(Exception):
+            pass
+
+        def callback(hmm, total):
+            raise MyException("oopsie")
+
+        seqs = self.pksi
+        results = pyhmmer.jackhmmer(seqs[-1:], seqs, cpus=1, max_iterations=1, callback=callback)
+        with self.assertRaises(MyException):
+            result = next(results)
+
+        results = pyhmmer.jackhmmer(seqs[-1:], seqs, cpus=2, max_iterations=1, callback=callback)
+        with self.assertRaises(MyException):
+            result = next(results)
+
     def test_no_queries(self):
-        with self.seqs_file("PKSI", digital=True) as seqs_file:
-            seqs = seqs_file.read_block()
+        seqs = self.pksi
         result = pyhmmer.jackhmmer([], seqs, cpus=1, max_iterations=1)
         self.assertIs(None, next(result, None))
 
-    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_pksi(self):
-        with self.seqs_file("PKSI", digital=True) as seqs_file:
-            seqs = seqs_file.read_block()
+        seqs = self.pksi
         results = pyhmmer.jackhmmer(seqs[-1:], seqs, cpus=1, max_iterations=1)
         result = next(results)
         self.assertEqual(result.iteration, 1)
@@ -393,10 +457,8 @@ class TestJackhmmer(unittest.TestCase):
                 self.assertEqual(domain.env_from, int(fields[19]))
                 self.assertEqual(domain.env_to, int(fields[20]))
 
-    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_pksi_checkpoint(self):
-        with self.seqs_file("PKSI", digital=True) as seqs_file:
-            seqs = seqs_file.read_block()
+        seqs = self.pksi
         # jackhmmer CLI converges in 3 iterations, 5 hits, 17 sequences in MSA
         iterations = next(
             pyhmmer.jackhmmer(
@@ -411,7 +473,6 @@ class TestJackhmmer(unittest.TestCase):
         self.assertEqual(len(iterations[-1].hits), 5)
         self.assertEqual(len(iterations[-1].msa.sequences), 17)
 
-    @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_thioestherase(self):
         with self.hmm_file("Thioesterase") as hmm_file:
             hmm = hmm_file.read()

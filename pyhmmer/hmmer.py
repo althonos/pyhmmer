@@ -215,6 +215,7 @@ class _BaseWorker(typing.Generic[_Q, _T, _R], threading.Thread):
                 hits = self.process(chore.query)
                 chore.complete(hits)
             except BaseException as exc:
+                print(exc)
                 self.kill()
                 chore.fail(exc)
         if isinstance(self.targets, (SequenceFile, HMMPressedFile)):
@@ -222,6 +223,7 @@ class _BaseWorker(typing.Generic[_Q, _T, _R], threading.Thread):
 
     def kill(self) -> None:
         """Set the synchronized kill switch for all threads."""
+        print(self.kill_switch)
         self.kill_switch.set()
 
     def process(self, query: _Q) -> _R:
@@ -428,6 +430,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
         pipeline_class: typing.Type[Pipeline] = Pipeline,
         alphabet: Alphabet = Alphabet.amino(),
         builder: typing.Optional[Builder] = None,
+        timeout: int = 1,
         **options,  # type: object
     ) -> None:
         self.queries = queries
@@ -437,6 +440,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
         self.pipeline_class = pipeline_class
         self.alphabet = alphabet
         self.builder = builder
+        self.timeout = timeout
 
         # make sure a positive number of CPUs is requested
         if cpus <= 0:
@@ -499,11 +503,19 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
             # given to filling the query queue, so that no worker
             # ever idles.
             for query in self.queries:
-                # get the next query and add it to the query queue
+                # prepare to add the next query to the queue
                 query_count.value += 1
                 chore: _Chore[_Q, _R] = _Chore(query)
-                query_queue.put(chore)  # <-- blocks if too many chores in queue
-                results.append(chore)
+                # attempt to add the query to the query queue,
+                # but use a timeout so that it doesn't deadlock
+                # if the background thread errored (which would
+                # set the kill switch), typically because the
+                # user-provided callback failed
+                while not kill_switch.is_set():
+                    with contextlib.suppress(queue.Full):
+                        query_queue.put(chore, timeout=self.timeout)  # <-- blocks if too many chores in queue
+                        results.append(chore)
+                        break
                 # aggressively wait for the result with a very short
                 # timeout, and exit the loop if the queue is not full
                 if results[0].available():
@@ -622,6 +634,7 @@ class _JACKHMMERDispatcher(
         pipeline_class: typing.Type[Pipeline] = Pipeline,
         alphabet: Alphabet = Alphabet.amino(),
         builder: typing.Optional[Builder] = None,
+        timeout: int = 1,
         max_iterations: typing.Optional[int] = 5,
         select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
         checkpoints: bool = False,
@@ -635,6 +648,7 @@ class _JACKHMMERDispatcher(
             pipeline_class=pipeline_class,
             alphabet=alphabet,
             builder=builder,
+            timeout=timeout,
             **options,
         )
         self.max_iterations = max_iterations
@@ -681,16 +695,18 @@ class _NHMMERDispatcher(
         pipeline_class: typing.Type[Pipeline] = LongTargetsPipeline,
         alphabet: Alphabet = Alphabet.dna(),
         builder: typing.Optional[Builder] = None,
+        timeout: int = 1,
         **options,  # type: typing.Dict[str, object]
     ) -> None:
         super().__init__(
-            queries,
-            targets,
-            cpus,
-            callback,
-            pipeline_class,
-            alphabet,
-            builder,
+            queries=queries,
+            targets=targets,
+            cpus=cpus,
+            callback=callback,
+            pipeline_class=pipeline_class,
+            alphabet=alphabet,
+            builder=builder,
+            timeout=timeout,
             **options,
         )
 
