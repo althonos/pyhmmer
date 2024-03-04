@@ -215,7 +215,6 @@ class _BaseWorker(typing.Generic[_Q, _T, _R], threading.Thread):
                 hits = self.process(chore.query)
                 chore.complete(hits)
             except BaseException as exc:
-                print(exc)
                 self.kill()
                 chore.fail(exc)
         if isinstance(self.targets, (SequenceFile, HMMPressedFile)):
@@ -223,7 +222,6 @@ class _BaseWorker(typing.Generic[_Q, _T, _R], threading.Thread):
 
     def kill(self) -> None:
         """Set the synchronized kill switch for all threads."""
-        print(self.kill_switch)
         self.kill_switch.set()
 
     def process(self, query: _Q) -> _R:
