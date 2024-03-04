@@ -6,7 +6,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.6...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.7...HEAD
+
+
+## [v0.10.7] - 2024-03-04
+[v0.10.7]: https://github.com/althonos/pyhmmer/compare/v0.10.6...v0.10.7
+
+### Added
+- Pre-compiled wheels for PyPy 3.10.
+
+### Fixed
+- Invalid pointer cast in `__getbuffer__` method of `Matrix` and `Vector` objects.
+- Remaining tests failing to run on missing `importlib-resources`.
+- `pyhmmer.hmmer` dispatchers possibly dead-locking on background thread errors ([#60](https://github.com/althonos/pyhmmer/issues/60)).
 
 
 ## [v0.10.6] - 2024-02-20
