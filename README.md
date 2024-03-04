@@ -18,6 +18,7 @@
 [![Changelog](https://img.shields.io/badge/keep%20a-changelog-8A0707.svg?maxAge=2678400&style=flat-square)](https://github.com/althonos/pyhmmer/blob/master/CHANGELOG.md)
 [![Downloads](https://img.shields.io/pypi/dm/pyhmmer?style=flat-square&color=303f9f&maxAge=86400&label=downloads)](https://pepy.tech/project/pyhmmer)
 [![Paper](https://img.shields.io/badge/paper-Bioinformatics-teal.svg?style=flat-square&maxAge=3600)](https://doi.org/10.1093/bioinformatics/btad214)
+[![Citations](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fbadge.dimensions.ai%2Fdetails%2Fid%2Fpub.1157360482%2Fmetadata.json&query=%24.times_cited&style=flat-square&label=citations&maxAge=86400)](https://badge.dimensions.ai/details/id/pub.1157360482)
 
 
 ## 🗺️ Overview
