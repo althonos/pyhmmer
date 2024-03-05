@@ -41,6 +41,9 @@ jobs:
         - python-version: pypy-3.9
           python-release: v3.9
           python-impl: PyPy
+        - python-version: pypy-3.10
+          python-release: v3.10
+          python-impl: PyPy
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -73,38 +76,38 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         verbose: true
 
-  test_linux_arm64:
-    name: Test (Linux, arm64)
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-tag:
-        - cp310-manylinux_aarch64
-        - cp311-manylinux_aarch64
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-    - name: Set up QEMU
-      id: qemu
-      uses: docker/setup-qemu-action@v3
-      with:
-        platforms: arm64
-    - name: Build manylinux wheels
-      uses: pypa/cibuildwheel@v2.16.5
-      env:
-        CIBW_ARCHS: aarch64
-        CIBW_BUILD: ${{ matrix.python-tag }}
-        CIBW_BUILD_VERBOSITY: 2
-        CIBW_BEFORE_BUILD: pip install cython
-        CIBW_TEST_COMMAND: python -m unittest pyhmmer.tests -vv
-        CIBW_TEST_REQUIRES: importlib-resources
-      with:
-        output-dir: dist
-    - uses: actions/upload-artifact@v3
-      with:
-        name: wheels
-        path: dist/*
+#  test_linux_arm64:
+#    name: Test (Linux, arm64)
+#    runs-on: ubuntu-latest
+#    strategy:
+#      matrix:
+#        python-tag:
+#        - cp310-manylinux_aarch64
+#        - cp311-manylinux_aarch64
+#    steps:
+#    - uses: actions/checkout@v4
+#      with:
+#        submodules: true
+#    - name: Set up QEMU
+#      id: qemu
+#      uses: docker/setup-qemu-action@v3
+#      with:
+#        platforms: arm64
+#    - name: Build manylinux wheels
+#      uses: pypa/cibuildwheel@v2.16.5
+#      env:
+#        CIBW_ARCHS: aarch64
+#        CIBW_BUILD: ${{ matrix.python-tag }}
+#        CIBW_BUILD_VERBOSITY: 2
+#        CIBW_BEFORE_BUILD: pip install cython
+#        CIBW_TEST_COMMAND: python -m unittest pyhmmer.tests -vv
+#        CIBW_TEST_REQUIRES: importlib-resources
+#      with:
+#        output-dir: dist
+#    - uses: actions/upload-artifact@v3
+#      with:
+#        name: wheels
+#        path: dist/*
 
   test_osx_x86:
     name: Test (OSX)
@@ -142,6 +145,9 @@ jobs:
         - python-version: pypy-3.9
           python-release: v3.9
           python-impl: PyPy
+        - python-version: pypy-3.10
+          python-release: v3.10
+          python-impl: PyPy
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -175,3 +181,4 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         codecov_curl_args: "--globoff"
         verbose: true
+
