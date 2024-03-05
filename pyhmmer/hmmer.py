@@ -1210,7 +1210,16 @@ def nhmmer(
     """
     _alphabet = Alphabet.dna()
     _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count() or 1
-    _builder = Builder(_alphabet) if builder is None else builder
+
+    if builder is None:
+        _builder = Builder(
+            _alphabet,
+            seed=options.get("seed", 42),
+            window_length=options.get("window_length"),
+            window_beta=options.get("window_beta"),
+        )
+    else:
+        _builder = builder
 
     if not isinstance(queries, collections.abc.Iterable):
         queries = (queries,)
