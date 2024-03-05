@@ -6,7 +6,23 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.7...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.8...HEAD
+
+
+## [v0.10.8] - 2024-03-06
+[v0.10.8]: https://github.com/althonos/pyhmmer/compare/v0.10.7...v0.10.8
+
+### Added
+- Getter to access the strand of a `Domain` produced by a `LongTargetsPipeline`.
+
+### Changed
+- Display model and cutoff names in `MissingCutoffs` error message, if any.
+- Allow `LongTargetsPipeline` to be configured with window length and beta parameters.
+- Make `nhmmer` use the window length and beta from the options when creating a `Builder`.
+
+### Fixed
+- `nhmmer` not computing E-values for non-default window lengths ([moshi4/pybarrnap#2](https://github.com/moshi4/pybarrnap/issues/2)).
+- `SequenceFile` and `MSAFile` crashing with a segmentation fault when given the path to a folder rather than a file.
 
 
 ## [v0.10.7] - 2024-03-04
