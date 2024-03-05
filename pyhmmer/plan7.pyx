@@ -4271,7 +4271,7 @@ cdef class OptimizedProfile:
     def scale_b(self):
         """`float`: The scale for MSV filter scores.
 
-        .. versionadded:: 0.11.0
+        .. versionadded:: 0.10.3
 
         """
         assert self._om != NULL
@@ -4281,7 +4281,7 @@ cdef class OptimizedProfile:
     def base_b(self):
         """`int`: The offset for MSV filter scores.
 
-        .. versionadded:: 0.11.0
+        .. versionadded:: 0.10.3
 
         """
         assert self._om != NULL
@@ -4293,7 +4293,7 @@ cdef class OptimizedProfile:
 
         .. versionadded:: 0.4.0
 
-        .. versionchanged:: 0.11.0
+        .. versionchanged:: 0.10.3
             Renamed from `bias`.
 
         """
@@ -4310,7 +4310,7 @@ cdef class OptimizedProfile:
     def scale_w(self):
         """`float`: The scale for Viterbi filter scores.
 
-        .. versionadded:: 0.11.0
+        .. versionadded:: 0.10.3
 
         """
         assert self._om != NULL
@@ -4320,7 +4320,7 @@ cdef class OptimizedProfile:
     def base_w(self):
         """`int`: The offset for Viterbi filter scores.
 
-        .. versionadded:: 0.11.0
+        .. versionadded:: 0.10.3
 
         """
         assert self._om != NULL
@@ -4330,7 +4330,7 @@ cdef class OptimizedProfile:
     def ddbound_w(self):
         """`int`: The threshold precalculated for lazy :math:`DD` evaluation.
 
-        .. versionadded:: 0.11.0
+        .. versionadded:: 0.10.3
 
         """
         assert self._om != NULL
@@ -4340,7 +4340,7 @@ cdef class OptimizedProfile:
     def ncj_roundoff(self):
         """`float`: The missing precision on :math:`NN,CC,JJ` after rounding.
 
-        .. versionadded:: 0.11.0
+        .. versionadded:: 0.10.3
 
         """
         assert self._om != NULL
@@ -4352,7 +4352,7 @@ cdef class OptimizedProfile:
     def rfv(self):
         """`~pyhmmer.easel.MatrixF`: The match scores for the Forward/Backward.
 
-        .. versionadded:: 0.11.0
+        .. versionadded:: 0.10.3
 
         """
         assert self._om != NULL
@@ -4368,7 +4368,7 @@ cdef class OptimizedProfile:
     def tfv(self):
         """`~pyhmmer.easel.VectorF`: The transition scores for the Forward/Backard.
 
-        .. versionadded:: 0.11.0
+        .. versionadded:: 0.10.3
 
         """
         assert self._om != NULL
@@ -4383,7 +4383,7 @@ cdef class OptimizedProfile:
     def xf(self):
         """`~pyhmmer.easel.MatrixF`: The :math:`NECJ` transition costs.
 
-        .. versionadded:: 0.11.0
+        .. versionadded:: 0.10.3
 
         """
         assert self._om != NULL
@@ -6456,7 +6456,7 @@ cdef class LongTargetsPipeline(Pipeline):
 
     .. versionadded:: 0.4.9
 
-    .. versionadded:: 0.11.0
+    .. versionadded:: 0.10.8
        The ``window_length`` and ``window_beta`` keyword arguments.
 
     """
