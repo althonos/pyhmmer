@@ -136,7 +136,7 @@ cdef class HMM:
     # inner ESL_ALPHABET; the Python object provides reference counting for free
     cdef readonly Alphabet          alphabet
 
-    cdef void _initialize(self) nogil
+    cdef void _initialize(self) noexcept nogil
 
     cpdef HMM copy(self)
     cpdef VectorF match_occupancy(self)
@@ -336,6 +336,8 @@ cdef class Pipeline:
 
 
 cdef class LongTargetsPipeline(Pipeline):
+    cdef int             _window_length
+    cdef double          _window_beta
     cdef ID_LENGTH_LIST* _idlens
 
     cpdef TopHits search_hmm(

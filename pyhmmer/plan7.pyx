@@ -999,6 +999,9 @@ cdef class Builder:
         else:
             raise UnexpectedError(status, "p7_SingleBuilder")
 
+        # update max length (used in `nhmmer`) which is only set on `hmm`
+        profile._gm.max_length = opti._om.max_length = hmm._hmm.max_length
+
         # return newly built HMM, profile and optimized profile
         return hmm, profile, opti
 
@@ -1098,6 +1101,9 @@ cdef class Builder:
             raise ValueError(f"Could not build HMM: {msg}")
         else:
             raise UnexpectedError(status, "p7_Builder")
+
+        # update max length (used in `nhmmer`) which is only set on `hmm`
+        profile._gm.max_length = opti._om.max_length = hmm._hmm.max_length
 
         # return newly built HMM, profile and optimized profile
         return hmm, profile, opti
@@ -2234,7 +2240,7 @@ cdef class HMM:
 
     # --- Magic methods ------------------------------------------------------
 
-    cdef void _initialize(self) nogil:
+    cdef void _initialize(self) noexcept nogil:
         cdef int i
         cdef int j
         cdef int K = self.alphabet._abc.K
@@ -6450,11 +6456,15 @@ cdef class LongTargetsPipeline(Pipeline):
 
     .. versionadded:: 0.4.9
 
+    .. versionadded:: 0.11.0
+       The ``window_length`` and ``window_beta`` keyword arguments.
+
     """
 
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
+        self._window_length = -1
         self._idlens = NULL
 
     def __dealloc__(self):
@@ -6473,6 +6483,8 @@ cdef class LongTargetsPipeline(Pipeline):
         int B2=DEFAULT_LONG_B2,
         int B3=DEFAULT_LONG_B3,
         int block_length=DEFAULT_LONG_BLOCK_LENGTH,
+        object window_length=None,
+        object window_beta=None,
         **kwargs,
     ):
         """Instantiate and configure a new long targets pipeline.
@@ -6501,6 +6513,8 @@ cdef class LongTargetsPipeline(Pipeline):
             block_length (`int`): The number of residues to use as the
                 window size :math:`W` when reading blocks from the long
                 target sequences.
+            window_length (`int`): The window length to use to compute
+                E-values.
             **kwargs: Any additional parameter will be passed to the
                 `~pyhmmer.plan7.Pipeline` constructor.
 
@@ -6508,8 +6522,10 @@ cdef class LongTargetsPipeline(Pipeline):
         # check that a nucleotide alphabet is given
         if not alphabet.is_nucleotide():
             raise AlphabetMismatch(Alphabet.dna(), alphabet)
+
         # create the pipeline
         super().__init__(alphabet, background, F1=F1, F2=F2, F3=F3, **kwargs)
+
         # set the options for long targets
         self._pli.long_targets = True
         self._pli.block_length = block_length
@@ -6517,6 +6533,12 @@ cdef class LongTargetsPipeline(Pipeline):
         self.B1 = B1
         self.B2 = B2
         self.B3 = B3
+        self.window_length = window_length
+        if window_beta is None:
+            self.window_beta = libhmmer.p7_builder.p7_DEFAULT_WINDOW_BETA
+        else:
+            self.window_beta = window_beta
+
         # allocate storage for the ID/length list
         self._idlens = libhmmer.nhmmer.idlen_list_init(64)
         if self._idlens == NULL:
@@ -6578,6 +6600,33 @@ cdef class LongTargetsPipeline(Pipeline):
             self._pli.strands = p7_strands_e.p7_STRAND_BOTTOMONLY
         else:
             raise InvalidParameter("strand", strand, choices=["watson", "crick", None])
+
+    @property
+    def window_length(self):
+        """`int` or `None`: The window length for nucleotide sequences.
+        """
+        return None if self._window_length == -1 else self._window_length
+
+    @window_length.setter
+    def window_length(self, object window_length):
+        if window_length is None:
+            self._window_length = -1
+        elif window_length > 0:
+            self._window_length = window_length
+        else:
+            raise InvalidParameter("window_length", window_length, hint="integer greater than 0 or None")
+
+    @property
+    def window_beta(self):
+        """`float`: The tail mass at which window length is determined.
+        """
+        return self._window_beta
+
+    @window_beta.setter
+    def window_beta(self, double window_beta):
+        if window_beta > 1 or window_beta < 0:
+            raise InvalidParameter("window_beta", window_beta, hint="real number between 0 and 1")
+        self._window_beta = window_beta
 
     # --- Methods ------------------------------------------------------------
 
@@ -6698,6 +6747,8 @@ cdef class LongTargetsPipeline(Pipeline):
         """
         raise NotImplementedError("Cannot run a database scan with the long target pipeline")
 
+
+
     cpdef TopHits search_hmm(
         self,
         object query,
@@ -6738,6 +6789,8 @@ cdef class LongTargetsPipeline(Pipeline):
         cdef int                  status
         cdef int64_t              res_count
         cdef int                  allocM
+        cdef HMM                  hmm
+        cdef int                  max_length
         cdef ScoreData            scoredata      = ScoreData.__new__(ScoreData)
         cdef TopHits              hits           = TopHits()
         cdef P7_HIT*              hit            = NULL
@@ -6763,6 +6816,17 @@ cdef class LongTargetsPipeline(Pipeline):
             L = self.L_HINT
         # get the optimized profile from the query
         om = self._get_om_from_query(query, L=L)
+
+        # compute max length based on window length to use for E-values
+        max_length = om.max_length
+        if self._window_length > 0:
+            max_length = om.max_length = self._window_length
+        elif isinstance(query, HMM):
+            hmm = query
+            libhmmer.p7_builder.p7_Builder_MaxLength(hmm._hmm, self._window_beta)
+            max_length = hmm._hmm.max_length
+        else:
+            raise TypeError("Cannot use `Profile` or `OptimizedProfile` query without `max_length` set")
 
         with nogil:
             # make sure the pipeline is set to search mode and ready for a new HMM
@@ -6804,7 +6868,7 @@ cdef class LongTargetsPipeline(Pipeline):
                 res_count = <int64_t> (1000000 * self._pli.Z)
                 if self._pli.strands == p7_strands_e.p7_STRAND_BOTH:
                     res_count *= 2
-            libhmmer.p7_tophits.p7_tophits_ComputeNhmmerEvalues(hits._th, res_count, self.opt._om.max_length)
+            libhmmer.p7_tophits.p7_tophits_ComputeNhmmerEvalues(hits._th, res_count, max_length)
             # assign target sequence lengths
             hits._sort_by_seqidx()
             status = libhmmer.nhmmer.idlen_list_assign(self._idlens, hits._th)
@@ -6868,7 +6932,19 @@ cdef class LongTargetsPipeline(Pipeline):
         assert self._pli != NULL
         if not self.alphabet._eq(query.alphabet):
             raise AlphabetMismatch(self.alphabet, query.alphabet)
-        builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
+
+        if builder is None:
+            builder = Builder(
+                self.alphabet,
+                seed=self.seed,
+                window_length=self.window_length,
+                window_beta=self.window_beta,
+            )
+        elif builder.window_length != self.window_length:
+            raise ValueError("builder and long targets pipeline have different window lengths")
+        elif builder.window_beta != self.window_beta:
+            raise ValueError("builder and long targets pipeline have different window beta")
+
         cdef HMM hmm = builder.build(query, self.background)[0]
         assert hmm._hmm.max_length != -1
         if isinstance(sequences, DigitalSequenceBlock):
@@ -6917,7 +6993,19 @@ cdef class LongTargetsPipeline(Pipeline):
 
         if not self.alphabet._eq(query.alphabet):
             raise AlphabetMismatch(self.alphabet, query.alphabet)
-        builder = Builder(self.alphabet, seed=self.seed) if builder is None else builder
+
+        if builder is None:
+            builder = Builder(
+                self.alphabet,
+                seed=self.seed,
+                window_length=self.window_length,
+                window_beta=self.window_beta,
+            )
+        elif builder.window_length != self.window_length:
+            raise ValueError("builder and long targets pipeline have different window lengths")
+        elif builder.window_beta != self.window_beta:
+            raise ValueError("builder and long targets pipeline have different window beta")
+
         cdef HMM hmm = builder.build_msa(query, self.background)[0]
         assert hmm._hmm.max_length != -1
         if isinstance(sequences, DigitalSequenceBlock):
