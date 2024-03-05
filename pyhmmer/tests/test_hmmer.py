@@ -521,6 +521,9 @@ class TestNhmmer(unittest.TestCase):
         path = resource_files(__package__).joinpath("data", "hmms", "txt", "bmyD.hmm")
         with HMMFile(path) as hmm_file:
             cls.bmyD = next(hmm_file)
+        path = resource_files(__package__).joinpath("data", "hmms", "txt", "RF00001.hmm")
+        with HMMFile(path) as hmm_file:
+            cls.rf00001 = next(hmm_file)
 
     @staticmethod
     def table(name):
@@ -672,6 +675,24 @@ class TestNhmmer(unittest.TestCase):
         self.assertEqual(len(hits.reported), 6)
         with self.table("bmyD2.tbl") as table:
             self.assertTableEqual(hits, table)
+
+    def test_rf0001_genome_file(self):
+        alphabet = Alphabet.rna()
+        path = resource_files(__package__).joinpath("data", "seqs", "CP000560.2.fna")
+        with SequenceFile(path, "fasta", digital=True, alphabet=alphabet) as seqs_file:
+            hits = list(pyhmmer.nhmmer(self.rf00001, seqs_file, cpus=1))[0]
+            hits.sort()
+        self.assertAlmostEqual(hits[0].evalue, 1.4e-14)
+        self.assertAlmostEqual(hits[9].evalue, 1.7e-13)
+
+    def test_rf0001_genome_file_wlen_3878(self):
+        alphabet = Alphabet.rna()
+        path = resource_files(__package__).joinpath("data", "seqs", "CP000560.2.fna")
+        with SequenceFile(path, "fasta", digital=True, alphabet=alphabet) as seqs_file:
+            hits = list(pyhmmer.nhmmer(self.rf00001, seqs_file, cpus=1, window_length=3878))[0]
+            hits.sort()
+        self.assertAlmostEqual(hits[0].evalue, 3.1e-14)
+        self.assertAlmostEqual(hits[9].evalue, 3.7e-13)
 
 
 class TestHmmalign(unittest.TestCase):
