@@ -252,7 +252,11 @@ cdef class Pipeline:
 
     cdef int _save_cutoff_parameters(self) except 1
     cdef int _restore_cutoff_parameters(self) except 1
+    
+    @staticmethod
+    cdef int _missing_cutoffs(const P7_PIPELINE* pli, const P7_OPROFILE* om) except 1 nogil
     cdef P7_OPROFILE* _get_om_from_query(self, object query, int L = *) except NULL
+
     cpdef list    arguments(self)
     cpdef void    clear(self)
 

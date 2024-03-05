@@ -5524,6 +5524,16 @@ cdef class Pipeline:
             ty = type(query).__name__
             raise TypeError(f"Expected HMM, Profile or OptimizedProfile, found {ty}")
 
+    @staticmethod
+    cdef int _missing_cutoffs(const P7_PIPELINE* pli, const P7_OPROFILE* om) except 1 nogil:
+        with gil:
+            bit_cutoffs = next(
+                (k for k,v in PIPELINE_BIT_CUTOFFS.items() if v == pli.use_bit_cutoffs),
+                None
+            )
+            model_name = PyUnicode_DecodeASCII(om.name, strlen(om.name), "replace")
+            raise MissingCutoffs(model_name, bit_cutoffs)
+
     # --- Methods ------------------------------------------------------------
 
     cpdef list arguments(self):
@@ -5923,7 +5933,7 @@ cdef class Pipeline:
         # configure the pipeline for the current HMM
         status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
         if status == libeasel.eslEINVAL:
-            raise MissingCutoffs()
+            Pipeline._missing_cutoffs(pli, om)
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_pli_NewModel")
 
@@ -5942,7 +5952,7 @@ cdef class Pipeline:
             # run the pipeline on the target sequence
             status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, sq[t], NULL, th)
             if status == libeasel.eslEINVAL:
-                raise MissingCutoffs()
+                Pipeline._missing_cutoffs(pli, om)
             elif status == libeasel.eslERANGE:
                 raise OverflowError("numerical overflow in the optimized vector implementation")
             elif status != libeasel.eslOK:
@@ -5988,7 +5998,7 @@ cdef class Pipeline:
             # configure the pipeline for the current HMM
             status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
             if status == libeasel.eslEINVAL:
-                raise MissingCutoffs()
+                Pipeline._missing_cutoffs(pli, om)
             elif status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_pli_NewModel")
             # run the inner loop on all sequences
@@ -6017,7 +6027,7 @@ cdef class Pipeline:
                 # run the pipeline on the target sequence
                 status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, dbsq, NULL, th)
                 if status == libeasel.eslEINVAL:
-                    raise MissingCutoffs()
+                    Pipeline._missing_cutoffs(pli, om)
                 elif status == libeasel.eslERANGE:
                     raise OverflowError("numerical overflow in the optimized vector implementation")
                 elif status != libeasel.eslOK:
@@ -6148,7 +6158,9 @@ cdef class Pipeline:
         for t in range(n_targets):
             # configure the background and pipeline for the new optimized profile
             status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om[t], bg)
-            if status != libeasel.eslOK:
+            if status == libeasel.eslEINVAL:
+                Pipeline._missing_cutoffs(pli, om[t])
+            elif status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_pli_NewModel")
             status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq.n)
             if status != libeasel.eslOK:
@@ -6166,7 +6178,7 @@ cdef class Pipeline:
                 # run the pipeline on the query sequence
                 status = libhmmer.p7_pipeline.p7_Pipeline(pli, om[t], bg, sq, NULL, th)
                 if status == libeasel.eslEINVAL:
-                    raise MissingCutoffs()
+                    Pipeline._missing_cutoffs(pli, om[t])
                 elif status == libeasel.eslERANGE:
                     raise OverflowError("numerical overflow in the optimized vector implementation")
                 elif status != libeasel.eslOK:
@@ -6210,7 +6222,9 @@ cdef class Pipeline:
             try:
                 # configure the background and pipeline for the new optimized profile
                 status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
-                if status != libeasel.eslOK:
+                if status == libeasel.eslEINVAL:
+                    Pipeline._missing_cutoffs(pli, om)
+                elif status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_pli_NewModel")
                 status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq.n)
                 if status != libeasel.eslOK:
@@ -6222,7 +6236,7 @@ cdef class Pipeline:
                 # run the pipeline on the query sequence
                 status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, sq, NULL, th)
                 if status == libeasel.eslEINVAL:
-                    raise MissingCutoffs()
+                    Pipeline._missing_cutoffs(pli, om)
                 elif status == libeasel.eslERANGE:
                     raise OverflowError("numerical overflow in the optimized vector implementation")
                 elif status != libeasel.eslOK:
@@ -6945,7 +6959,7 @@ cdef class LongTargetsPipeline(Pipeline):
         # configure the pipeline for the current HMM
         status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
         if status == libeasel.eslEINVAL:
-            raise MissingCutoffs()
+            Pipeline._missing_cutoffs(pli, om)
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_pli_NewModel")
 
@@ -7003,7 +7017,7 @@ cdef class LongTargetsPipeline(Pipeline):
                     # run the pipeline on the forward strand
                     status = libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, tmpsq, p7_complementarity_e.p7_NOCOMPLEMENT, NULL, NULL, NULL)
                     if status == libeasel.eslEINVAL:
-                        raise MissingCutoffs()
+                        Pipeline._missing_cutoffs(pli, om)
                     elif status == libeasel.eslERANGE:
                         raise OverflowError("numerical overflow in the optimized vector implementation")
                     elif status != libeasel.eslOK:
@@ -7020,7 +7034,7 @@ cdef class LongTargetsPipeline(Pipeline):
                     # run the pipeline on the reverse strand
                     status = libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, tmpsq, p7_complementarity_e.p7_COMPLEMENT, NULL, NULL, NULL)
                     if status == libeasel.eslEINVAL:
-                        raise MissingCutoffs()
+                        Pipeline._missing_cutoffs(pli, om)
                     elif status == libeasel.eslERANGE:
                         raise OverflowError("numerical overflow in the optimized vector implementation")
                     elif status != libeasel.eslOK:
@@ -7072,7 +7086,7 @@ cdef class LongTargetsPipeline(Pipeline):
         # configure the pipeline for the current HMM
         status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
         if status == libeasel.eslEINVAL:
-            raise MissingCutoffs()
+            Pipeline._missing_cutoffs(pli, om)
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_pli_NewModel")
 
@@ -7099,7 +7113,13 @@ cdef class LongTargetsPipeline(Pipeline):
                 # process forward strand
                 if pli.strands != p7_strands_e.p7_STRAND_BOTTOMONLY:
                     pli.nres -= dbsq.C
-                    libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, dbsq, p7_complementarity_e.p7_NOCOMPLEMENT, NULL, NULL, NULL)
+                    status = libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, dbsq, p7_complementarity_e.p7_NOCOMPLEMENT, NULL, NULL, NULL)
+                    if status == libeasel.eslEINVAL:
+                        Pipeline._missing_cutoffs(pli, om)
+                    elif status == libeasel.eslERANGE:
+                        raise OverflowError("numerical overflow in the optimized vector implementation")
+                    elif status != libeasel.eslOK:
+                        raise UnexpectedError(status, "p7_Pipeline_LongTarget")
                     libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
                 else:
                     pli.nres -= dbsq.n
@@ -7108,6 +7128,12 @@ cdef class LongTargetsPipeline(Pipeline):
                     libeasel.sq.esl_sq_Copy(dbsq, dbsq_rc)
                     libeasel.sq.esl_sq_ReverseComplement(dbsq_rc)
                     libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, dbsq_rc, p7_complementarity_e.p7_COMPLEMENT, NULL, NULL, NULL)
+                    if status == libeasel.eslEINVAL:
+                        Pipeline._missing_cutoffs(pli, om)
+                    elif status == libeasel.eslERANGE:
+                        raise OverflowError("numerical overflow in the optimized vector implementation")
+                    elif status != libeasel.eslOK:
+                        raise UnexpectedError(status, "p7_Pipeline_LongTarget")
                     libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
                     pli.nres += dbsq_rc.W
                 # read next window
@@ -7118,7 +7144,7 @@ cdef class LongTargetsPipeline(Pipeline):
                     libeasel.sq.esl_sq_Reuse(dbsq)
                     status = libeasel.sqio.esl_sqio_ReadWindow(sqfp, 0, W, dbsq)
                     seq_id += 1
-                elif status != libeasel.eslOK and status != libeasel.eslEOF:
+                if status != libeasel.eslOK and status != libeasel.eslEOF:
                     raise UnexpectedError(status, "esl_sqio_ReadWindow")
         finally:
             libeasel.sq.esl_sq_Destroy(dbsq)

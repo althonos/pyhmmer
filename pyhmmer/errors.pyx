@@ -166,14 +166,29 @@ class MissingCutoffs(ValueError):
 
     .. versionadded:: 0.8.2
 
+    .. versionadded:: 0.10.8
+       The ``model_name`` and ``bit_cutoffs`` displayed in the error message.
+
     """
+
+    def __init__(self, str model_name = None, str bit_cutoffs = None):
+        self.model_name = model_name
+        self.bit_cutoffs = bit_cutoffs
 
     def __repr__(self):
         cdef str ty = type(self).__name__
-        return f"{ty}()"
+        args = []
+        if self.model_name is not None:
+            args.append(f"model_name={self.model_name!r}")
+        if self.bit_cutoffs is not None:
+            args.append(f"bit_cutoffs={self.bit_cutoffs!r}")
+            return f"{ty}({self.model_name!r})"
+        return f"{ty}({ ', '.join(args) })"
 
     def __str__(self):
-        return f"Model is missing bitscore cutoff required by pipeline"
+        model = f"Model {self.model_name!r}" if self.model_name is not None else "Model"
+        bit_cutoffs = f"{self.bit_cutoffs!r} bitscore cutoff" if self.bit_cutoffs is not None else f"bitscore cutoff"
+        return f"{model} is missing {bit_cutoffs} required by pipeline"
 
 
 class InvalidParameter(ValueError):

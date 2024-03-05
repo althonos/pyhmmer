@@ -45,7 +45,11 @@ class ServerError(RuntimeError):
 
 
 class MissingCutoffs(ValueError):
-    def __init__(self) -> None: ...
+    def __init__(
+        self,
+        model_name: typing.Optional[str] = None,
+        bit_cutoffs: typing.Optional[str] = None,
+    ) -> None: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
 
@@ -56,11 +60,11 @@ class InvalidParameter(ValueError):
     choices: typing.Optional[typing.List[str]]
     hint: typing.Optional[str]
     def __init__(
-        self, 
-        name: str, 
-        value: object, 
+        self,
+        name: str,
+        value: object,
         *,
-        choices: typing.Optional[typing.List[str]], 
+        choices: typing.Optional[typing.List[str]],
         hint: typing.Optional[str]
     ) -> None: ...
     def __repr__(self) -> str: ...
