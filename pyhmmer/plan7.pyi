@@ -37,6 +37,7 @@ WEIGHTING = Literal["pb", "gsc", "blosum", "none", "given"]
 EFFECTIVE = Literal["entropy", "exp", "clust", "none"]
 PRIOR_SCHEME = Literal["laplace", "alphabet"]
 STRAND = Literal["watson", "crick"]
+STRAND_SIGN = Literal["+", "-"]
 HITS_FORMAT = Literal["targets", "domain", "pfam"]
 HITS_MODE = Literal["search", "scan"]
 
@@ -206,6 +207,8 @@ class Domain(object):
     def env_from(self) -> int: ...
     @property
     def env_to(self) -> int: ...
+    @property
+    def strand(self) -> typing.Optional[STRAND_SIGN]: ...
     @property
     def score(self) -> float: ...
     @property

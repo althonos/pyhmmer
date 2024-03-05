@@ -1497,6 +1497,23 @@ cdef class Domain:
         return self._dom.jenv
 
     @property
+    def strand(self):
+        """`str` or `None`: The strand where the domain is located.
+
+        When running a search with the `LongTargetsPipeline`, both strands
+        of each target sequence are processed (unless disabled), so the
+        domain may be located on either strand, either ``+`` or ``-``.
+        For default `Pipeline` searches, this is always `None`.
+
+        .. versionadded:: 0.10.8
+
+        """
+        assert self._dom != NULL
+        if not self.hit.hits._pli.long_targets:
+            return None
+        return "+" if self._dom.iali < self._dom.jali else "-"
+
+    @property
     def score(self):
         """`float`: The overall score in bits, *null2*-corrected.
         """

@@ -1,4 +1,5 @@
 import abc
+import collections
 import math
 import io
 import itertools
@@ -682,8 +683,13 @@ class TestNhmmer(unittest.TestCase):
         with SequenceFile(path, "fasta", digital=True, alphabet=alphabet) as seqs_file:
             hits = list(pyhmmer.nhmmer(self.rf00001, seqs_file, cpus=1))[0]
             hits.sort()
+
         self.assertAlmostEqual(hits[0].evalue, 1.4e-14)
         self.assertAlmostEqual(hits[9].evalue, 1.7e-13)
+
+        strands = collections.Counter(hit.best_domain.strand for hit in hits.reported)
+        self.assertEqual(strands["+"], 9)
+        self.assertEqual(strands["-"], 1)
 
     def test_rf0001_genome_file_wlen_3878(self):
         alphabet = Alphabet.rna()
@@ -691,9 +697,13 @@ class TestNhmmer(unittest.TestCase):
         with SequenceFile(path, "fasta", digital=True, alphabet=alphabet) as seqs_file:
             hits = list(pyhmmer.nhmmer(self.rf00001, seqs_file, cpus=1, window_length=3878))[0]
             hits.sort()
+
         self.assertAlmostEqual(hits[0].evalue, 3.1e-14)
         self.assertAlmostEqual(hits[9].evalue, 3.7e-13)
 
+        strands = collections.Counter(hit.best_domain.strand for hit in hits.reported)
+        self.assertEqual(strands["+"], 9)
+        self.assertEqual(strands["-"], 1)
 
 class TestHmmalign(unittest.TestCase):
     def setUp(self):
@@ -707,7 +717,7 @@ class TestHmmalign(unittest.TestCase):
         hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "LuxC.hmm")
         seqs_path = resource_files(__package__).joinpath("data", "seqs", "LuxC.faa")
         ref_path = resource_files(__package__).joinpath("data", "msa", "LuxC.hmmalign.sto")
-            
+
         with HMMFile(hmm_path) as hmm_file:
             hmm = hmm_file.read()
         with SequenceFile(seqs_path, digital=True, alphabet=hmm.alphabet) as seqs_file:
