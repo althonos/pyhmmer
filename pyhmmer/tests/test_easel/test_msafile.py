@@ -29,6 +29,10 @@ class TestMSAFile(unittest.TestCase):
     def test_init_file_not_found(self):
         self.assertRaises(FileNotFoundError, easel.MSAFile, "path/to/missing/file.sto")
 
+    def test_init_error_folder(self):
+        folder = tempfile.gettempdir()
+        self.assertRaises(IsADirectoryError, easel.MSAFile, folder)
+
     @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_author(self):
         trna_5 = os.path.join(EASEL_FOLDER, "testsuite", "trna-5.stk")

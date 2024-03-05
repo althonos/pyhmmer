@@ -39,6 +39,10 @@ class TestSequenceFile(unittest.TestCase):
             FileNotFoundError, easel.SequenceFile, "path/to/missing/file.fa"
         )
 
+    def test_init_error_folder(self):
+        folder = tempfile.gettempdir()
+        self.assertRaises(IsADirectoryError, easel.SequenceFile, folder)
+
     @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_iter(self):
         fasta = os.path.join(EASEL_FOLDER, "formats", "fasta")

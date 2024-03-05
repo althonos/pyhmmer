@@ -99,6 +99,7 @@ include "_getid.pxi"
 
 import abc
 import array
+import errno
 import functools
 import io
 import itertools
@@ -4068,7 +4069,7 @@ cdef class MSAFile:
         """
         cdef int   fmt
         cdef int   status
-        cdef bytes fspath
+        cdef bytes fspath = None
 
         fmt = libeasel.msafile.eslMSAFILE_UNKNOWN
         if format is not None:
@@ -4080,6 +4081,11 @@ cdef class MSAFile:
         # open from either a file-like object or a path
         try:
             fspath = os.fsencode(file)
+            # NOTE(@althonos): manually check the file is not a folder,
+            # otherwise Easel will run into a segmentation fault after
+            # failing to "slurp" the file!
+            if os.path.isdir(fspath):
+                raise IsADirectoryError(errno.EISDIR, f"Is a directory: {file!r}")
         except TypeError:
             self._msaf = MSAFile._open_fileobj(file, fmt)
             status = libeasel.eslOK
@@ -4094,7 +4100,7 @@ cdef class MSAFile:
         try:
             # check opening the file was successful
             if status == libeasel.eslENOTFOUND:
-                raise FileNotFoundError(2, "No such file or directory: {!r}".format(file))
+                raise FileNotFoundError(errno.ENOENT, f"No such file or directory: {file!r}")
             elif status == libeasel.eslEMEM:
                 raise AllocationError("ESL_MSAFILE", sizeof(ESL_MSAFILE))
             elif status == libeasel.eslENOFORMAT:
@@ -6186,6 +6192,11 @@ cdef class SequenceFile:
         # open the given filename
         try:
             fspath = os.fsencode(file)
+            # NOTE(@althonos): manually check the file is not a folder,
+            # otherwise Easel will run into a segmentation fault after
+            # failing to "slurp" the file!
+            if os.path.isdir(fspath):
+                raise IsADirectoryError(errno.EISDIR, f"Is a directory: {file!r}")
         except TypeError:
             self._sqfp = SequenceFile._open_fileobj(file, fmt)
             status = libeasel.eslOK
@@ -6200,7 +6211,7 @@ cdef class SequenceFile:
         try:
             # check opening the file was successful
             if status == libeasel.eslENOTFOUND:
-                raise FileNotFoundError(2, "No such file or directory: {!r}".format(file))
+                raise FileNotFoundError(errno.ENOENT, "No such file or directory: {!r}".format(file))
             elif status == libeasel.eslEMEM:
                 raise AllocationError("ESL_SQFILE", sizeof(ESL_SQFILE))
             elif status == libeasel.eslEFORMAT:
@@ -6561,7 +6572,7 @@ cdef class SSIReader:
         """Create a new SSI file reader for the file at the given location.
 
         Arguments:
-            file (`str`, `bytes` or `os.PathLike`): The path to a 
+            file (`str`, `bytes` or `os.PathLike`): The path to a
                 sequence/subsequence index file to read.
 
         """
@@ -6653,7 +6664,7 @@ cdef class SSIWriter:
         """Create a new SSI file write for the file at the given location.
 
         Arguments:
-            file (`str`, `bytes` or `os.PathLike`): The path to a 
+            file (`str`, `bytes` or `os.PathLike`): The path to a
                 sequence/subsequence index file to write.
             exclusive (`bool`): Whether or not to create a file if one does
                 not exist.
@@ -6703,9 +6714,9 @@ cdef class SSIWriter:
         """Add a new file to the index.
 
         Arguments:
-            filename (`str`, `bytes` or `os.PathLike`): The name of the 
+            filename (`str`, `bytes` or `os.PathLike`): The name of the
                 file to register.
-            format (`int`): A format code to associate with the file, 
+            format (`int`): A format code to associate with the file,
                 or *0* by default.
 
         Returns:

@@ -81,8 +81,12 @@ class _TestHMMPath:
     def open_pressed(self, path):
         return HMMPressedFile(path)
 
-    def test_filenotfound(self):
+    def test_init_error_filenotfound(self):
         self.assertRaises(FileNotFoundError, HMMFile, "path/to/missing/file")
+
+    def test_init_error_folder(self):
+        folder = tempfile.gettempdir()
+        self.assertRaises(IsADirectoryError, HMMFile, folder)
 
     def test_read_optimized_profiles(self):
         path = os.path.join(self.hmms_folder, "db", "{}.hmm".format(self.ID))

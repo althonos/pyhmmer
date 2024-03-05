@@ -3506,12 +3506,14 @@ cdef class HMMFile:
             status    = libeasel.eslOK
 
         if status == libeasel.eslENOTFOUND:
-            raise FileNotFoundError(errno.ENOENT, "no such file or directory: {!r}".format(file))
+            raise FileNotFoundError(errno.ENOENT, f"No such file or directory: {file!r}")
         elif status == libeasel.eslEFORMAT:
-            if os.stat(file).st_size:
-                raise ValueError("format not recognized by HMMER")
-            else:
-                raise EOFError("HMM file is empty")
+            if fspath is not None:
+                if os.path.isdir(fspath):
+                    raise IsADirectoryError(errno.EISDIR, f"Is a directory: {file!r}")
+                elif os.stat(file).st_size == 0:
+                    raise EOFError("HMM file is empty")
+            raise ValueError("format not recognized by HMMER")
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, function)
 
