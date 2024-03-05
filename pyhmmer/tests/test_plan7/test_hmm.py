@@ -5,8 +5,9 @@ import os
 import pickle
 import platform
 import shutil
-import unittest
+import sys
 import tempfile
+import unittest
 
 import pyhmmer
 from pyhmmer.errors import EaselError, AlphabetMismatch
@@ -142,6 +143,11 @@ class TestHMM(unittest.TestCase):
             seq = TextSequence(sequence="A"*(hmm.M - 1)).digitize(dna)
             hmm.set_consensus(seq)
 
+    @unittest.skipIf(sys.implementation.name == "pypy", "`getsizeof` not supported on PyPY")
+    def test_sizeof(self):
+        dna = Alphabet.dna()
+        hmm = HMM(dna, 100, b"test")
+        self.assertGreater(sys.getsizeof(hmm), 0)
 
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
     def test_write(self):

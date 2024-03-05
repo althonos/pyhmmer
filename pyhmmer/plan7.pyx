@@ -3741,7 +3741,6 @@ cdef class HMMPressedFile:
         return om
 
     def __repr__(self):
-
         cdef str ty = type(self).__name__
         cdef str mod = type(self).__module__
         if self._hmmfile._name is not None:
@@ -4438,7 +4437,6 @@ cdef class OptimizedProfile:
 
         """
         assert self._om != NULL
-
         cdef VectorF vec = VectorF.__new__(VectorF)
         vec._n = vec._shape[0] = p7_MAXABET
         vec._owner = self

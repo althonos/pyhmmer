@@ -1,4 +1,5 @@
 from . import (
+    test_alignment,
     test_background,
     test_block,
     test_builder,
@@ -14,6 +15,7 @@ from . import (
 )
 
 def load_tests(loader, suite, pattern):
+    suite.addTests(loader.loadTestsFromModule(test_alignment))
     suite.addTests(loader.loadTestsFromModule(test_background))
     suite.addTests(loader.loadTestsFromModule(test_block))
     suite.addTests(loader.loadTestsFromModule(test_builder))

@@ -39,3 +39,10 @@ class TestBuilder(unittest.TestCase):
         self.assertEqual(bg.alphabet, bg2.alphabet)
         self.assertEqual(bg.transition_probability, bg2.transition_probability)
         self.assertEqual(bg.residue_frequencies, bg2.residue_frequencies)
+
+    def test_repr(self):
+        abc = easel.Alphabet.amino()
+        bg = plan7.Background(abc)
+        self.assertEqual(repr(bg), "Background(Alphabet.amino(), uniform=False)")
+        bg2 = plan7.Background(abc, uniform=True)
+        self.assertEqual(repr(bg2), "Background(Alphabet.amino(), uniform=True)")
