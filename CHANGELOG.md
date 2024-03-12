@@ -6,7 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.8...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.9...HEAD
+
+
+## [v0.10.9] - 2024-03-12
+[v0.10.9]: https://github.com/althonos/pyhmmer/compare/v0.10.8...v0.10.9
+
+### Fixed
+- Reallocation issue causing segmentation faults in `nhmmer` with more than 64 sequences ([#62](https://github.com/althonos/pyhmmer/issues/62)).
 
 
 ## [v0.10.8] - 2024-03-06
