@@ -83,7 +83,7 @@ Py_ssize_t fileobj_linux_readinto(void* cookie, char* buf, size_t size) {
     return len;
 }
 
-int fileobj_linux_seek(void* cookie, off64_t* offset, int whence) {
+int fileobj_linux_seek(void* cookie, off_t* offset, int whence) {
     PyObject* file = (PyObject*) cookie;
 
     PyObject* out = PyObject_CallMethod(file, "seek", "Li", *offset, whence);
