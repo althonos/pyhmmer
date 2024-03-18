@@ -3389,17 +3389,20 @@ cdef class MSA:
         """
         assert self._msa != NULL
 
-        cdef int    status
         cdef int    fmt
-        cdef FILE*  file
+        cdef int    status
+        cdef FILE*  file   = NULL
 
         if format not in MSA_FILE_FORMATS:
             raise InvalidParameter("format", format, choices=list(MSA_FILE_FORMATS))
 
         fmt = MSA_FILE_FORMATS[format]
-        file = fopen_obj(fh, "w")
-        status = libeasel.msafile.esl_msafile_Write(file, self._msa, fmt)
-        fclose(file)
+
+        try:
+            file = fopen_obj(fh, "w")
+            status = libeasel.msafile.esl_msafile_Write(file, self._msa, fmt)
+        finally:
+            fclose(file)
 
         if status != libeasel.eslOK:
             _reraise_error()
@@ -4704,10 +4707,13 @@ cdef class Sequence:
         assert self._sq != NULL
 
         cdef int    status
-        cdef FILE*  file   = fopen_obj(fh, "w")
+        cdef FILE*  file   = NULL
 
-        status = libeasel.sqio.ascii.esl_sqascii_WriteFasta(file, self._sq, False)
-        fclose(file)
+        try:
+            file = fopen_obj(fh, "w")
+            status = libeasel.sqio.ascii.esl_sqascii_WriteFasta(file, self._sq, False)
+        finally:
+            fclose(file)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sqascii_WriteFasta")
 
