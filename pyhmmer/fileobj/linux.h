@@ -15,6 +15,9 @@
 
 Py_ssize_t fileobj_linux_write(void* cookie, const char* buf, size_t size) {
     PyObject* file = (PyObject*) cookie;
+
+    if (buf == NULL)
+        return 0;
     
     PyObject* out = PyObject_CallMethod(file, "write", "y#", buf, (Py_ssize_t) size);
     if (out == NULL)
@@ -33,6 +36,9 @@ Py_ssize_t fileobj_linux_write(void* cookie, const char* buf, size_t size) {
 
 Py_ssize_t fileobj_linux_read(void* cookie, char* buf, size_t size) {
     PyObject* file = (PyObject*) cookie;
+
+    if (buf == NULL)
+        return 0;
 
     PyObject* chunk = PyObject_CallMethod(file, "read", "n", size);
     if (chunk == NULL)
@@ -59,6 +65,9 @@ Py_ssize_t fileobj_linux_read(void* cookie, char* buf, size_t size) {
 
 Py_ssize_t fileobj_linux_readinto(void* cookie, char* buf, size_t size) {
     PyObject* file = (PyObject*) cookie;
+
+    if (buf == NULL)
+        return 0;
 
     PyObject* mem  = PyMemoryView_FromMemory(buf, (Py_ssize_t) size, PyBUF_WRITE);
     if (mem == NULL) 
