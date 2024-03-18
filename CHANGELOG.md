@@ -6,7 +6,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.9...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.10...HEAD
+
+
+## [v0.10.10] - 2024-03-18
+[v0.10.10]: https://github.com/althonos/pyhmmer/compare/v0.10.9...v0.10.10
+
+### Fixed
+- Implement `write` function for `fopencookie` with `off_t` instead of `off64_t` for compatibility.
+- Fix handling of NULL buffers passed to `read` and `write` methods of `fopencookie`.
 
 
 ## [v0.10.9] - 2024-03-12
