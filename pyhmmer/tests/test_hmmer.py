@@ -145,6 +145,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
                 self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
 
     @unittest.skipUnless(resource_files, "importlib.resources not available")
+    @unittest.skipUnless(resource_files(__package__).joinpath("data", "hmms", "db", "t2pks.hmm").exists(), "t2pks.hmm not available")
     def test_t2pks(self):
         with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
             seqs = seqs_file.read_block()
@@ -741,6 +742,7 @@ class TestHMMScan(unittest.TestCase):
         return HMMFile(path)
 
     @unittest.skipUnless(resource_files, "importlib.resources not available")
+    @unittest.skipUnless(resource_files(__package__).joinpath("data", "hmms", "db", "t2pks.hmm").exists(), "t2pks.hmm not available")
     def test_t2pks_block(self):
         # get paths to resources
         table_path = resource_files(__package__).joinpath("data", "tables", "t2pks.scan.tbl")
@@ -779,6 +781,7 @@ class TestHMMScan(unittest.TestCase):
                     self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
 
     @unittest.skipUnless(resource_files, "importlib.resources not available")
+    @unittest.skipUnless(resource_files(__package__).joinpath("data", "hmms", "db", "t2pks.hmm").exists(), "t2pks.hmm not available")
     def test_t2pks_file(self):
         # get paths to resources
         table_path = resource_files(__package__).joinpath("data", "tables", "t2pks.scan.tbl")

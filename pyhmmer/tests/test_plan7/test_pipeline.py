@@ -177,6 +177,7 @@ class TestSearchPipeline(unittest.TestCase):
 
 
 @unittest.skipUnless(resource_files, "importlib.resources.files not available")
+@unittest.skipUnless(resource_files(__package__).joinpath("data", "hmms", "db", "t2pks.hmm").exists(), "t2pks.hmm not available")
 class TestScanPipeline(unittest.TestCase):
 
     @classmethod

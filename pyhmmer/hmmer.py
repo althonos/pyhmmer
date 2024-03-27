@@ -1444,11 +1444,11 @@ def hmmscan(
         use the `HMMFile.optimized_profiles` method so that profiles are
         read iteratively from the file during the scan loop::
 
-            >>> with HMMFile("tests/data/hmms/db/t2pks.hmm") as hmm_file:
+            >>> with HMMFile("tests/data/hmms/db/PF02826.hmm") as hmm_file:
             ...     targets = hmm_file.optimized_profiles()
             ...     all_hits = list(hmmscan(proteins, targets, E=1e-10))
             >>> sum(len(hits) for hits in all_hits)
-            26
+            6
 
         Otherwise, passing ``hmm_file`` as the ``profiles`` argument of
         `hmmscan` would cause the entire HMM file to be loaded in memory
