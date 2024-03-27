@@ -6,7 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.10...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.11...HEAD
+
+
+## [v0.10.11] - 2024-03-27
+[v0.10.11]: https://github.com/althonos/pyhmmer/compare/v0.10.10...v0.10.11
+
+### Fixed
+- Compilation of Easel and HMMER code not using SSE4.1 extensions.
 
 
 ## [v0.10.10] - 2024-03-18
