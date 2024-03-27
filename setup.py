@@ -41,7 +41,7 @@ def _eprint(*args, **kwargs):
 def _patch_osx_compiler(compiler):
     # On newer OSX, Python has been compiled as a universal binary, so
     # it will attempt to pass universal binary flags when building the
-    # extension. This will not work because the code makes use of SSE2.
+    # extension. This will not work because the code makes use of SSE4.
     for tool in ("compiler", "compiler_so", "linker_so"):
         flags = getattr(compiler, tool)
         i = next((i for i in range(1, len(flags)) if flags[i-1] == "-arch" and flags[i] == "arm64"), None)
@@ -488,18 +488,19 @@ class configure(_build_clib):
             platform_args=[] if "64" in self.target_machine else ["-mfpu=neon"]
         )
 
-    def _check_sse2(self):
+    def _check_sse4(self):
         return self._check_simd_generic(
-            "SSE2",
+            "SSE4",
             program="""
-                #include <emmintrin.h>
+                #include <smmintrin.h>
                 int main(int argc, char *argv[]) {{
-                    __m128i a = _mm_set1_epi16(-1);
-                            a = _mm_and_si128(a, a);
-                    short   x = _mm_extract_epi16(a, 1);
-                    return (x == -1) ? 0 : 1;
+                    __m128  a = _mm_set1_ps(1.0);
+                            a = _mm_blend_ps(a, _mm_setzero_ps(), 0b1111);
+                    float   x = _mm_extract_ps(a, 1);
+                    return (x == 1) ? 0 : 1;
                 }}
             """,
+            platform_args=["-msse4.1"]
         )
 
     def _check_vmx(self):
@@ -585,7 +586,7 @@ class configure(_build_clib):
         # check platform flags
         if self.hmmer_impl is not None:
             if self.hmmer_impl == "SSE":
-                supported_feature = self._check_sse2()
+                supported_feature = self._check_sse4()
             elif self.hmmer_impl == "VMX":
                 supported_feature = self._check_vmx()
             elif self.hmmer_impl == "NEON":
@@ -688,6 +689,9 @@ class build_clib(_build_clib):
             library.extra_link_args.append("-maltivec")
         elif self.hmmer_impl == "SSE":
             library.define_macros.append(("eslENABLE_SSE", 1))
+            library.define_macros.append(("eslENABLE_SSE4", 1))
+            library.extra_compile_args.append("-msse4.1")
+            library.extra_link_args.append("-msse4.1")
         elif self.hmmer_impl == "NEON":
             library.define_macros.append(("eslENABLE_NEON", 1))
             if "64" not in self.target_machine:
