@@ -56,6 +56,25 @@ Steps to install on ArchLinux depend on your `AUR helper <https://wiki.archlinux
     $ aura -A python-pyhmmer
 
 
+BioArchLinux
+^^^^^^^^^^^^
+
+The `BioArchLinux <https://bioarchlinux.org>`_ project provides pre-compiled packages
+based on the AUR recipe. Add the BioArchLinux package repository to ``/etc/pacman.conf``:
+
+.. code:: ini
+
+    [bioarchlinux]
+    Server = https://repo.bioarchlinux.org/$arch
+
+Then install the latest version of the package and its dependencies with ``pacman``:
+
+.. code:: console
+
+    $ pacman -Sy
+    $ pacman -S python-pyhmmer
+
+
 Piwheels
 ^^^^^^^^
 
