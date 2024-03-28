@@ -3378,12 +3378,12 @@ cdef class HMMFile:
 
         Load all the HMMs from an HMM file into a `list`::
 
-            >>> with HMMFile("tests/data/hmms/txt/t2pks.hmm") as hmm_file:
+            >>> with HMMFile("tests/data/hmms/txt/RREFam.hmm") as hmm_file:
             ...     hmms = list(hmm_file)
             >>> len(hmms)
-            40
-            >>> hmms[0].name
-            b'CLF'
+            28
+            >>> hmms[0].accession
+            b'RREFam008.1'
 
     """
 

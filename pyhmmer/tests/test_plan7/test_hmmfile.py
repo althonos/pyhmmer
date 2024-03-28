@@ -124,16 +124,36 @@ class _TestThioesterase(_TestHMMFile):
 
 
 class _TestT2PKS(_TestHMMFile):
-    ID = "t2pks"
+    ID = "RREFam"
     NAMES = [
-        b"CLF", b"CLF_7", b"CLF_8|9", b"CLF_11|12", b"AT", b"CYC", b"CYC_C7-C12",
-        b"CYC_C5-C14", b"CYC_C5-C14/C3-C16", b"CYC_C1-C18|C2-C19", b"CYC_C2-C19",
-        b"CYC_C5-C18", b"CYC_C4-C17/C2-C19", b"CYC_C4-C21/C2-C23|C2-C19",
-        b"CYC_C9-C14", b"KSIII", b"ACP", b"KR", b"KR_C9", b"KR_C11", b"KR_C15",
-        b"KR_C17", b"KR_C19", b"KS", b"OXY", b"GT", b"MET", b"MET_carboxy_O",
-        b"MET_C2O|C2N", b"MET_C6|C8", b"MET_C9O", b"MET_C10", b"MET_C11O",
-        b"MET_C13O|C17O", b"MET_C18O", b"DIMER", b"LIG", b"HAL", b"AMIN",
-        b"AMID"
+        b"Bottromycin_Methyltransferase_RRE",
+        b"Cyanobactin_D_RRE",
+        b"Cytolysin_C_RRE",
+        b"Stand_Alone_Lasso_RRE",
+        b"Lasso_Fused_RRE",
+        b"Goadsporin_CD_RRE",
+        b"Heterocycloanthracin_C_RRE",
+        b"Lanthipeptide_LanB_RRE",
+        b"Mycofactocin_RRE",
+        b"NHLP_CD_RRE",
+        b"Other_Sactipeptide_rSAM_RRE",
+        b"Pantocin_Microcin_RRE",
+        b"Plantazolicin_C_RRE",
+        b"PlpY_RRE",
+        b"PqqD_RRE",
+        b"Proteusin_Methyltransferase_RRE",
+        b"Proteusin_Epimerase_RRE",
+        b"Quinohemoprotein_rSAM_RRE",
+        b"Ranthipeptide_rSAM_RRE",
+        b"Streptide_RRE",
+        b"Subtilosin_rSAM_RRE",
+        b"Thiaglutamate_B_RRE",
+        b"Thiaglutamate_G_RRE",
+        b"Thiaglutamate_I_RRE",
+        b"Thiopeptide_F_RRE",
+        b"Thuricin_rSAM_RRE",
+        b"Thurincin_rSAM_RRE",
+        b"Trifolitoxin_RRE"
     ]
 
 

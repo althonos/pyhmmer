@@ -177,7 +177,6 @@ class TestSearchPipeline(unittest.TestCase):
 
 
 @unittest.skipUnless(resource_files, "importlib.resources.files not available")
-@unittest.skipUnless(resource_files(__package__).joinpath("data", "hmms", "db", "t2pks.hmm").exists(), "t2pks.hmm not available")
 class TestScanPipeline(unittest.TestCase):
 
     @classmethod
@@ -188,7 +187,7 @@ class TestScanPipeline(unittest.TestCase):
         with SequenceFile(seq_path, digital=True, alphabet=cls.alphabet) as f:
             cls.references = f.read_block()
 
-        hmm_file = resource_files(__package__).joinpath("data", "hmms", "txt", "t2pks.hmm")
+        hmm_file = resource_files(__package__).joinpath("data", "hmms", "txt", "RREFam.hmm")
         with HMMFile(hmm_file) as f:
             cls.hmms = list(f)
 
@@ -206,7 +205,7 @@ class TestScanPipeline(unittest.TestCase):
         self.assertRaises(AlphabetMismatch, pipeline.scan_seq, dsq, oprofiles)
 
     def test_scan_seq_block(self):
-        seq = next(x for x in self.references if x.name == b"938293.PRJEB85.HG003687_188")
+        seq = next(x for x in self.references if x.name == b"938293.PRJEB85.HG003691_78")
 
         oprofiles = OptimizedProfileBlock(seq.alphabet)
         background = Background(seq.alphabet)
@@ -217,17 +216,17 @@ class TestScanPipeline(unittest.TestCase):
 
         pipeline = Pipeline(alphabet=self.alphabet)
         hits = pipeline.scan_seq(seq, oprofiles)
-        self.assertEqual(len(hits), 6)  # number found with `hmmscan`
+        self.assertEqual(len(hits), 3)  # number found with `hmmscan`
 
     def test_scan_seq_file(self):
-        seq = next(x for x in self.references if x.name == b"938293.PRJEB85.HG003687_188")
+        seq = next(x for x in self.references if x.name == b"938293.PRJEB85.HG003691_78")
 
-        hmm_file = resource_files(__package__).joinpath("data", "hmms", "db", "t2pks.hmm")
+        hmm_file = resource_files(__package__).joinpath("data", "hmms", "db", "RREFam.hmm")
         with HMMFile(hmm_file) as f:
             pipeline = Pipeline(alphabet=self.alphabet)
             hits = pipeline.scan_seq(seq, f.optimized_profiles())
 
-        self.assertEqual(len(hits), 6)  # number found with `hmmscan`
+        self.assertEqual(len(hits), 3)  # number found with `hmmscan`
 
 
 @unittest.skipUnless(resource_files, "importlib.resources.files not available")
