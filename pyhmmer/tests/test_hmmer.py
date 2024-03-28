@@ -682,31 +682,27 @@ class TestNhmmer(unittest.TestCase):
 
     def test_rf0001_genome_file(self):
         alphabet = Alphabet.rna()
-        path = resource_files(__package__).joinpath("data", "seqs", "CP000560.2.fna")
+        path = resource_files(__package__).joinpath("data", "seqs", "1390.SAMEA104415756.OFHT01000024.fna")
         with SequenceFile(path, "fasta", digital=True, alphabet=alphabet) as seqs_file:
             hits = list(pyhmmer.nhmmer(self.rf00001, seqs_file, cpus=1))[0]
             hits.sort()
 
-        self.assertAlmostEqual(hits[0].evalue, 1.4e-14)
-        self.assertAlmostEqual(hits[9].evalue, 1.7e-13)
-
-        strands = collections.Counter(hit.best_domain.strand for hit in hits.reported)
-        self.assertEqual(strands["+"], 9)
-        self.assertEqual(strands["-"], 1)
+        self.assertEqual(len(hits), 1)
+        self.assertAlmostEqual(hits[0].evalue, 2.5e-17, places=2)
+        self.assertEqual(hits[0].best_domain.strand, "-")
 
     def test_rf0001_genome_file_wlen_3878(self):
         alphabet = Alphabet.rna()
-        path = resource_files(__package__).joinpath("data", "seqs", "CP000560.2.fna")
+        path = resource_files(__package__).joinpath("data", "seqs", "1390.SAMEA104415756.OFHT01000024.fna")
         with SequenceFile(path, "fasta", digital=True, alphabet=alphabet) as seqs_file:
             hits = list(pyhmmer.nhmmer(self.rf00001, seqs_file, cpus=1, window_length=3878))[0]
             hits.sort()
 
-        self.assertAlmostEqual(hits[0].evalue, 3.1e-14)
-        self.assertAlmostEqual(hits[9].evalue, 3.7e-13)
-
-        strands = collections.Counter(hit.best_domain.strand for hit in hits.reported)
-        self.assertEqual(strands["+"], 9)
-        self.assertEqual(strands["-"], 1)
+        self.assertEqual(len(hits), 2)
+        self.assertAlmostEqual(hits[0].evalue, 5.4e-17, places=2)
+        self.assertAlmostEqual(hits[1].evalue, 0.3, places=2)
+        self.assertEqual(hits[0].best_domain.strand, "-")
+        self.assertEqual(hits[1].best_domain.strand, "-")
 
 class TestHmmalign(unittest.TestCase):
     def setUp(self):
