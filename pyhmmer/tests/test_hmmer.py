@@ -655,26 +655,28 @@ class TestNhmmer(unittest.TestCase):
     def test_bmyd_hmm_genome_block(self):
         alphabet = Alphabet.dna()
 
-        path = resource_files(__package__).joinpath("data", "seqs", "CP000560.2.fna")
+        path = resource_files(__package__).joinpath("data", "seqs", "1390.SAMEA104415756.OFHT01000022.fna")
         with SequenceFile(path, "fasta", digital=True, alphabet=alphabet) as seqs_file:
             seqs = seqs_file.read_block()
 
         hits = next(pyhmmer.nhmmer(self.bmyD, seqs, cpus=1))
         hits.sort()
 
-        self.assertEqual(len(hits.reported), 6)
+        self.assertEqual(len(hits.reported), 3)
+        self.assertEqual(len(hits.included), 2)
         with self.table("bmyD2.tbl") as table:
             self.assertTableEqual(hits, table)
 
     def test_bmyd_hmm_genome_file(self):
         alphabet = Alphabet.dna()
 
-        path = resource_files(__package__).joinpath("data", "seqs", "CP000560.2.fna")
+        path = resource_files(__package__).joinpath("data", "seqs", "1390.SAMEA104415756.OFHT01000022.fna")
         with SequenceFile(path, "fasta", digital=True, alphabet=alphabet) as seqs_file:
             hits = list(pyhmmer.nhmmer(self.bmyD, seqs_file, cpus=1))[0]
             hits.sort()
 
-        self.assertEqual(len(hits.reported), 6)
+        self.assertEqual(len(hits.reported), 3)
+        self.assertEqual(len(hits.included), 2)
         with self.table("bmyD2.tbl") as table:
             self.assertTableEqual(hits, table)
 
