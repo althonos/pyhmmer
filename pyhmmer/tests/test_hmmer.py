@@ -703,6 +703,7 @@ class TestNhmmer(unittest.TestCase):
         self.assertEqual(hits[0].best_domain.strand, "-")
         self.assertEqual(hits[1].best_domain.strand, "-")
 
+
 class TestHmmalign(unittest.TestCase):
     def setUp(self):
         self.tmpout = tempfile.NamedTemporaryFile(suffix=".hmm", delete=False).name

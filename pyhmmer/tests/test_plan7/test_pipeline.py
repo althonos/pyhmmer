@@ -240,19 +240,16 @@ class TestIteratePipeline(unittest.TestCase):
         with SequenceFile(seq_path, digital=True, alphabet=cls.alphabet) as f:
             cls.references = f.read_block()
 
-        query_path = resource_files(__package__).joinpath("data", "seqs", "LuxC.faa")
-        with SequenceFile(query_path, digital=True, alphabet=cls.alphabet) as f:
-            cls.query = next(seq for seq in f if b"P12748" in seq.name)
-
-        hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "t2pks.hmm")
-        with HMMFile(hmm_path) as hmm_file:
-            cls.hmm = next(hmm for hmm in hmm_file if b"KR" in hmm.name)
-
     def test_iterate_seq(self):
         # check that `Pipeline.iterate_seq` produces consistent results
         # compared to a 'gold standard' run of `jackhmmer`.
+
+        query_path = resource_files(__package__).joinpath("data", "seqs", "LuxC.faa")
+        with SequenceFile(query_path, digital=True, alphabet=self.alphabet) as f:
+            query = next(seq for seq in f if b"P12748" in seq.name)
+
         pipeline = Pipeline(alphabet=self.alphabet, incE=0.001, incdomE=0.001)
-        search_iterator = pipeline.iterate_seq(self.query, self.references)
+        search_iterator = pipeline.iterate_seq(query, self.references)
 
         for n in range(3):
             self.assertEqual(search_iterator.iteration, n)
@@ -280,8 +277,13 @@ class TestIteratePipeline(unittest.TestCase):
     def test_iterate_hmm(self):
         # check that `Pipeline.iterate_hmm` produces consistent results
         # compared to a 'gold standard' run of `jackhmmer` (actually, manually iterated hmmsearches).
+
+        hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "KR.hmm")
+        with HMMFile(hmm_path) as hmm_file:
+            hmm = hmm_file.read()
+
         pipeline = Pipeline(alphabet=self.alphabet, incE=0.001, incdomE=0.001)
-        search_iterator = pipeline.iterate_hmm(self.hmm, self.references)
+        search_iterator = pipeline.iterate_hmm(hmm, self.references)
 
         for n in range(6):
             self.assertEqual(search_iterator.iteration, n)
