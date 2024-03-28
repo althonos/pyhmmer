@@ -1,0 +1,28 @@
+#                                                                                          --- full sequence --- -------------- this domain -------------   hmm coord   ali coord   env coord
+# target name        accession   tlen query name                        accession    qlen   E-value  score  bias   #  of  c-Evalue  i-Evalue  score  bias  from    to  from    to  from    to  acc description of target
+#------------------- ---------- -----              --------------------  ---------- ----- --------- ------ ----- --- --- --------- --------- ------ ----- ----- ----- ----- ----- ----- ----- ---- ---------------------
+938293.PRJEB85.HG003691_78 -            106 Stand_Alone_Lasso_RRE RREFam002.1    87    0.0012   15.8   0.0   1   1   7.9e-07    0.0017   15.4   0.0    33    84    52   103    49   105 0.89 # 82443 # 82760 # 1 # ID=5_78;partial=00;start_type=ATG;rbs_motif=GGA/GAG/AGG;rbs_spacer=5-10bp;gc_cont=0.252
+938293.PRJEB85.HG003686_827 -            330 Other_Sactipeptide_rSAM_RRE RREFam021.1   138    0.0033   14.4   3.1   1   2   0.00077       1.6    5.7   0.5    39    97    14    76    11   106 0.69 # 893589 # 894578 # -1 # ID=7_827;partial=00;start_type=ATG;rbs_motif=GGA/GAG/AGG;rbs_spacer=5-10bp;gc_cont=0.332
+938293.PRJEB85.HG003686_827 -            330 Other_Sactipeptide_rSAM_RRE RREFam021.1   138    0.0033   14.4   3.1   2   2   0.00011      0.23    8.4   0.1    38    84   273   325   264   328 0.76 # 893589 # 894578 # -1 # ID=7_827;partial=00;start_type=ATG;rbs_motif=GGA/GAG/AGG;rbs_spacer=5-10bp;gc_cont=0.332
+938293.PRJEB85.HG003691_78  -            106 PqqD_RRE             RREFam006.1    93   5.9e-07   26.2   0.0   1   2     0.021        22    1.9   0.0    18    35    14    31     5    38 0.83 # 82443 # 82760 # 1 # ID=5_78;partial=00;start_type=ATG;rbs_motif=GGA/GAG/AGG;rbs_spacer=5-10bp;gc_cont=0.252
+938293.PRJEB85.HG003691_78  -            106 PqqD_RRE             RREFam006.1    93   5.9e-07   26.2   0.0   2   2   7.4e-09   7.7e-06   22.6   0.0    35    91    48   104    32   105 0.91 # 82443 # 82760 # 1 # ID=5_78;partial=00;start_type=ATG;rbs_motif=GGA/GAG/AGG;rbs_spacer=5-10bp;gc_cont=0.252
+938293.PRJEB85.HG003685_119 -            316 PqqD_RRE             RREFam006.1    93     0.016   11.9   0.0   1   1   4.3e-05     0.045   10.5   0.0    46    75   281   310   274   311 0.89 # 125269 # 126216 # -1 # ID=6_119;partial=00;start_type=ATG;rbs_motif=AGGAG;rbs_spacer=5-10bp;gc_cont=0.367
+938293.PRJEB85.HG003688_1 -            142 Proteusin_Epimerase_RRE RREFam010.1   101     0.009   13.0   0.0   1   1     8e-06     0.017   12.1   0.0    58    90    33    65    22    73 0.93 # 204 # 629 # -1 # ID=1_1;partial=00;start_type=ATG;rbs_motif=GGAG/GAGG;rbs_spacer=5-10bp;gc_cont=0.319
+938293.PRJEB85.HG003686_714 -            462 Ranthipeptide_rSAM_RRE RREFam024.1   100   5.3e-24   81.3   0.5   1   1   1.7e-26   1.8e-23   79.6   0.5     3   100     1    99     1    99 0.92 # 776785 # 778170 # -1 # ID=7_714;partial=00;start_type=ATG;rbs_motif=AGGAG;rbs_spacer=5-10bp;gc_cont=0.346
+938293.PRJEB85.HG003684_52  -            434 Ranthipeptide_rSAM_RRE RREFam024.1   100     0.002   15.3   0.6   1   2     0.085        89    0.4   0.1    53    73   351   371   320   373 0.78 # 56036 # 57337 # 1 # ID=2_52;partial=00;start_type=ATG;rbs_motif=GGA/GAG/AGG;rbs_spacer=5-10bp;gc_cont=0.265
+938293.PRJEB85.HG003684_52  -            434 Ranthipeptide_rSAM_RRE RREFam024.1   100     0.002   15.3   0.6   2   2   1.5e-05     0.016   12.4   0.1    16    78   373   430   372   433 0.91 # 56036 # 57337 # 1 # ID=2_52;partial=00;start_type=ATG;rbs_motif=GGA/GAG/AGG;rbs_spacer=5-10bp;gc_cont=0.265
+938293.PRJEB85.HG003691_74 -           1188 Thiaglutamate_B_RRE  RREFam028.1    83    0.0088   13.4   0.0   1   1   1.4e-05      0.03   11.7   0.0    29    64   603   638   598   645 0.90 # 75732 # 79295 # 1 # ID=5_74;partial=00;start_type=ATG;rbs_motif=GGA/GAG/AGG;rbs_spacer=5-10bp;gc_cont=0.390
+938293.PRJEB85.HG003686_714 -            462 Thuricin_rSAM_RRE    RREFam020.1    87   6.1e-08   29.7   3.4   1   3   2.9e-11   6.1e-08   29.7   3.4    13    85     6    77     1    79 0.88 # 776785 # 778170 # -1 # ID=7_714;partial=00;start_type=ATG;rbs_motif=AGGAG;rbs_spacer=5-10bp;gc_cont=0.346
+938293.PRJEB85.HG003686_714 -            462 Thuricin_rSAM_RRE    RREFam020.1    87   6.1e-08   29.7   3.4   2   3      0.52   1.1e+03   -3.2   0.1    28    43   190   205   180   211 0.64 # 776785 # 778170 # -1 # ID=7_714;partial=00;start_type=ATG;rbs_motif=AGGAG;rbs_spacer=5-10bp;gc_cont=0.346
+938293.PRJEB85.HG003686_714 -            462 Thuricin_rSAM_RRE    RREFam020.1    87   6.1e-08   29.7   3.4   3   3      0.78   1.6e+03   -3.8   0.0    14    41   316   326   306   331 0.57 # 776785 # 778170 # -1 # ID=7_714;partial=00;start_type=ATG;rbs_motif=AGGAG;rbs_spacer=5-10bp;gc_cont=0.346
+938293.PRJEB85.HG003691_78 -            106 Thurincin_rSAM_RRE   RREFam019.1    85   7.9e-06   22.8   0.5   1   1     5e-09     1e-05   22.4   0.4    38    82    58   102    12   104 0.89 # 82443 # 82760 # 1 # ID=5_78;partial=00;start_type=ATG;rbs_motif=GGA/GAG/AGG;rbs_spacer=5-10bp;gc_cont=0.252
+#
+# Program:         hmmsearch
+# Version:         3.4 (Aug 2023)
+# Pipeline mode:   SEARCH
+# Query file:      ../hmms/txt/RREFam.hmm
+# Target file:     938293.PRJEB85.HG003687.faa
+# Option settings: hmmsearch --tblout ../tables/RREFam.tbl --domtblout ../tables/RREFam.domtbl ../hmms/txt/RREFam.hmm 938293.PRJEB85.HG003687.faa 
+# Current dir:     /home/althonos/Code/pyhmmer/pyhmmer/tests/data/seqs
+# Date:            Thu Mar 28 19:10:06 2024
+# [ok]

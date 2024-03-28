@@ -145,15 +145,15 @@ class _TestSearch(metaclass=abc.ABCMeta):
                 self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
 
     @unittest.skipUnless(resource_files, "importlib.resources not available")
-    def test_t2pks(self):
+    def test_rrefam(self):
         with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
             seqs = seqs_file.read_block()
 
-        with self.hmm_file("t2pks") as hmm_file:
+        with self.hmm_file("RREFam") as hmm_file:
             all_hits = [self.get_hits(hmm, seqs) for hmm in hmm_file]
 
         hits = (hit for hits in all_hits for hit in hits)
-        with self.table("t2pks.tbl") as table:
+        with self.table("RREFam.tbl") as table:
             lines = filter(lambda line: not line.startswith("#"), table)
             for line, hit in itertools.zip_longest(lines, hits):
                 fields = list(filter(None, line.strip().split(" ")))
@@ -171,7 +171,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
         domains = [
             domain for hits in all_hits for hit in hits for domain in hit.domains
         ]
-        with self.table("t2pks.domtbl") as table:
+        with self.table("RREFam.domtbl") as table:
             lines = filter(lambda line: not line.startswith("#"), table)
             for line, domain in itertools.zip_longest(lines, domains):
                 fields = list(filter(None, line.strip().split(" ")))
@@ -739,10 +739,10 @@ class TestHMMScan(unittest.TestCase):
         return HMMFile(path)
 
     @unittest.skipUnless(resource_files, "importlib.resources not available")
-    def test_t2pks_block(self):
+    def test_rrefam_block(self):
         # get paths to resources
-        table_path = resource_files(__package__).joinpath("data", "tables", "t2pks.scan.tbl")
-        db_path = resource_files(__package__).joinpath("data", "hmms", "db", "t2pks.hmm")
+        table_path = resource_files(__package__).joinpath("data", "tables", "RREFam.scan.tbl")
+        db_path = resource_files(__package__).joinpath("data", "hmms", "db", "RREFam.hmm")
         seqs_path = resource_files(__package__).joinpath("data", "seqs", "PKSI.faa")
 
         # load expected results from the hmmscan table
@@ -777,10 +777,10 @@ class TestHMMScan(unittest.TestCase):
                     self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
 
     @unittest.skipUnless(resource_files, "importlib.resources not available")
-    def test_t2pks_file(self):
+    def test_rrefam_file(self):
         # get paths to resources
-        table_path = resource_files(__package__).joinpath("data", "tables", "t2pks.scan.tbl")
-        db_path = resource_files(__package__).joinpath("data", "hmms", "db", "t2pks.hmm")
+        table_path = resource_files(__package__).joinpath("data", "tables", "RREFam.scan.tbl")
+        db_path = resource_files(__package__).joinpath("data", "hmms", "db", "RREFam.hmm")
         seqs_path = resource_files(__package__).joinpath("data", "seqs", "PKSI.faa")
 
         # load expected results from the hmmscan table

@@ -123,7 +123,7 @@ class _TestThioesterase(_TestHMMFile):
     NAMES = [b"Thioesterase"]
 
 
-class _TestT2PKS(_TestHMMFile):
+class _TestRREFam(_TestHMMFile):
     ID = "RREFam"
     NAMES = [
         b"Bottromycin_Methyltransferase_RRE",
@@ -164,7 +164,7 @@ class TestFileobjSingle(_TestHMMFileobj, _TestThioesterase, unittest.TestCase):
     pass
 
 @unittest.skipUnless(resource_files, "importlib.resources.files not available")
-class TestFileObjMultiple(_TestHMMFileobj, _TestT2PKS, unittest.TestCase):
+class TestFileObjMultiple(_TestHMMFileobj, _TestRREFam, unittest.TestCase):
     pass
 
 @unittest.skipUnless(resource_files, "importlib.resources.files not available")
@@ -172,5 +172,5 @@ class TestPathSingle(_TestHMMPath, _TestThioesterase, unittest.TestCase):
     pass
 
 @unittest.skipUnless(resource_files, "importlib.resources.files not available")
-class TestPathMultiple(_TestHMMPath, _TestT2PKS, unittest.TestCase):
+class TestPathMultiple(_TestHMMPath, _TestRREFam, unittest.TestCase):
     pass
