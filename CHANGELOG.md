@@ -6,7 +6,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.11...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.12...HEAD
+
+
+## [v0.10.12] - 2024-04-25
+[v0.10.12]: https://github.com/althonos/pyhmmer/compare/v0.10.11...v0.10.12
+
+### Fixed
+- `HMM.__setstate__` not properly extracting the cutoff from `pickle` state for some HMMs ([#67](https://github.com/althonos/pyhmmer/issues/67)).
+
+### Changed
+- Update and remove some test files to reduce size of distributed package data. 
 
 
 ## [v0.10.11] - 2024-03-27
@@ -16,7 +26,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Compilation of Easel and HMMER code not using SSE4.1 extensions.
 
 
-## [v0.10.10] - 2024-03-18
+## [v0.10.10] - 2024-03-18 - YANKED
 [v0.10.10]: https://github.com/althonos/pyhmmer/compare/v0.10.9...v0.10.10
 
 ### Fixed
@@ -24,14 +34,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fix handling of NULL buffers passed to `read` and `write` methods of `fopencookie`.
 
 
-## [v0.10.9] - 2024-03-12
+## [v0.10.9] - 2024-03-12 - YANKED
 [v0.10.9]: https://github.com/althonos/pyhmmer/compare/v0.10.8...v0.10.9
 
 ### Fixed
 - Reallocation issue causing segmentation faults in `nhmmer` with more than 64 sequences ([#62](https://github.com/althonos/pyhmmer/issues/62)).
 
 
-## [v0.10.8] - 2024-03-06
+## [v0.10.8] - 2024-03-06 - YANKED
 [v0.10.8]: https://github.com/althonos/pyhmmer/compare/v0.10.7...v0.10.8
 
 ### Added
@@ -47,7 +57,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - `SequenceFile` and `MSAFile` crashing with a segmentation fault when given the path to a folder rather than a file.
 
 
-## [v0.10.7] - 2024-03-04
+## [v0.10.7] - 2024-03-04 - YANKED
 [v0.10.7]: https://github.com/althonos/pyhmmer/compare/v0.10.6...v0.10.7
 
 ### Added
@@ -59,7 +69,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - `pyhmmer.hmmer` dispatchers possibly dead-locking on background thread errors ([#60](https://github.com/althonos/pyhmmer/issues/60)).
 
 
-## [v0.10.6] - 2024-02-20
+## [v0.10.6] - 2024-02-20 - YANKED
 [v0.10.6]: https://github.com/althonos/pyhmmer/compare/v0.10.5...v0.10.6
 
 ### Added
@@ -73,7 +83,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Memory leak caused by alphabet allocation in `Pipeline._scan_loop_file`.
 
 
-## [v0.10.5] - 2024-02-16
+## [v0.10.5] - 2024-02-16 - YANKED
 [v0.10.5]: https://github.com/althonos/pyhmmer/compare/v0.10.4...v0.10.5
 
 ### Added
@@ -93,7 +103,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Memory leak caused by string duplication in `__getbuffer__` methods of `Matrix` and `Vector` types.
 
 
-## [v0.10.4] - 2023-10-29
+## [v0.10.4] - 2023-10-29 - YANKED
 [v0.10.4]: https://github.com/althonos/pyhmmer/compare/v0.10.3...v0.10.4
 
 ### Added
@@ -107,7 +117,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Syntax errors in type annotation files.
 
 
-## [v0.10.3] - 2023-10-22
+## [v0.10.3] - 2023-10-22 - YANKED
 [v0.10.3]: https://github.com/althonos/pyhmmer/compare/v0.10.2...v0.10.3
 
 ### Added
@@ -125,14 +135,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Relax tolerance of HMM validation in `TraceAligner.align_traces`.
 
 
-## [v0.10.2] - 2023-08-20
+## [v0.10.2] - 2023-08-20 - YANKED
 [v0.10.2]: https://github.com/althonos/pyhmmer/compare/v0.10.1...v0.10.2
 
 ### Fixed
 - Invalid buffer write in `DigitalSequenceBlock.translate` ([#50](https://github.com/althonos/pyhmmer/issues/50)).
 
 
-## [v0.10.1] - 2023-08-17
+## [v0.10.1] - 2023-08-17 - YANKED
 [v0.10.1]: https://github.com/althonos/pyhmmer/compare/v0.10.0...v0.10.1
 
 ### Added
@@ -143,7 +153,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - `pyhmmer.plan7.HMM` constructor setting a consensus string forcefully.
 
 
-## [v0.10.0] - 2023-08-16
+## [v0.10.0] - 2023-08-16 - YANKED
 [v0.10.0]: https://github.com/althonos/pyhmmer/compare/v0.9.0...v0.10.0
 
 ### Added

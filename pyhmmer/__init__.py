@@ -32,7 +32,7 @@ from .hmmer import hmmalign, hmmsearch, hmmpress, nhmmer, hmmscan, phmmer, jackh
 
 __author__ = "Martin Larralde <martin.larralde@embl.de>"
 __license__ = "MIT"
-__version__ = "0.10.11"
+__version__ = "0.10.12"
 __all__ = [
     "errors",
     "easel",
