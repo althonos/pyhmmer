@@ -2531,7 +2531,7 @@ cdef class HMM:
             compo = state["compo"]
             assert compo.ndim == 1
             assert compo.shape[0] == K
-            memcpy(&self._hmm.cutoff[0], &compo[0], K * sizeof(float))
+            memcpy(&self._hmm.compo[0], &compo[0], K * sizeof(float))
 
         # copy alignment map only if it is available
         if self._hmm.flags & p7H_MAP == 0:
