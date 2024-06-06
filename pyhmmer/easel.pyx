@@ -3402,7 +3402,8 @@ cdef class MSA:
             file = fopen_obj(fh, "w")
             status = libeasel.msafile.esl_msafile_Write(file, self._msa, fmt)
         finally:
-            fclose(file)
+            if file is not NULL:
+                fclose(file)
 
         if status != libeasel.eslOK:
             _reraise_error()
@@ -4713,7 +4714,8 @@ cdef class Sequence:
             file = fopen_obj(fh, "w")
             status = libeasel.sqio.ascii.esl_sqascii_WriteFasta(file, self._sq, False)
         finally:
-            fclose(file)
+            if file is not NULL:
+                fclose(file)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sqascii_WriteFasta")
 
