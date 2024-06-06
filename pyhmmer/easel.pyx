@@ -3716,7 +3716,7 @@ cdef class TextMSA(MSA):
             return new
         elif status == libeasel.eslEINVAL:
             err_msg = errbuf.decode("utf-8", "replace")
-            raise ValueError(f"Cannot digitize MSA with alphabet {alphabet}: {err_msg}")
+            raise ValueError(f"Cannot digitize MSA with {alphabet.type} alphabet: {err_msg}")
         else:
             raise UnexpectedError(status, "esl_msa_Digitize")
 

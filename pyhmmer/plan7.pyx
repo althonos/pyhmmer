@@ -3610,6 +3610,9 @@ cdef class HMMFile:
                 file, or when the file could not be parsed.
             `~pyhmmer.errors.AllocationError`: When memory for the HMM could
                 not be allocated successfully.
+            `~pyhmmer.errors.AlphabetMismatch`: When the file contains HMMs
+                in different alphabets, or in an alphabet that is different
+                from the alphabet used to initialize the `HMMFile`.
 
         .. versionadded:: 0.4.11
 
@@ -3638,8 +3641,7 @@ cdef class HMMFile:
         elif status == libeasel.eslEFORMAT:
             raise ValueError("Invalid format in file: {}".format(self._hfp.errbuf.decode("utf-8", "replace")))
         elif status == libeasel.eslEINCOMPAT:
-            alphabet = libeasel.alphabet.esl_abc_DecodeType(self._alphabet.type)
-            raise ValueError("HMM is not in the expected {} alphabet".format(alphabet))
+            raise AlphabetMismatch(self._alphabet)
         else:
             _reraise_error()
             raise UnexpectedError(status, "p7_hmmfile_Read")
@@ -3818,6 +3820,10 @@ cdef class HMMPressedFile:
                 closed file, or when the file could not be parsed.
             `~pyhmmer.errors.AllocationError`: When memory for the
                 `OptimizedProfile` could not be allocated successfully.
+            `~pyhmmer.errors.AlphabetMismatch`: When the file contains
+                optimized profiles in different alphabets, or in an alphabet
+                that is different from the alphabet used to initialize the
+                `HMMFile`.
 
         .. versionadded:: 0.4.11
 
@@ -3845,8 +3851,7 @@ cdef class HMMPressedFile:
         elif status == libeasel.eslEFORMAT:
             raise ValueError("Invalid format in file: {}".format(self._hfp.errbuf.decode("utf-8", "replace")))
         elif status == libeasel.eslEINCOMPAT:
-            alphabet = libeasel.alphabet.esl_abc_DecodeType(self._alphabet.type)
-            raise ValueError("HMM is not in the expected {} alphabet".format(alphabet))
+            raise AlphabetMismatch(self._alphabet)
         else:
             _reraise_error()
             raise UnexpectedError(status, "p7_oprofile_ReadMSV")
