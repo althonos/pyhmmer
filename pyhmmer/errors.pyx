@@ -117,22 +117,26 @@ class AlphabetMismatch(ValueError):
         >>> builder.build(seq, plan7.Background(seq.alphabet))
         Traceback (most recent call last):
           ...
-        pyhmmer.errors.AlphabetMismatch: Expected ..., found ...
+        pyhmmer.errors.AlphabetMismatch: Expected amino alphabet, found DNA alphabet
 
     .. versionadded:: 0.3.0
 
     """
 
-    def __init__(self, expected, actual):
+    def __init__(self, expected, actual=None):
         super().__init__(self)
         self.expected = expected
         self.actual = actual
 
     def __repr__(self):
         cdef str ty = type(self).__name__
+        if self.actual is None:
+            return f"{ty}({self.expected!r})"
         return f"{ty}({self.expected!r}, {self.actual!r})"
 
     def __str__(self):
+        if self.actual is None:
+            return f"Expected {self.expected.type} alphabet"
         return f"Expected {self.expected.type} alphabet, found {self.actual.type} alphabet"
 
     def __eq__(self, other):
