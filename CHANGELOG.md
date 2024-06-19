@@ -6,7 +6,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.12...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.13...HEAD
+
+
+## [v0.10.13] - 2024-06-19
+[v0.10.13]: https://github.com/althonos/pyhmmer/compare/v0.10.12...v0.10.13
+
+### Changed
+- Allow `AlphabetMismatch` error to allow for an unknown *actual* alphabet.
+- Make `HMMFile` and `HMMPressedFile` raise `AlphabetMismatch` on files with mixed alphabets.
+
+### Fixed
+- Avoid calling `fclose` with null pointers in `Sequence.write` and `MSA.write`.
 
 
 ## [v0.10.12] - 2024-04-25
