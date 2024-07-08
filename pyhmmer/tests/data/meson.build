@@ -1,0 +1,5 @@
+subdir('hmms')
+subdir('jackhmmer')
+subdir('msa')
+subdir('seqs')
+subdir('tables')

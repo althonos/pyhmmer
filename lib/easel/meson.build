@@ -193,7 +193,7 @@ easel_sources = [
   'interface_lapack.c',
 ]
 
-easel_lib = library(
+easel_lib = static_library(
   'easel',
   easel_sources,
   dependencies : [math, threads, mpi],

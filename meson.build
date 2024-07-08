@@ -25,5 +25,4 @@ destatic = generator(
 )
 
 subdir('lib')
-# subdir('include')
 subdir('pyhmmer')

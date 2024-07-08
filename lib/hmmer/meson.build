@@ -106,7 +106,7 @@ hmmer_sources = [
   'fm_ssv.c'
 ]
 
-hmmer_lib = library(
+hmmer_lib = static_library(
   'hmmer',
   [hmmer_sources, impl_sources],
   dependencies : [math, threads, mpi, easel_dep],
