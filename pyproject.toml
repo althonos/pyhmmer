@@ -59,3 +59,7 @@ warn_return_any = true
 
 ["tool.mypy-pyhmmer.tests.*"]
 ignore_errors = true
+
+[tool.coverage.report]
+include = ["pyhmmer/*.py", "pyhmmer/*.pyx"]
+plugins = [ "Cython.Coverage" ]
