@@ -1,0 +1,2 @@
+subdir('easel')
+subdir('hmmer')
