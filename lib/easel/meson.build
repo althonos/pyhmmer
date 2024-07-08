@@ -197,7 +197,7 @@ easel_lib = static_library(
   'easel',
   easel_sources,
   dependencies : [math, threads, mpi],
-  objects : easel_config_h
+  sources : easel_config_h
 )
 
 easel_dep = declare_dependency(

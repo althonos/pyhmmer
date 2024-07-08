@@ -110,9 +110,11 @@ hmmer_lib = static_library(
   'hmmer',
   [hmmer_sources, impl_sources],
   dependencies : [math, threads, mpi, easel_dep],
+  sources : hmmer_p7_config_h,
 )
 
 hmmer_dep = declare_dependency(
   link_with : hmmer_lib,
+  sources : hmmer_p7_config_h,
   include_directories : '.',
 )
