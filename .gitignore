@@ -82,6 +82,7 @@ cython_debug/
 build/
 develop-eggs/
 dist/
+wheelhouse/
 downloads/
 eggs/
 .eggs/
