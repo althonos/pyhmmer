@@ -18,6 +18,7 @@ from cpython.list cimport PyList_New, PyList_SET_ITEM
 from cpython.ref cimport PyObject
 from cpython.exc cimport PyErr_Clear
 from cpython.unicode cimport PyUnicode_DecodeASCII
+
 from libc.math cimport exp, ceil
 from libc.stddef cimport ptrdiff_t
 from libc.stdio cimport printf, rewind
@@ -42,42 +43,42 @@ from cpython.pythread cimport (
     WAIT_LOCK,
 )
 
-cimport libeasel
-cimport libeasel.sq
-cimport libeasel.sqio
-cimport libeasel.alphabet
-cimport libeasel.dmatrix
-cimport libeasel.fileparser
-cimport libeasel.random
-cimport libeasel.scorematrix
-cimport libeasel.getopts
-cimport libeasel.vec
-cimport libhmmer
-cimport libhmmer.modelconfig
-cimport libhmmer.modelstats
-cimport libhmmer.p7_alidisplay
-cimport libhmmer.p7_hmm
-cimport libhmmer.p7_builder
-cimport libhmmer.p7_bg
-cimport libhmmer.p7_domain
-cimport libhmmer.p7_domaindef
-cimport libhmmer.p7_hit
-cimport libhmmer.p7_hmmfile
-cimport libhmmer.p7_pipeline
-cimport libhmmer.p7_prior
-cimport libhmmer.p7_profile
-cimport libhmmer.p7_scoredata
-cimport libhmmer.p7_tophits
-cimport libhmmer.p7_trace
-cimport libhmmer.tracealign
-cimport libhmmer.nhmmer
-from libeasel cimport eslERRBUFSIZE, eslCONST_LOG2R, eslINFINITY
-from libeasel.alphabet cimport ESL_ALPHABET, esl_alphabet_Create, esl_abc_ValidateType
-from libeasel.getopts cimport ESL_GETOPTS, ESL_OPTIONS
-from libeasel.sq cimport ESL_SQ
-from libeasel.keyhash cimport ESL_KEYHASH
-from libeasel.fileparser cimport ESL_FILEPARSER
-from libhmmer cimport (
+from . cimport libeasel
+from .libeasel cimport sq as libeasel_sq
+from .libeasel cimport sqio as libeasel_sqio
+from .libeasel cimport alphabet as libeasel_alphabet
+from .libeasel cimport dmatrix as libeasel_dmatrix
+from .libeasel cimport fileparser as libeasel_fileparser
+from .libeasel cimport random as libeasel_random
+from .libeasel cimport scorematrix as libeasel_scorematrix
+from .libeasel cimport getopts as libeasel_getopts
+from .libeasel cimport vec as libeasel_vec
+from . cimport libhmmer
+from .libhmmer cimport modelconfig as libhmmer_modelconfig
+from .libhmmer cimport modelstats as libhmmer_modelstats
+from .libhmmer cimport p7_alidisplay
+from .libhmmer cimport p7_hmm
+from .libhmmer cimport p7_builder
+from .libhmmer cimport p7_bg
+from .libhmmer cimport p7_domain
+from .libhmmer cimport p7_domaindef
+from .libhmmer cimport p7_hit
+from .libhmmer cimport p7_hmmfile
+from .libhmmer cimport p7_pipeline
+from .libhmmer cimport p7_prior
+from .libhmmer cimport p7_profile
+from .libhmmer cimport p7_scoredata
+from .libhmmer cimport p7_tophits
+from .libhmmer cimport p7_trace
+from .libhmmer cimport tracealign as libhmmer_tracealign
+from .libhmmer cimport nhmmer as libhmmer_nhmmer
+from .libeasel cimport eslERRBUFSIZE, eslCONST_LOG2R, eslINFINITY
+from .libeasel.alphabet cimport ESL_ALPHABET, esl_alphabet_Create, esl_abc_ValidateType
+from .libeasel.getopts cimport ESL_GETOPTS, ESL_OPTIONS
+from .libeasel.sq cimport ESL_SQ
+from .libeasel.keyhash cimport ESL_KEYHASH
+from .libeasel.fileparser cimport ESL_FILEPARSER
+from .libhmmer cimport (
     p7_MAXABET,
     p7_LOCAL,
     p7_EVPARAM_UNSET,
@@ -88,28 +89,28 @@ from libhmmer cimport (
     p7_cutoffs_e,
     p7_evparams_e,
 )
-from libhmmer.logsum cimport p7_FLogsumInit
-from libhmmer.p7_builder cimport P7_BUILDER, p7_archchoice_e, p7_wgtchoice_e, p7_effnchoice_e
-from libhmmer.p7_hmm cimport p7H_NTRANSITIONS, p7H_TC, p7H_GA, p7H_NC, p7H_MAP, p7h_transitions_e
-from libhmmer.p7_hmmfile cimport p7_hmmfile_formats_e
-from libhmmer.p7_hit cimport p7_hitflags_e, P7_HIT
-from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
-from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e, p7_strands_e, p7_complementarity_e
-from libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL
-from libhmmer.p7_trace cimport P7_TRACE, p7t_statetype_e
-from libhmmer.p7_prior cimport P7_PRIOR
-from libhmmer.nhmmer cimport ID_LENGTH_LIST
-from capacity cimport new_capacity
+from .libhmmer.logsum cimport p7_FLogsumInit
+from .libhmmer.p7_builder cimport P7_BUILDER, p7_archchoice_e, p7_wgtchoice_e, p7_effnchoice_e
+from .libhmmer.p7_hmm cimport p7H_NTRANSITIONS, p7H_TC, p7H_GA, p7H_NC, p7H_MAP, p7h_transitions_e
+from .libhmmer.p7_hmmfile cimport p7_hmmfile_formats_e
+from .libhmmer.p7_hit cimport p7_hitflags_e, P7_HIT
+from .libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
+from .libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e, p7_strands_e, p7_complementarity_e
+from .libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL
+from .libhmmer.p7_trace cimport P7_TRACE, p7t_statetype_e
+from .libhmmer.p7_prior cimport P7_PRIOR
+from .libhmmer.nhmmer cimport ID_LENGTH_LIST
+from .capacity cimport new_capacity
 
 if HMMER_IMPL == "VMX":
-    from libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init, p7O_EXTRA_SB
-    from libhmmer.impl_vmx.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
-    from libhmmer.impl_vmx.p7_omx cimport (
+    from .libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init, p7O_EXTRA_SB
+    from .libhmmer.impl_vmx.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
+    from .libhmmer.impl_vmx.p7_omx cimport (
         P7_OM_BLOCK,
         p7_oprofile_CreateBlock,
         p7_oprofile_DestroyBlock,
     )
-    from libhmmer.impl_vmx.p7_oprofile cimport (
+    from .libhmmer.impl_vmx.p7_oprofile cimport (
         P7_OPROFILE,
         p7O_NXSTATES,
         p7O_NXTRANS,
@@ -121,14 +122,14 @@ if HMMER_IMPL == "VMX":
         p7_oprofile_Destroy,
     )
 elif HMMER_IMPL == "SSE":
-    from libhmmer.impl_sse cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7O_EXTRA_SB
-    from libhmmer.impl_sse.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
-    from libhmmer.impl_sse.p7_omx cimport (
+    from .libhmmer.impl_sse cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7O_EXTRA_SB
+    from .libhmmer.impl_sse.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
+    from .libhmmer.impl_sse.p7_omx cimport (
         P7_OM_BLOCK,
         p7_oprofile_CreateBlock,
         p7_oprofile_DestroyBlock,
     )
-    from libhmmer.impl_sse.p7_oprofile cimport (
+    from .libhmmer.impl_sse.p7_oprofile cimport (
         P7_OPROFILE,
         p7O_NXSTATES,
         p7O_NXTRANS,
@@ -140,14 +141,14 @@ elif HMMER_IMPL == "SSE":
         p7_oprofile_Destroy
     )
 elif HMMER_IMPL == "NEON":
-    from libhmmer.impl_neon cimport p7_oprofile, p7_omx, impl_Init, p7O_EXTRA_SB
-    from libhmmer.impl_neon.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
-    from libhmmer.impl_neon.p7_omx cimport (
+    from .libhmmer.impl_neon cimport p7_oprofile, p7_omx, impl_Init, p7O_EXTRA_SB
+    from .libhmmer.impl_neon.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
+    from .libhmmer.impl_neon.p7_omx cimport (
         P7_OM_BLOCK,
         p7_oprofile_CreateBlock,
         p7_oprofile_DestroyBlock,
     )
-    from libhmmer.impl_neon.p7_oprofile cimport (
+    from .libhmmer.impl_neon.p7_oprofile cimport (
         P7_OPROFILE,
         p7O_NXSTATES,
         p7O_NXTRANS,
@@ -265,9 +266,9 @@ cdef dict HMM_FILE_MAGIC = {
 }
 
 cdef dict PIPELINE_BIT_CUTOFFS = {
-    "gathering": libhmmer.p7_hmm.p7H_GA,
-    "noise": libhmmer.p7_hmm.p7H_NC,
-    "trusted": libhmmer.p7_hmm.p7H_TC,
+    "gathering": p7_hmm.p7H_GA,
+    "noise": p7_hmm.p7H_NC,
+    "trusted": p7_hmm.p7H_TC,
 }
 
 # --- Cython classes ---------------------------------------------------------
@@ -300,7 +301,7 @@ cdef class Alignment:
         cdef FILE*  fp     = fopen_obj(buffer, "w")
 
         try:
-            status = libhmmer.p7_alidisplay.p7_nontranslated_alidisplay_Print(
+            status = p7_alidisplay.p7_nontranslated_alidisplay_Print(
                 fp,
                 self._ad,
                 0,
@@ -318,7 +319,7 @@ cdef class Alignment:
 
     def __sizeof__(self):
         assert self._ad != NULL
-        return sizeof(self) + libhmmer.p7_alidisplay.p7_alidisplay_Sizeof(self._ad)
+        return sizeof(self) + p7_alidisplay.p7_alidisplay_Sizeof(self._ad)
 
     def __getstate__(self):
         cdef int       status
@@ -328,7 +329,7 @@ cdef class Alignment:
         cdef VectorU8  vec
 
         with nogil:
-            status = libhmmer.p7_alidisplay.p7_alidisplay_Serialize(self._ad, &buffer, &n, &nalloc)
+            status = p7_alidisplay.p7_alidisplay_Serialize(self._ad, &buffer, &n, &nalloc)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_alidisplay_Serialize")
 
@@ -343,12 +344,12 @@ cdef class Alignment:
         cdef uint32_t offset = 0
 
         if self._ad == NULL:
-            self.domain._dom.ad = self._ad = libhmmer.p7_alidisplay.p7_alidisplay_Create_empty()
+            self.domain._dom.ad = self._ad = p7_alidisplay.p7_alidisplay_Create_empty()
             if self._ad == NULL:
                 raise AllocationError("P7_ALIDISPLAY", sizeof(P7_ALIDISPLAY))
 
         with nogil:
-            status = libhmmer.p7_alidisplay.p7_alidisplay_Deserialize(&state[0], &offset, self._ad)
+            status = p7_alidisplay.p7_alidisplay_Deserialize(&state[0], &offset, self._ad)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_alidisplay_Deserialize")
 
@@ -502,9 +503,9 @@ cdef class Background:
         # create the background profile
         with nogil:
             if uniform:
-                self._bg = libhmmer.p7_bg.p7_bg_CreateUniform(alphabet._abc)
+                self._bg = p7_bg.p7_bg_CreateUniform(alphabet._abc)
             else:
-                self._bg = libhmmer.p7_bg.p7_bg_Create(alphabet._abc)
+                self._bg = p7_bg.p7_bg_Create(alphabet._abc)
         if self._bg == NULL:
             raise AllocationError("P7_BG", sizeof(P7_BG))
         # expose the residue frequencies as the `residue_frequencies` attribute
@@ -514,7 +515,7 @@ cdef class Background:
         self.residue_frequencies._n = self.residue_frequencies._shape[0] = self.alphabet.K
 
     def __dealloc__(self):
-        libhmmer.p7_bg.p7_bg_Destroy(self._bg)
+        p7_bg.p7_bg_Destroy(self._bg)
 
     def __copy__(self):
         return self.copy()
@@ -543,7 +544,7 @@ cdef class Background:
         cdef P7_BG* bg     = self._bg
 
         with nogil:
-            status = libhmmer.p7_bg.p7_bg_SetLength(bg, L)
+            status = p7_bg.p7_bg_SetLength(bg, L)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_bg_SetLength")
         self._L = L
@@ -582,7 +583,7 @@ cdef class Background:
 
         cdef Background new = Background.__new__(Background)
         with nogil:
-            new._bg = libhmmer.p7_bg.p7_bg_Clone(self._bg)
+            new._bg = p7_bg.p7_bg_Clone(self._bg)
         if new._bg == NULL:
             raise AllocationError("P7_BG", sizeof(P7_BG))
 
@@ -722,7 +723,7 @@ cdef class Builder:
         self.alphabet = alphabet
         abcty = alphabet._abc.type
         with nogil:
-            self._bld = libhmmer.p7_builder.p7_builder_Create(NULL, alphabet._abc)
+            self._bld = p7_builder.p7_builder_Create(NULL, alphabet._abc)
         if self._bld == NULL:
             raise AllocationError("P7_BG", sizeof(P7_BG))
 
@@ -803,18 +804,18 @@ cdef class Builder:
 
         # set the prior scheme (this involves re-allocating a new prior)
         self.prior_scheme = prior_scheme
-        libhmmer.p7_prior.p7_prior_Destroy(self._bld.prior)
+        p7_prior.p7_prior_Destroy(self._bld.prior)
         self._bld.prior = NULL
         if prior_scheme is not None:
             if prior_scheme == "laplace":
-                self._bld.prior = libhmmer.p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
+                self._bld.prior = p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
             elif prior_scheme == "alphabet":
                 if alphabet.is_amino():
-                    self._bld.prior = libhmmer.p7_prior.p7_prior_CreateAmino()
+                    self._bld.prior = p7_prior.p7_prior_CreateAmino()
                 elif alphabet.is_nucleotide():
-                    self._bld.prior = libhmmer.p7_prior.p7_prior_CreateNucleic()
+                    self._bld.prior = p7_prior.p7_prior_CreateNucleic()
                 else:
-                    self._bld.prior = libhmmer.p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
+                    self._bld.prior = p7_prior.p7_prior_CreateLaplace(self.alphabet._abc)
             else:
                 raise InvalidParameter("prior_scheme", prior_scheme, choices=["laplace", "alphabet", None])
             if self._bld.prior == NULL:
@@ -834,12 +835,12 @@ cdef class Builder:
         # set the window options
         self.window_length = window_length
         if window_beta is None:
-            self.window_beta = libhmmer.p7_builder.p7_DEFAULT_WINDOW_BETA
+            self.window_beta = p7_builder.p7_DEFAULT_WINDOW_BETA
         else:
             self.window_beta = window_beta
 
     def __dealloc__(self):
-        libhmmer.p7_builder.p7_builder_Destroy(self._bld)
+        p7_builder.p7_builder_Destroy(self._bld)
 
     def __copy__(self):
         return self.copy()
@@ -964,7 +965,7 @@ cdef class Builder:
         # or if a different score system is in use
         if self._bld.S == NULL or strcmp(self._bld.S.name, mx_ptr) != 0:
             with nogil:
-                status = libhmmer.p7_builder.p7_builder_LoadScoreSystem(
+                status = p7_builder.p7_builder_LoadScoreSystem(
                     self._bld,
                     mx_ptr,
                     self.popen,
@@ -982,7 +983,7 @@ cdef class Builder:
 
         # build HMM and profiles
         with nogil:
-            status = libhmmer.p7_builder.p7_SingleBuilder(
+            status = p7_builder.p7_SingleBuilder(
                 self._bld,
                 sequence._sq,
                 background._bg,
@@ -1064,10 +1065,10 @@ cdef class Builder:
         # by a call to `build`, since we won't be needing them here
         self._bld.popen = self._bld.pextend = -1
         if self._bld.S != NULL:
-            libeasel.scorematrix.esl_scorematrix_Destroy(self._bld.S)
+            libeasel_scorematrix.esl_scorematrix_Destroy(self._bld.S)
             self._bld.S = NULL
         if self._bld.Q != NULL:
-            libeasel.dmatrix.esl_dmatrix_Destroy(self._bld.Q)
+            libeasel_dmatrix.esl_dmatrix_Destroy(self._bld.Q)
             self._bld.Q = NULL
 
         # reseed RNG used by the builder if needed
@@ -1084,7 +1085,7 @@ cdef class Builder:
         # build HMM
         with nogil:
             # build HMM and profiles
-            status = libhmmer.p7_builder.p7_Builder(
+            status = p7_builder.p7_Builder(
                 self._bld,
                 msa._msa,
                 background._bg,
@@ -1456,7 +1457,7 @@ cdef class Domain:
         cdef VectorU8  vec
 
         with nogil:
-            status = libhmmer.p7_domain.p7_domain_Serialize(self._dom, &buffer, &n, &nalloc)
+            status = p7_domain.p7_domain_Serialize(self._dom, &buffer, &n, &nalloc)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_domain_Serialize")
 
@@ -1471,12 +1472,12 @@ cdef class Domain:
         cdef uint32_t offset = 0
 
         if self._dom == NULL:
-            self._dom = libhmmer.p7_domain.p7_domain_Create_empty()
+            self._dom = p7_domain.p7_domain_Create_empty()
             if self._dom == NULL:
                 raise AllocationError("P7_DOMAIN", sizeof(P7_DOMAIN))
 
         with nogil:
-            status = libhmmer.p7_domain.p7_domain_Deserialize(&state[0], &offset, self._dom)
+            status = p7_domain.p7_domain_Deserialize(&state[0], &offset, self._dom)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_domain_Deserialize")
 
@@ -1901,7 +1902,7 @@ cdef class Hit:
         cdef VectorU8  vec
 
         with nogil:
-            status = libhmmer.p7_hit.p7_hit_Serialize(self._hit, &buffer, &n, &nalloc)
+            status = p7_hit.p7_hit_Serialize(self._hit, &buffer, &n, &nalloc)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_hit_Serialize")
 
@@ -1916,12 +1917,12 @@ cdef class Hit:
         cdef uint32_t offset = 0
 
         if self._hit == NULL:
-            self._hit = libhmmer.p7_hit.p7_hit_Create_empty()
+            self._hit = p7_hit.p7_hit_Create_empty()
             if self._hit == NULL:
                 raise AllocationError("P7_HIT", sizeof(P7_HIT))
 
         with nogil:
-            status = libhmmer.p7_hit.p7_hit_Deserialize(&state[0], &offset, self._hit)
+            status = p7_hit.p7_hit_Deserialize(&state[0], &offset, self._hit)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_hit_Deserialize")
 
@@ -2225,7 +2226,7 @@ cdef class HMM:
 
         if enumerable:
             fname = "p7_hmm_SampleEnumerable"
-            status = libhmmer.p7_hmm.p7_hmm_SampleEnumerable(
+            status = p7_hmm.p7_hmm_SampleEnumerable(
                 randomness._rng,
                 M,
                 alphabet._abc,
@@ -2233,7 +2234,7 @@ cdef class HMM:
             )
         elif ungapped:
             fname = "p7_hmm_SampleUngapped"
-            status = libhmmer.p7_hmm.p7_hmm_SampleUngapped(
+            status = p7_hmm.p7_hmm_SampleUngapped(
                 randomness._rng,
                 M,
                 alphabet._abc,
@@ -2241,7 +2242,7 @@ cdef class HMM:
             )
         else:
             fname = "p7_hmm_Sample"
-            status = libhmmer.p7_hmm.p7_hmm_Sample(
+            status = p7_hmm.p7_hmm_Sample(
                 randomness._rng,
                 M,
                 alphabet._abc,
@@ -2262,9 +2263,9 @@ cdef class HMM:
         cdef int j
         cdef int K = self.alphabet._abc.K
         for i in range(self._hmm.M+1):
-            libeasel.vec.esl_vec_FSet(self._hmm.mat[i], K, 0.0)
-            libeasel.vec.esl_vec_FSet(self._hmm.ins[i], K, 0.0)
-            libeasel.vec.esl_vec_FSet(self._hmm.t[i], p7H_NTRANSITIONS, 0.0)
+            libeasel_vec.esl_vec_FSet(self._hmm.mat[i], K, 0.0)
+            libeasel_vec.esl_vec_FSet(self._hmm.ins[i], K, 0.0)
+            libeasel_vec.esl_vec_FSet(self._hmm.t[i], p7H_NTRANSITIONS, 0.0)
             self._hmm.mat[i][0] = 1.0
             self._hmm.ins[i][0] = 1.0
             self._hmm.t[i][<int> p7h_transitions_e.p7H_MM] = 1.0
@@ -2288,7 +2289,7 @@ cdef class HMM:
         self.alphabet = alphabet
         # create a new HMM suitable for at least M nodes
         with nogil:
-            self._hmm = libhmmer.p7_hmm.p7_hmm_Create(M, alphabet._abc)
+            self._hmm = p7_hmm.p7_hmm_Create(M, alphabet._abc)
         if not self._hmm:
             raise AllocationError("P7_HMM", sizeof(P7_HMM))
 
@@ -2299,7 +2300,7 @@ cdef class HMM:
         self.name = name
 
     def __dealloc__(self):
-        libhmmer.p7_hmm.p7_hmm_Destroy(self._hmm)
+        p7_hmm.p7_hmm_Destroy(self._hmm)
 
     def __repr__(self):
         cdef str ty = type(self).__name__
@@ -2316,7 +2317,7 @@ cdef class HMM:
 
         other_ = <HMM> other
         with nogil:
-            status = libhmmer.p7_hmm.p7_hmm_Compare(self._hmm, other_._hmm, 0.0)
+            status = p7_hmm.p7_hmm_Compare(self._hmm, other_._hmm, 0.0)
         if status == libeasel.eslOK:
             return True
         elif status == libeasel.eslFAIL:
@@ -2350,17 +2351,17 @@ cdef class HMM:
         s += self.alphabet._abc.K * (self._hmm.M + 1) * sizeof(float)
         s += self.alphabet._abc.K * (self._hmm.M + 1) * sizeof(float)
         # optional fields
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_RF:
+        if self._hmm.flags & p7_hmm.p7H_RF:
             s += (self._hmm.M + 2) * sizeof(char)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_MMASK:
+        if self._hmm.flags & p7_hmm.p7H_MMASK:
             s += (self._hmm.M + 2) * sizeof(char)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_CONS:
+        if self._hmm.flags & p7_hmm.p7H_CONS:
             s += (self._hmm.M + 2) * sizeof(char)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_CS:
+        if self._hmm.flags & p7_hmm.p7H_CS:
             s += (self._hmm.M + 2) * sizeof(char)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_CA:
+        if self._hmm.flags & p7_hmm.p7H_CA:
             s += (self._hmm.M + 2) * sizeof(char)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_MAP:
+        if self._hmm.flags & p7_hmm.p7H_MAP:
             s += (self._hmm.M + 1) * sizeof(int)
         # annotations
         if self._hmm.name != NULL:
@@ -2410,25 +2411,25 @@ cdef class HMM:
         }
 
         # copy alignment map if available
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_MAP:
+        if self._hmm.flags & p7_hmm.p7H_MAP:
             assert self._hmm.map != NULL
             state["map"] = map_ = array.array('i')
             for i in range(self._hmm.M + 1):
                 map_.append(self._hmm.map[i])
         # add optional annotations
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_RF:
+        if self._hmm.flags & p7_hmm.p7H_RF:
             assert self._hmm.rf != NULL
             state["rf"] = PyBytes_FromStringAndSize(self._hmm.rf, self._hmm.M + 1)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_MM:
+        if self._hmm.flags & p7_hmm.p7H_MM:
             assert self._hmm.mm != NULL
             state["mm"] = PyBytes_FromStringAndSize(self._hmm.mm, self._hmm.M + 1)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_CS:
+        if self._hmm.flags & p7_hmm.p7H_CS:
             assert self._hmm.cs != NULL
             state["cs"] = PyBytes_FromStringAndSize(self._hmm.cs, self._hmm.M + 1)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_CA:
+        if self._hmm.flags & p7_hmm.p7H_CA:
             assert self._hmm.ca != NULL
             state["ca"] = PyBytes_FromStringAndSize(self._hmm.ca, self._hmm.M + 1)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_CONS:
+        if self._hmm.flags & p7_hmm.p7H_CONS:
             assert self._hmm.consensus != NULL
             state["consensus"] = PyBytes_FromStringAndSize(self._hmm.consensus, self._hmm.M + 1)
 
@@ -2471,23 +2472,23 @@ cdef class HMM:
         self._hmm.rf = self._hmm.mm = self._hmm.consensus = self._hmm.cs = self._hmm.ca = NULL
 
         # strings that must be set manually
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_RF:
+        if self._hmm.flags & p7_hmm.p7H_RF:
             self._hmm.rf = strndup(<const char*> state["rf"], M+2)
             if self._hmm.rf == NULL:
                 raise AllocationError("char", sizeof(char), M+2)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_MM:
+        if self._hmm.flags & p7_hmm.p7H_MM:
             self._hmm.mm = strndup(<const char*> state["mm"], M+2)
             if self._hmm.mm == NULL:
                 raise AllocationError("char", sizeof(char), M+2)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_CONS:
+        if self._hmm.flags & p7_hmm.p7H_CONS:
             self._hmm.consensus = strndup(<const char*> state["consensus"], M+2)
             if self._hmm.consensus == NULL:
                 raise AllocationError("char", sizeof(char), M+2)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_CS:
+        if self._hmm.flags & p7_hmm.p7H_CS:
             self._hmm.cs = strndup(<const char*> state["cs"], M+2)
             if self._hmm.cs == NULL:
                 raise AllocationError("char", sizeof(char), M+2)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_CA:
+        if self._hmm.flags & p7_hmm.p7H_CA:
             self._hmm.ca = strndup(<const char*> state["ca"], M+2)
             if self._hmm.ca == NULL:
                 raise AllocationError("char", sizeof(char), M+2)
@@ -2527,7 +2528,7 @@ cdef class HMM:
         assert cutoff.shape[0] == p7_NCUTOFFS
         memcpy(&self._hmm.evparam[0], &evparam[0], p7_NEVPARAM * sizeof(float))
         memcpy(&self._hmm.cutoff[0], &cutoff[0], p7_NCUTOFFS * sizeof(float))
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_COMPO:
+        if self._hmm.flags & p7_hmm.p7H_COMPO:
             compo = state["compo"]
             assert compo.ndim == 1
             assert compo.shape[0] == K
@@ -2572,7 +2573,7 @@ cdef class HMM:
 
         cdef int   length = len(name)
         cdef char* name_  = <char*> name
-        cdef int   err    = libhmmer.p7_hmm.p7_hmm_SetName(self._hmm, name_)
+        cdef int   err    = p7_hmm.p7_hmm_SetName(self._hmm, name_)
 
         if err == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), length)
@@ -2591,7 +2592,7 @@ cdef class HMM:
         assert self._hmm != NULL
 
         cdef char* acc    = NULL if accession is None else <char*> accession
-        cdef int   err    = libhmmer.p7_hmm.p7_hmm_SetAccession(self._hmm, acc)
+        cdef int   err    = p7_hmm.p7_hmm_SetAccession(self._hmm, acc)
         cdef int   length = 0 if accession is None else len(accession)
 
         if err == libeasel.eslEMEM:
@@ -2614,7 +2615,7 @@ cdef class HMM:
 
         """
         assert self._hmm != NULL
-        if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CHKSUM):
+        if not (self._hmm.flags & p7_hmm.p7H_CHKSUM):
             return None
         return self._hmm.checksum
 
@@ -2647,7 +2648,7 @@ cdef class HMM:
 
         cdef VectorF comp
 
-        if not (self._hmm.flags & libhmmer.p7_hmm.p7H_COMPO):
+        if not (self._hmm.flags & p7_hmm.p7H_COMPO):
             return None
         comp = VectorF.__new__(VectorF)
         comp._data = &(self._hmm.compo[0])
@@ -2663,7 +2664,7 @@ cdef class HMM:
 
         """
         assert self._hmm != NULL
-        if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CONS):
+        if not (self._hmm.flags & p7_hmm.p7H_CONS):
             return None
         assert self._hmm.consensus != NULL
         return (&self._hmm.consensus[1]).decode("ascii")
@@ -2676,7 +2677,7 @@ cdef class HMM:
 
         """
         assert self._hmm != NULL
-        if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CS):
+        if not (self._hmm.flags & p7_hmm.p7H_CS):
             return None
         assert self._hmm.cs != NULL
         return (&self._hmm.cs[1]).decode("ascii")
@@ -2689,7 +2690,7 @@ cdef class HMM:
 
         """
         assert self._hmm != NULL
-        if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CA):
+        if not (self._hmm.flags & p7_hmm.p7H_CA):
             return None
         assert self._hmm.ca != NULL
         return (&self._hmm.ca[1]).decode("ascii")
@@ -2706,7 +2707,7 @@ cdef class HMM:
 
         """
         assert self._hmm != NULL
-        if not (self._hmm.flags & libhmmer.p7_hmm.p7H_RF):
+        if not (self._hmm.flags & p7_hmm.p7H_RF):
             return None
         assert self._hmm.rf != NULL
         return (&self._hmm.rf[1]).decode("ascii")
@@ -2719,7 +2720,7 @@ cdef class HMM:
 
         """
         assert self._hmm != NULL
-        if not (self._hmm.flags & libhmmer.p7_hmm.p7H_MM):
+        if not (self._hmm.flags & p7_hmm.p7H_MM):
             return None
         assert self._hmm.mm != NULL
         return (&self._hmm.mm[1]).decode("ascii")
@@ -2736,7 +2737,7 @@ cdef class HMM:
         assert self._hmm != NULL
 
         cdef char* desc   = NULL if description is None else <char*> description
-        cdef int   err    = libhmmer.p7_hmm.p7_hmm_SetDescription(self._hmm, desc)
+        cdef int   err    = p7_hmm.p7_hmm_SetDescription(self._hmm, desc)
         cdef int   length = 0 if description is None else len(description)
 
         if err == libeasel.eslEMEM:
@@ -2792,7 +2793,7 @@ cdef class HMM:
         assert self._hmm != NULL
         cdef MatrixF mat = MatrixF.__new__(MatrixF)
         mat._m = mat._shape[0] = self._hmm.M + 1
-        mat._n = mat._shape[1] = libhmmer.p7_hmm.p7H_NTRANSITIONS
+        mat._n = mat._shape[1] = p7_hmm.p7H_NTRANSITIONS
         mat._owner = self
         mat._data = <void**> self._hmm.t
         return mat
@@ -3032,7 +3033,7 @@ cdef class HMM:
         new.alphabet = self.alphabet
 
         with nogil:
-            new._hmm = libhmmer.p7_hmm.p7_hmm_Clone(self._hmm)
+            new._hmm = p7_hmm.p7_hmm_Clone(self._hmm)
         if new._hmm == NULL:
             raise AllocationError("P7_HMM", sizeof(P7_HMM))
         return new
@@ -3051,7 +3052,7 @@ cdef class HMM:
         assert self._hmm != NULL
         cdef VectorF mocc = VectorF.zeros(self._hmm.M)
         with nogil:
-            status = libhmmer.p7_hmm.p7_hmm_CalculateOccupancy(
+            status = p7_hmm.p7_hmm_CalculateOccupancy(
                 self._hmm,
                 <float*> mocc._data,
                 NULL
@@ -3085,7 +3086,7 @@ cdef class HMM:
         """
         assert self._hmm != NULL
         with nogil:
-            return libhmmer.modelstats.p7_MeanMatchEntropy(self._hmm)
+            return libhmmer_modelstats.p7_MeanMatchEntropy(self._hmm)
 
     cpdef double mean_match_information(self, Background background) except *:
         """Compute the mean information content of the HMM match states.
@@ -3123,7 +3124,7 @@ cdef class HMM:
         assert self._hmm != NULL
         assert background._bg != NULL
         with nogil:
-            return libhmmer.modelstats.p7_MeanMatchInfo(self._hmm, background._bg)
+            return libhmmer_modelstats.p7_MeanMatchInfo(self._hmm, background._bg)
 
     cpdef double mean_match_relative_entropy(self, Background background) except *:
         """Compute the mean relative entropy per HMM match state.
@@ -3159,7 +3160,7 @@ cdef class HMM:
         assert self._hmm != NULL
         assert background._bg != NULL
         with nogil:
-            return libhmmer.modelstats.p7_MeanMatchRelativeEntropy(self._hmm, background._bg)
+            return libhmmer_modelstats.p7_MeanMatchRelativeEntropy(self._hmm, background._bg)
 
     cpdef void renormalize(self):
         """Renormalize all parameter vectors (emissions and transitions).
@@ -3171,7 +3172,7 @@ cdef class HMM:
 
         cdef int status
         with nogil:
-            status = libhmmer.p7_hmm.p7_hmm_Renormalize(self._hmm)
+            status = p7_hmm.p7_hmm_Renormalize(self._hmm)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_hmm_Renormalize")
 
@@ -3200,9 +3201,9 @@ cdef class HMM:
         cdef int status
         with nogil:
             if exponential:
-                status = libhmmer.p7_hmm.p7_hmm_ScaleExponential(self._hmm, scale)
+                status = p7_hmm.p7_hmm_ScaleExponential(self._hmm, scale)
             else:
-                status = libhmmer.p7_hmm.p7_hmm_Scale(self._hmm, scale)
+                status = p7_hmm.p7_hmm_Scale(self._hmm, scale)
         if status != libeasel.eslOK:
             func = "p7_hmm_ScaleExponential" if exponential else "p7_hmm_Scale"
             raise UnexpectedError(status, func)
@@ -3217,7 +3218,7 @@ cdef class HMM:
 
         cdef int status
         with nogil:
-            status = libhmmer.p7_hmm.p7_hmm_SetComposition(self._hmm)
+            status = p7_hmm.p7_hmm_SetComposition(self._hmm)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_hmm_SetComposition")
 
@@ -3259,7 +3260,7 @@ cdef class HMM:
                 raise ValueError(f"Expected `DigitalSequence` of length {self.M!r}, found {sq.n!r}")
 
         with nogil:
-            status = libhmmer.p7_hmm.p7_hmm_SetConsensus(self._hmm, sq)
+            status = p7_hmm.p7_hmm_SetConsensus(self._hmm, sq)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_hmm_SetConsensus")
 
@@ -3315,7 +3316,7 @@ cdef class HMM:
         """
         cdef char[eslERRBUFSIZE] errbuf
 
-        if libhmmer.p7_hmm.p7_hmm_Validate(self._hmm, errbuf, tolerance) != libeasel.eslOK:
+        if p7_hmm.p7_hmm_Validate(self._hmm, errbuf, tolerance) != libeasel.eslOK:
             err_msg = errbuf.decode("utf-8", "replace")
             raise InvalidHMM(self, err_msg)
 
@@ -3341,9 +3342,9 @@ cdef class HMM:
         file = fopen_obj(fh, "w")
 
         if binary:
-            status = libhmmer.p7_hmmfile.p7_hmmfile_WriteBinary(file, -1, hm)
+            status = p7_hmmfile.p7_hmmfile_WriteBinary(file, -1, hm)
         else:
-            status = libhmmer.p7_hmmfile.p7_hmmfile_WriteASCII(file, -1, hm)
+            status = p7_hmmfile.p7_hmmfile_WriteASCII(file, -1, hm)
 
         if status == libeasel.eslOK:
             fclose(file)
@@ -3356,7 +3357,7 @@ cdef class HMM:
         """
         assert self._hmm != NULL
         with nogil:
-            libhmmer.p7_hmm.p7_hmm_Zero(self._hmm)
+            p7_hmm.p7_hmm_Zero(self._hmm)
 
 
 cdef class HMMFile:
@@ -3445,25 +3446,25 @@ cdef class HMMFile:
             return hfp
 
         # create and configure the file parser
-        hfp.efp = libeasel.fileparser.esl_fileparser_Create(hfp.f)
+        hfp.efp = libeasel_fileparser.esl_fileparser_Create(hfp.f)
         if hfp.efp == NULL:
-            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
+            p7_hmmfile.p7_hmmfile_Close(hfp)
             raise AllocationError("ESL_FILEPARSER", sizeof(ESL_FILEPARSER))
-        status = libeasel.fileparser.esl_fileparser_SetCommentChar(hfp.efp, b"#")
+        status = libeasel_fileparser.esl_fileparser_SetCommentChar(hfp.efp, b"#")
         if status != libeasel.eslOK:
-            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
+            p7_hmmfile.p7_hmmfile_Close(hfp)
             raise UnexpectedError(status, "esl_fileparser_SetCommentChar")
 
         # get the magic string at the beginning
-        status = libeasel.fileparser.esl_fileparser_NextLine(hfp.efp)
+        status = libeasel_fileparser.esl_fileparser_NextLine(hfp.efp)
         if status == libeasel.eslEOF:
             raise EOFError("HMM file is empty")
         elif status != libeasel.eslOK:
-            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
+            p7_hmmfile.p7_hmmfile_Close(hfp)
             raise UnexpectedError(status, "esl_fileparser_NextLine");
-        status = libeasel.fileparser.esl_fileparser_GetToken(hfp.efp, &token, &token_len)
+        status = libeasel_fileparser.esl_fileparser_GetToken(hfp.efp, &token, &token_len)
         if status != libeasel.eslOK:
-            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
+            p7_hmmfile.p7_hmmfile_Close(hfp)
             raise UnexpectedError(status, "esl_fileparser_GetToken");
 
         # detect the format
@@ -3481,7 +3482,7 @@ cdef class HMMFile:
         # check the format tag was recognized
         if hfp.parser == NULL:
             text = token.decode("utf-8", "replace")
-            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
+            p7_hmmfile.p7_hmmfile_Close(hfp)
             raise ValueError("Unrecognized format tag in HMM file: {!r}".format(text))
 
         # return the finalized P7_HMMFILE*
@@ -3514,10 +3515,10 @@ cdef class HMMFile:
             self._name = os.fsdecode(fspath)
             if db:
                 function = "p7_hmmfile_OpenE"
-                status = libhmmer.p7_hmmfile.p7_hmmfile_Open(fspath, NULL, &self._hfp, errbuf)
+                status = p7_hmmfile.p7_hmmfile_Open(fspath, NULL, &self._hfp, errbuf)
             else:
                 function = "p7_hmmfile_OpenENoDB"
-                status = libhmmer.p7_hmmfile.p7_hmmfile_OpenNoDB(fspath, NULL, &self._hfp, errbuf)
+                status = p7_hmmfile.p7_hmmfile_OpenNoDB(fspath, NULL, &self._hfp, errbuf)
         except TypeError:
             self._hfp = HMMFile._open_fileobj(file)
             status    = libeasel.eslOK
@@ -3590,7 +3591,7 @@ cdef class HMMFile:
         cdef int status
         if self._hfp == NULL:
             raise ValueError("I/O operation on closed file.")
-        status = libhmmer.p7_hmmfile.p7_hmmfile_Position(self._hfp, 0)
+        status = p7_hmmfile.p7_hmmfile_Position(self._hfp, 0)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_hmmfile_Position")
         # Manually rewind the MSV readers as well, if the file is pressed
@@ -3625,7 +3626,7 @@ cdef class HMMFile:
             raise ValueError("I/O operation on closed file.")
 
         # don't run in *nogil* because the file may call a file-like handle
-        status = libhmmer.p7_hmmfile.p7_hmmfile_Read(self._hfp, &self._alphabet._abc, &hmm)
+        status = p7_hmmfile.p7_hmmfile_Read(self._hfp, &self._alphabet._abc, &hmm)
 
         if status == libeasel.eslOK:
             py_hmm = HMM.__new__(HMM)
@@ -3657,7 +3658,7 @@ cdef class HMMFile:
 
         """
         if self._hfp:
-            libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
+            p7_hmmfile.p7_hmmfile_Close(self._hfp)
             self._hfp = NULL
 
     cpdef bint is_pressed(self) except *:
@@ -3867,7 +3868,7 @@ cdef class HMMPressedFile:
 
         """
         if self._hfp:
-            libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
+            p7_hmmfile.p7_hmmfile_Close(self._hfp)
             self._hfp = self._hmmfile._hfp = NULL
 
 cdef class IterationResult:
@@ -5113,7 +5114,7 @@ cdef class Pipeline:
 
         # allocate the pipeline
         with nogil:
-            self._pli = libhmmer.p7_pipeline.p7_pipeline_Create(
+            self._pli = p7_pipeline.p7_pipeline_Create(
                 NULL,
                 m_hint,
                 l_hint,
@@ -5155,7 +5156,7 @@ cdef class Pipeline:
         self.bit_cutoffs = bit_cutoffs
 
     def __dealloc__(self):
-        libhmmer.p7_pipeline.p7_pipeline_Destroy(self._pli)
+        p7_pipeline.p7_pipeline_Destroy(self._pli)
 
     # --- Properties ---------------------------------------------------------
 
@@ -5524,8 +5525,8 @@ cdef class Pipeline:
         if isinstance(query, HMM):
             # reallocate the profile if it is too small, otherwise just clear it
             if self.profile._gm.allocM < query.M:
-                libhmmer.p7_profile.p7_profile_Destroy(self.profile._gm)
-                self.profile._gm = libhmmer.p7_profile.p7_profile_Create(query.M, self.alphabet._abc)
+                p7_profile.p7_profile_Destroy(self.profile._gm)
+                self.profile._gm = p7_profile.p7_profile_Create(query.M, self.alphabet._abc)
                 if self.profile._gm == NULL:
                     raise AllocationError("P7_PROFILE", sizeof(P7_OPROFILE))
             else:
@@ -5670,7 +5671,7 @@ cdef class Pipeline:
         # it unconditionally.
         self.randomness.seed(self._seed)
         # reinitialize the domaindef
-        libhmmer.p7_domaindef.p7_domaindef_Reuse(self._pli.ddef)
+        p7_domaindef.p7_domaindef_Reuse(self._pli.ddef)
 
         # Reset accounting values
         self._pli.nmodels         = 0
@@ -5959,7 +5960,7 @@ cdef class Pipeline:
         cdef size_t t
 
         # configure the pipeline for the current HMM
-        status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
+        status = p7_pipeline.p7_pli_NewModel(pli, om, bg)
         if status == libeasel.eslEINVAL:
             Pipeline._missing_cutoffs(pli, om)
         elif status != libeasel.eslOK:
@@ -5968,17 +5969,17 @@ cdef class Pipeline:
         # run the inner loop on all sequences
         for t in range(n_targets):
             # configure the profile, background and pipeline for the new sequence
-            status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq[t])
+            status = p7_pipeline.p7_pli_NewSeq(pli, sq[t])
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_pli_NewSeq")
-            status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq[t].n)
+            status = p7_bg.p7_bg_SetLength(bg, sq[t].n)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_bg_SetLength")
             status = p7_oprofile.p7_oprofile_ReconfigLength(om, sq[t].n)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
             # run the pipeline on the target sequence
-            status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, sq[t], NULL, th)
+            status = p7_pipeline.p7_Pipeline(pli, om, bg, sq[t], NULL, th)
             if status == libeasel.eslEINVAL:
                 Pipeline._missing_cutoffs(pli, om)
             elif status == libeasel.eslERANGE:
@@ -5986,7 +5987,7 @@ cdef class Pipeline:
             elif status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_Pipeline")
             # clear pipeline for reuse for next target
-            libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
+            p7_pipeline.p7_pipeline_Reuse(pli)
 
         # Return 0 to indicate success
         return 0
@@ -6018,13 +6019,13 @@ cdef class Pipeline:
         cdef ESL_SQ* dbsq
 
         # allocate a temporary sequence to read targets into
-        dbsq = libeasel.sq.esl_sq_CreateDigital(om.abc)
+        dbsq = libeasel_sq.esl_sq_CreateDigital(om.abc)
         if dbsq == NULL:
             raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
 
         try:
             # configure the pipeline for the current HMM
-            status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
+            status = p7_pipeline.p7_pli_NewModel(pli, om, bg)
             if status == libeasel.eslEINVAL:
                 Pipeline._missing_cutoffs(pli, om)
             elif status != libeasel.eslOK:
@@ -6032,7 +6033,7 @@ cdef class Pipeline:
             # run the inner loop on all sequences
             while True:
                 # read the next sequence
-                status = libeasel.sqio.esl_sqio_Read(sqfp, dbsq)
+                status = libeasel_sqio.esl_sqio_Read(sqfp, dbsq)
                 if status == libeasel.eslEOF:
                     break
                 elif status == libeasel.eslEFORMAT:
@@ -6043,17 +6044,17 @@ cdef class Pipeline:
                 if dbsq.L > HMMER_TARGET_LIMIT:
                     raise ValueError(f"sequence length over comparison pipeline limit ({HMMER_TARGET_LIMIT})")
                 # configure the profile, background and pipeline for the new sequence
-                status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, dbsq)
+                status = p7_pipeline.p7_pli_NewSeq(pli, dbsq)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_pli_NewSeq")
-                status = libhmmer.p7_bg.p7_bg_SetLength(bg, dbsq.n)
+                status = p7_bg.p7_bg_SetLength(bg, dbsq.n)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_bg_SetLength")
                 status = p7_oprofile.p7_oprofile_ReconfigLength(om, dbsq.n)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
                 # run the pipeline on the target sequence
-                status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, dbsq, NULL, th)
+                status = p7_pipeline.p7_Pipeline(pli, om, bg, dbsq, NULL, th)
                 if status == libeasel.eslEINVAL:
                     Pipeline._missing_cutoffs(pli, om)
                 elif status == libeasel.eslERANGE:
@@ -6061,11 +6062,11 @@ cdef class Pipeline:
                 elif status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_Pipeline")
                 # clear pipeline and sequence for reuse for next target
-                libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
-                libeasel.sq.esl_sq_Reuse(dbsq)
+                p7_pipeline.p7_pipeline_Reuse(pli)
+                libeasel_sq.esl_sq_Reuse(dbsq)
 
         finally:
-            libeasel.sq.esl_sq_Destroy(dbsq)
+            libeasel_sq.esl_sq_Destroy(dbsq)
 
         # Return 0 to indicate success
         return 0
@@ -6178,19 +6179,19 @@ cdef class Pipeline:
         cdef size_t t
 
         # configure the pipeline for the current sequence
-        status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq)
+        status = p7_pipeline.p7_pli_NewSeq(pli, sq)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_pli_NewSeq")
 
         # run the inner loop on all HMMs
         for t in range(n_targets):
             # configure the background and pipeline for the new optimized profile
-            status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om[t], bg)
+            status = p7_pipeline.p7_pli_NewModel(pli, om[t], bg)
             if status == libeasel.eslEINVAL:
                 Pipeline._missing_cutoffs(pli, om[t])
             elif status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_pli_NewModel")
-            status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq.n)
+            status = p7_bg.p7_bg_SetLength(bg, sq.n)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_bg_SetLength")
             # use a critical section here because `p7_oprofile_ReconfigLength`
@@ -6204,7 +6205,7 @@ cdef class Pipeline:
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
                 # run the pipeline on the query sequence
-                status = libhmmer.p7_pipeline.p7_Pipeline(pli, om[t], bg, sq, NULL, th)
+                status = p7_pipeline.p7_Pipeline(pli, om[t], bg, sq, NULL, th)
                 if status == libeasel.eslEINVAL:
                     Pipeline._missing_cutoffs(pli, om[t])
                 elif status == libeasel.eslERANGE:
@@ -6214,7 +6215,7 @@ cdef class Pipeline:
             finally:
                 PyThread_release_lock(locks[t])
             # clear pipeline for reuse for next target
-            libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
+            p7_pipeline.p7_pipeline_Reuse(pli)
 
         # Return 0 to indicate success
         return 0
@@ -6232,7 +6233,7 @@ cdef class Pipeline:
         cdef ESL_ALPHABET* abc    = <ESL_ALPHABET*> sq.abc
 
         # configure the pipeline for the current sequence
-        status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, sq)
+        status = p7_pipeline.p7_pli_NewSeq(pli, sq)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_pli_NewSeq")
 
@@ -6249,12 +6250,12 @@ cdef class Pipeline:
             # make sure that the optimized profile memory is not leaked
             try:
                 # configure the background and pipeline for the new optimized profile
-                status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
+                status = p7_pipeline.p7_pli_NewModel(pli, om, bg)
                 if status == libeasel.eslEINVAL:
                     Pipeline._missing_cutoffs(pli, om)
                 elif status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_pli_NewModel")
-                status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq.n)
+                status = p7_bg.p7_bg_SetLength(bg, sq.n)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_bg_SetLength")
                 # configure the profile
@@ -6262,7 +6263,7 @@ cdef class Pipeline:
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
                 # run the pipeline on the query sequence
-                status = libhmmer.p7_pipeline.p7_Pipeline(pli, om, bg, sq, NULL, th)
+                status = p7_pipeline.p7_Pipeline(pli, om, bg, sq, NULL, th)
                 if status == libeasel.eslEINVAL:
                     Pipeline._missing_cutoffs(pli, om)
                 elif status == libeasel.eslERANGE:
@@ -6274,7 +6275,7 @@ cdef class Pipeline:
                om = NULL
 
             # clear pipeline for reuse for next target
-            libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
+            p7_pipeline.p7_pipeline_Reuse(pli)
 
         # Return 0 to indicate success
         return 0
@@ -6490,7 +6491,7 @@ cdef class LongTargetsPipeline(Pipeline):
         self._idlens = NULL
 
     def __dealloc__(self):
-        libhmmer.nhmmer.idlen_list_destroy(self._idlens)
+        libhmmer_nhmmer.idlen_list_destroy(self._idlens)
 
     def __init__(
         self,
@@ -6557,12 +6558,12 @@ cdef class LongTargetsPipeline(Pipeline):
         self.B3 = B3
         self.window_length = window_length
         if window_beta is None:
-            self.window_beta = libhmmer.p7_builder.p7_DEFAULT_WINDOW_BETA
+            self.window_beta = p7_builder.p7_DEFAULT_WINDOW_BETA
         else:
             self.window_beta = window_beta
 
         # allocate storage for the ID/length list
-        self._idlens = libhmmer.nhmmer.idlen_list_init(64)
+        self._idlens = libhmmer_nhmmer.idlen_list_init(64)
         if self._idlens == NULL:
             raise AllocationError("ID_LENGTH_LIST", sizeof(ID_LENGTH_LIST))
 
@@ -6845,7 +6846,7 @@ cdef class LongTargetsPipeline(Pipeline):
             max_length = om.max_length = self._window_length
         elif isinstance(query, HMM):
             hmm = query
-            libhmmer.p7_builder.p7_Builder_MaxLength(hmm._hmm, self._window_beta)
+            p7_builder.p7_Builder_MaxLength(hmm._hmm, self._window_beta)
             max_length = hmm._hmm.max_length
         else:
             raise TypeError("Cannot use `Profile` or `OptimizedProfile` query without `max_length` set")
@@ -6855,10 +6856,10 @@ cdef class LongTargetsPipeline(Pipeline):
             self._pli.mode = p7_pipemodes_e.p7_SEARCH_SEQS
             self._pli.nseqs = 0
             # reset the ID/length list
-            libhmmer.nhmmer.idlen_list_clear(self._idlens)
+            libhmmer_nhmmer.idlen_list_clear(self._idlens)
             # create the score data struct
             scoredata.Kp = self.profile._gm.abc.Kp
-            scoredata._sd = libhmmer.p7_scoredata.p7_hmm_ScoreDataCreate(om, NULL)
+            scoredata._sd = p7_scoredata.p7_hmm_ScoreDataCreate(om, NULL)
             if scoredata._sd == NULL:
                 raise AllocationError("P7_SCOREDATA", sizeof(P7_SCOREDATA))
             # run the search loop on all database sequences while recycling memory
@@ -6890,14 +6891,14 @@ cdef class LongTargetsPipeline(Pipeline):
                 res_count = <int64_t> (1000000 * self._pli.Z)
                 if self._pli.strands == p7_strands_e.p7_STRAND_BOTH:
                     res_count *= 2
-            libhmmer.p7_tophits.p7_tophits_ComputeNhmmerEvalues(hits._th, res_count, max_length)
+            p7_tophits.p7_tophits_ComputeNhmmerEvalues(hits._th, res_count, max_length)
             # assign target sequence lengths
             hits._sort_by_seqidx()
-            status = libhmmer.nhmmer.idlen_list_assign(self._idlens, hits._th)
+            status = libhmmer_nhmmer.idlen_list_assign(self._idlens, hits._th)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "idlen_list_assign")
             # remove target duplicates from the hits (using the ones with best E-value)
-            libhmmer.p7_tophits.p7_tophits_RemoveDuplicates(hits._th, True)
+            p7_tophits.p7_tophits_RemoveDuplicates(hits._th, True)
             # sort hits, threshold and record pipeline configuration
             hits._sort_by_key()
             hits._threshold(self)
@@ -7067,30 +7068,30 @@ cdef class LongTargetsPipeline(Pipeline):
             raise InvalidParameter("W", W, hint="strictly positive integer greater than C")
 
         # configure the pipeline for the current HMM
-        status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
+        status = p7_pipeline.p7_pli_NewModel(pli, om, bg)
         if status == libeasel.eslEINVAL:
             Pipeline._missing_cutoffs(pli, om)
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_pli_NewModel")
 
         # create a temporary sequence in digital mode to store the current window
-        tmpsq = libeasel.sq.esl_sq_CreateDigital(om.abc)
+        tmpsq = libeasel_sq.esl_sq_CreateDigital(om.abc)
         if tmpsq == NULL:
             raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
 
         # run the inner loop on all sequences
         for t in range(n_targets):
             # record length
-            libhmmer.nhmmer.idlen_list_add(idlens, t, sq[t].L)
+            libhmmer_nhmmer.idlen_list_add(idlens, t, sq[t].L)
 
             # initialize the sequence window storage
             tmpsq.idx = t
             tmpsq.L = -1
-            libeasel.sq.esl_sq_SetAccession(tmpsq, sq[t].acc)
-            libeasel.sq.esl_sq_SetName(tmpsq, sq[t].name)
-            libeasel.sq.esl_sq_SetDesc(tmpsq, sq[t].desc)
-            libeasel.sq.esl_sq_SetSource(tmpsq, sq[t].name)
-            libeasel.sq.esl_sq_GrowTo(tmpsq, min(W+C, sq[t].n))
+            libeasel_sq.esl_sq_SetAccession(tmpsq, sq[t].acc)
+            libeasel_sq.esl_sq_SetName(tmpsq, sq[t].name)
+            libeasel_sq.esl_sq_SetDesc(tmpsq, sq[t].desc)
+            libeasel_sq.esl_sq_SetSource(tmpsq, sq[t].name)
+            libeasel_sq.esl_sq_GrowTo(tmpsq, min(W+C, sq[t].n))
 
             # iterate over successive windows of width W, keeping C residues
             # from the previous iteration as context
@@ -7116,7 +7117,7 @@ cdef class LongTargetsPipeline(Pipeline):
                 tmpsq.dsq[0] = tmpsq.dsq[tmpsq.n+1] = libeasel.eslDSQ_SENTINEL
 
                 # configure the profile, background and pipeline for the new sequence
-                status = libhmmer.p7_pipeline.p7_pli_NewSeq(pli, tmpsq)
+                status = p7_pipeline.p7_pli_NewSeq(pli, tmpsq)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_pli_NewSeq")
 
@@ -7125,7 +7126,7 @@ cdef class LongTargetsPipeline(Pipeline):
                     # account for overlapping region of windows
                     pli.nres -= tmpsq.C
                     # run the pipeline on the forward strand
-                    status = libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, tmpsq, p7_complementarity_e.p7_NOCOMPLEMENT, NULL, NULL, NULL)
+                    status = p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, tmpsq, p7_complementarity_e.p7_NOCOMPLEMENT, NULL, NULL, NULL)
                     if status == libeasel.eslEINVAL:
                         Pipeline._missing_cutoffs(pli, om)
                     elif status == libeasel.eslERANGE:
@@ -7133,16 +7134,16 @@ cdef class LongTargetsPipeline(Pipeline):
                     elif status != libeasel.eslOK:
                         raise UnexpectedError(status, "p7_Pipeline_LongTarget")
                     # clear pipeline for reuse for next target
-                    libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
+                    p7_pipeline.p7_pipeline_Reuse(pli)
                 else:
                     pli.nres -= tmpsq.n
 
                 # process reverse strand
                 if pli.strands != p7_strands_e.p7_STRAND_TOPONLY:
                     # reverse complement sequence
-                    libeasel.sq.esl_sq_ReverseComplement(tmpsq)
+                    libeasel_sq.esl_sq_ReverseComplement(tmpsq)
                     # run the pipeline on the reverse strand
-                    status = libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, tmpsq, p7_complementarity_e.p7_COMPLEMENT, NULL, NULL, NULL)
+                    status = p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, tmpsq, p7_complementarity_e.p7_COMPLEMENT, NULL, NULL, NULL)
                     if status == libeasel.eslEINVAL:
                         Pipeline._missing_cutoffs(pli, om)
                     elif status == libeasel.eslERANGE:
@@ -7150,15 +7151,15 @@ cdef class LongTargetsPipeline(Pipeline):
                     elif status != libeasel.eslOK:
                         raise UnexpectedError(status, "p7_Pipeline_LongTarget")
                     # clear pipeline for reuse for next target
-                    libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
+                    p7_pipeline.p7_pipeline_Reuse(pli)
                     pli.nres += tmpsq.W
 
             # clear the allocated sequence and advance to next sequence
-            libeasel.sq.esl_sq_Reuse(tmpsq)
+            libeasel_sq.esl_sq_Reuse(tmpsq)
             pli.nseqs += 1
 
         # Free temporary data
-        libeasel.sq.esl_sq_Destroy(tmpsq)
+        libeasel_sq.esl_sq_Destroy(tmpsq)
 
         # Return 0 to indicate success
         return 0
@@ -7194,7 +7195,7 @@ cdef class LongTargetsPipeline(Pipeline):
             raise InvalidParameter("W", W, hint="strictly positive integer greater than C")
 
         # configure the pipeline for the current HMM
-        status = libhmmer.p7_pipeline.p7_pli_NewModel(pli, om, bg)
+        status = p7_pipeline.p7_pli_NewModel(pli, om, bg)
         if status == libeasel.eslEINVAL:
             Pipeline._missing_cutoffs(pli, om)
         elif status != libeasel.eslOK:
@@ -7202,15 +7203,15 @@ cdef class LongTargetsPipeline(Pipeline):
 
         try:
             # allocate temporary memory for the sequences
-            dbsq = libeasel.sq.esl_sq_CreateDigital(om.abc)
+            dbsq = libeasel_sq.esl_sq_CreateDigital(om.abc)
             if dbsq == NULL:
                 raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
             if om.abc.complement != NULL:
-                dbsq_rc = libeasel.sq.esl_sq_CreateDigital(om.abc)
+                dbsq_rc = libeasel_sq.esl_sq_CreateDigital(om.abc)
                 if dbsq_rc == NULL:
                     raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
             # read the first sequence window
-            status = libeasel.sqio.esl_sqio_ReadWindow(sqfp, 0, W, dbsq)
+            status = libeasel_sqio.esl_sqio_ReadWindow(sqfp, 0, W, dbsq)
             if status == libeasel.eslEOF:
                 return 0
             elif status != libeasel.eslOK:
@@ -7219,46 +7220,46 @@ cdef class LongTargetsPipeline(Pipeline):
             while status == libeasel.eslOK:
                 # reconfigure the pipeline
                 dbsq.idx = seq_id
-                libhmmer.p7_pipeline.p7_pli_NewSeq(pli, dbsq)
+                p7_pipeline.p7_pli_NewSeq(pli, dbsq)
                 # process forward strand
                 if pli.strands != p7_strands_e.p7_STRAND_BOTTOMONLY:
                     pli.nres -= dbsq.C
-                    status = libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, dbsq, p7_complementarity_e.p7_NOCOMPLEMENT, NULL, NULL, NULL)
+                    status = p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, dbsq, p7_complementarity_e.p7_NOCOMPLEMENT, NULL, NULL, NULL)
                     if status == libeasel.eslEINVAL:
                         Pipeline._missing_cutoffs(pli, om)
                     elif status == libeasel.eslERANGE:
                         raise OverflowError("numerical overflow in the optimized vector implementation")
                     elif status != libeasel.eslOK:
                         raise UnexpectedError(status, "p7_Pipeline_LongTarget")
-                    libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
+                    p7_pipeline.p7_pipeline_Reuse(pli)
                 else:
                     pli.nres -= dbsq.n
                 # process reverse strand
                 if pli.strands != p7_strands_e.p7_STRAND_BOTTOMONLY and dbsq.abc.complement != NULL:
-                    libeasel.sq.esl_sq_Copy(dbsq, dbsq_rc)
-                    libeasel.sq.esl_sq_ReverseComplement(dbsq_rc)
-                    libhmmer.p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, dbsq_rc, p7_complementarity_e.p7_COMPLEMENT, NULL, NULL, NULL)
+                    libeasel_sq.esl_sq_Copy(dbsq, dbsq_rc)
+                    libeasel_sq.esl_sq_ReverseComplement(dbsq_rc)
+                    p7_pipeline.p7_Pipeline_LongTarget(pli, om, scoredata, bg, th, pli.nseqs, dbsq_rc, p7_complementarity_e.p7_COMPLEMENT, NULL, NULL, NULL)
                     if status == libeasel.eslEINVAL:
                         Pipeline._missing_cutoffs(pli, om)
                     elif status == libeasel.eslERANGE:
                         raise OverflowError("numerical overflow in the optimized vector implementation")
                     elif status != libeasel.eslOK:
                         raise UnexpectedError(status, "p7_Pipeline_LongTarget")
-                    libhmmer.p7_pipeline.p7_pipeline_Reuse(pli)
+                    p7_pipeline.p7_pipeline_Reuse(pli)
                     pli.nres += dbsq_rc.W
                 # read next window
-                status = libeasel.sqio.esl_sqio_ReadWindow(sqfp, C, W, dbsq)
+                status = libeasel_sqio.esl_sqio_ReadWindow(sqfp, C, W, dbsq)
                 if status == libeasel.eslEOD:
-                    libhmmer.nhmmer.idlen_list_add(idlens, dbsq.idx, dbsq.L)
+                    libhmmer_nhmmer.idlen_list_add(idlens, dbsq.idx, dbsq.L)
                     pli.nseqs += 1
-                    libeasel.sq.esl_sq_Reuse(dbsq)
-                    status = libeasel.sqio.esl_sqio_ReadWindow(sqfp, 0, W, dbsq)
+                    libeasel_sq.esl_sq_Reuse(dbsq)
+                    status = libeasel_sqio.esl_sqio_ReadWindow(sqfp, 0, W, dbsq)
                     seq_id += 1
                 if status != libeasel.eslOK and status != libeasel.eslEOF:
                     raise UnexpectedError(status, "esl_sqio_ReadWindow")
         finally:
-            libeasel.sq.esl_sq_Destroy(dbsq)
-            libeasel.sq.esl_sq_Destroy(dbsq_rc)
+            libeasel_sq.esl_sq_Destroy(dbsq)
+            libeasel_sq.esl_sq_Destroy(dbsq_rc)
 
         return 0
 
@@ -7294,12 +7295,12 @@ cdef class Profile:
         self.alphabet = alphabet
         # create a new profile large enough to store M nodes
         with nogil:
-            self._gm = libhmmer.p7_profile.p7_profile_Create(M, alphabet._abc)
+            self._gm = p7_profile.p7_profile_Create(M, alphabet._abc)
         if not self._gm:
             raise AllocationError("P7_PROFILE", sizeof(P7_PROFILE))
 
     def __dealloc__(self):
-        libhmmer.p7_profile.p7_profile_Destroy(self._gm)
+        p7_profile.p7_profile_Destroy(self._gm)
 
     def __repr__(self):
         cdef str ty = type(self).__name__
@@ -7323,7 +7324,7 @@ cdef class Profile:
             return NotImplemented
 
         cdef Profile      p = <Profile> other
-        cdef int     status = libhmmer.p7_profile.p7_profile_Compare(self._gm, p._gm, 0.0)
+        cdef int     status = p7_profile.p7_profile_Compare(self._gm, p._gm, 0.0)
 
         if status == libeasel.eslOK:
             return True
@@ -7334,7 +7335,7 @@ cdef class Profile:
 
     def __sizeof__(self):
         assert self._gm != NULL
-        return libhmmer.p7_profile.p7_profile_Sizeof(self._gm) + sizeof(self)
+        return p7_profile.p7_profile_Sizeof(self._gm) + sizeof(self)
 
     # --- Properties ---------------------------------------------------------
 
@@ -7360,7 +7361,7 @@ cdef class Profile:
         assert self._gm != NULL
         cdef int status
         with nogil:
-            status = libhmmer.modelconfig.p7_ReconfigLength(self._gm, L)
+            status = libhmmer_modelconfig.p7_ReconfigLength(self._gm, L)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_ReconfigLength")
 
@@ -7458,7 +7459,7 @@ cdef class Profile:
 
         """
         assert self._gm != NULL
-        return libhmmer.p7_profile.p7_profile_IsLocal(self._gm)
+        return p7_profile.p7_profile_IsLocal(self._gm)
 
     @property
     def multihit(self):
@@ -7468,16 +7469,16 @@ cdef class Profile:
 
         """
         assert self._gm != NULL
-        return libhmmer.p7_profile.p7_profile_IsMultihit(self._gm)
+        return p7_profile.p7_profile_IsMultihit(self._gm)
 
     @multihit.setter
     def multihit(self, multihit):
         if multihit:
             if not self.multihit:
-                libhmmer.modelconfig.p7_ReconfigMultihit(self._gm, self._gm.L)
+                libhmmer_modelconfig.p7_ReconfigMultihit(self._gm, self._gm.L)
         else:
             if self.multihit:
-                libhmmer.modelconfig.p7_ReconfigUnihit(self._gm, self._gm.L)
+                libhmmer_modelconfig.p7_ReconfigUnihit(self._gm, self._gm.L)
 
     # --- Methods ------------------------------------------------------------
 
@@ -7486,7 +7487,7 @@ cdef class Profile:
         """
         cdef int status
         with nogil:
-            status = libhmmer.p7_profile.p7_profile_Reuse(self._gm)
+            status = p7_profile.p7_profile_Reuse(self._gm)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_profile_Reuse")
 
@@ -7530,7 +7531,7 @@ cdef class Profile:
             mode = p7_UNILOCAL if local else p7_UNIGLOCAL
         # configure the model
         with nogil:
-            status = libhmmer.modelconfig.p7_ProfileConfig(hm, bg, gm, L, mode)
+            status = libhmmer_modelconfig.p7_ProfileConfig(hm, bg, gm, L, mode)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_ProfileConfig")
 
@@ -7545,13 +7546,13 @@ cdef class Profile:
 
         # allocate a new profile
         with nogil:
-            new._gm = libhmmer.p7_profile.p7_profile_Create(self._gm.allocM, self.alphabet._abc)
+            new._gm = p7_profile.p7_profile_Create(self._gm.allocM, self.alphabet._abc)
         if not new._gm:
             raise AllocationError("P7_PROFILE", sizeof(P7_PROFILE))
 
         # copy the current profile to the new profile
         with nogil:
-            status = libhmmer.p7_profile.p7_profile_Copy(self._gm, new._gm)
+            status = p7_profile.p7_profile_Copy(self._gm, new._gm)
         if status == libeasel.eslOK:
             return new
         else:
@@ -7588,12 +7589,12 @@ cdef class ScoreData:
 
         self.Kp = gm.alphabet.Kp
         with nogil:
-            self._sd = libhmmer.p7_scoredata.p7_hmm_ScoreDataCreate(_om, _gm)
+            self._sd = p7_scoredata.p7_hmm_ScoreDataCreate(_om, _gm)
         if self._sd == NULL:
             raise AllocationError("P7_SCOREDATA", sizeof(P7_SCOREDATA))
 
     def __dealloc__(self):
-        libhmmer.p7_scoredata.p7_hmm_ScoreDataDestroy(self._sd)
+        p7_scoredata.p7_hmm_ScoreDataDestroy(self._sd)
         self._sd = NULL
 
     def __copy__(self):
@@ -7606,7 +7607,7 @@ cdef class ScoreData:
         cdef ScoreData new = ScoreData.__new__(ScoreData)
         new.Kp = self.Kp
         with nogil:
-            new._sd = libhmmer.p7_scoredata.p7_hmm_ScoreDataClone(self._sd, self.Kp)
+            new._sd = p7_scoredata.p7_hmm_ScoreDataClone(self._sd, self.Kp)
         if new._sd == NULL:
             raise AllocationError("P7_SCOREDATA", sizeof(P7_SCOREDATA))
         return new
@@ -7650,16 +7651,16 @@ cdef class TopHits:
         """
         with nogil:
             # free allocated memory (in case __init__ is called more than once)
-            libhmmer.p7_tophits.p7_tophits_Destroy(self._th)
+            p7_tophits.p7_tophits_Destroy(self._th)
             # allocate top hits
-            self._th = libhmmer.p7_tophits.p7_tophits_Create()
+            self._th = p7_tophits.p7_tophits_Create()
             if self._th == NULL:
                 raise AllocationError("P7_TOPHITS", sizeof(P7_TOPHITS))
             # clear pipeline configuration
             memset(&self._pli, 0, sizeof(P7_PIPELINE))
 
     def __dealloc__(self):
-        libhmmer.p7_tophits.p7_tophits_Destroy(self._th)
+        p7_tophits.p7_tophits_Destroy(self._th)
 
     def __bool__(self):
         return len(self) > 0
@@ -7785,7 +7786,7 @@ cdef class TopHits:
 
         # deallocate current data if needed
         if self._th != NULL:
-            libhmmer.p7_tophits.p7_tophits_Destroy(self._th)
+            p7_tophits.p7_tophits_Destroy(self._th)
             self._th = NULL
 
         # allocate a new `P7_TOPHITS` but using exact-sized buffers from the state
@@ -7817,7 +7818,7 @@ cdef class TopHits:
         assert len(state["unsrt"]) == <Py_ssize_t> self._th.N
         for i, hit_state in enumerate(state["unsrt"]):
             n = 0
-            status = libhmmer.p7_hit.p7_hit_Deserialize(
+            status = p7_hit.p7_hit_Deserialize(
                 <const uint8_t*> hit_state._data,
                 &n,
                 &self._th.unsrt[i],
@@ -8109,7 +8110,7 @@ cdef class TopHits:
 
     cdef int _threshold(self, Pipeline pipeline) except 1 nogil:
         # threshold the top hits with the given pipeline numbers
-        cdef int status = libhmmer.p7_tophits.p7_tophits_Threshold(self._th, pipeline._pli)
+        cdef int status = p7_tophits.p7_tophits_Threshold(self._th, pipeline._pli)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tophits_Threshold")
         # record pipeline configuration
@@ -8124,13 +8125,13 @@ cdef class TopHits:
         return 0
 
     cdef int _sort_by_key(self) except 1 nogil:
-        cdef int status = libhmmer.p7_tophits.p7_tophits_SortBySortkey(self._th)
+        cdef int status = p7_tophits.p7_tophits_SortBySortkey(self._th)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tophits_SortBySortkey")
         return 0
 
     cdef int _sort_by_seqidx(self) except 1 nogil:
-        cdef int status = libhmmer.p7_tophits.p7_tophits_SortBySeqidxAndAlipos(self._th)
+        cdef int status = p7_tophits.p7_tophits_SortBySeqidxAndAlipos(self._th)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tophits_SortBySeqidxAndAlipos")
         return 0
@@ -8193,9 +8194,9 @@ cdef class TopHits:
             #                  zero-allocation of the target arrays, it
             #                  should be reported as a bug at some point.
             if self._th.N > 0:
-                copy._th = libhmmer.p7_tophits.p7_tophits_Clone(self._th)
+                copy._th = p7_tophits.p7_tophits_Clone(self._th)
             else:
-                copy._th = libhmmer.p7_tophits.p7_tophits_Create()
+                copy._th = p7_tophits.p7_tophits_Create()
         if copy._th == NULL:
             raise AllocationError("P7_TOPHITS", sizeof(P7_TOPHITS))
 
@@ -8224,7 +8225,7 @@ cdef class TopHits:
         cdef int status
 
         with nogil:
-            status = libhmmer.p7_tophits.p7_tophits_CompareRanking(
+            status = p7_tophits.p7_tophits_CompareRanking(
                 self._th,
                 ranking._kh,
                 &new_hits
@@ -8356,7 +8357,7 @@ cdef class TopHits:
                     sqarr[i] = seq._sq
                     trarr[i] = trace._tr
             # build the alignment
-            status = libhmmer.p7_tophits.p7_tophits_Alignment(
+            status = p7_tophits.p7_tophits_Alignment(
                 self._th,
                 alphabet._abc,
                 sqarr,
@@ -8416,7 +8417,7 @@ cdef class TopHits:
         try:
             if format == "targets":
                 fname = "p7_tophits_TabularTargets"
-                status = libhmmer.p7_tophits.p7_tophits_TabularTargets(
+                status = p7_tophits.p7_tophits_TabularTargets(
                     file,
                     qname,
                     qacc,
@@ -8426,7 +8427,7 @@ cdef class TopHits:
                 )
             elif format == "domains":
                 fname = "p7_tophits_TabularDomains"
-                status = libhmmer.p7_tophits.p7_tophits_TabularDomains(
+                status = p7_tophits.p7_tophits_TabularDomains(
                     file,
                     qname,
                     qacc,
@@ -8436,7 +8437,7 @@ cdef class TopHits:
                 )
             elif format == "pfam":
                 fname = "p7_tophits_TabularXfam"
-                status = libhmmer.p7_tophits.p7_tophits_TabularXfam(
+                status = p7_tophits.p7_tophits_TabularXfam(
                     file,
                     qname,
                     qacc,
@@ -8520,11 +8521,11 @@ cdef class TopHits:
             # merge everything
             with nogil:
                 # merge the top hits
-                status = libhmmer.p7_tophits.p7_tophits_Merge(merged._th, other_copy._th)
+                status = p7_tophits.p7_tophits_Merge(merged._th, other_copy._th)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_tophits_Merge")
                 # merge the pipelines
-                status = libhmmer.p7_pipeline.p7_pipeline_Merge(&merged._pli, &other_copy._pli)
+                status = p7_pipeline.p7_pipeline_Merge(&merged._pli, &other_copy._pli)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_pipeline_Merge")
 
@@ -8541,7 +8542,7 @@ cdef class TopHits:
                 merged._th.hit[i].dcl[j].is_included = False
 
         # threshold the merged hits with new values
-        status = libhmmer.p7_tophits.p7_tophits_Threshold(merged._th, &merged._pli)
+        status = p7_tophits.p7_tophits_Threshold(merged._th, &merged._pli)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tophits_Threshold")
 
@@ -8569,16 +8570,16 @@ cdef class Trace:
         cdef int   status
         cdef Trace trace  = cls()
 
-        status = libhmmer.p7_trace.p7_trace_Append(trace._tr, p7t_statetype_e.p7T_B, 0, 0)
+        status = p7_trace.p7_trace_Append(trace._tr, p7t_statetype_e.p7T_B, 0, 0)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_trace_Append")
 
         for i in range(1, sequence._sq.n + 1):
-            status = libhmmer.p7_trace.p7_trace_Append(trace._tr, p7t_statetype_e.p7T_M, i, i)
+            status = p7_trace.p7_trace_Append(trace._tr, p7t_statetype_e.p7T_M, i, i)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_trace_Append")
 
-        status = libhmmer.p7_trace.p7_trace_Append(trace._tr, p7t_statetype_e.p7T_E, 0, 0)
+        status = p7_trace.p7_trace_Append(trace._tr, p7t_statetype_e.p7T_E, 0, 0)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_trace_Append")
 
@@ -8602,19 +8603,19 @@ cdef class Trace:
         # make `__init__` calllable more than once to avoid bugs
         if self._tr != NULL:
             if self.traces is None:
-                libhmmer.p7_trace.p7_trace_Destroy(self._tr)
+                p7_trace.p7_trace_Destroy(self._tr)
             self._tr = NULL
             self.traces = None
         if posteriors:
-            self._tr = libhmmer.p7_trace.p7_trace_CreateWithPP()
+            self._tr = p7_trace.p7_trace_CreateWithPP()
         else:
-            self._tr = libhmmer.p7_trace.p7_trace_Create()
+            self._tr = p7_trace.p7_trace_Create()
         if self._tr == NULL:
             raise AllocationError("P7_TRACE", sizeof(P7_TRACE))
 
     def __dealloc__(self):
         if self.traces is None:
-            libhmmer.p7_trace.p7_trace_Destroy(self._tr)
+            p7_trace.p7_trace_Destroy(self._tr)
 
     def __eq__(self, object other):
         assert self._tr != NULL
@@ -8623,7 +8624,7 @@ cdef class Trace:
             return NotImplemented
 
         cdef Trace t      = <Trace> other
-        cdef int   status = libhmmer.p7_trace.p7_trace_Compare(self._tr, t._tr, 0.0)
+        cdef int   status = p7_trace.p7_trace_Compare(self._tr, t._tr, 0.0)
 
         if status == libeasel.eslOK:
             return True
@@ -8672,7 +8673,7 @@ cdef class Trace:
         """
         assert self._tr != NULL
         with nogil:
-            return libhmmer.p7_trace.p7_trace_GetExpectedAccuracy(self._tr)
+            return p7_trace.p7_trace_GetExpectedAccuracy(self._tr)
 
     cpdef float score(self, DigitalSequence sequence, Profile profile) except *:
         """Score traceback for target sequence using given profile.
@@ -8688,7 +8689,7 @@ cdef class Trace:
         cdef float score
 
         with nogil:
-            status = libhmmer.p7_trace.p7_trace_Score(self._tr, sequence._sq.dsq, profile._gm, &score)
+            status = p7_trace.p7_trace_Score(self._tr, sequence._sq.dsq, profile._gm, &score)
         if status == libeasel.eslEINVAL:
             error = _recover_error()
             raise ValueError("Invalid trace") from error
@@ -8712,7 +8713,7 @@ cdef class Traces:
         self._ntraces = 0
 
     def __dealloc__(self):
-        libhmmer.p7_trace.p7_trace_DestroyArray(self._traces, self._ntraces)
+        p7_trace.p7_trace_DestroyArray(self._traces, self._ntraces)
 
     def __len__(self):
         return self._ntraces
@@ -8747,7 +8748,7 @@ cdef class Traces:
         if self._ntraces != other_tr._ntraces:
             return False
         for i in range(self._ntraces):
-            status = libhmmer.p7_trace.p7_trace_Compare(self._traces[i], other_tr._traces[i], 0.0)
+            status = p7_trace.p7_trace_Compare(self._traces[i], other_tr._traces[i], 0.0)
             if status == libeasel.eslFAIL:
                 return False
             elif status != libeasel.eslOK:
@@ -8822,13 +8823,13 @@ cdef class TraceAligner:
         if traces._traces == NULL:
             raise AllocationError("P7_TRACE**", sizeof(P7_TRACE*), nseq)
         for i in range(nseq):
-            traces._traces[i] = libhmmer.p7_trace.p7_trace_CreateWithPP()
+            traces._traces[i] = p7_trace.p7_trace_CreateWithPP()
             if traces._traces[i] == NULL:
                 raise AllocationError("P7_TRACE", sizeof(P7_TRACE))
 
         # compute the traces
         with nogil:
-            status = libhmmer.tracealign.p7_tracealign_computeTraces(
+            status = libhmmer_tracealign.p7_tracealign_computeTraces(
                 hmm._hmm,
                 sequences._refs,
                 0,
@@ -8919,7 +8920,7 @@ cdef class TraceAligner:
 
         # make the alignments
         with nogil:
-            status = libhmmer.tracealign.p7_tracealign_Seqs(
+            status = libhmmer_tracealign.p7_tracealign_Seqs(
                 sequences._refs,
                 traces._traces,
                 nseq,

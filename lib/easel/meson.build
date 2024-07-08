@@ -62,6 +62,10 @@ if target_machine.cpu_family() == 'aarch64'
   easel_conf.set('eslHAVE_NEON_AARCH64', true)
 endif
 
+if target_machine.endian() == 'big'
+  easel_conf.set('WORDS_BIGENDIAN', true)
+endif
+
 if mpi.found()
   easel_conf.set('HAVE_MPI', true)
 endif

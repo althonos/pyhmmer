@@ -3,8 +3,7 @@
 """Common errors and status codes for the `easel` and `hmmer` modules.
 """
 
-cimport libeasel
-cimport libeasel.alphabet
+from . cimport libeasel
 
 include "_getid.pxi"
 

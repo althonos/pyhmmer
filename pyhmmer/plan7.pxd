@@ -7,32 +7,32 @@ from libc.stdint cimport uint8_t, uint32_t
 from posix.types cimport off_t
 from cpython.pythread cimport PyThread_type_lock
 
-from libeasel import eslINFINITY
-from libeasel.sq cimport ESL_SQ
-from libeasel.sqio cimport ESL_SQFILE
-from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
-from libhmmer.p7_bg cimport P7_BG
-from libhmmer.p7_builder cimport P7_BUILDER
-from libhmmer.p7_domain cimport P7_DOMAIN
-from libhmmer.p7_hit cimport P7_HIT
-from libhmmer.p7_hmm cimport P7_HMM, p7_NOFFSETS, p7_NEVPARAM, p7_NCUTOFFS
-from libhmmer.p7_hmmfile cimport P7_HMMFILE
-from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e
-from libhmmer.p7_profile cimport P7_PROFILE
-from libhmmer.p7_scoredata cimport P7_SCOREDATA
-from libhmmer.p7_tophits cimport P7_TOPHITS
-from libhmmer.p7_trace cimport P7_TRACE
-from libhmmer.nhmmer cimport ID_LENGTH_LIST
+from .libeasel import eslINFINITY
+from .libeasel.sq cimport ESL_SQ
+from .libeasel.sqio cimport ESL_SQFILE
+from .libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
+from .libhmmer.p7_bg cimport P7_BG
+from .libhmmer.p7_builder cimport P7_BUILDER
+from .libhmmer.p7_domain cimport P7_DOMAIN
+from .libhmmer.p7_hit cimport P7_HIT
+from .libhmmer.p7_hmm cimport P7_HMM, p7_NOFFSETS, p7_NEVPARAM, p7_NCUTOFFS
+from .libhmmer.p7_hmmfile cimport P7_HMMFILE
+from .libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e
+from .libhmmer.p7_profile cimport P7_PROFILE
+from .libhmmer.p7_scoredata cimport P7_SCOREDATA
+from .libhmmer.p7_tophits cimport P7_TOPHITS
+from .libhmmer.p7_trace cimport P7_TRACE
+from .libhmmer.nhmmer cimport ID_LENGTH_LIST
 
 if HMMER_IMPL == "VMX":
-    from libhmmer.impl_vmx.p7_omx cimport P7_OM_BLOCK
-    from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
+    from .libhmmer.impl_vmx.p7_omx cimport P7_OM_BLOCK
+    from .libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
 elif HMMER_IMPL == "SSE":
-    from libhmmer.impl_sse.p7_omx cimport P7_OM_BLOCK
-    from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
+    from .libhmmer.impl_sse.p7_omx cimport P7_OM_BLOCK
+    from .libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
 elif HMMER_IMPL == "NEON":
-    from libhmmer.impl_neon.p7_omx cimport P7_OM_BLOCK
-    from libhmmer.impl_neon.p7_oprofile cimport P7_OPROFILE
+    from .libhmmer.impl_neon.p7_omx cimport P7_OM_BLOCK
+    from .libhmmer.impl_neon.p7_oprofile cimport P7_OPROFILE
 
 from .easel cimport (
     Alphabet,

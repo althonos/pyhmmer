@@ -2,10 +2,10 @@ from libc.stdint cimport int64_t
 from libc.stdio cimport FILE
 from posix.types cimport off_t
 
-from libeasel cimport ESL_DSQ
-from libeasel.alphabet cimport ESL_ALPHABET
-from libeasel.sqio cimport ESL_SQFILE
-from libeasel.sq cimport ESL_SQ, ESL_SQ_BLOCK
+from ..libeasel cimport ESL_DSQ
+from ..libeasel.alphabet cimport ESL_ALPHABET
+from ..libeasel.sqio cimport ESL_SQFILE
+from ..libeasel.sq cimport ESL_SQ, ESL_SQ_BLOCK
 
 
 cdef extern from "reexports/esl_sqio_ascii.h":

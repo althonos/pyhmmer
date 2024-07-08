@@ -32,28 +32,28 @@ from cpython.unicode cimport (
     PyUnicode_READ,
 )
 
-cimport libeasel
-cimport libeasel.alphabet
-cimport libeasel.bitfield
-cimport libeasel.buffer
-cimport libeasel.gencode
-cimport libeasel.keyhash
-cimport libeasel.matrixops
-cimport libeasel.msa
-cimport libeasel.msafile
-cimport libeasel.random
-cimport libeasel.sq
-cimport libeasel.sqio
-cimport libeasel.sqio.ascii
-cimport libeasel.ssi
-cimport libeasel.vec
-from libeasel cimport ESL_DSQ, esl_pos_t, eslERRBUFSIZE
-from libeasel.buffer cimport ESL_BUFFER
-from libeasel.gencode cimport ESL_GENCODE
-from libeasel.sq cimport ESL_SQ
-from libeasel.sqio cimport ESL_SQFILE, ESL_SQASCII_DATA
-from libeasel.random cimport ESL_RANDOMNESS
-from capacity cimport new_capacity
+from . cimport libeasel
+from .libeasel cimport alphabet as libeasel_alphabet
+from .libeasel cimport bitfield as libeasel_bitfield
+from .libeasel cimport buffer as libeasel_buffer
+from .libeasel cimport gencode as libeasel_gencode
+from .libeasel cimport keyhash as libeasel_keyhash
+from .libeasel cimport matrixops as libeasel_matrixops
+from .libeasel cimport msa as libeasel_msa
+from .libeasel cimport msafile as libeasel_msafile
+from .libeasel cimport random as libeasel_random
+from .libeasel cimport sq as libeasel_sq
+from .libeasel cimport sqio as libeasel_sqio
+from .libeasel.sqio cimport ascii as libeasel_sqio_ascii
+from .libeasel cimport ssi as libeasel_ssi
+from .libeasel cimport vec as libeasel_vec
+from .libeasel cimport ESL_DSQ, esl_pos_t, eslERRBUFSIZE
+from .libeasel.buffer cimport ESL_BUFFER
+from .libeasel.gencode cimport ESL_GENCODE
+from .libeasel.sq cimport ESL_SQ
+from .libeasel.sqio cimport ESL_SQFILE, ESL_SQASCII_DATA
+from .libeasel.random cimport ESL_RANDOMNESS
+from .capacity cimport new_capacity
 
 from .reexports.esl_sqio_ascii cimport (
     loadbuf,
@@ -116,16 +116,16 @@ from .utils import peekable
 # --- Constants --------------------------------------------------------------
 
 cdef dict MSA_FILE_FORMATS = {
-    "stockholm": libeasel.msafile.eslMSAFILE_STOCKHOLM,
-    "pfam": libeasel.msafile.eslMSAFILE_PFAM,
-    "a2m": libeasel.msafile.eslMSAFILE_A2M,
-    "psiblast": libeasel.msafile.eslMSAFILE_PSIBLAST,
-    "selex": libeasel.msafile.eslMSAFILE_SELEX,
-    "afa": libeasel.msafile.eslMSAFILE_AFA,
-    "clustal": libeasel.msafile.eslMSAFILE_CLUSTAL,
-    "clustallike": libeasel.msafile.eslMSAFILE_CLUSTALLIKE,
-    "phylip": libeasel.msafile.eslMSAFILE_PHYLIP,
-    "phylips": libeasel.msafile.eslMSAFILE_PHYLIPS,
+    "stockholm": libeasel_msafile.eslMSAFILE_STOCKHOLM,
+    "pfam": libeasel_msafile.eslMSAFILE_PFAM,
+    "a2m": libeasel_msafile.eslMSAFILE_A2M,
+    "psiblast": libeasel_msafile.eslMSAFILE_PSIBLAST,
+    "selex": libeasel_msafile.eslMSAFILE_SELEX,
+    "afa": libeasel_msafile.eslMSAFILE_AFA,
+    "clustal": libeasel_msafile.eslMSAFILE_CLUSTAL,
+    "clustallike": libeasel_msafile.eslMSAFILE_CLUSTALLIKE,
+    "phylip": libeasel_msafile.eslMSAFILE_PHYLIP,
+    "phylips": libeasel_msafile.eslMSAFILE_PHYLIPS,
 }
 
 cdef dict MSA_FILE_FORMATS_INDEX = {
@@ -133,15 +133,15 @@ cdef dict MSA_FILE_FORMATS_INDEX = {
 }
 
 cdef dict SEQUENCE_FILE_FORMATS = {
-    "fasta": libeasel.sqio.eslSQFILE_FASTA,
-    "embl": libeasel.sqio.eslSQFILE_EMBL,
-    "genbank": libeasel.sqio.eslSQFILE_GENBANK,
-    "ddbj": libeasel.sqio.eslSQFILE_DDBJ,
-    "uniprot": libeasel.sqio.eslSQFILE_UNIPROT,
-    "ncbi": libeasel.sqio.eslSQFILE_NCBI,
-    "daemon": libeasel.sqio.eslSQFILE_DAEMON,
-    "hmmpgmd": libeasel.sqio.eslSQFILE_DAEMON,
-    "fmindex": libeasel.sqio.eslSQFILE_FMINDEX,
+    "fasta": libeasel_sqio.eslSQFILE_FASTA,
+    "embl": libeasel_sqio.eslSQFILE_EMBL,
+    "genbank": libeasel_sqio.eslSQFILE_GENBANK,
+    "ddbj": libeasel_sqio.eslSQFILE_DDBJ,
+    "uniprot": libeasel_sqio.eslSQFILE_UNIPROT,
+    "ncbi": libeasel_sqio.eslSQFILE_NCBI,
+    "daemon": libeasel_sqio.eslSQFILE_DAEMON,
+    "hmmpgmd": libeasel_sqio.eslSQFILE_DAEMON,
+    "fmindex": libeasel_sqio.eslSQFILE_FMINDEX,
     **MSA_FILE_FORMATS,
 }
 
@@ -172,8 +172,8 @@ cdef class Alphabet:
 
     cdef int _init_default(self, int ty) except 1 nogil:
         if self._abc != NULL:
-            libeasel.alphabet.esl_alphabet_Destroy(self._abc)
-        self._abc = libeasel.alphabet.esl_alphabet_Create(ty)
+            libeasel_alphabet.esl_alphabet_Destroy(self._abc)
+        self._abc = libeasel_alphabet.esl_alphabet_Create(ty)
         if not self._abc:
             raise AllocationError("ESL_ALPHABET", sizeof(ESL_ALPHABET))
         return 0
@@ -183,7 +183,7 @@ cdef class Alphabet:
         """Create a default amino-acid alphabet.
         """
         cdef Alphabet alphabet = Alphabet.__new__(Alphabet)
-        alphabet._init_default(libeasel.alphabet.eslAMINO)
+        alphabet._init_default(libeasel_alphabet.eslAMINO)
         return alphabet
 
     @classmethod
@@ -191,7 +191,7 @@ cdef class Alphabet:
         """Create a default DNA alphabet.
         """
         cdef Alphabet alphabet = Alphabet.__new__(Alphabet)
-        alphabet._init_default(libeasel.alphabet.eslDNA)
+        alphabet._init_default(libeasel_alphabet.eslDNA)
         return alphabet
 
     @classmethod
@@ -199,7 +199,7 @@ cdef class Alphabet:
         """Create a default RNA alphabet.
         """
         cdef Alphabet alphabet = Alphabet.__new__(Alphabet)
-        alphabet._init_default(libeasel.alphabet.eslRNA)
+        alphabet._init_default(libeasel_alphabet.eslRNA)
         return alphabet
 
     def __init__(self):
@@ -211,7 +211,7 @@ cdef class Alphabet:
         self._abc = NULL
 
     def __dealloc__(self):
-        libeasel.alphabet.esl_alphabet_Destroy(self._abc)
+        libeasel_alphabet.esl_alphabet_Destroy(self._abc)
 
     def __repr__(self):
         assert self._abc != NULL
@@ -219,11 +219,11 @@ cdef class Alphabet:
         cdef type   ty   = type(self)
         cdef str    name = ty.__name__
 
-        if self._abc.type == libeasel.alphabet.eslRNA:
+        if self._abc.type == libeasel_alphabet.eslRNA:
             return f"{name}.rna()"
-        elif self._abc.type == libeasel.alphabet.eslDNA:
+        elif self._abc.type == libeasel_alphabet.eslDNA:
             return f"{name}.dna()"
-        elif self._abc.type == libeasel.alphabet.eslAMINO:
+        elif self._abc.type == libeasel_alphabet.eslAMINO:
             return f"{name}.amino()"
         else:
             return "{}({!r}, K={!r}, Kp={!r})".format(
@@ -242,18 +242,18 @@ cdef class Alphabet:
 
     def __reduce__(self):
         assert self._abc != NULL
-        if self._abc.type == libeasel.alphabet.eslRNA:
+        if self._abc.type == libeasel_alphabet.eslRNA:
             return Alphabet.rna, ()
-        elif self._abc.type == libeasel.alphabet.eslDNA:
+        elif self._abc.type == libeasel_alphabet.eslDNA:
             return Alphabet.dna, ()
-        elif self._abc.type == libeasel.alphabet.eslAMINO:
+        elif self._abc.type == libeasel_alphabet.eslAMINO:
             return Alphabet.amino, ()
         else:
             raise NotImplementedError("Alphabet.__reduce__")
 
     def __sizeof__(self):
         assert self._abc != NULL
-        return libeasel.alphabet.esl_alphabet_Sizeof(self._abc) + sizeof(self)
+        return libeasel_alphabet.esl_alphabet_Sizeof(self._abc) + sizeof(self)
 
     # --- Properties ---------------------------------------------------------
 
@@ -313,7 +313,7 @@ cdef class Alphabet:
 
         """
         assert self._abc != NULL
-        return libeasel.alphabet.esl_abc_DecodeType(self._abc.type).decode('ascii')
+        return libeasel_alphabet.esl_abc_DecodeType(self._abc.type).decode('ascii')
 
     # --- Utils --------------------------------------------------------------
 
@@ -326,27 +326,27 @@ cdef class Alphabet:
         """Check whether the `Alphabet` object is a DNA alphabet.
         """
         assert self._abc != NULL
-        return self._abc.type == libeasel.alphabet.eslDNA
+        return self._abc.type == libeasel_alphabet.eslDNA
 
     cpdef bint is_rna(self):
         """Check whether the `Alphabet` object is a RNA alphabet.
         """
         assert self._abc != NULL
-        return self._abc.type == libeasel.alphabet.eslRNA
+        return self._abc.type == libeasel_alphabet.eslRNA
 
     cpdef bint is_amino(self):
         """Check whether the `Alphabet` object is a protein alphabet.
         """
         assert self._abc != NULL
-        return self._abc.type == libeasel.alphabet.eslAMINO
+        return self._abc.type == libeasel_alphabet.eslAMINO
 
     cpdef bint is_nucleotide(self):
         """Check whether the `Alphabet` object is a nucleotide alphabet.
         """
         assert self._abc != NULL
         return (
-             self._abc.type == libeasel.alphabet.eslDNA
-          or self._abc.type == libeasel.alphabet.eslRNA
+             self._abc.type == libeasel_alphabet.eslDNA
+          or self._abc.type == libeasel_alphabet.eslRNA
         )
 
     cpdef VectorU8 encode(self, str sequence):
@@ -378,8 +378,8 @@ cdef class Alphabet:
 
         for i in range(length):
             c = PyUnicode_READ(kind, data, i)
-            if libeasel.alphabet.esl_abc_CIsValid(self._abc, c):
-                buffer[i] = libeasel.alphabet.esl_abc_DigitizeSymbol(self._abc, c)
+            if libeasel_alphabet.esl_abc_CIsValid(self._abc, c):
+                buffer[i] = libeasel_alphabet.esl_abc_DigitizeSymbol(self._abc, c)
             else:
                 raise ValueError(f"Invalid alphabet character in text sequence: {c}")
 
@@ -424,7 +424,7 @@ cdef class Alphabet:
             with nogil:
                 for i in range(length):
                     x = sequence[i]
-                    if libeasel.alphabet.esl_abc_XIsValid(self._abc, x):
+                    if libeasel_alphabet.esl_abc_XIsValid(self._abc, x):
                         data[i] = self._abc.sym[x]
                     else:
                         raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
@@ -438,7 +438,7 @@ cdef class Alphabet:
 
             for i in range(length):
                 x = sequence[i]
-                if libeasel.alphabet.esl_abc_XIsValid(self._abc, x):
+                if libeasel_alphabet.esl_abc_XIsValid(self._abc, x):
                     PyUnicode_WRITE(kind, data, i, self._abc.sym[x])
                 else:
                     raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
@@ -461,7 +461,7 @@ cdef class GeneticCode:
         self._gcode = NULL
 
     def __dealloc__(self):
-        libeasel.gencode.esl_gencode_Destroy(self._gcode)
+        libeasel_gencode.esl_gencode_Destroy(self._gcode)
 
     def __init__(
         self,
@@ -489,7 +489,7 @@ cdef class GeneticCode:
         if not amino_alphabet.is_amino():
             raise InvalidParameter("amino_alphabet", amino_alphabet, "amino alphabet")
 
-        self._gcode = libeasel.gencode.esl_gencode_Create(nucleotide_alphabet._abc, amino_alphabet._abc)
+        self._gcode = libeasel_gencode.esl_gencode_Create(nucleotide_alphabet._abc, amino_alphabet._abc)
         if self._gcode == NULL:
             raise AllocationError("ESL_GENCODE", sizeof(ESL_GENCODE))
 
@@ -529,7 +529,7 @@ cdef class GeneticCode:
     @translation_table.setter
     def translation_table(self, int translation_table):
         assert self._gcode != NULL
-        status = libeasel.gencode.esl_gencode_Set(self._gcode, translation_table)
+        status = libeasel_gencode.esl_gencode_Set(self._gcode, translation_table)
         if status == libeasel.eslENOTFOUND:
             raise InvalidParameter("translation_table", translation_table, hint="translation table code")
         elif status != libeasel.eslOK:
@@ -561,7 +561,7 @@ cdef class GeneticCode:
             raise BufferError(f"Output buffer too short for sequence of length {seqlen // 3!r}")
 
         for i, j in enumerate(range(0, seqlen, 3)):
-            aa = libeasel.gencode.esl_gencode_GetTranslation(self._gcode, <ESL_DSQ*> &seq[j])
+            aa = libeasel_gencode.esl_gencode_GetTranslation(self._gcode, <ESL_DSQ*> &seq[j])
             if aa == -1:
                 raise ValueError(f"Failed to translate codon at index {j!r}")
             out[i] = aa
@@ -680,7 +680,7 @@ cdef class Bitfield:
             raise ValueError("Cannot create an empty `Bitfield`")
         cdef Bitfield bitfield = Bitfield.__new__(Bitfield)
         bitfield._shape[0] = (n + 63) // 64
-        bitfield._b = libeasel.bitfield.esl_bitfield_Create(n)
+        bitfield._b = libeasel_bitfield.esl_bitfield_Create(n)
         if not bitfield._b:
             raise AllocationError("ESL_BITFIELD", sizeof(ESL_BITFIELD))
         return bitfield
@@ -704,7 +704,7 @@ cdef class Bitfield:
         self._shape[0] = 0
 
     def __dealloc__(self):
-        libeasel.bitfield.esl_bitfield_Destroy(self._b)
+        libeasel_bitfield.esl_bitfield_Destroy(self._b)
 
     def __init__(self, object iterable):
         """Create a new bitfield from an iterable of objects.
@@ -724,13 +724,13 @@ cdef class Bitfield:
             raise ValueError("Cannot create an empty `Bitfield`")
 
         self._shape[0] = (n + 63) // 64
-        self._b = libeasel.bitfield.esl_bitfield_Create(n)
+        self._b = libeasel_bitfield.esl_bitfield_Create(n)
         if not self._b:
             raise AllocationError("ESL_BITFIELD", sizeof(ESL_BITFIELD))
 
         for i, item in enumerate(iterable):
             if item:
-                libeasel.bitfield.esl_bitfield_Set(self._b, i)
+                libeasel_bitfield.esl_bitfield_Set(self._b, i)
 
     def __len__(self):
         assert self._b != NULL
@@ -739,15 +739,15 @@ cdef class Bitfield:
     def __getitem__(self, int idx):
         assert self._b != NULL
         cdef size_t index_ = self._wrap_index(idx)
-        return libeasel.bitfield.esl_bitfield_IsSet(self._b, index_)
+        return libeasel_bitfield.esl_bitfield_IsSet(self._b, index_)
 
     def __setitem__(self, index, value):
         assert self._b != NULL
         cdef size_t index_ = self._wrap_index(index)
         if value:
-            libeasel.bitfield.esl_bitfield_Set(self._b, index_)
+            libeasel_bitfield.esl_bitfield_Set(self._b, index_)
         else:
-            libeasel.bitfield.esl_bitfield_Clear(self._b, index_)
+            libeasel_bitfield.esl_bitfield_Clear(self._b, index_)
 
     def __eq__(self, object other):
         assert self._b != NULL
@@ -808,7 +808,7 @@ cdef class Bitfield:
             raise ValueError("Cannot create an empty `Bitfield`")
 
         if self._b == NULL:
-            self._b = libeasel.bitfield.esl_bitfield_Create(nb)
+            self._b = libeasel_bitfield.esl_bitfield_Create(nb)
         else:
             self._b.nb = nb
             self._b.b  = <uint64_t*> realloc(self._b.b, nu * sizeof(uint64_t))
@@ -873,7 +873,7 @@ cdef class Bitfield:
         assert self._b != NULL
         cdef size_t count_
         with nogil:
-            count_ = libeasel.bitfield.esl_bitfield_Count(self._b)
+            count_ = libeasel_bitfield.esl_bitfield_Count(self._b)
         return count_ if value else self._b.nb - count_
 
     cpdef Bitfield copy(self):
@@ -906,7 +906,7 @@ cdef class Bitfield:
         assert self._b != NULL
         cdef size_t index_ = self._wrap_index(index)
         with nogil:
-            libeasel.bitfield.esl_bitfield_Toggle(self._b, index_)
+            libeasel_bitfield.esl_bitfield_Toggle(self._b, index_)
 
 
 # --- KeyHash ----------------------------------------------------------------
@@ -964,16 +964,16 @@ cdef class KeyHash:
         self._kh = NULL
 
     def __dealloc__(self):
-        libeasel.keyhash.esl_keyhash_Destroy(self._kh)
+        libeasel_keyhash.esl_keyhash_Destroy(self._kh)
 
     def __init__(self):
         """Create a new empty key-hash collection.
         """
         with nogil:
             if self._kh == NULL:
-                self._kh = libeasel.keyhash.esl_keyhash_Create()
+                self._kh = libeasel_keyhash.esl_keyhash_Create()
             else:
-                libeasel.keyhash.esl_keyhash_Reuse(self._kh)
+                libeasel_keyhash.esl_keyhash_Reuse(self._kh)
         if not self._kh:
             raise AllocationError("ESL_KEYHASH", sizeof(ESL_KEYHASH))
 
@@ -982,7 +982,7 @@ cdef class KeyHash:
 
     def __len__(self):
         assert self._kh != NULL
-        return libeasel.keyhash.esl_keyhash_GetNumber(self._kh)
+        return libeasel_keyhash.esl_keyhash_GetNumber(self._kh)
 
     def __contains__(self, object value):
         assert self._kh != NULL
@@ -995,7 +995,7 @@ cdef class KeyHash:
         cdef       size_t length = len(value)
 
         with nogil:
-            status = libeasel.keyhash.esl_keyhash_Lookup(self._kh, key, length, NULL)
+            status = libeasel_keyhash.esl_keyhash_Lookup(self._kh, key, length, NULL)
         if status == libeasel.eslOK:
             return True
         elif status == libeasel.eslENOTFOUND:
@@ -1012,7 +1012,7 @@ cdef class KeyHash:
         cdef       size_t length = len(item)
 
         with nogil:
-            status = libeasel.keyhash.esl_keyhash_Lookup(self._kh, key, length, &index)
+            status = libeasel_keyhash.esl_keyhash_Lookup(self._kh, key, length, &index)
         if status == libeasel.eslOK:
             return index
         elif status == libeasel.eslENOTFOUND:
@@ -1027,7 +1027,7 @@ cdef class KeyHash:
         cdef int   offset
         cdef char* key
 
-        for i in range(libeasel.keyhash.esl_keyhash_GetNumber(self._kh)):
+        for i in range(libeasel_keyhash.esl_keyhash_GetNumber(self._kh)):
             offset = self._kh.key_offset[i]
             key = &self._kh.smem[offset]
             yield <bytes> key
@@ -1077,9 +1077,9 @@ cdef class KeyHash:
 
         # FIXME: avoid reallocation if possible?
         if self._kh != NULL:
-            libeasel.keyhash.esl_keyhash_Destroy(self._kh)
+            libeasel_keyhash.esl_keyhash_Destroy(self._kh)
         # allocate the keyhash using the right allocation sizes
-        self._kh = libeasel.keyhash.esl_keyhash_CreateCustom(
+        self._kh = libeasel_keyhash.esl_keyhash_CreateCustom(
             state["hashsize"],
             state["kalloc"],
             state["salloc"]
@@ -1141,7 +1141,7 @@ cdef class KeyHash:
         cdef       size_t length = len(key)
 
         with nogil:
-            status = libeasel.keyhash.esl_keyhash_Store(self._kh, k, length, &index)
+            status = libeasel_keyhash.esl_keyhash_Store(self._kh, k, length, &index)
         if status == libeasel.eslOK or status == libeasel.eslEDUP:
             return index
         else:
@@ -1152,7 +1152,7 @@ cdef class KeyHash:
         """
         cdef int status
         with nogil:
-            status = libeasel.keyhash.esl_keyhash_Reuse(self._kh)
+            status = libeasel_keyhash.esl_keyhash_Reuse(self._kh)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_keyhash_Reuse")
 
@@ -1171,7 +1171,7 @@ cdef class KeyHash:
         assert self._kh != NULL
         cdef KeyHash new = KeyHash.__new__(KeyHash)
         with nogil:
-            new._kh = libeasel.keyhash.esl_keyhash_Clone(self._kh)
+            new._kh = libeasel_keyhash.esl_keyhash_Clone(self._kh)
         if not new._kh:
             raise AllocationError("ESL_KEYHASH", sizeof(ESL_KEYHASH))
         return new
@@ -1544,7 +1544,7 @@ cdef class VectorF(Vector):
 
         # check values
         with nogil:
-            status = libeasel.vec.esl_vec_FCompare(&data[0], &buffer[0], self._n, 0)
+            status = libeasel_vec.esl_vec_FCompare(&data[0], &buffer[0], self._n, 0)
 
         return status == libeasel.eslOK
 
@@ -1620,11 +1620,11 @@ cdef class VectorF(Vector):
             if self._n != other_vec._n:
                 raise ValueError("cannot pairwise add vectors of different sizes")
             with nogil:
-                libeasel.vec.esl_vec_FAdd(data, other_data, self._n)
+                libeasel_vec.esl_vec_FAdd(data, other_data, self._n)
         else:
             other_f = other
             with nogil:
-                libeasel.vec.esl_vec_FIncrement(data, self._n, other_f)
+                libeasel_vec.esl_vec_FIncrement(data, self._n, other_f)
         return self
 
     def __isub__(self, object other):
@@ -1675,7 +1675,7 @@ cdef class VectorF(Vector):
         else:
             other_f = other
             with nogil:
-                libeasel.vec.esl_vec_FScale(data, self._n, other_f)
+                libeasel_vec.esl_vec_FScale(data, self._n, other_f)
         return self
 
     def __truediv__(VectorF self, object other):
@@ -1725,7 +1725,7 @@ cdef class VectorF(Vector):
         if self._n != other_vec._n:
             raise ValueError("cannot multiply vectors of different sizes")
         with nogil:
-            res = libeasel.vec.esl_vec_FDot(data, other_data, self._n)
+            res = libeasel_vec.esl_vec_FDot(data, other_data, self._n)
         return res
 
     # --- Properties ---------------------------------------------------------
@@ -1750,14 +1750,14 @@ cdef class VectorF(Vector):
         if self._n == 0:
             raise ValueError("argmax() called on an empty vector")
         with nogil:
-            return libeasel.vec.esl_vec_FArgMax(<float*> self._data, self._n)
+            return libeasel_vec.esl_vec_FArgMax(<float*> self._data, self._n)
 
     cpdef int argmin(self) except -1:
         assert self._data != NULL
         if self._n == 0:
             raise ValueError("argmin() called on an empty vector")
         with nogil:
-            return libeasel.vec.esl_vec_FArgMin(<float*> self._data, self._n)
+            return libeasel_vec.esl_vec_FArgMin(<float*> self._data, self._n)
 
     cpdef VectorF copy(self):
         assert self._data != NULL
@@ -1802,21 +1802,21 @@ cdef class VectorF(Vector):
         """
         assert self._data != NULL
         with nogil:
-            return libeasel.vec.esl_vec_FEntropy(<float*> self._data, self._n)
+            return libeasel_vec.esl_vec_FEntropy(<float*> self._data, self._n)
 
     cpdef float max(self) except *:
         assert self._data != NULL
         if self._n == 0:
             raise ValueError("max() called on an empty vector")
         with nogil:
-            return libeasel.vec.esl_vec_FMax(<float*> self._data, self._n)
+            return libeasel_vec.esl_vec_FMax(<float*> self._data, self._n)
 
     cpdef float min(self) except *:
         assert self._data != NULL
         if self._n == 0:
             raise ValueError("argmin() called on an empty vector")
         with nogil:
-            return libeasel.vec.esl_vec_FMin(<float*> self._data, self._n)
+            return libeasel_vec.esl_vec_FMin(<float*> self._data, self._n)
 
     cpdef object normalize(self):
         """Normalize a vector so that all elements sum to 1.
@@ -1828,7 +1828,7 @@ cdef class VectorF(Vector):
         """
         assert self._data != NULL
         with nogil:
-            libeasel.vec.esl_vec_FNorm(<float*> self._data, self._n)
+            libeasel_vec.esl_vec_FNorm(<float*> self._data, self._n)
         return None
 
     cpdef float relative_entropy(self, VectorF other) except *:
@@ -1867,7 +1867,7 @@ cdef class VectorF(Vector):
         if self._n != other._n:
             raise ValueError("cannot compute relative entropy of vectors of different sizes")
         with nogil:
-            return libeasel.vec.esl_vec_FRelEntropy(
+            return libeasel_vec.esl_vec_FRelEntropy(
                 <float*> self._data,
                 <float*> other._data,
                 self._n
@@ -1876,7 +1876,7 @@ cdef class VectorF(Vector):
     cpdef object reverse(self):
         assert self._data != NULL
         with nogil:
-            libeasel.vec.esl_vec_FReverse(<float*> self._data, <float*> self._data, self._n)
+            libeasel_vec.esl_vec_FReverse(<float*> self._data, <float*> self._data, self._n)
         return None
 
     cpdef float sum(self):
@@ -1897,7 +1897,7 @@ cdef class VectorF(Vector):
         """
         assert self._data != NULL
         with nogil:
-            return libeasel.vec.esl_vec_FSum(<float*> self._data, self._n)
+            return libeasel_vec.esl_vec_FSum(<float*> self._data, self._n)
 
 
 cdef class VectorU8(Vector):
@@ -2638,11 +2638,11 @@ cdef class MatrixF(Matrix):
             if other_mat._m != self._m or other_mat._n != self._n:
                 raise ValueError(f"cannot pairwise add {other_mat.shape} matrix to {self.shape} matrix")
             with nogil:
-                libeasel.vec.esl_vec_FAdd(<float*> self._data[0], <float*> other_mat._data[0], self._m * self._n)
+                libeasel_vec.esl_vec_FAdd(<float*> self._data[0], <float*> other_mat._data[0], self._m * self._n)
         else:
             other_f = other
             with nogil:
-                libeasel.vec.esl_vec_FIncrement(<float*> self._data[0], self._m*self._n, other_f)
+                libeasel_vec.esl_vec_FIncrement(<float*> self._data[0], self._m*self._n, other_f)
         return self
 
     def __imul__(self, object other):
@@ -2664,7 +2664,7 @@ cdef class MatrixF(Matrix):
         else:
             other_f = other
             with nogil:
-                libeasel.matrixops.esl_mat_FScale(<float**> self._data, self._m, self._n, other_f)
+                libeasel_matrixops.esl_mat_FScale(<float**> self._data, self._m, self._n, other_f)
         return self
 
     def __getitem__(self, object index):
@@ -2765,7 +2765,7 @@ cdef class MatrixF(Matrix):
         cdef int y
 
         with nogil:
-            n = libeasel.vec.esl_vec_FArgMax(<float*> self._data[0], self._m*self._n)
+            n = libeasel_vec.esl_vec_FArgMax(<float*> self._data[0], self._m*self._n)
             x = n // self._m
             y = n % self._n
 
@@ -2779,7 +2779,7 @@ cdef class MatrixF(Matrix):
         cdef int y
 
         with nogil:
-            n = libeasel.vec.esl_vec_FArgMin(<float*> self._data[0], self._m*self._n)
+            n = libeasel_vec.esl_vec_FArgMin(<float*> self._data[0], self._m*self._n)
             x = n // self._m
             y = n % self._n
 
@@ -2790,7 +2790,7 @@ cdef class MatrixF(Matrix):
         mat._m = mat._shape[0] = self._m
         mat._n = mat._shape[1] = self._n
         with nogil:
-            mat._data = <void**> libeasel.matrixops.esl_mat_FClone(<float**> self._data, self._m, self._n)
+            mat._data = <void**> libeasel_matrixops.esl_mat_FClone(<float**> self._data, self._m, self._n)
         if mat._data == NULL:
             raise AllocationError("float**", sizeof(float), self._m * self._n)
         return mat
@@ -2798,17 +2798,17 @@ cdef class MatrixF(Matrix):
     cpdef float max(self):
         assert self._data != NULL
         with nogil:
-            return libeasel.matrixops.esl_mat_FMax(<float**> self._data, self._m, self._n)
+            return libeasel_matrixops.esl_mat_FMax(<float**> self._data, self._m, self._n)
 
     cpdef float min(self):
         assert self._data != NULL
         with nogil:
-            return libeasel.vec.esl_vec_FMin(<float*> self._data[0], self._m*self._n)
+            return libeasel_vec.esl_vec_FMin(<float*> self._data[0], self._m*self._n)
 
     cpdef float sum(self):
         assert self._data != NULL
         with nogil:
-            return libeasel.vec.esl_vec_FSum(<float*> self._data[0], self._m*self._n)
+            return libeasel_vec.esl_vec_FSum(<float*> self._data[0], self._m*self._n)
 
 
 cdef class MatrixU8(Matrix):
@@ -3151,7 +3151,7 @@ cdef class MSA:
         self._msa = NULL
 
     def __dealloc__(self):
-        libeasel.msa.esl_msa_Destroy(self._msa)
+        libeasel_msa.esl_msa_Destroy(self._msa)
 
     def __init__(self):
         raise TypeError("Can't instantiate abstract class 'MSA'")
@@ -3169,7 +3169,7 @@ cdef class MSA:
             return NotImplemented
 
         other_msa = <MSA> other
-        status = libeasel.msa.esl_msa_Compare(self._msa, other_msa._msa)
+        status = libeasel_msa.esl_msa_Compare(self._msa, other_msa._msa)
 
         if status == libeasel.eslOK:
             return True
@@ -3211,7 +3211,7 @@ cdef class MSA:
             acc = accession
 
         with nogil:
-            status = libeasel.msa.esl_msa_SetAccession(self._msa, acc, length)
+            status = libeasel_msa.esl_msa_SetAccession(self._msa, acc, length)
         if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), length)
         elif status != libeasel.eslOK:
@@ -3242,7 +3242,7 @@ cdef class MSA:
             au = author
 
         with nogil:
-            status = libeasel.msa.esl_msa_SetAuthor(self._msa, au, length)
+            status = libeasel_msa.esl_msa_SetAuthor(self._msa, au, length)
         if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), length)
         elif status != libeasel.eslOK:
@@ -3273,7 +3273,7 @@ cdef class MSA:
             nm = name
 
         with nogil:
-            status = libeasel.msa.esl_msa_SetName(self._msa, nm, length)
+            status = libeasel_msa.esl_msa_SetName(self._msa, nm, length)
         if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), length)
         elif status != libeasel.eslOK:
@@ -3304,7 +3304,7 @@ cdef class MSA:
             desc = description
 
         with nogil:
-            status = libeasel.msa.esl_msa_SetDesc(self._msa, desc, length)
+            status = libeasel_msa.esl_msa_SetDesc(self._msa, desc, length)
         if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), length)
         elif status != libeasel.eslOK:
@@ -3356,7 +3356,7 @@ cdef class MSA:
     cdef int _rehash(self) except 1 nogil:
         """Rehash the sequence names for faster lookup.
         """
-        cdef int status = libeasel.msa.esl_msa_Hash(self._msa)
+        cdef int status = libeasel_msa.esl_msa_Hash(self._msa)
         if status == libeasel.eslOK:
             return 0
         else:
@@ -3370,7 +3370,7 @@ cdef class MSA:
         cdef uint32_t checksum = 0
         cdef int status
         with nogil:
-            status = libeasel.msa.esl_msa_Checksum(self._msa, &checksum)
+            status = libeasel_msa.esl_msa_Checksum(self._msa, &checksum)
         if status == libeasel.eslOK:
             return checksum
         else:
@@ -3400,7 +3400,7 @@ cdef class MSA:
 
         try:
             file = fopen_obj(fh, "w")
-            status = libeasel.msafile.esl_msafile_Write(file, self._msa, fmt)
+            status = libeasel_msafile.esl_msafile_Write(file, self._msa, fmt)
         finally:
             if file is not NULL:
                 fclose(file)
@@ -3429,7 +3429,7 @@ cdef class _TextMSASequences(_MSASequences):
             raise IndexError("list index out of range")
 
         seq = TextSequence.__new__(TextSequence)
-        status = libeasel.sq.esl_sq_FetchFromMSA(self.msa._msa, idx, &seq._sq)
+        status = libeasel_sq.esl_sq_FetchFromMSA(self.msa._msa, idx, &seq._sq)
 
         if status == libeasel.eslOK:
             return seq
@@ -3457,7 +3457,7 @@ cdef class _TextMSASequences(_MSASequences):
             raise ValueError("sequence does not have the expected length")
 
         # make sure inserting the sequence will not create a name duplicate
-        status = libeasel.keyhash.esl_keyhash_Lookup(
+        status = libeasel_keyhash.esl_keyhash_Lookup(
             self.msa._msa.index,
             seq._sq.name,
             -1,
@@ -3531,7 +3531,7 @@ cdef class TextMSA(MSA):
             raise ValueError("all sequences must have the same length")
 
         with nogil:
-            self._msa = libeasel.msa.esl_msa_Create(nseq, alen)
+            self._msa = libeasel_msa.esl_msa_Create(nseq, alen)
         if self._msa == NULL:
             raise AllocationError("ESL_MSA", sizeof(ESL_MSA))
 
@@ -3582,7 +3582,7 @@ cdef class TextMSA(MSA):
 
         """
         assert self._msa != NULL
-        assert not (self._msa.flags & libeasel.msa.eslMSA_DIGITAL)
+        assert not (self._msa.flags & libeasel_msa.eslMSA_DIGITAL)
 
         cdef int64_t i
         cdef str     seq
@@ -3642,7 +3642,7 @@ cdef class TextMSA(MSA):
 
         """
         assert self._msa != NULL
-        assert not (self._msa.flags & libeasel.msa.eslMSA_DIGITAL)
+        assert not (self._msa.flags & libeasel_msa.eslMSA_DIGITAL)
         return _TextMSASequences(self)
 
     # --- Utils --------------------------------------------------------------
@@ -3652,17 +3652,17 @@ cdef class TextMSA(MSA):
 
         cdef int status
 
-        status = libeasel.msa.esl_msa_SetSeqName(self._msa, idx, seq.name, -1)
+        status = libeasel_msa.esl_msa_SetSeqName(self._msa, idx, seq.name, -1)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_msa_SetSeqName")
 
         if seq.acc[0] != b'\0':
-            status = libeasel.msa.esl_msa_SetSeqAccession(self._msa, idx, seq.acc, -1)
+            status = libeasel_msa.esl_msa_SetSeqAccession(self._msa, idx, seq.acc, -1)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "esl_msa_SetSeqAccession")
 
         if seq.desc[0] != b'\0':
-            status = libeasel.msa.esl_msa_SetSeqDescription(self._msa, idx, seq.desc, -1)
+            status = libeasel_msa.esl_msa_SetSeqDescription(self._msa, idx, seq.desc, -1)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "esl_msa_SetSeqDescription")
 
@@ -3676,12 +3676,12 @@ cdef class TextMSA(MSA):
         """Duplicate the text sequence alignment, and return the copy.
         """
         assert self._msa != NULL
-        assert not (self._msa.flags & libeasel.msa.eslMSA_DIGITAL)
+        assert not (self._msa.flags & libeasel_msa.eslMSA_DIGITAL)
 
         cdef int status
         cdef TextMSA new = TextMSA.__new__(TextMSA)
         with nogil:
-            new._msa = libeasel.msa.esl_msa_Clone(self._msa)
+            new._msa = libeasel_msa.esl_msa_Clone(self._msa)
         if new._msa == NULL:
             raise AllocationError("ESL_MSA", sizeof(ESL_MSA))
         return new
@@ -3707,13 +3707,13 @@ cdef class TextMSA(MSA):
 
         new = DigitalMSA.__new__(DigitalMSA, alphabet)
         with nogil:
-            new._msa = libeasel.msa.esl_msa_Clone(self._msa)
+            new._msa = libeasel_msa.esl_msa_Clone(self._msa)
             if new._msa == NULL:
                 raise AllocationError("ESL_MSA", sizeof(ESL_MSA))
-            status = libeasel.msa.esl_msa_Digitize(alphabet._abc, new._msa, <char*> &errbuf)
+            status = libeasel_msa.esl_msa_Digitize(alphabet._abc, new._msa, <char*> &errbuf)
 
         if status == libeasel.eslOK:
-            assert new._msa.flags & libeasel.msa.eslMSA_DIGITAL
+            assert new._msa.flags & libeasel_msa.eslMSA_DIGITAL
             return new
         elif status == libeasel.eslEINVAL:
             err_msg = errbuf.decode("utf-8", "replace")
@@ -3743,7 +3743,7 @@ cdef class _DigitalMSASequences(_MSASequences):
 
         seq = DigitalSequence.__new__(DigitalSequence, self.alphabet)
         with nogil:
-            status = libeasel.sq.esl_sq_FetchFromMSA(self.msa._msa, idx, &seq._sq)
+            status = libeasel_sq.esl_sq_FetchFromMSA(self.msa._msa, idx, &seq._sq)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_FetchFromMSA")
 
@@ -3774,7 +3774,7 @@ cdef class _DigitalMSASequences(_MSASequences):
             raise AlphabetMismatch(self.msa.alphabet, seq.alphabet)
 
         # make sure inserting the sequence will not create a name duplicate
-        status = libeasel.keyhash.esl_keyhash_Lookup(
+        status = libeasel_keyhash.esl_keyhash_Lookup(
             self.msa._msa.index,
             seq._sq.name,
             -1,
@@ -3854,7 +3854,7 @@ cdef class DigitalMSA(MSA):
 
         self.alphabet = alphabet
         with nogil:
-            self._msa = libeasel.msa.esl_msa_CreateDigital(alphabet._abc, nseq, alen)
+            self._msa = libeasel_msa.esl_msa_CreateDigital(alphabet._abc, nseq, alen)
         if self._msa == NULL:
             raise AllocationError("ESL_MSA", sizeof(ESL_MSA))
 
@@ -3895,17 +3895,17 @@ cdef class DigitalMSA(MSA):
 
         cdef int status
 
-        status = libeasel.msa.esl_msa_SetSeqName(self._msa, idx, seq.name, -1)
+        status = libeasel_msa.esl_msa_SetSeqName(self._msa, idx, seq.name, -1)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_msa_SetSeqName")
 
         if seq.acc[0] != b'\0':
-            status = libeasel.msa.esl_msa_SetSeqAccession(self._msa, idx, seq.acc, -1)
+            status = libeasel_msa.esl_msa_SetSeqAccession(self._msa, idx, seq.acc, -1)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "esl_msa_SetSeqAccession")
 
         if seq.desc[0] != b'\0':
-            status = libeasel.msa.esl_msa_SetSeqDescription(self._msa, idx, seq.desc, -1)
+            status = libeasel_msa.esl_msa_SetSeqDescription(self._msa, idx, seq.desc, -1)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "esl_msa_SetSeqDescription")
 
@@ -3919,13 +3919,13 @@ cdef class DigitalMSA(MSA):
         """Duplicate the digital sequence alignment, and return the copy.
         """
         assert self._msa != NULL
-        assert self._msa.flags & libeasel.msa.eslMSA_DIGITAL
+        assert self._msa.flags & libeasel_msa.eslMSA_DIGITAL
 
         cdef int           status
         cdef DigitalMSA    new    = DigitalMSA.__new__(DigitalMSA, self.alphabet)
 
         with nogil:
-            new._msa = libeasel.msa.esl_msa_Clone(self._msa)
+            new._msa = libeasel_msa.esl_msa_Clone(self._msa)
         if new._msa == NULL:
             raise AllocationError("ESL_MSA", sizeof(ESL_MSA))
         return new
@@ -3947,13 +3947,13 @@ cdef class DigitalMSA(MSA):
 
         new = TextMSA.__new__(TextMSA)
         with nogil:
-            new._msa = libeasel.msa.esl_msa_Clone(self._msa)
+            new._msa = libeasel_msa.esl_msa_Clone(self._msa)
             if new._msa == NULL:
                 raise AllocationError("ESL_MSA", sizeof(ESL_MSA))
-            status = libeasel.msa.esl_msa_Textize(new._msa)
+            status = libeasel_msa.esl_msa_Textize(new._msa)
 
         if status == libeasel.eslOK:
-            assert not (new._msa.flags & libeasel.msa.eslMSA_DIGITAL)
+            assert not (new._msa.flags & libeasel_msa.eslMSA_DIGITAL)
             return new
         else:
             raise UnexpectedError(status, "esl_msa_Textize")
@@ -4006,7 +4006,7 @@ cdef class MSAFile:
 
         try:
             # get an ESL_BUFFER from the file object
-            status = libeasel.buffer.esl_buffer_OpenStream(fp, &buffer)
+            status = libeasel_buffer.esl_buffer_OpenStream(fp, &buffer)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "esl_buffer_OpenStream")
         except:
@@ -4015,7 +4015,7 @@ cdef class MSAFile:
 
         try:
             # get an ESL_MSAFILE from the ESL_BUFFER
-            status = libeasel.msafile.esl_msafile_OpenBuffer(NULL, buffer, fmt, NULL, &msaf)
+            status = libeasel_msafile.esl_msafile_OpenBuffer(NULL, buffer, fmt, NULL, &msaf)
             if status == libeasel.eslOK:
                 return msaf
             elif status == libeasel.eslENOFORMAT:
@@ -4023,7 +4023,7 @@ cdef class MSAFile:
             elif status != libeasel.eslOK:
                 raise UnexpectedError(status, "esl_msafile_OpenBuffer")
         except:
-            libeasel.msafile.esl_msafile_Close(msaf)
+            libeasel_msafile.esl_msafile_Close(msaf)
             fclose(fp)
             raise
 
@@ -4075,7 +4075,7 @@ cdef class MSAFile:
         cdef int   status
         cdef bytes fspath = None
 
-        fmt = libeasel.msafile.eslMSAFILE_UNKNOWN
+        fmt = libeasel_msafile.eslMSAFILE_UNKNOWN
         if format is not None:
             format_ = format.lower()
             if format_ not in MSA_FILE_FORMATS:
@@ -4095,7 +4095,7 @@ cdef class MSAFile:
             status = libeasel.eslOK
         else:
             self.name = os.fsdecode(fspath)
-            status = libeasel.msafile.esl_msafile_Open(NULL, fspath, NULL, fmt, NULL, &self._msaf)
+            status = libeasel_msafile.esl_msafile_Open(NULL, fspath, NULL, fmt, NULL, &self._msaf)
 
         # store a reference to the argument
         self._file = file
@@ -4119,7 +4119,7 @@ cdef class MSAFile:
                 self.alphabet = self.guess_alphabet() if alphabet is None else alphabet
                 if self.alphabet is None:
                     raise ValueError("Could not determine alphabet of file: {!r}".format(file))
-                status = libeasel.msafile.esl_msafile_SetDigital(self._msaf, self.alphabet._abc)
+                status = libeasel_msafile.esl_msafile_SetDigital(self._msaf, self.alphabet._abc)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "esl_msafile_SetDigital")
         except Exception as err:
@@ -4185,7 +4185,7 @@ cdef class MSAFile:
     cpdef void close(self):
         """Close the file and free the resources used by the parser.
         """
-        libeasel.msafile.esl_msafile_Close(self._msaf)
+        libeasel_msafile.esl_msafile_Close(self._msaf)
         self._msaf = NULL
 
     cpdef Alphabet guess_alphabet(self):
@@ -4214,7 +4214,7 @@ cdef class MSAFile:
         if self._msaf == NULL:
             raise ValueError("I/O operation on closed file.")
 
-        status = libeasel.msafile.esl_msafile_GuessAlphabet(self._msaf, &ty)
+        status = libeasel_msafile.esl_msafile_GuessAlphabet(self._msaf, &ty)
         if status == libeasel.eslOK:
             alphabet = Alphabet.__new__(Alphabet)
             alphabet._init_default(ty)
@@ -4251,7 +4251,7 @@ cdef class MSAFile:
         if self._msaf == NULL:
             raise ValueError("I/O operation on closed file.")
         else:
-            status = libeasel.msafile.esl_msafile_Read(self._msaf, &msa._msa)
+            status = libeasel_msafile.esl_msafile_Read(self._msaf, &msa._msa)
 
         if status == libeasel.eslOK:
             return msa
@@ -4286,7 +4286,7 @@ cdef class Randomness:
 
     def __dealloc__(self):
         if self._rng != NULL and self._owner is None:
-            libeasel.random.esl_randomness_Destroy(self._rng)
+            libeasel_random.esl_randomness_Destroy(self._rng)
         self._rng = NULL
 
     def __init__(self, object seed=None, bint fast=False):
@@ -4306,9 +4306,9 @@ cdef class Randomness:
         # Support calling __init__ multiple times
         if self._rng == NULL:
             if fast:
-                self._rng = libeasel.random.esl_randomness_CreateFast(_seed)
+                self._rng = libeasel_random.esl_randomness_CreateFast(_seed)
             else:
-                self._rng = libeasel.random.esl_randomness_Create(_seed)
+                self._rng = libeasel_random.esl_randomness_Create(_seed)
             if self._rng == NULL:
                 raise AllocationError("ESL_RANDOMNESS", sizeof(ESL_RANDOMNESS))
         else:
@@ -4345,7 +4345,7 @@ cdef class Randomness:
         """`bool`: `True` when the linear congruential generator is in use.
         """
         assert self._rng != NULL
-        return self._rng.type == libeasel.random.esl_randomness_type.eslRND_FAST
+        return self._rng.type == libeasel_random.esl_randomness_type.eslRND_FAST
 
 
     # --- Methods ------------------------------------------------------------
@@ -4366,10 +4366,10 @@ cdef class Randomness:
 
         self._rng.seed = state[1]
         if state[0]:
-            self._rng.type = libeasel.random.esl_randomness_type.eslRND_FAST
+            self._rng.type = libeasel_random.esl_randomness_type.eslRND_FAST
             self._rng.x = state[2]
         else:
-            self._rng.type = libeasel.random.esl_randomness_type.eslRND_MERSENNE
+            self._rng.type = libeasel_random.esl_randomness_type.eslRND_MERSENNE
             self._rng.mti = state[2]
             for x in range(624):
                 self._rng.mt[x] = state[3][x]
@@ -4388,7 +4388,7 @@ cdef class Randomness:
         cdef uint32_t seed   = n if n is not None else 0
 
         with nogil:
-            status = libeasel.random.esl_randomness_Init(self._rng, seed)
+            status = libeasel_random.esl_randomness_Init(self._rng, seed)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_randomness_Init")
 
@@ -4409,7 +4409,7 @@ cdef class Randomness:
         """Generate a uniform random deviate on :math:`\\left[ 0, 1 \\right)`.
         """
         assert self._rng != NULL
-        return libeasel.random.esl_random(self._rng)
+        return libeasel_random.esl_random(self._rng)
 
     cpdef double normalvariate(self, double mu, double sigma):
         """Generate a Gaussian-distributed sample.
@@ -4421,7 +4421,7 @@ cdef class Randomness:
 
         """
         assert self._rng != NULL
-        return libeasel.random.esl_rnd_Gaussian(self._rng, mu, sigma)
+        return libeasel_random.esl_rnd_Gaussian(self._rng, mu, sigma)
 
 
 # --- Sequence ---------------------------------------------------------------
@@ -4453,7 +4453,7 @@ cdef class Sequence:
         raise TypeError("Can't instantiate abstract class 'Sequence'")
 
     def __dealloc__(self):
-        libeasel.sq.esl_sq_Destroy(self._sq)
+        libeasel_sq.esl_sq_Destroy(self._sq)
 
     def __eq__(self, object other):
         assert self._sq != NULL
@@ -4465,7 +4465,7 @@ cdef class Sequence:
             return NotImplemented
 
         other_sq = <Sequence> other
-        status = libeasel.sq.esl_sq_Compare(self._sq, other_sq._sq)
+        status = libeasel_sq.esl_sq_Compare(self._sq, other_sq._sq)
 
         if status == libeasel.eslOK:
             return True
@@ -4518,7 +4518,7 @@ cdef class Sequence:
         cdef const char* acc    = accession
 
         with nogil:
-            status = libeasel.sq.esl_sq_SetAccession(self._sq, acc)
+            status = libeasel_sq.esl_sq_SetAccession(self._sq, acc)
         if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), len(accession))
         elif status != libeasel.eslOK:
@@ -4539,7 +4539,7 @@ cdef class Sequence:
         cdef const char* nm     = name
 
         with nogil:
-            status = libeasel.sq.esl_sq_SetName(self._sq, nm)
+            status = libeasel_sq.esl_sq_SetName(self._sq, nm)
         if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), len(name))
         elif status != libeasel.eslOK:
@@ -4560,7 +4560,7 @@ cdef class Sequence:
         cdef const char* desc   = description
 
         with nogil:
-            status = libeasel.sq.esl_sq_SetDesc(self._sq, desc)
+            status = libeasel_sq.esl_sq_SetDesc(self._sq, desc)
         if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), len(description))
         elif status != libeasel.eslOK:
@@ -4581,7 +4581,7 @@ cdef class Sequence:
         cdef const char* src    = source
 
         with nogil:
-            status = libeasel.sq.esl_sq_SetSource(self._sq, src)
+            status = libeasel_sq.esl_sq_SetSource(self._sq, src)
         if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), len(source))
         elif status != libeasel.eslOK:
@@ -4614,7 +4614,7 @@ cdef class Sequence:
         cdef bytes  tag
         cdef bytes  val
         cdef dict   xr  = {}
-        cdef size_t off = 0 if libeasel.sq.esl_sq_IsText(self._sq) else 1
+        cdef size_t off = 0 if libeasel_sq.esl_sq_IsText(self._sq) else 1
 
         for i in range(self._sq.nxr):
             tag = PyBytes_FromString(self._sq.xr_tag[i])
@@ -4632,8 +4632,8 @@ cdef class Sequence:
 
         cdef int     i
         cdef ssize_t xrlen = len(xr)
-        cdef size_t  off   = 0 if libeasel.sq.esl_sq_IsText(self._sq) else 1
-        cdef size_t  xrdim = self._sq.n + 2 * libeasel.sq.esl_sq_IsDigital(self._sq)
+        cdef size_t  off   = 0 if libeasel_sq.esl_sq_IsText(self._sq) else 1
+        cdef size_t  xrdim = self._sq.n + 2 * libeasel_sq.esl_sq_IsDigital(self._sq)
 
         # check the values have the right length before doing anything
         for tag, val in xr.items():
@@ -4678,7 +4678,7 @@ cdef class Sequence:
         cdef uint32_t checksum = 0
 
         with nogil:
-            status = libeasel.sq.esl_sq_Checksum(self._sq, &checksum)
+            status = libeasel_sq.esl_sq_Checksum(self._sq, &checksum)
         if status == libeasel.eslOK:
             return checksum
         else:
@@ -4692,7 +4692,7 @@ cdef class Sequence:
         cdef int status
 
         with nogil:
-            status = libeasel.sq.esl_sq_Reuse(self._sq)
+            status = libeasel_sq.esl_sq_Reuse(self._sq)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_Reuse")
 
@@ -4712,7 +4712,7 @@ cdef class Sequence:
 
         try:
             file = fopen_obj(fh, "w")
-            status = libeasel.sqio.ascii.esl_sqascii_WriteFasta(file, self._sq, False)
+            status = libeasel_sqio_ascii.esl_sqascii_WriteFasta(file, self._sq, False)
         finally:
             if file is not NULL:
                 fclose(file)
@@ -4753,9 +4753,9 @@ cdef class TextSequence(Sequence):
 
         if sequence is not None:
             sq = sequence.encode("ascii")
-            self._sq = libeasel.sq.esl_sq_CreateFrom(NULL, sq, NULL, NULL, NULL)
+            self._sq = libeasel_sq.esl_sq_CreateFrom(NULL, sq, NULL, NULL, NULL)
         else:
-            self._sq = libeasel.sq.esl_sq_Create()
+            self._sq = libeasel_sq.esl_sq_Create()
         if self._sq == NULL:
             raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
         self._sq.abc = NULL
@@ -4771,7 +4771,7 @@ cdef class TextSequence(Sequence):
         if residue_markups is not None:
             self.residue_markups = residue_markups
 
-        assert libeasel.sq.esl_sq_IsText(self._sq)
+        assert libeasel_sq.esl_sq_IsText(self._sq)
         assert self._sq.name != NULL
         assert self._sq.desc != NULL
         assert self._sq.acc != NULL
@@ -4796,7 +4796,7 @@ cdef class TextSequence(Sequence):
         """`str`: The raw sequence letters, as a Python string.
         """
         assert self._sq != NULL
-        assert libeasel.sq.esl_sq_IsText(self._sq)
+        assert libeasel_sq.esl_sq_IsText(self._sq)
         return PyUnicode_DecodeASCII(self._sq.seq, self._sq.n, NULL)
 
     # --- Methods ------------------------------------------------------------
@@ -4810,20 +4810,20 @@ cdef class TextSequence(Sequence):
 
         """
         assert self._sq != NULL
-        assert libeasel.sq.esl_sq_IsText(self._sq)
+        assert libeasel_sq.esl_sq_IsText(self._sq)
 
         cdef int             status
         cdef ESL_ALPHABET*   abc    = alphabet._abc
         cdef DigitalSequence new    = DigitalSequence.__new__(DigitalSequence, alphabet)
 
         with nogil:
-            new._sq = libeasel.sq.esl_sq_CreateDigital(abc)
+            new._sq = libeasel_sq.esl_sq_CreateDigital(abc)
             if new._sq == NULL:
                 raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
-            status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
+            status = libeasel_sq.esl_sq_Copy(self._sq, new._sq)
 
         if status == libeasel.eslOK:
-            assert libeasel.sq.esl_sq_IsDigital(new._sq)
+            assert libeasel_sq.esl_sq_IsDigital(new._sq)
             return new
         elif status == libeasel.eslEINVAL:
             raise ValueError(f"Cannot digitize sequence with alphabet {alphabet}: invalid chars in sequence")
@@ -4834,22 +4834,22 @@ cdef class TextSequence(Sequence):
         """Duplicate the text sequence, and return the copy.
         """
         assert self._sq != NULL
-        assert libeasel.sq.esl_sq_IsText(self._sq)
+        assert libeasel_sq.esl_sq_IsText(self._sq)
 
         cdef int          status
         cdef TextSequence new    = TextSequence.__new__(TextSequence)
 
         with nogil:
-            new._sq = libeasel.sq.esl_sq_Create()
+            new._sq = libeasel_sq.esl_sq_Create()
             if new._sq == NULL:
                 raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
             new._sq.abc = NULL
 
-            status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
+            status = libeasel_sq.esl_sq_Copy(self._sq, new._sq)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "esl_sq_Copy")
 
-        assert libeasel.sq.esl_sq_IsText(new._sq)
+        assert libeasel_sq.esl_sq_IsText(new._sq)
         return new
 
     cpdef TextSequence reverse_complement(self, bint inplace=False):
@@ -4888,10 +4888,10 @@ cdef class TextSequence(Sequence):
         cdef int          status
 
         if inplace:
-            status = libeasel.sq.esl_sq_ReverseComplement(self._sq)
+            status = libeasel_sq.esl_sq_ReverseComplement(self._sq)
         else:
             rc = self.copy()
-            status = libeasel.sq.esl_sq_ReverseComplement(rc._sq)
+            status = libeasel_sq.esl_sq_ReverseComplement(rc._sq)
 
         if status == libeasel.eslEINVAL:
             warnings.warn(
@@ -4954,7 +4954,7 @@ cdef class DigitalSequence(Sequence):
         cdef int64_t n
 
         # create an empty digital sequence
-        self._sq = libeasel.sq.esl_sq_CreateDigital(alphabet._abc)
+        self._sq = libeasel_sq.esl_sq_CreateDigital(alphabet._abc)
         if self._sq == NULL:
             raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
 
@@ -4969,10 +4969,10 @@ cdef class DigitalSequence(Sequence):
                 n = sequence.shape[0]
                 # check the sequence encoding is compatible with the alphabet
                 for i in range(n):
-                    if not libeasel.alphabet.esl_abc_XIsValid(alphabet._abc, sequence[i]):
+                    if not libeasel_alphabet.esl_abc_XIsValid(alphabet._abc, sequence[i]):
                         raise ValueError(f"Invalid alphabet character in digital sequence: {sequence[i]}")
                 # grow the sequence buffer so it can hold `n` residues
-                status = libeasel.sq.esl_sq_GrowTo(self._sq, n)
+                status = libeasel_sq.esl_sq_GrowTo(self._sq, n)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "esl_sq_GrowTo")
                 # update the digital sequence buffer
@@ -4994,7 +4994,7 @@ cdef class DigitalSequence(Sequence):
         if residue_markups is not None:
             self.residue_markups = residue_markups
 
-        assert libeasel.sq.esl_sq_IsDigital(self._sq)
+        assert libeasel_sq.esl_sq_IsDigital(self._sq)
         assert self._sq.name != NULL
         assert self._sq.desc != NULL
         assert self._sq.acc != NULL
@@ -5045,22 +5045,22 @@ cdef class DigitalSequence(Sequence):
         """Duplicate the digital sequence, and return the copy.
         """
         assert self._sq != NULL
-        assert libeasel.sq.esl_sq_IsDigital(self._sq)
+        assert libeasel_sq.esl_sq_IsDigital(self._sq)
 
         cdef int             status
         cdef ESL_ALPHABET*   abc    = self.alphabet._abc
         cdef DigitalSequence new    = DigitalSequence.__new__(DigitalSequence, self.alphabet)
 
         with nogil:
-            new._sq = libeasel.sq.esl_sq_CreateDigital(abc)
+            new._sq = libeasel_sq.esl_sq_CreateDigital(abc)
             if new._sq == NULL:
                 raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
 
-            status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
+            status = libeasel_sq.esl_sq_Copy(self._sq, new._sq)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "esl_sq_Copy")
 
-        assert libeasel.sq.esl_sq_IsDigital(new._sq)
+        assert libeasel_sq.esl_sq_IsDigital(new._sq)
         return new
 
     cpdef TextSequence textize(self):
@@ -5073,22 +5073,22 @@ cdef class DigitalSequence(Sequence):
 
         """
         assert self._sq != NULL
-        assert libeasel.sq.esl_sq_IsDigital(self._sq)
+        assert libeasel_sq.esl_sq_IsDigital(self._sq)
 
         cdef int          status
         cdef TextSequence new    = TextSequence.__new__(TextSequence)
 
         with nogil:
-            new._sq = libeasel.sq.esl_sq_Create()
+            new._sq = libeasel_sq.esl_sq_Create()
 
             if new._sq == NULL:
                 raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
 
-            status = libeasel.sq.esl_sq_Copy(self._sq, new._sq)
+            status = libeasel_sq.esl_sq_Copy(self._sq, new._sq)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "esl_sq_Copy")
 
-        assert libeasel.sq.esl_sq_IsText(new._sq)
+        assert libeasel_sq.esl_sq_IsText(new._sq)
         return new
 
     cpdef DigitalSequence translate(self, GeneticCode genetic_code = GeneticCode()):
@@ -5147,7 +5147,7 @@ cdef class DigitalSequence(Sequence):
         )
 
         # allocate output buffer
-        status = libeasel.sq.esl_sq_GrowTo(protein._sq, aalen)
+        status = libeasel_sq.esl_sq_GrowTo(protein._sq, aalen)
         if status == libeasel.eslEMEM:
             raise AllocationError("ESL_DSQ", sizeof(ESL_DSQ), aalen + 2)
         elif status != libeasel.eslOK:
@@ -5197,10 +5197,10 @@ cdef class DigitalSequence(Sequence):
             raise ValueError(f"{self.alphabet} has no defined complement")
 
         if inplace:
-            status = libeasel.sq.esl_sq_ReverseComplement(self._sq)
+            status = libeasel_sq.esl_sq_ReverseComplement(self._sq)
         else:
             rc = self.copy()
-            status = libeasel.sq.esl_sq_ReverseComplement(rc._sq)
+            status = libeasel_sq.esl_sq_ReverseComplement(rc._sq)
 
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_ReverseComplement")
@@ -5297,7 +5297,7 @@ cdef class SequenceBlock:
 
         with nogil:
             for i in range(self._length):
-                status = libeasel.sq.esl_sq_Compare(self._refs[i], other_._refs[i])
+                status = libeasel_sq.esl_sq_Compare(self._refs[i], other_._refs[i])
                 if status == libeasel.eslOK:
                     continue
                 elif status == libeasel.eslFAIL:
@@ -5415,7 +5415,7 @@ cdef class SequenceBlock:
         # scan to locate the sequence
         with nogil:
             for i in range(start_, stop_):
-                status = libeasel.sq.esl_sq_Compare(sequence._sq, self._refs[i])
+                status = libeasel_sq.esl_sq_Compare(sequence._sq, self._refs[i])
                 if status == libeasel.eslOK:
                     break
                 elif status != libeasel.eslFAIL:
@@ -5550,7 +5550,7 @@ cdef class TextSequenceBlock(SequenceBlock):
 
         with nogil:
             for i in range(self._length):
-                libeasel.sq.esl_sq_Copy(self._refs[i], block._refs[i])
+                libeasel_sq.esl_sq_Copy(self._refs[i], block._refs[i])
 
         return block
 
@@ -5708,7 +5708,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
 
         with nogil:
             for i in range(self._length):
-                libeasel.sq.esl_sq_Copy(self._refs[i], block._refs[i])
+                libeasel_sq.esl_sq_Copy(self._refs[i], block._refs[i])
 
         return block
 
@@ -5777,7 +5777,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
 
             proteins._append(protein)
             # grow the internal sequence buffer
-            status = libeasel.sq.esl_sq_GrowTo(protein._sq, aalen)
+            status = libeasel_sq.esl_sq_GrowTo(protein._sq, aalen)
             if status == libeasel.eslEMEM:
                 raise AllocationError("ESL_DSQ", sizeof(ESL_DSQ), aalen + 2)
             elif status != libeasel.eslOK:
@@ -5894,12 +5894,12 @@ cdef class SequenceFile:
 
         if alphabet is None:
             seq = TextSequence.__new__(TextSequence)
-            seq._sq = libeasel.sq.esl_sq_Create()
+            seq._sq = libeasel_sq.esl_sq_Create()
             seq._sq.abc = NULL
         else:
             seq = DigitalSequence.__new__(DigitalSequence)
             seq.alphabet = alphabet
-            seq._sq = libeasel.sq.esl_sq_CreateDigital(alphabet._abc)
+            seq._sq = libeasel_sq.esl_sq_CreateDigital(alphabet._abc)
         if not seq._sq:
             raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
 
@@ -5936,14 +5936,14 @@ cdef class SequenceFile:
         """
         assert seq._sq != NULL
 
-        cdef int fmt = libeasel.sqio.eslSQFILE_UNKNOWN
+        cdef int fmt = libeasel_sqio.eslSQFILE_UNKNOWN
         if format is not None:
             format_ = format.lower()
             if format_ not in SEQUENCE_FILE_FORMATS:
                 raise InvalidParameter("format", format, choices=list(SEQUENCE_FILE_FORMATS))
             fmt = SEQUENCE_FILE_FORMATS[format_]
 
-        cdef int status = libeasel.sqio.esl_sqio_Parse(
+        cdef int status = libeasel_sqio.esl_sqio_Parse(
             <char*> &buffer[0],
             buffer.shape[0],
             seq._sq, fmt
@@ -5980,7 +5980,7 @@ cdef class SequenceFile:
         cdef bytes             fh_repr = repr(fh).encode("ascii")
 
         # bail out early if format is not supported
-        if fmt == libeasel.sqio.eslSQFILE_NCBI:
+        if fmt == libeasel_sqio.eslSQFILE_NCBI:
             fclose(fp)
             raise NotImplementedError("Cannot use a file-like object to read sequences from an NCBI database")
 
@@ -6063,7 +6063,7 @@ cdef class SequenceFile:
                 raise AllocationError("char", sizeof(char), len(fh_repr))
 
             # if we don't know the format yet, try to autodetect
-            if fmt == libeasel.sqio.eslSQFILE_UNKNOWN:
+            if fmt == libeasel_sqio.eslSQFILE_UNKNOWN:
                 status = sqascii_GuessFileFormat(sqfp, &fmt)
                 if status == libeasel.eslOK:
                     sqfp.format = fmt
@@ -6071,7 +6071,7 @@ cdef class SequenceFile:
                     raise UnexpectedError(status, "sqascii_GuessFileFormat")
 
             # if we still couldn't guess, it may be an MSA, try opening it as such
-            if fmt == libeasel.sqio.eslSQFILE_UNKNOWN or libeasel.sqio.esl_sqio_IsAlignment(fmt):
+            if fmt == libeasel_sqio.eslSQFILE_UNKNOWN or libeasel_sqio.esl_sqio_IsAlignment(fmt):
                 ascii.afp = MSAFile._open_fileobj(fh, fmt)
                 sqfp.format = fmt = ascii.afp.format
 
@@ -6082,17 +6082,17 @@ cdef class SequenceFile:
             #       known.
 
             # configure the parser and inmaps for this format
-            if not libeasel.sqio.esl_sqio_IsAlignment(fmt):
-                if fmt == libeasel.sqio.eslSQFILE_EMBL or fmt == libeasel.sqio.eslSQFILE_UNIPROT:
+            if not libeasel_sqio.esl_sqio_IsAlignment(fmt):
+                if fmt == libeasel_sqio.eslSQFILE_EMBL or fmt == libeasel_sqio.eslSQFILE_UNIPROT:
                     config_embl(sqfp)
                     inmap_embl(sqfp, NULL)
-                elif fmt == libeasel.sqio.eslSQFILE_GENBANK or fmt == libeasel.sqio.eslSQFILE_DDBJ:
+                elif fmt == libeasel_sqio.eslSQFILE_GENBANK or fmt == libeasel_sqio.eslSQFILE_DDBJ:
                     config_genbank(sqfp)
                     inmap_genbank(sqfp, NULL)
-                elif fmt == libeasel.sqio.eslSQFILE_FASTA or fmt == libeasel.sqio.eslSQFILE_HMMPGMD:
+                elif fmt == libeasel_sqio.eslSQFILE_FASTA or fmt == libeasel_sqio.eslSQFILE_HMMPGMD:
                     config_fasta(sqfp)
                     inmap_fasta(sqfp, NULL)
-                elif fmt == libeasel.sqio.eslSQFILE_DAEMON:
+                elif fmt == libeasel_sqio.eslSQFILE_DAEMON:
                     config_daemon(sqfp)
                     inmap_daemon(sqfp,  NULL)
                 else:
@@ -6106,7 +6106,7 @@ cdef class SequenceFile:
                     raise UnexpectedError(status, "loadbuf")
 
                 # skip the first line of HMMPGMD files, which is a header
-                if fmt == libeasel.sqio.eslSQFILE_HMMPGMD:
+                if fmt == libeasel_sqio.eslSQFILE_HMMPGMD:
                     status = fileheader_hmmpgmd(sqfp)
                     if status != libeasel.eslOK:
                         raise UnexpectedError(status, "fileheader_hmmpgmd")
@@ -6121,7 +6121,7 @@ cdef class SequenceFile:
             return sqfp
         except:
             # on error, make sure to clean up resources
-            libeasel.sqio.esl_sqfile_Close(sqfp)
+            libeasel_sqio.esl_sqfile_Close(sqfp)
             raise
 
     # --- Magic methods ------------------------------------------------------
@@ -6190,7 +6190,7 @@ cdef class SequenceFile:
         cdef bytes fspath
 
         # get format from string passed as input
-        fmt = libeasel.sqio.eslSQFILE_UNKNOWN
+        fmt = libeasel_sqio.eslSQFILE_UNKNOWN
         if format is not None:
             format_ = format.lower()
             if format_ not in SEQUENCE_FILE_FORMATS:
@@ -6209,7 +6209,7 @@ cdef class SequenceFile:
             self._sqfp = SequenceFile._open_fileobj(file, fmt)
             status = libeasel.eslOK
         else:
-            status = libeasel.sqio.esl_sqfile_Open(fspath, fmt, NULL, &self._sqfp)
+            status = libeasel_sqio.esl_sqfile_Open(fspath, fmt, NULL, &self._sqfp)
             self.name = os.fsdecode(fspath)
 
         # store a reference to the argument
@@ -6234,7 +6234,7 @@ cdef class SequenceFile:
                 self.alphabet = self.guess_alphabet() if alphabet is None else alphabet
                 if self.alphabet is None:
                     raise ValueError("Could not determine alphabet of file: {!r}".format(file))
-                status = libeasel.sqio.esl_sqfile_SetDigital(self._sqfp, self.alphabet._abc)
+                status = libeasel_sqio.esl_sqfile_SetDigital(self._sqfp, self.alphabet._abc)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "esl_sqfile_SetDigital")
         except Exception as err:
@@ -6303,7 +6303,7 @@ cdef class SequenceFile:
     cpdef void close(self) except *:
         """Close the file and free the resources used by the parser.
         """
-        libeasel.sqio.esl_sqfile_Close(self._sqfp)
+        libeasel_sqio.esl_sqfile_Close(self._sqfp)
         self._sqfp = NULL
 
     cpdef Alphabet guess_alphabet(self):
@@ -6338,7 +6338,7 @@ cdef class SequenceFile:
         if self._sqfp == NULL:
             raise ValueError("I/O operation on closed file.")
 
-        status = libeasel.sqio.esl_sqfile_GuessAlphabet(self._sqfp, &ty)
+        status = libeasel_sqio.esl_sqfile_GuessAlphabet(self._sqfp, &ty)
         if status == libeasel.eslOK:
             alphabet = Alphabet.__new__(Alphabet)
             alphabet._init_default(ty)
@@ -6348,7 +6348,7 @@ cdef class SequenceFile:
         elif status == libeasel.eslENODATA:
             raise EOFError("Sequence file appears to be empty.")
         elif status == libeasel.eslEFORMAT:
-            errbuf = libeasel.sqio.esl_sqfile_GetErrorBuf(self._sqfp)
+            errbuf = libeasel_sqio.esl_sqfile_GetErrorBuf(self._sqfp)
             msg = errbuf.decode("utf-8", "replace")
             raise ValueError("Could not parse file: {}".format(msg))
         else:
@@ -6435,13 +6435,13 @@ cdef class SequenceFile:
 
         if not skip_info and not skip_sequence:
             funcname = "esl_sqio_Read"
-            status = libeasel.sqio.esl_sqio_Read(self._sqfp, seq._sq)
+            status = libeasel_sqio.esl_sqio_Read(self._sqfp, seq._sq)
         elif not skip_info:
             funcname = "esl_sqio_ReadInfo"
-            status = libeasel.sqio.esl_sqio_ReadInfo(self._sqfp, seq._sq)
+            status = libeasel_sqio.esl_sqio_ReadInfo(self._sqfp, seq._sq)
         elif not skip_sequence:
             funcname = "esl_sqio_ReadSequence"
-            status = libeasel.sqio.esl_sqio_ReadSequence(self._sqfp, seq._sq)
+            status = libeasel_sqio.esl_sqio_ReadSequence(self._sqfp, seq._sq)
         else:
             raise ValueError("Cannot skip reading both sequence and metadata.")
 
@@ -6450,7 +6450,7 @@ cdef class SequenceFile:
         elif status == libeasel.eslEOF:
             return None
         elif status == libeasel.eslEFORMAT:
-            errbuf = libeasel.sqio.esl_sqfile_GetErrorBuf(self._sqfp)
+            errbuf = libeasel_sqio.esl_sqfile_GetErrorBuf(self._sqfp)
             msg = errbuf.decode("utf-8", "replace")
             raise ValueError("Could not parse file: {}".format(msg))
         else:
@@ -6545,7 +6545,7 @@ cdef class SequenceFile:
         """
         if self._sqfp == NULL:
             raise ValueError("I/O operation on closed file")
-        status = libeasel.sqio.esl_sqfile_Position(self._sqfp, 0)
+        status = libeasel_sqio.esl_sqfile_Position(self._sqfp, 0)
         if status == libeasel.eslEMEM:
             raise AllocationError("ESL_SQFILE", sizeof(ESL_SQFILE))
         elif status == libeasel.eslESYS or status == libeasel.eslEINVAL:
@@ -6587,7 +6587,7 @@ cdef class SSIReader:
         cdef int      status
         cdef bytes    fspath = os.fsencode(file)
 
-        status = libeasel.ssi.esl_ssi_Open(fspath, &self._ssi)
+        status = libeasel_ssi.esl_ssi_Open(fspath, &self._ssi)
         if status == libeasel.eslENOTFOUND:
             raise FileNotFoundError(2, "No such file or directory: {!r}".format(file))
         elif status == libeasel.eslEFORMAT:
@@ -6598,7 +6598,7 @@ cdef class SSIReader:
             raise UnexpectedError(status, "esl_ssi_Open")
 
     def __dealloc__(self):
-        libeasel.ssi.esl_ssi_Close(self._ssi)
+        libeasel_ssi.esl_ssi_Close(self._ssi)
 
     def __enter__(self):
         return self
@@ -6621,7 +6621,7 @@ cdef class SSIReader:
         if fd >= self._ssi.nfiles:
             raise IndexError(fd)
 
-        status = libeasel.ssi.esl_ssi_FileInfo(self._ssi, fd, &filename, &format)
+        status = libeasel_ssi.esl_ssi_FileInfo(self._ssi, fd, &filename, &format)
         if status == libeasel.eslOK:
             return self.FileInfo(os.fsdecode(filename), format)
         else:
@@ -6639,7 +6639,7 @@ cdef class SSIReader:
         if self._ssi == NULL:
             raise ValueError("I/O operation on closed file.")
 
-        status = libeasel.ssi.esl_ssi_FindName(
+        status = libeasel_ssi.esl_ssi_FindName(
             self._ssi, key, &ret_fh, &ret_roff, &opt_doff, &opt_L
         )
 
@@ -6655,7 +6655,7 @@ cdef class SSIReader:
     cpdef void close(self):
         """Close the SSI file reader.
         """
-        libeasel.ssi.esl_ssi_Close(self._ssi)
+        libeasel_ssi.esl_ssi_Close(self._ssi)
         self._ssi = NULL
 
 
@@ -6685,7 +6685,7 @@ cdef class SSIWriter:
         cdef int   status
         cdef bytes fspath = os.fsencode(file)
 
-        status = libeasel.ssi.esl_newssi_Open(fspath, not exclusive, &self._newssi)
+        status = libeasel_ssi.esl_newssi_Open(fspath, not exclusive, &self._newssi)
         if status == libeasel.eslENOTFOUND:
             raise FileNotFoundError(2, "No such file or directory: {!r}".format(file))
         elif status == libeasel.eslEOVERWRITE:
@@ -6736,7 +6736,7 @@ cdef class SSIWriter:
 
         self._on_write()
         name = os.fsencode(filename)
-        status = libeasel.ssi.esl_newssi_AddFile(self._newssi, name, format, &fd)
+        status = libeasel_ssi.esl_newssi_AddFile(self._newssi, name, format, &fd)
         if status == libeasel.eslOK:
             return fd
         elif status == libeasel.eslERANGE:
@@ -6758,7 +6758,7 @@ cdef class SSIWriter:
         cdef int status
 
         self._on_write()
-        status = libeasel.ssi.esl_newssi_AddKey(
+        status = libeasel_ssi.esl_newssi_AddKey(
             self._newssi, key, fd, record_offset, data_offset, record_length
         )
 
@@ -6776,7 +6776,7 @@ cdef class SSIWriter:
         cdef int status
 
         self._on_write()
-        status = libeasel.ssi.esl_newssi_AddAlias(self._newssi, alias, key)
+        status = libeasel_ssi.esl_newssi_AddAlias(self._newssi, alias, key)
         if status == libeasel.eslOK:
             return
         elif status == libeasel.eslERANGE:
@@ -6794,7 +6794,7 @@ cdef class SSIWriter:
 
         if not self.closed:
 
-            status = libeasel.ssi.esl_newssi_Write(self._newssi)
+            status = libeasel_ssi.esl_newssi_Write(self._newssi)
             if status == libeasel.eslERANGE:
                 raise ValueError("Too many keys registered in index.")
             elif status == libeasel.eslESYS:
@@ -6802,5 +6802,5 @@ cdef class SSIWriter:
             elif status == libeasel.eslEDUP:
                 raise ValueError("Index contains duplicate keys.")
 
-            libeasel.ssi.esl_newssi_Close(self._newssi)
+            libeasel_ssi.esl_newssi_Close(self._newssi)
             self._newssi = NULL

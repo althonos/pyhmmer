@@ -4,10 +4,10 @@
 # --- C imports --------------------------------------------------------------
 
 from libc.stdint cimport uint16_t, uint64_t
-from libhmmer.p7_pipeline cimport p7_pipemodes_e
+from .libhmmer.p7_pipeline cimport p7_pipemodes_e
 
-cimport pyhmmer.plan7
-from pyhmmer.plan7 cimport TopHits, Pipeline, HMM
+from . cimport plan7
+from .plan7 cimport TopHits, Pipeline, HMM
 
 
 # --- Cython classes ---------------------------------------------------------
@@ -30,7 +30,7 @@ cdef class Client:
     )
 
 
-cdef class IterativeSearch(pyhmmer.plan7.IterativeSearch):
+cdef class IterativeSearch(plan7.IterativeSearch):
 
     cdef readonly Client   client
     cdef readonly uint64_t db

@@ -1,9 +1,3 @@
-#
-
-# _dummy = configuration_data()
-# configure_file(output : 'esl_config.h', configuration : easel_conf)
-# configure_file(output : 'p7_config.h', configuration : hmmer_conf)
-
 # --- Check if `PyInterpreterState_GetID` is missing 00-------------------------
 getid_code = (
   '''
@@ -45,7 +39,6 @@ cython_args = [
 
 if get_option('buildtype') == 'debug'
     cython_args += [
-        '-I/home/althonos/Code/pyhmmer/include',
         '-Xcdivision_warnings=True',
         '-Xwarn.undeclared=True',
         '-Xwarn.unreachable=True',
@@ -104,3 +97,24 @@ pyhmmer_daemon = python.extension_module('daemon',
     c_args : c_args,
 )
 
+# --- Python sources -----------------------------------------------------------
+
+python_sources = [
+    '__init__.py',
+    'daemon.pxd',
+    'daemon.pyi',
+    'easel.pxd',
+    'easel.pyi',
+    'errors.pyi',
+    'hmmer.py',
+    'plan7.pxd',
+    'plan7.pyi',
+    'utils.py'
+]
+
+python.install_sources(
+    python_sources, 
+    subdir : 'pyhmmer'
+)
+
+subdir('tests')

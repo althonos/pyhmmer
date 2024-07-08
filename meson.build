@@ -18,12 +18,12 @@ python = py_mod.find_installation(pure: false)
 py_dep = python.dependency()
 
 # prepare a script to remove all C `static` keywords
-destatic_script = files('.' / 'tools' / 'destatic.py')[0].full_path()
 destatic = generator(
-  python, 
-  arguments: [ destatic_script, '--input', '@INPUT@', '--output', '@OUTPUT@' ],
+  python,
+  arguments: [ '@SOURCE_DIR@' / 'tools' / 'destatic.py', '--input', '@INPUT@', '--output', '@OUTPUT@' ],
   output : ['@PLAINNAME@']
 )
 
 subdir('lib')
+# subdir('include')
 subdir('pyhmmer')

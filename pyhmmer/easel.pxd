@@ -6,18 +6,17 @@
 from libc.stdint cimport int64_t, uint8_t, uint16_t, uint32_t
 from posix.types cimport off_t
 
-cimport libeasel.sq
-from libeasel.alphabet cimport ESL_ALPHABET
-from libeasel.bitfield cimport ESL_BITFIELD
-from libeasel.gencode cimport ESL_GENCODE
-from libeasel.keyhash cimport ESL_KEYHASH
-from libeasel.msa cimport ESL_MSA
-from libeasel.msafile cimport ESL_MSAFILE
-from libeasel.random cimport ESL_RANDOMNESS
-from libeasel.sq cimport ESL_SQ, ESL_SQ_BLOCK
-from libeasel.sqio cimport ESL_SQFILE
-from libeasel.ssi cimport ESL_SSI, ESL_NEWSSI
-from libeasel cimport ESL_DSQ
+from .libeasel.alphabet cimport ESL_ALPHABET
+from .libeasel.bitfield cimport ESL_BITFIELD
+from .libeasel.gencode cimport ESL_GENCODE
+from .libeasel.keyhash cimport ESL_KEYHASH
+from .libeasel.msa cimport ESL_MSA
+from .libeasel.msafile cimport ESL_MSAFILE
+from .libeasel.random cimport ESL_RANDOMNESS
+from .libeasel.sq cimport ESL_SQ, ESL_SQ_BLOCK
+from .libeasel.sqio cimport ESL_SQFILE
+from .libeasel.ssi cimport ESL_SSI, ESL_NEWSSI
+from .libeasel cimport ESL_DSQ
 
 
 # --- Alphabet ---------------------------------------------------------------

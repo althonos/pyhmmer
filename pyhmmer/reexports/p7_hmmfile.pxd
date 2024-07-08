@@ -1,8 +1,8 @@
 from libc.stdint cimport uint32_t
 
-from libeasel.alphabet cimport ESL_ALPHABET
-from libhmmer.p7_hmm cimport P7_HMM
-from libhmmer.p7_hmmfile cimport P7_HMMFILE
+from ..libeasel.alphabet cimport ESL_ALPHABET
+from ..libhmmer.p7_hmm cimport P7_HMM
+from ..libhmmer.p7_hmmfile cimport P7_HMMFILE
 
 cdef extern from "reexports/p7_hmmfile.h" nogil:
     cdef uint32_t v3a_magic
