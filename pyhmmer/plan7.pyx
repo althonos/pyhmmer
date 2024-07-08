@@ -187,9 +187,9 @@ from .reexports.p7_hmmfile cimport (
     v3f_magic
 )
 
-if PLATFORM_UNAME_SYSTEM == "Linux":
+if PLATFORM_UNAME_SYSTEM == "linux":
     from .fileobj.linux cimport fileobj_linux_open as fopen_obj
-elif PLATFORM_UNAME_SYSTEM == "Darwin" or PLATFORM_UNAME_SYSTEM.endswith("BSD"):
+elif PLATFORM_UNAME_SYSTEM == "darwin" or PLATFORM_UNAME_SYSTEM.endswith("bsd"):
     from .fileobj.bsd cimport fileobj_bsd_open as fopen_obj
 
 include "exceptions.pxi"
