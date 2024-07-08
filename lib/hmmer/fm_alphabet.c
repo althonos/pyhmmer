@@ -1,0 +1,1 @@
+../../vendor/hmmer/src/fm_alphabet.c

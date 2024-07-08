@@ -1,0 +1,1 @@
+../../vendor/hmmer/src/p7_gmxchk.h

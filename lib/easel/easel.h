@@ -1,0 +1,1 @@
+../../vendor/easel/easel.h
