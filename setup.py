@@ -459,7 +459,7 @@ class configure(_build_clib):
         except CompileError:
             _eprint("no")
             return False
-        except (subprocess.SubprocessError, OSError):
+        except Exception:
             _eprint("yes, but cannot run code")
             return True  # assume we are cross-compiling, and still build
         else:
@@ -515,6 +515,30 @@ class configure(_build_clib):
                     float f;
                     vec_ste(a, 0, &f);
                     return (f == 1) ? 0 : 1;
+                }
+            """
+        )
+
+    def _check_denormals_zero_mode(self):
+        return self._check_simd_generic(
+            "denormals-are-zero",
+            program="""
+                #include <pmmintrin.h>
+                int main(int argc, const char** argv) {
+                    _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+                    return 0;
+                }
+            """
+        )
+
+    def _check_flush_zero_mode(self):
+        return self._check_simd_generic(
+            "flush-to-zero",
+            program="""
+                #include <xmmintrin.h>
+                int main(int argc, const char** argv) {
+                    _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+                    return 0;
                 }
             """
         )
@@ -597,6 +621,13 @@ class configure(_build_clib):
                 supported_feature = False
             if not supported_feature:
                 raise RuntimeError("failed to compile platform-specific code, aborting.")
+
+        # check zeroing mode for SSE code
+        if self.hmmer_impl == "SSE":
+            if self._check_denormals_zero_mode():
+                defines["HAVE_DENORMALS_ZERO_MODE"] = 1
+            if self._check_flush_zero_mode():
+                defines["HAVE_FLUSH_ZERO_MODE"] = 1
 
         # fill the defines if headers are found
         headers = headers or []
