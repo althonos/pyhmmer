@@ -77,22 +77,23 @@ language, that provides bindings to HMMER3. It directly interacts with the
 HMMER internals, which has the following advantages over CLI wrappers:
 
 .. grid:: 1 2 3 3
+   :gutter: 1
 
    .. grid-item-card:: :fas:`battery-full` Batteries-included
 
-      Just install ``pyhmmer`` as a ``pip`` or ``conda`` dependency, no need
-      for the HMMER binaries or any other dependency.
+      Just add ``pyhmmer`` as a ``pip`` or ``conda`` dependency, no need
+      for the HMMER binaries or any external dependency.
 
    .. grid-item-card:: :fas:`screwdriver-wrench` Flexible
 
-      Create input `~pyhmmer.easel.Sequence` and `~pyhmmer.plan7.HMM` objects 
+      Create input `~pyhmmer.easel.Sequence` and `~pyhmmer.plan7.HMM` objects
       with the :doc:`API <api/index>`, or load them from a file.
-      
+
    .. grid-item-card:: :fas:`gears` Practical
-      
+
       Retrieve nested results as dedicated `~pyhmmer.plan7.TopHits` objects,
       write them to a file, or use them for further Python analysis.
-      
+
    .. grid-item-card:: :fas:`gauge-high` Fast
 
       Run `hmmsearch` in parallel using an efficient threading model, which
@@ -100,15 +101,10 @@ HMMER internals, which has the following advantages over CLI wrappers:
 
    .. grid-item-card:: :fas:`dolly` Shareable
 
-      :doc:`Distribute <examples/embed_hmms> and load` `~pyhmmer.plan7.HMM`
-      from inside a Python package to facilitate sharing analyses.
+      :doc:`Distribute and load <examples/embed_hmms>` `~pyhmmer.plan7.HMM`
+      objects from inside a Python package to facilitate sharing analyses.
 
-   .. grid-item-card:: :fas:`dolly` Distributable
-
-      :doc`Distribute <examples/embed_hmms>` and load `HMM` next 
-      in Python package to facilitate sharing and improve reproducibility.
-
-   .. grip-item-card:: :fas:`eye` Inspectable
+   .. grid-item-card:: :fas:`eye` Transparent
 
       Access the internals of a `~pyhmmer.plan7.HMM`, inspect the attributes
       and manually edit transitions or emissions scores.
@@ -137,22 +133,107 @@ Library
    :maxdepth: 2
 
    User Guide <guide/index>
-   .. Examples <examples/index>
+   Examples <examples/index>
    API Reference <api/index>
+
 
 Related Projects
 ----------------
 
-Building a HMM from scratch? Then you may be interested in the `PyFAMSA <https://pypi.org/project/pyfamsa/>`_
-package, providing bindings to `FAMSA <https://github.com/refresh-bio/FAMSA>`_,
-a very fast multiple sequence aligner. In addition, you may want to trim alignments:
-in that case, consider `PytrimAl <https://pypi.org/project/pytrimal>`_, which
-wraps `trimAl 2.0 <https://github.com/inab/trimal/tree/2.0_RC>`_.
+The following Python libraries may be of interest for bioinformaticians.
 
-If despite of all the advantages listed earlier, you would rather use HMMER
-through its CLI, this package will not be of great help. You can instead check
-the `hmmer-py <https://github.com/EBI-Metagenomics/hmmer-py>`_ package developed
-by `Danilo Horta <https://github.com/horta>`_ at the `EMBL-EBI <https://www.ebi.ac.uk>`_.
+.. grid:: 1 3 5 5
+   :gutter: 1
+
+   .. grid-item-card:: :fas:`fire` Pyrodigal
+      :link: https://pyrodigal.readthedocs.io
+
+      Gene Finding (with Prodigal).
+
+   .. grid-item-card:: :fas:`virus-covid` Pyrodigal-gv
+      :link: https://github.com/althonos/pyrodigal-gv
+
+      Pyrodigal for Giant Viruses.
+
+   .. grid-item-card:: :fas:`align-center` PyFAMSA
+      :link: https://pyfamsa.readthedocs.io
+
+      Multiple Sequence Alignment (with FAMSA).
+
+   .. grid-item-card:: :fas:`scissors` PytrimAl
+      :link: https://pytrimal.readthedocs.io
+
+      Alignment Trimming (with trimAl).
+
+   .. grid-item-card:: :fas:`music` LightMotif
+      :link: https://lightmotif.readthedocs.io
+
+      Platform-accelerated motif scoring.
+
+   .. grid-item-card:: :fas:`knife;fa-custom` Diced
+      :link: https://diced.readthedocs.io
+
+      CRISPR Detection (with MinCED).
+
+   .. grid-item-card:: :fas:`table-cells` Scoring Matrices
+      :link: https://scoring-matrices.readthedocs.io
+
+      Common scoring matrices for Cython.
+
+   .. grid-item-card:: :fas:`chain` Pyskani
+      :link: https://pyskani.readthedocs.io
+
+      Average Nucleotide Identity (with skani).
+
+   .. grid-item-card:: :fas:`forward-fast` PyFastANI
+      :link: https://pyfastani.readthedocs.io
+
+      Average Nucleotide Identity (with FastANI).
+
+   .. grid-item-card:: :fas:`magnifying-glass` PyJess
+      :link: https://pyjess.readthedocs.io
+
+      Geometric Template Matching (with Jess).
+
+   .. grid-item-card:: :fas:`repeat` PyTantan
+      :link: https://pytantan.readthedocs.io
+
+      Tandem Repeat Masking (with Tantan).
+
+   .. grid-item-card:: :fas:`gem` PyOpal
+      :link: https://pyopal.readthedocs.io
+
+      Query/Database Aligner (with Opal).
+
+   .. grid-item-card:: :fas:`sword;fa-custom` PySWRD
+      :link: https://pyswrd.readthedocs.io
+
+      Database Heuristic Filtering (with SWORD).
+
+   .. grid-item-card:: :fas:`rocket` Mini3di
+      :link: https://github.com/althonos/mini3di
+
+      Protein structure to 3di (with FoldSeek).
+
+   .. grid-item-card:: :fas:`calculator` ``peptides.py``
+      :link: https://peptides.readthedocs.io
+
+      Peptide descriptors.
+
+   .. grid-item-card:: :fas:`diagram-project` Pronto
+      :link: https://pronto.readthedocs.io
+
+      Open Biomedical Ontologies in Python.
+
+   .. grid-item-card:: :fas:`box` NAFcodec
+      :link: https://nafcodec.readthedocs.io
+
+      Nucleotide Archival Format in Python.
+
+   .. grid-item-card:: :fas:`bank` ``gb-io.py``
+      :link: https://gb-io.readthedocs.io
+
+      Fast GenBank parser written in Rust.
 
 
 License
