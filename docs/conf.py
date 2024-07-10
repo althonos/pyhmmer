@@ -27,16 +27,6 @@ if os.getenv("READTHEDOCS", "False") != "True":
     sys.path.insert(0, project_dir)
 
 
-# -- Sphinx Setup ------------------------------------------------------------
-
-def setup(app):
-    pass
-    # Add custom stylesheet
-    # app.add_css_file("css/main.css")
-    # app.add_js_file("js/apitoc.js")
-    # app.add_js_file("js/example-admonition.js")
-
-
 # -- Project information -----------------------------------------------------
 
 import pyhmmer
@@ -129,23 +119,28 @@ html_css_files = ["custom.css"]
 # documentation.
 #
 html_theme_options = {
+    "external_links": [
+        {
+            "url": "https://doi.org/10.1093/bioinformatics/btad214",
+            "name": "Paper",
+        },
+    ],
     "show_toc_level": 2,
     "use_edit_page_button": True,
     "icon_links": [
         {
             "name": "GitHub",
-            "url": "https://github.com/pydata/pydata-sphinx-theme",
+            "url": "https://github.com/althonos/pyhmmer",
             "icon": "fa-brands fa-github",
         },
         {
             "name": "PyPI",
-            "url": "https://pypi.org/project/pydata-sphinx-theme",
+            "url": "https://pypi.org/project/pyhmmer",
             "icon": "fa-custom fa-pypi",
         },
     ],
     "logo": {
         "text": "PyHMMER",
-        "image_dark": "_images/logo.png",
     },
     "navbar_align": "left",
     "footer_start": ["copyright"],
