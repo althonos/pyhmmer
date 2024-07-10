@@ -1,0 +1,1660 @@
+{
+  "results": [
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 1 hmmsearch /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 224.51758726624666,
+      "stddev": 1.333222123439741,
+      "median": 223.91428781658,
+      "user": 224.03521606666664,
+      "system": 0.3098857533333333,
+      "min": 223.59265492658,
+      "max": 226.04581905558,
+      "times": [
+        223.91428781658,
+        223.59265492658,
+        226.04581905558
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "1"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 1 hmmsearch /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 201.62664871458,
+      "stddev": 0.23034451816301357,
+      "median": 201.58045424058,
+      "user": 201.2556937333333,
+      "system": 0.20451842,
+      "min": 201.42290206258,
+      "max": 201.87658984058,
+      "times": [
+        201.42290206258,
+        201.58045424058,
+        201.87658984058
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "1"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 1 hmmscan /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 371.04412481491335,
+      "stddev": 0.2908078868611768,
+      "median": 371.13069832957996,
+      "user": 370.3218610666666,
+      "system": 0.4029810866666666,
+      "min": 370.71986119558,
+      "max": 371.28181491958,
+      "times": [
+        371.13069832957996,
+        370.71986119558,
+        371.28181491958
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "1"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 1 /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 252.65077800491335,
+      "stddev": 0.32361495643682264,
+      "median": 252.63356662258,
+      "user": 298.17430706666664,
+      "system": 4.7306967533333335,
+      "min": 252.33611219058,
+      "max": 252.98265520158,
+      "times": [
+        252.33611219058,
+        252.98265520158,
+        252.63356662258
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "1"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 1 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 233.79433237758,
+      "stddev": 0.11931004998752609,
+      "median": 233.75900398558,
+      "user": 279.61830073333334,
+      "system": 4.60036642,
+      "min": 233.69667607858,
+      "max": 233.92731706858,
+      "times": [
+        233.75900398558,
+        233.92731706858,
+        233.69667607858
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "1"
+      }
+    },
+    {
+      "command": "hmmscan --cpu 1 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 770.5809113912468,
+      "stddev": 2.302362870665056,
+      "median": 769.96267268258,
+      "user": 879.0173384,
+      "system": 376.26082442,
+      "min": 768.65078746658,
+      "max": 773.12927402458,
+      "times": [
+        773.12927402458,
+        768.65078746658,
+        769.96267268258
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "1"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 2 hmmsearch /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 114.89993386158001,
+      "stddev": 0.9002697671134702,
+      "median": 114.96234491358,
+      "user": 226.22818706666666,
+      "system": 0.4708100866666666,
+      "min": 113.97008252158,
+      "max": 115.76737414958001,
+      "times": [
+        114.96234491358,
+        115.76737414958001,
+        113.97008252158
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "2"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 2 hmmsearch /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 101.13805572024667,
+      "stddev": 0.14235976344649914,
+      "median": 101.08894895258,
+      "user": 202.9267864,
+      "system": 0.32684408666666664,
+      "min": 101.02674999958,
+      "max": 101.29846820858,
+      "times": [
+        101.08894895258,
+        101.02674999958,
+        101.29846820858
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "2"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 2 hmmscan /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 205.93796006891333,
+      "stddev": 1.00394187816501,
+      "median": 205.56058425858,
+      "user": 363.27069739999996,
+      "system": 6.648042753333333,
+      "min": 205.17739041258,
+      "max": 207.07590553558,
+      "times": [
+        207.07590553558,
+        205.56058425858,
+        205.17739041258
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "2"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 2 /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 193.68566352091332,
+      "stddev": 0.32922606942120564,
+      "median": 193.70906503858,
+      "user": 289.92574106666666,
+      "system": 5.92396242,
+      "min": 193.34536105558,
+      "max": 194.00256446858,
+      "times": [
+        194.00256446858,
+        193.34536105558,
+        193.70906503858
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "2"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 2 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 174.52294393324667,
+      "stddev": 0.11388803903028424,
+      "median": 174.47381102858,
+      "user": 271.0815184,
+      "system": 5.858763753333332,
+      "min": 174.44186970358,
+      "max": 174.65315106758,
+      "times": [
+        174.47381102858,
+        174.44186970358,
+        174.65315106758
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "2"
+      }
+    },
+    {
+      "command": "hmmscan --cpu 2 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 734.2320936602467,
+      "stddev": 1.0881885931479758,
+      "median": 734.2194150775799,
+      "user": 883.9563100666666,
+      "system": 387.1958547533333,
+      "min": 733.1502997545799,
+      "max": 735.32656614858,
+      "times": [
+        734.2194150775799,
+        735.32656614858,
+        733.1502997545799
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "2"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 3 hmmsearch /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 78.67273913724667,
+      "stddev": 0.1501540945481676,
+      "median": 78.69346824258,
+      "user": 228.78586306666668,
+      "system": 0.5271727533333334,
+      "min": 78.51329748958,
+      "max": 78.81145167958,
+      "times": [
+        78.69346824258,
+        78.51329748958,
+        78.81145167958
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "3"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 3 hmmsearch /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 68.14005316291333,
+      "stddev": 0.3797026711165135,
+      "median": 68.26060967058,
+      "user": 204.95444639999997,
+      "system": 0.3511537533333333,
+      "min": 67.71470818258,
+      "max": 68.44484163558,
+      "times": [
+        68.26060967058,
+        67.71470818258,
+        68.44484163558
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "3"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 3 hmmscan /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 143.01607648458,
+      "stddev": 0.2328971541745679,
+      "median": 143.06139209758,
+      "user": 365.86625073333335,
+      "system": 7.7002320866666665,
+      "min": 142.76385179058,
+      "max": 143.22298556558,
+      "times": [
+        143.22298556558,
+        143.06139209758,
+        142.76385179058
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "3"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 3 /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 185.70699490824668,
+      "stddev": 0.17687695465766073,
+      "median": 185.71369351658,
+      "user": 285.3229584,
+      "system": 6.959350086666666,
+      "min": 185.52686380758,
+      "max": 185.88042740058,
+      "times": [
+        185.88042740058,
+        185.52686380758,
+        185.71369351658
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "3"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 3 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 166.48028860891333,
+      "stddev": 0.14728344209802596,
+      "median": 166.41177367458,
+      "user": 266.3972777333333,
+      "system": 7.0341357533333335,
+      "min": 166.37974366458,
+      "max": 166.64934848758,
+      "times": [
+        166.37974366458,
+        166.64934848758,
+        166.41177367458
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "3"
+      }
+    },
+    {
+      "command": "hmmscan --cpu 3 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 734.0706315759134,
+      "stddev": 2.7716656915950484,
+      "median": 734.8018002415799,
+      "user": 888.2666843999999,
+      "system": 388.4294807533333,
+      "min": 731.00668199858,
+      "max": 736.40341248758,
+      "times": [
+        736.40341248758,
+        734.8018002415799,
+        731.00668199858
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "3"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 4 hmmsearch /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 63.05171870424667,
+      "stddev": 0.8456111545982212,
+      "median": 63.49407605858,
+      "user": 239.80708206666665,
+      "system": 0.5583200866666665,
+      "min": 62.07668446858,
+      "max": 63.58439558558,
+      "times": [
+        62.07668446858,
+        63.58439558558,
+        63.49407605858
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "4"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 4 hmmsearch /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 55.15802249791333,
+      "stddev": 0.12305213432110768,
+      "median": 55.17867242858,
+      "user": 221.0794047333333,
+      "system": 0.39546042,
+      "min": 55.02595184258,
+      "max": 55.26944322258,
+      "times": [
+        55.02595184258,
+        55.17867242858,
+        55.26944322258
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "4"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 4 hmmscan /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 112.83866962558,
+      "stddev": 0.209098698912435,
+      "median": 112.90925289858001,
+      "user": 374.4267164,
+      "system": 8.883601753333332,
+      "min": 112.60341357458,
+      "max": 113.00334240358,
+      "times": [
+        112.60341357458,
+        112.90925289858001,
+        113.00334240358
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "4"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 4 /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 185.87610916124666,
+      "stddev": 0.31357226524053583,
+      "median": 186.04041640058,
+      "user": 288.04319606666667,
+      "system": 8.081581753333332,
+      "min": 185.51452770858,
+      "max": 186.07338337458,
+      "times": [
+        185.51452770858,
+        186.04041640058,
+        186.07338337458
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "4"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 4 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 166.43946178658,
+      "stddev": 0.1609106819384051,
+      "median": 166.37040954258,
+      "user": 269.33483373333337,
+      "system": 7.824834086666666,
+      "min": 166.32460220558,
+      "max": 166.62337361158,
+      "times": [
+        166.62337361158,
+        166.37040954258,
+        166.32460220558
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "4"
+      }
+    },
+    {
+      "command": "hmmscan --cpu 4 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 737.0370806329133,
+      "stddev": 2.0663445492407067,
+      "median": 736.01288435758,
+      "user": 895.0376060666666,
+      "system": 390.9295710866666,
+      "min": 735.68288664758,
+      "max": 739.4154708935799,
+      "times": [
+        736.01288435758,
+        739.4154708935799,
+        735.68288664758
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "4"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 5 hmmsearch /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 55.51565129324666,
+      "stddev": 1.269536352969471,
+      "median": 56.15988553958,
+      "user": 256.8768577333333,
+      "system": 0.59073442,
+      "min": 54.05316395458,
+      "max": 56.33390438558,
+      "times": [
+        54.05316395458,
+        56.33390438558,
+        56.15988553958
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "5"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 5 hmmsearch /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 47.774280198246664,
+      "stddev": 0.07293538751423159,
+      "median": 47.75768941858,
+      "user": 239.1967264,
+      "system": 0.45329941999999995,
+      "min": 47.711069432580004,
+      "max": 47.854081743580004,
+      "times": [
+        47.711069432580004,
+        47.854081743580004,
+        47.75768941858
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "5"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 5 hmmscan /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 94.79050720391335,
+      "stddev": 0.07674166154226421,
+      "median": 94.75546296758,
+      "user": 382.9052747333333,
+      "system": 9.863854753333333,
+      "min": 94.73754380058,
+      "max": 94.87851484358,
+      "times": [
+        94.87851484358,
+        94.75546296758,
+        94.73754380058
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "5"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 5 /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 189.72719985991333,
+      "stddev": 0.24918102249496574,
+      "median": 189.86805881558,
+      "user": 293.41741973333336,
+      "system": 9.338672086666667,
+      "min": 189.43949118858,
+      "max": 189.87404957558,
+      "times": [
+        189.86805881558,
+        189.87404957558,
+        189.43949118858
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "5"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 5 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 170.94768244124668,
+      "stddev": 0.07923298774422242,
+      "median": 170.91715172058,
+      "user": 276.5477330666667,
+      "system": 9.035204753333334,
+      "min": 170.88825661958,
+      "max": 171.03763898358,
+      "times": [
+        170.88825661958,
+        171.03763898358,
+        170.91715172058
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "5"
+      }
+    },
+    {
+      "command": "hmmscan --cpu 5 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 735.5461749535801,
+      "stddev": 2.1496515348025342,
+      "median": 734.90372601658,
+      "user": 897.8917837333333,
+      "system": 392.13166575333327,
+      "min": 733.79099718658,
+      "max": 737.94380165758,
+      "times": [
+        734.90372601658,
+        737.94380165758,
+        733.79099718658
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "5"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 6 hmmsearch /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 54.33104793991333,
+      "stddev": 1.6802611851900542,
+      "median": 55.19011359858,
+      "user": 282.82063039999997,
+      "system": 0.7494760866666667,
+      "min": 52.39493544258,
+      "max": 55.40809477858,
+      "times": [
+        52.39493544258,
+        55.19011359858,
+        55.40809477858
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "6"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 6 hmmsearch /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 42.97109813158,
+      "stddev": 0.054812493540109086,
+      "median": 42.964984270580004,
+      "user": 257.9613310666667,
+      "system": 0.5421700866666667,
+      "min": 42.91959889858,
+      "max": 43.028711225580004,
+      "times": [
+        42.91959889858,
+        42.964984270580004,
+        43.028711225580004
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "6"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 6 hmmscan /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 83.78222972491334,
+      "stddev": 0.1450093861901297,
+      "median": 83.75872047158,
+      "user": 398.7565064,
+      "system": 10.771436753333333,
+      "min": 83.65041134458001,
+      "max": 83.93755735858,
+      "times": [
+        83.65041134458001,
+        83.75872047158,
+        83.93755735858
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "6"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 6 /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 198.67803539458,
+      "stddev": 0.26024952503087656,
+      "median": 198.78923202758,
+      "user": 312.4892144,
+      "system": 10.906767753333334,
+      "min": 198.38065970758,
+      "max": 198.86421444858001,
+      "times": [
+        198.78923202758,
+        198.38065970758,
+        198.86421444858001
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "6"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 6 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 179.47775320491334,
+      "stddev": 0.5354557421536481,
+      "median": 179.45315253058,
+      "user": 294.71833173333334,
+      "system": 10.348039086666667,
+      "min": 178.95502180758,
+      "max": 180.02508527658,
+      "times": [
+        179.45315253058,
+        180.02508527658,
+        178.95502180758
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "6"
+      }
+    },
+    {
+      "command": "hmmscan --cpu 6 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 748.21499308758,
+      "stddev": 1.153833537485418,
+      "median": 748.70584593658,
+      "user": 932.5426377333333,
+      "system": 400.39558875333324,
+      "min": 746.89689269458,
+      "max": 749.04224063158,
+      "times": [
+        749.04224063158,
+        748.70584593658,
+        746.89689269458
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "6"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 7 hmmsearch /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 52.604720525913336,
+      "stddev": 1.8074769097664396,
+      "median": 53.572951506580004,
+      "user": 310.67901706666663,
+      "system": 0.8026767533333333,
+      "min": 50.51939631858,
+      "max": 53.72181375258,
+      "times": [
+        50.51939631858,
+        53.72181375258,
+        53.572951506580004
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "7"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 7 hmmsearch /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 41.89689282124667,
+      "stddev": 0.05705417386345436,
+      "median": 41.91707568458,
+      "user": 293.2202237333333,
+      "system": 0.5297994199999999,
+      "min": 41.83249054558,
+      "max": 41.94111223358,
+      "times": [
+        41.83249054558,
+        41.91707568458,
+        41.94111223358
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "7"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 7 hmmscan /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 79.07120989091334,
+      "stddev": 0.3258953036724377,
+      "median": 78.93613096258,
+      "user": 440.31991739999995,
+      "system": 11.224650753333334,
+      "min": 78.83457340058,
+      "max": 79.44292530958,
+      "times": [
+        78.83457340058,
+        78.93613096258,
+        79.44292530958
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "7"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 7 /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 202.81627493858,
+      "stddev": 0.4215866637067035,
+      "median": 202.70343797358,
+      "user": 323.0507997333333,
+      "system": 12.368965086666668,
+      "min": 202.46258833758,
+      "max": 203.28279850458,
+      "times": [
+        202.46258833758,
+        203.28279850458,
+        202.70343797358
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "7"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 7 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 181.53192521391335,
+      "stddev": 0.20658376351055763,
+      "median": 181.50216730558,
+      "user": 300.52691339999996,
+      "system": 12.055348086666667,
+      "min": 181.34183416658,
+      "max": 181.75177416958,
+      "times": [
+        181.34183416658,
+        181.50216730558,
+        181.75177416958
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "7"
+      }
+    },
+    {
+      "command": "hmmscan --cpu 7 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 746.54768287358,
+      "stddev": 2.3226369825444597,
+      "median": 745.74722508558,
+      "user": 938.9658784,
+      "system": 401.5953880866666,
+      "min": 744.7311363955799,
+      "max": 749.16468713958,
+      "times": [
+        744.7311363955799,
+        749.16468713958,
+        745.74722508558
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "7"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 8 hmmsearch /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 50.91413116191333,
+      "stddev": 1.6514825286145576,
+      "median": 51.76517408958,
+      "user": 335.24899206666663,
+      "system": 0.8236747533333332,
+      "min": 49.01070950058,
+      "max": 51.96650989558,
+      "times": [
+        49.01070950058,
+        51.76517408958,
+        51.96650989558
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "8"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 8 hmmsearch /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 40.698155898913335,
+      "stddev": 0.05279366419834699,
+      "median": 40.72403486058,
+      "user": 325.32142573333334,
+      "system": 0.5497944199999999,
+      "min": 40.63741599458,
+      "max": 40.73301684158,
+      "times": [
+        40.72403486058,
+        40.63741599458,
+        40.73301684158
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "8"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 8 hmmscan /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 75.93314988558,
+      "stddev": 0.2571457524457529,
+      "median": 75.84688591058,
+      "user": 477.04328406666656,
+      "system": 12.133410086666666,
+      "min": 75.73022734058,
+      "max": 76.22233640558,
+      "times": [
+        76.22233640558,
+        75.84688591058,
+        75.73022734058
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "8"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 8 /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 204.93942386824665,
+      "stddev": 1.4966653397597978,
+      "median": 204.43472791558,
+      "user": 327.0914754,
+      "system": 13.933470753333333,
+      "min": 203.76034995158,
+      "max": 206.62319373758,
+      "times": [
+        204.43472791558,
+        203.76034995158,
+        206.62319373758
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "8"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 8 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 182.1102902419133,
+      "stddev": 0.07497192756237998,
+      "median": 182.10543471858,
+      "user": 302.5865634,
+      "system": 13.403790419999998,
+      "min": 182.03786409358,
+      "max": 182.18757191358,
+      "times": [
+        182.18757191358,
+        182.03786409358,
+        182.10543471858
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "8"
+      }
+    },
+    {
+      "command": "hmmscan --cpu 8 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 756.90617943158,
+      "stddev": 3.273431210275576,
+      "median": 757.53099552858,
+      "user": 961.4601134,
+      "system": 407.9678327533333,
+      "min": 753.36537309258,
+      "max": 759.82216967358,
+      "times": [
+        757.53099552858,
+        759.82216967358,
+        753.36537309258
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "8"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 9 hmmsearch /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 49.48157316291334,
+      "stddev": 1.8509526756947623,
+      "median": 50.52583847258,
+      "user": 357.9451764,
+      "system": 0.87017342,
+      "min": 47.344461164580004,
+      "max": 50.574419851580004,
+      "times": [
+        47.344461164580004,
+        50.574419851580004,
+        50.52583847258
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "9"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 9 hmmsearch /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 39.744935130913326,
+      "stddev": 0.0846204533125894,
+      "median": 39.73929152158,
+      "user": 357.1094364,
+      "system": 0.60293242,
+      "min": 39.66327774658,
+      "max": 39.83223612458,
+      "times": [
+        39.73929152158,
+        39.66327774658,
+        39.83223612458
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "9"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 9 hmmscan /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 73.18940682591334,
+      "stddev": 0.04582218029851743,
+      "median": 73.20834607558,
+      "user": 512.3408917333333,
+      "system": 12.813153753333333,
+      "min": 73.13715109558,
+      "max": 73.22272330658001,
+      "times": [
+        73.13715109558,
+        73.20834607558,
+        73.22272330658001
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "9"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 9 /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 204.63089795991334,
+      "stddev": 0.3231905037034977,
+      "median": 204.67837226858,
+      "user": 327.98751939999994,
+      "system": 15.835746753333334,
+      "min": 204.28659607858,
+      "max": 204.92772553258,
+      "times": [
+        204.28659607858,
+        204.67837226858,
+        204.92772553258
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "9"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 9 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 182.43960832858,
+      "stddev": 0.12507523707764992,
+      "median": 182.43505598358,
+      "user": 304.0830904,
+      "system": 14.75618842,
+      "min": 182.31687141358,
+      "max": 182.56689758858,
+      "times": [
+        182.31687141358,
+        182.43505598358,
+        182.56689758858
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "9"
+      }
+    },
+    {
+      "command": "hmmscan --cpu 9 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 751.2379789572466,
+      "stddev": 3.0908606038713606,
+      "median": 751.56435723858,
+      "user": 954.3944027333333,
+      "system": 406.1284467533333,
+      "min": 747.99688026858,
+      "max": 754.1526993645799,
+      "times": [
+        754.1526993645799,
+        751.56435723858,
+        747.99688026858
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "9"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 10 hmmsearch /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 48.20282251791334,
+      "stddev": 1.670770820128136,
+      "median": 49.15563397658,
+      "user": 375.1266560666666,
+      "system": 0.97542142,
+      "min": 46.27363054258,
+      "max": 49.17920303458,
+      "times": [
+        46.27363054258,
+        49.15563397658,
+        49.17920303458
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "10"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 10 hmmsearch /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 38.856690265913336,
+      "stddev": 0.049408319614407434,
+      "median": 38.83969376758,
+      "user": 387.6266997333333,
+      "system": 0.6294474199999999,
+      "min": 38.81802368358,
+      "max": 38.91235334658,
+      "times": [
+        38.81802368358,
+        38.83969376758,
+        38.91235334658
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "10"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 10 hmmscan /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 70.98576227891333,
+      "stddev": 0.06573744204704773,
+      "median": 71.00834884458,
+      "user": 542.4096567333332,
+      "system": 13.995996753333332,
+      "min": 70.91170916358,
+      "max": 71.03722882858,
+      "times": [
+        71.03722882858,
+        70.91170916358,
+        71.00834884458
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "10"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 10 /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 205.37739407324662,
+      "stddev": 0.5043914502069896,
+      "median": 205.28436515058,
+      "user": 330.2313117333333,
+      "system": 17.281559753333333,
+      "min": 204.92599292958,
+      "max": 205.92182413958,
+      "times": [
+        205.28436515058,
+        204.92599292958,
+        205.92182413958
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "10"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 10 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 183.35349016458,
+      "stddev": 0.16894119442484384,
+      "median": 183.36521096758,
+      "user": 306.2462797333333,
+      "system": 16.337281753333333,
+      "min": 183.17899378158,
+      "max": 183.51626574458,
+      "times": [
+        183.36521096758,
+        183.51626574458,
+        183.17899378158
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "10"
+      }
+    },
+    {
+      "command": "hmmscan --cpu 10 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 760.7230792942468,
+      "stddev": 0.5943262526753854,
+      "median": 760.8048579535799,
+      "user": 972.9342947333331,
+      "system": 413.40119375333325,
+      "min": 760.09209854558,
+      "max": 761.27228138358,
+      "times": [
+        761.27228138358,
+        760.8048579535799,
+        760.09209854558
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "10"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 11 hmmsearch /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 47.26620457291333,
+      "stddev": 1.894659662707958,
+      "median": 48.29740568258,
+      "user": 390.3364774,
+      "system": 0.97893742,
+      "min": 45.07961525658,
+      "max": 48.42159277958,
+      "times": [
+        45.07961525658,
+        48.29740568258,
+        48.42159277958
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "11"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 11 hmmsearch /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 38.07615418824667,
+      "stddev": 0.030528238024026357,
+      "median": 38.07530847158,
+      "user": 417.4555337333333,
+      "system": 0.6514067533333333,
+      "min": 38.04605759558,
+      "max": 38.10709649758,
+      "times": [
+        38.10709649758,
+        38.07530847158,
+        38.04605759558
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "11"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 11 hmmscan /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 68.89113643924668,
+      "stddev": 0.20181075185961092,
+      "median": 68.82995844258001,
+      "user": 569.0585557333333,
+      "system": 15.914179086666666,
+      "min": 68.72699352158,
+      "max": 69.11645735358,
+      "times": [
+        68.72699352158,
+        68.82995844258001,
+        69.11645735358
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "11"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 11 /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 205.79449548158001,
+      "stddev": 0.1831170108285751,
+      "median": 205.77738082858,
+      "user": 332.81027506666663,
+      "system": 18.427010086666666,
+      "min": 205.62053662758,
+      "max": 205.98556898858,
+      "times": [
+        205.62053662758,
+        205.77738082858,
+        205.98556898858
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "11"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 11 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 184.30378030691335,
+      "stddev": 0.12664603199437638,
+      "median": 184.36529863058,
+      "user": 309.1168023999999,
+      "system": 18.048573086666668,
+      "min": 184.15812623958,
+      "max": 184.38791605058,
+      "times": [
+        184.15812623958,
+        184.38791605058,
+        184.36529863058
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "11"
+      }
+    },
+    {
+      "command": "hmmscan --cpu 11 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 759.3010741529133,
+      "stddev": 4.032141641147456,
+      "median": 757.74186424758,
+      "user": 971.7589797333334,
+      "system": 414.8587670866666,
+      "min": 756.28136146058,
+      "max": 763.87999675058,
+      "times": [
+        757.74186424758,
+        763.87999675058,
+        756.28136146058
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "11"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 12 hmmsearch /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 47.62198392291333,
+      "stddev": 1.8385745418282562,
+      "median": 48.518337811580004,
+      "user": 398.4931474,
+      "system": 0.9680347533333333,
+      "min": 45.50714305758,
+      "max": 48.84047089958,
+      "times": [
+        45.50714305758,
+        48.518337811580004,
+        48.84047089958
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "12"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 12 hmmsearch /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 37.38002674291334,
+      "stddev": 0.018299257038927735,
+      "median": 37.37936330558,
+      "user": 443.81325239999995,
+      "system": 0.8641334199999999,
+      "min": 37.36206822658,
+      "max": 37.398648696580004,
+      "times": [
+        37.36206822658,
+        37.398648696580004,
+        37.37936330558
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "12"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 12 hmmscan /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 67.23545827657999,
+      "stddev": 0.1803235720525956,
+      "median": 67.23991778258,
+      "user": 593.5906380666667,
+      "system": 16.643362753333335,
+      "min": 67.05294631358,
+      "max": 67.41351073358,
+      "times": [
+        67.05294631358,
+        67.41351073358,
+        67.23991778258
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "12"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 12 /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 210.78866353491333,
+      "stddev": 0.07597205875926494,
+      "median": 210.77143714958,
+      "user": 344.44404406666666,
+      "system": 21.561267086666664,
+      "min": 210.72278382558,
+      "max": 210.87176962958,
+      "times": [
+        210.87176962958,
+        210.72278382558,
+        210.77143714958
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "12"
+      }
+    },
+    {
+      "command": "hmmsearch --cpu 12 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 189.35572130291334,
+      "stddev": 0.20662458052163396,
+      "median": 189.34814612158,
+      "user": 321.58111406666666,
+      "system": 20.61675208666667,
+      "min": 189.15298848358,
+      "max": 189.56602930358,
+      "times": [
+        189.56602930358,
+        189.15298848358,
+        189.34814612158
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "12"
+      }
+    },
+    {
+      "command": "hmmscan --cpu 12 /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 768.22568025558,
+      "stddev": 0.6784538995178329,
+      "median": 767.98494020658,
+      "user": 989.4704244,
+      "system": 424.51440808666666,
+      "min": 767.7004243315799,
+      "max": 768.99167622858,
+      "times": [
+        768.99167622858,
+        767.7004243315799,
+        767.98494020658
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "12"
+      }
+    }
+  ]
+}
