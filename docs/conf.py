@@ -13,7 +13,6 @@ import sys
 import re
 import shutil
 import semantic_version
-import sphinx_bootstrap_theme
 
 # -- Path setup --------------------------------------------------------------
 
@@ -72,7 +71,6 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.todo",
     "sphinx.ext.extlinks",
-    "sphinx_bootstrap_theme",
     "sphinxcontrib.jquery",
     "nbsphinx",
     "recommonmark",
