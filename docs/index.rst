@@ -76,34 +76,42 @@ the `Eddy/Rivas Laboratory <http://eddylab.org/>`_ at Harvard University.
 language, that provides bindings to HMMER3. It directly interacts with the
 HMMER internals, which has the following advantages over CLI wrappers:
 
-- **single dependency**:
-  If your software or your analysis pipeline is
-  distributed as a Python package, you can add `pyhmmer` as a dependency to
-  your project, and stop worrying about the HMMER binaries being properly
-  setup on the end-user machine.
-- **no intermediate files**:
-  Everything happens in memory, in Python objects
-  you have control on, making it easier to pass your inputs to HMMER without
-  needing to write them to a temporary file. Output retrieval is also done
-  in memory, via instances of the `pyhmmer.plan7.TopHits` class.
-- **no input formatting**:
-  The Easel object model is exposed in the `pyhmmer.easel` module, and you
-  have the possibility to build a `~pyhmmer.easel.Sequence` object yourself to
-  pass to the HMMER pipeline. This is useful if your sequences are already
-  loaded in memory, for instance because you obtained them from another
-  Python library (such as `Pyrodigal <https://github.com/althonos/pyrodigal>`_
-  or `Biopython <https://biopython.org/>`_).
-- **no output formatting**:
-  HMMER3 is notorious for its numerous output files
-  and its fixed-width tabular output, which is hard to parse (even
-  `Bio.SearchIO.HmmerIO` is struggling on some sequences).
-- **efficient**:
-  Using `pyhmmer` to launch ``hmmsearch`` on sequences and HMMs in disk storage
-  is typically faster than directly using the ``hmmsearch`` binary.
-  `pyhmmer.hmmer.hmmsearch` uses a different parallelisation strategy compared to
-  the ``hmmsearch`` binary from HMMER, which helps getting the most of
-  multiple CPUs.
+.. grid:: 1 2 3 3
 
+   .. grid-item-card:: :fas:`battery-full` Batteries-included
+
+      Just install ``pyhmmer`` as a ``pip`` or ``conda`` dependency, no need
+      for the HMMER binaries or any other dependency.
+
+   .. grid-item-card:: :fas:`screwdriver-wrench` Flexible
+
+      Create input `~pyhmmer.easel.Sequence` and `~pyhmmer.plan7.HMM` objects 
+      with the :doc:`API <api/index>`, or load them from a file.
+      
+   .. grid-item-card:: :fas:`gears` Practical
+      
+      Retrieve nested results as dedicated `~pyhmmer.plan7.TopHits` objects,
+      write them to a file, or use them for further Python analysis.
+      
+   .. grid-item-card:: :fas:`gauge-high` Fast
+
+      Run `hmmsearch` in parallel using an efficient threading model, which
+      :doc:`outperforms <guide/benchmarks>` HMMER in some typical usecases.
+
+   .. grid-item-card:: :fas:`dolly` Shareable
+
+      :doc:`Distribute <examples/embed_hmms> and load` `~pyhmmer.plan7.HMM`
+      from inside a Python package to facilitate sharing analyses.
+
+   .. grid-item-card:: :fas:`dolly` Distributable
+
+      :doc`Distribute <examples/embed_hmms>` and load `HMM` next 
+      in Python package to facilitate sharing and improve reproducibility.
+
+   .. grip-item-card:: :fas:`eye` Inspectable
+
+      Access the internals of a `~pyhmmer.plan7.HMM`, inspect the attributes
+      and manually edit transitions or emissions scores.
 
 Setup
 -----
@@ -129,7 +137,7 @@ Library
    :maxdepth: 2
 
    User Guide <guide/index>
-   Examples <examples/index>
+   .. Examples <examples/index>
    API Reference <api/index>
 
 Related Projects
