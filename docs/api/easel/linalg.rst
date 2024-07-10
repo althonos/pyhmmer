@@ -1,9 +1,6 @@
 Linear Algebra
 ==============
 
-Vectors
--------
-
 .. autoclass:: pyhmmer.easel.Vector
    :members:
 
@@ -15,9 +12,6 @@ Vectors
    :special-members: __init__
    :members:
 
-
-Matrix
-------
 
 .. autoclass:: pyhmmer.easel.Matrix
    :members:

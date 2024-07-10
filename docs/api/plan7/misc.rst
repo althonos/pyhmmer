@@ -11,10 +11,17 @@ Miscellaneous
    :members:
 
 .. autoclass:: pyhmmer.plan7.Transitions(enum.IntEnum)
+
    .. autoattribute:: MM
+   
    .. autoattribute:: MI
+   
    .. autoattribute:: MD
+   
    .. autoattribute:: IM
+   
    .. autoattribute:: II
+   
    .. autoattribute:: DM
+   
    .. autoattribute:: DD

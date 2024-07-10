@@ -2755,7 +2755,7 @@ cdef class HMM:
         Columns correspond to the following transitions, in order:
         :math:`M_n \to M_{n+1}`, :math:`M_n \to I_n`, :math:`M_n \to D_{n+1}`,
         :math:`I_n \to I_n`, :math:`I_n \to M_{n+1}`, :math:`D_n \to D_{n+1}`,
-        :math:`D_n \to M_{n+1}`. Use the `~pyhmmer.plan7.Transitions` enum
+        :math:`D_n \to M_{n+1}`. Use the `pyhmmer.plan7.Transitions` enum
         instead of hardcoded indices to make your code more legible.
 
         Example:

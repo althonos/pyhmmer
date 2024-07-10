@@ -3,6 +3,8 @@ HMMER
 
 .. currentmodule:: pyhmmer.hmmer
 
+.. automodule:: pyhmmer.hmmer
+
 
 Profile Searches
 ----------------

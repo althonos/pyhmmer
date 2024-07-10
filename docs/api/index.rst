@@ -3,7 +3,8 @@ API Reference
 
 .. currentmodule:: pyhmmer
 
-.. automodule:: pyhmmer
+This section contains a complete reference of the API of the different 
+``pyhmmer`` modules.
 
 .. toctree::
    :maxdepth: 2
@@ -13,4 +14,3 @@ API Reference
    Plan7 <plan7/index>
    Daemon <daemon/index>
    Errors <errors/index>
-
