@@ -9,6 +9,7 @@ examples, and running with the latest version of the PyHMMER interface.
 
 .. toctree::
    :maxdepth: 2
+   :caption: Analyses
 
    Build an HMM from an multiple sequence alignment <msa_to_hmm>
    Analyse the active site of an enzymatic domain <active_site>
@@ -24,6 +25,7 @@ PyHMMER API in combination with Python and other Python libraries:
 
 .. toctree::
     :maxdepth: 2
+    :caption: Code & Data
 
     Recipes for extending PyHMMER <recipes>
     Create a Python package with embedded HMMs <embed_hmms>

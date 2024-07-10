@@ -1,14 +1,7 @@
 Installation
 ============
 
-.. note::
-
-    Wheels are provided for Linux and MacOS on x86-64 and NEON-enabled Arm platforms, 
-    but other machines will have to build the wheel from the source distribution. 
-    Building ``pyhmmer`` involves compiling HMMER3 and Easel, which requires a 
-    C compiler to be available.
-
-.. hint::
+.. caution::
 
     Windows is not supported by HMMER, so it is not possible to build PyHMMER
     on Windows as the moment. Consider using a Python install inside the 
@@ -27,7 +20,14 @@ one is available, or from source after compiling the Cython code :
 .. code:: console
 
     $ pip install --user pyhmmer
-    
+
+.. note::
+
+    Wheels are provided for Linux and MacOS on x86-64 and NEON-enabled Arm platforms, 
+    but other machines will have to build the wheel from the source distribution. 
+    Building ``pyhmmer`` involves compiling HMMER3 and Easel, which requires a 
+    C compiler to be available.
+
 
 Conda
 ^^^^^

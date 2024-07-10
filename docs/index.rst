@@ -110,7 +110,7 @@ Setup
 
 Run ``pip install pyhmmer`` in a shell to download the latest release and all
 its dependencies from PyPi, or have a look at the
-:doc:`Installation page <install>` to find other ways to install ``pyhmmer``.
+:doc:`Installation page <guide/install>` to find other ways to install ``pyhmmer``.
 
 
 Citation
@@ -119,7 +119,7 @@ Citation
 PyHMMER is scientific software, with a
 `published paper <https://doi.org/10.1093/bioinformatics/btad214>`_
 in the `Bioinformatics <https://academic.oup.com/bioinformatics>`_. Check the
-:doc:`Publications page <publications>` to see how to cite PyHMMER.
+:doc:`Publications page <guide/publications>` to see how to cite PyHMMER.
 
 
 Library
@@ -128,15 +128,9 @@ Library
 .. toctree::
    :maxdepth: 2
 
-   Installation <install>
+   User Guide <guide/index>
    Examples <examples/index>
-   Performance <performance>
-   Contributing <contributing>
-   Publications <publications>
-   Benchmarks <benchmarks>
    API Reference <api/index>
-   Changelog <changes>
-
 
 Related Projects
 ----------------
