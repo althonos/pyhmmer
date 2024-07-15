@@ -20,4 +20,4 @@ in `pyhmmer.hmmer`.
    Contribution Guide <contributing>
    Changelog <changes>
    Benchmarks <benchmarks>
-
+   Copyright Notice <copyright>
