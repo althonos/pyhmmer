@@ -145,10 +145,15 @@ The following Python libraries may be of interest for bioinformaticians.
 .. grid:: 1 3 5 5
    :gutter: 1
 
+   .. grid-item-card:: :fas:`diamond` PyHMMER
+      :link: https://pyrodigal.readthedocs.io
+
+      Profile Hidden Markov Models (with HMMER).
+
    .. grid-item-card:: :fas:`fire` Pyrodigal
       :link: https://pyrodigal.readthedocs.io
 
-      Gene Finding (with Prodigal).
+      Prokaryotic Gene Finding (with Prodigal).
 
    .. grid-item-card:: :fas:`virus-covid` Pyrodigal-gv
       :link: https://github.com/althonos/pyrodigal-gv
@@ -178,7 +183,7 @@ The following Python libraries may be of interest for bioinformaticians.
    .. grid-item-card:: :fas:`table-cells` Scoring Matrices
       :link: https://scoring-matrices.readthedocs.io
 
-      Common scoring matrices for Cython.
+      Scoring matrices for Cython.
 
    .. grid-item-card:: :fas:`chain` Pyskani
       :link: https://pyskani.readthedocs.io
@@ -213,27 +218,27 @@ The following Python libraries may be of interest for bioinformaticians.
    .. grid-item-card:: :fas:`rocket` Mini3di
       :link: https://github.com/althonos/mini3di
 
-      Protein structure to 3di (with FoldSeek).
+      Protein structure to 3di in pure Python.
 
    .. grid-item-card:: :fas:`calculator` ``peptides.py``
       :link: https://peptides.readthedocs.io
 
-      Peptide descriptors.
+      Peptide descriptors for Python.
 
    .. grid-item-card:: :fas:`diagram-project` Pronto
       :link: https://pronto.readthedocs.io
 
-      Open Biomedical Ontologies in Python.
+      Open Biomedical Ontologies for Python.
 
    .. grid-item-card:: :fas:`box` NAFcodec
       :link: https://nafcodec.readthedocs.io
 
-      Nucleotide Archival Format in Python.
+      Nucleotide Archival Format for Python.
 
    .. grid-item-card:: :fas:`bank` ``gb-io.py``
       :link: https://gb-io.readthedocs.io
 
-      Fast GenBank parser written in Rust.
+      Fast GenBank parser for Python (with ``gb-io``).
 
 
 License
