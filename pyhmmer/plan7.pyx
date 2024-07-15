@@ -489,8 +489,8 @@ cdef class Background:
         """Create a new background model for the given ``alphabet``.
 
         Arguments:
-          alphabet (`pyhmmer.easel.Alphabet`): The alphabet to create the
-              background model with.
+          alphabet (`~pyhmmer.easel.Alphabet`): The alphabet to create 
+              the background model with.
           uniform (`bool`): Whether or not to create the null model with
               uniform frequencies. Defaults to `False`.
 
@@ -3041,9 +3041,9 @@ cdef class HMM:
         """Calculate the match occupancy for each match state.
 
         Returns:
-            `~easel.VectorF`: A vector of size :math:`M+1` containing the
-            probability that each match state is used in a sample glocal
-            path through the model.
+            `~pyhmmer.easel.VectorF`: A vector of size :math:`M+1` 
+            containing the probability that each match state is used 
+            in a sample glocal path through the model.
 
         .. versionadded:: 0.4.10
 

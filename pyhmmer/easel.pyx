@@ -476,9 +476,9 @@ cdef class GeneticCode:
             translation_table (`int`): The translation table to use. Check the
                 `Wikipedia <https://w.wiki/47wo>`_ page listing all genetic
                 codes for the available values.
-            nucleotide_alphabet (`pyhmmer.easel.Alphabet`): The nucleotide
+            nucleotide_alphabet (`~pyhmmer.easel.Alphabet`): The nucleotide
                 alphabet from which to translate the sequence.
-            amino_alphabet (`pyhmmer.easel.Alphabet`): The target alphabet
+            amino_alphabet (`~pyhmmer.easel.Alphabet`): The target alphabet
                 into which to translate the sequence.
 
         """
@@ -579,7 +579,7 @@ cdef class GeneticCode:
                 `bytearray`, `~pyhmmer.easel.VectorU8`, etc.) may be given.
 
         Returns:
-            `pyhmmer.easel.VectorU8`: The translation of the input
+            `~pyhmmer.easel.VectorU8`: The translation of the input
             sequence, as a raw digital sequence.
 
         Raises:
@@ -5095,13 +5095,13 @@ cdef class DigitalSequence(Sequence):
         """Translate the sequence using the given genetic code.
 
         Arguments:
-            genetic_code (`pyhmmer.easel.GeneticCode`): The genetic code to
+            genetic_code (`~pyhmmer.easel.GeneticCode`): The genetic code to
                 use for translating the sequence. If none provided, the
                 default uses the standard translation table (1) and expects
                 DNA sequences.
 
         Returns:
-            `pyhmmer.easel.DigitalSequence`: The translation of the
+            `~pyhmmer.easel.DigitalSequence`: The translation of the
             input sequence, in digital mode.
 
         Raises:
@@ -5716,17 +5716,17 @@ cdef class DigitalSequenceBlock(SequenceBlock):
         """Translate the sequence block using the given genetic code.
 
         Arguments:
-            genetic_code (`pyhmmer.easel.GeneticCode`): The genetic code to
+            genetic_code (`~pyhmmer.easel.GeneticCode`): The genetic code to
                 use for translating the sequence. If none provided, the
                 default uses the standard translation table (1) and expects
                 DNA sequences.
 
         Returns:
-            `pyhmmer.easel.DigitalSequenceBlock`: The translation of
+            `~pyhmmer.easel.DigitalSequenceBlock`: The translation of
             each sequence from the block, in digital mode.
 
         Raises:
-            `pyhmmer.errors.AlphabetMismatch`: When the ``genetic_code``
+            `~pyhmmer.errors.AlphabetMismatch`: When the ``genetic_code``
                 expects a different nucleotide alphabet than the one
                 currently for the sequences in the block.
             `ValueError`: When a sequence from the block could not be
@@ -5734,8 +5734,8 @@ cdef class DigitalSequenceBlock(SequenceBlock):
                 recognized, or because the sequence has an invalid length.
 
         See Also:
-            `pyhmmer.easel.DigitalSequence.translate` for more information
-            on how ambiguous nucleotides are handled.
+            `DigitalSequence.translate` for more information on how 
+            ambiguous nucleotides are handled.
 
         """
         assert self.alphabet is not None
