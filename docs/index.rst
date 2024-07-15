@@ -146,7 +146,7 @@ The following Python libraries may be of interest for bioinformaticians.
    :gutter: 1
 
    .. grid-item-card:: :fas:`diamond` PyHMMER
-      :link: https://pyrodigal.readthedocs.io
+      :link: https://pyhmmer.readthedocs.io
 
       Profile Hidden Markov Models (with HMMER).
 
@@ -245,9 +245,11 @@ License
 -------
 
 This library is provided under the `MIT License <https://choosealicense.com/licenses/mit/>`_.
-The HMMER3 and Easel code is available under
-the `BSD 3-clause <https://choosealicense.com/licenses/bsd-3-clause/>`_ license,
-which allows redistribution of their sources in the ``pyhmmer`` distribution.
+The Easel and HMMER3 codes are available under
+the `BSD <https://choosealicense.com/licenses/bsd-2-clause/>`_ and 
+`BSD 3-clause <https://choosealicense.com/licenses/bsd-3-clause/>`_ licenses
+respectively, which both allow redistribution of the sources in the 
+``pyhmmer`` distribution. See the :doc:`Copyright Notice <guide/copyright>` section for more information.
 
 *This project is in no way not affiliated, sponsored, or otherwise endorsed by
 the original* `HMMER <http://hmmer.org>`_ *authors. It was developed by*
