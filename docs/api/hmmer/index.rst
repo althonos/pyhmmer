@@ -6,8 +6,8 @@ HMMER
 .. automodule:: pyhmmer.hmmer
 
 
-Profile Searches
-----------------
+Sequence Searches
+-----------------
 
 .. toctree::
     :hidden:
@@ -21,8 +21,8 @@ Profile Searches
     hmmscan
 
 
-Sequence Searches
------------------
+Profile Searches
+----------------
 
 .. toctree::
     :hidden:
