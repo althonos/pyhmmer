@@ -1,5 +1,8 @@
-PyHMMER |Stars|
-===============
+|Logo| PyHMMER |Stars|
+======================
+
+.. |Logo| image:: /_images/logo.png
+   :scale: 40%
 
 .. |Stars| image:: https://img.shields.io/github/stars/althonos/pyhmmer.svg?style=social&maxAge=3600&label=Star
    :target: https://github.com/althonos/pyhmmer/stargazers

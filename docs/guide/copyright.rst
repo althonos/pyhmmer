@@ -4,7 +4,7 @@ Copyright Notice
 PyHMMER
 -------
 
-The PyHMMER library is developed under the MIT license:
+The PyHMMER library is developed under the MIT license::
 
     Copyright (c) 2020-2024 Martin Larralde <martin.larralde@embl.de>
 
@@ -35,7 +35,7 @@ Easel
 -----
 
 PyHMMER distributes, builds and links to code from the Easel library, 
-redistributed under the terms of the BSD license:
+redistributed under the terms of the BSD license::
 
     Copyright (C) 1990-2023 Sean R. Eddy
     Copyright (C) 2015-2023 President and Fellows of Harvard College
@@ -112,7 +112,7 @@ HMMER
 -----
 
 PyHMMER distributes, builds and links to code from the HMMER software,
-redistributed under the terms of the BSD-3-clause license:
+redistributed under the terms of the BSD-3-clause license::
 
     Copyright (C) 1992-2023 Sean R. Eddy
     Copyright (C) 2015-2023 President and Fellows of Harvard College
