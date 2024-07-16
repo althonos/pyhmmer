@@ -190,6 +190,8 @@ napoleon_use_rtype = False
 autoclass_content = "class"
 autodoc_member_order = 'groupwise'
 autosummary_generate = []
+autodoc_typehints = 'none'
+autodoc_class_signature = 'separated'
 
 # -- Options for intersphinx extension ---------------------------------------
 

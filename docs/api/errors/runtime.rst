@@ -1,6 +1,8 @@
 Runtime Errors
 --------------
 
+.. currentmodule:: pyhmmer.errors
+
 .. autoexception:: UnexpectedError(RuntimeError)
    :special-members: __init__
    :members:

@@ -1,6 +1,7 @@
 Value Errors
 ------------
 
+.. currentmodule:: pyhmmer.errors
 
 .. autoexception:: AlphabetMismatch(ValueError)
    :special-members: __init__
