@@ -1,5 +1,5 @@
-Daemon
-======
+Daemon (`pyhmmer.daemon`)
+=========================
 
 .. currentmodule:: pyhmmer.daemon
 

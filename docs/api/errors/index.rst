@@ -1,5 +1,5 @@
-Errors
-======
+Errors (`pyhmmer.errors`)
+=========================
 
 .. currentmodule:: pyhmmer.errors
 

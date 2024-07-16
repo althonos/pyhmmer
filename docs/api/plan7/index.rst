@@ -1,5 +1,5 @@
-Plan7
-=====
+Plan7 (`pyhmmer.plan7`)
+=======================
 
 .. currentmodule:: pyhmmer.plan7
 

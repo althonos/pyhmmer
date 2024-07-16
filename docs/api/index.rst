@@ -9,8 +9,8 @@ This section contains a complete reference of the API of the different
 .. toctree::
    :maxdepth: 2
 
-   HMMER <hmmer/index>
-   Easel <easel/index>
-   Plan7 <plan7/index>
-   Daemon <daemon/index>
-   Errors <errors/index>
+   hmmer/index
+   easel/index
+   plan7/index
+   daemon/index
+   errors/index

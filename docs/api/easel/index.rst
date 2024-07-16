@@ -1,5 +1,5 @@
-Easel
-=====
+Easel (`pyhmmer.easel`)
+=======================
 
 .. currentmodule:: pyhmmer.easel
 

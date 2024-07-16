@@ -1,5 +1,5 @@
-HMMER
-=====
+HMMER (`pyhmmer.hmmer`)
+=======================
 
 .. currentmodule:: pyhmmer.hmmer
 
