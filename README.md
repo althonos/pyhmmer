@@ -50,7 +50,7 @@ HMMER internals, which has the following advantages over CLI wrappers
   loaded in memory, for instance because you obtained them from another
   Python library (such as [Pyrodigal](https://github.com/althonos/pyrodigal)
   or [Biopython](https://biopython.org/)).
-- **no output formatting**: HMMER3 is notorious for its numerous output files
+- **no output parsing**: HMMER3 is notorious for its numerous output files
   and its fixed-width tabular output, which is hard to parse (even
   [`Bio.SearchIO.HmmerIO`](https://biopython.org/docs/dev/api/Bio.SearchIO.HmmerIO.html)
   is struggling on some sequences).

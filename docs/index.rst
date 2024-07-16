@@ -1,5 +1,8 @@
-PyHMMER |Stars|
-===============
+|Logo| PyHMMER |Stars|
+======================
+
+.. |Logo| image:: /_images/logo.png
+   :scale: 40%
 
 .. |Stars| image:: https://img.shields.io/github/stars/althonos/pyhmmer.svg?style=social&maxAge=3600&label=Star
    :target: https://github.com/althonos/pyhmmer/stargazers
@@ -76,41 +79,45 @@ the `Eddy/Rivas Laboratory <http://eddylab.org/>`_ at Harvard University.
 language, that provides bindings to HMMER3. It directly interacts with the
 HMMER internals, which has the following advantages over CLI wrappers:
 
-- **single dependency**:
-  If your software or your analysis pipeline is
-  distributed as a Python package, you can add `pyhmmer` as a dependency to
-  your project, and stop worrying about the HMMER binaries being properly
-  setup on the end-user machine.
-- **no intermediate files**:
-  Everything happens in memory, in Python objects
-  you have control on, making it easier to pass your inputs to HMMER without
-  needing to write them to a temporary file. Output retrieval is also done
-  in memory, via instances of the `pyhmmer.plan7.TopHits` class.
-- **no input formatting**:
-  The Easel object model is exposed in the `pyhmmer.easel` module, and you
-  have the possibility to build a `~pyhmmer.easel.Sequence` object yourself to
-  pass to the HMMER pipeline. This is useful if your sequences are already
-  loaded in memory, for instance because you obtained them from another
-  Python library (such as `Pyrodigal <https://github.com/althonos/pyrodigal>`_
-  or `Biopython <https://biopython.org/>`_).
-- **no output formatting**:
-  HMMER3 is notorious for its numerous output files
-  and its fixed-width tabular output, which is hard to parse (even
-  `Bio.SearchIO.HmmerIO` is struggling on some sequences).
-- **efficient**:
-  Using `pyhmmer` to launch ``hmmsearch`` on sequences and HMMs in disk storage
-  is typically faster than directly using the ``hmmsearch`` binary.
-  `pyhmmer.hmmer.hmmsearch` uses a different parallelisation strategy compared to
-  the ``hmmsearch`` binary from HMMER, which helps getting the most of
-  multiple CPUs.
+.. grid:: 1 2 3 3
+   :gutter: 1
 
+   .. grid-item-card:: :fas:`battery-full` Batteries-included
+
+      Just add ``pyhmmer`` as a ``pip`` or ``conda`` dependency, no need
+      for the HMMER binaries or any external dependency.
+
+   .. grid-item-card:: :fas:`screwdriver-wrench` Flexible
+
+      Create input `~pyhmmer.easel.Sequence` and `~pyhmmer.plan7.HMM` objects
+      with the :doc:`API <api/index>`, or load them from a file.
+
+   .. grid-item-card:: :fas:`gears` Practical
+
+      Retrieve nested results as dedicated `~pyhmmer.plan7.TopHits` objects,
+      write them to a file, or use them for further Python analysis.
+
+   .. grid-item-card:: :fas:`gauge-high` Fast
+
+      Run `hmmsearch` in parallel using an efficient threading model, which
+      :doc:`outperforms <guide/benchmarks>` HMMER in some typical usecases.
+
+   .. grid-item-card:: :fas:`dolly` Shareable
+
+      :doc:`Distribute and load <examples/embed_hmms>` `~pyhmmer.plan7.HMM`
+      objects from inside a Python package to facilitate sharing analyses.
+
+   .. grid-item-card:: :fas:`eye` Transparent
+
+      Access the internals of a `~pyhmmer.plan7.HMM`, inspect the attributes
+      and manually edit transitions or emissions scores.
 
 Setup
 -----
 
 Run ``pip install pyhmmer`` in a shell to download the latest release and all
 its dependencies from PyPi, or have a look at the
-:doc:`Installation page <install>` to find other ways to install ``pyhmmer``.
+:doc:`Installation page <guide/install>` to find other ways to install ``pyhmmer``.
 
 
 Citation
@@ -119,7 +126,7 @@ Citation
 PyHMMER is scientific software, with a
 `published paper <https://doi.org/10.1093/bioinformatics/btad214>`_
 in the `Bioinformatics <https://academic.oup.com/bioinformatics>`_. Check the
-:doc:`Publications page <publications>` to see how to cite PyHMMER.
+:doc:`Publications page <guide/publications>` to see how to cite PyHMMER.
 
 
 Library
@@ -128,38 +135,124 @@ Library
 .. toctree::
    :maxdepth: 2
 
-   Installation <install>
+   User Guide <guide/index>
    Examples <examples/index>
-   Performance <performance>
-   Contributing <contributing>
-   Publications <publications>
-   Benchmarks <benchmarks>
    API Reference <api/index>
-   Changelog <changes>
 
 
 Related Projects
 ----------------
 
-Building a HMM from scratch? Then you may be interested in the `PyFAMSA <https://pypi.org/project/pyfamsa/>`_
-package, providing bindings to `FAMSA <https://github.com/refresh-bio/FAMSA>`_,
-a very fast multiple sequence aligner. In addition, you may want to trim alignments:
-in that case, consider `PytrimAl <https://pypi.org/project/pytrimal>`_, which
-wraps `trimAl 2.0 <https://github.com/inab/trimal/tree/2.0_RC>`_.
+The following Python libraries may be of interest for bioinformaticians.
 
-If despite of all the advantages listed earlier, you would rather use HMMER
-through its CLI, this package will not be of great help. You can instead check
-the `hmmer-py <https://github.com/EBI-Metagenomics/hmmer-py>`_ package developed
-by `Danilo Horta <https://github.com/horta>`_ at the `EMBL-EBI <https://www.ebi.ac.uk>`_.
+.. grid:: 1 3 5 5
+   :gutter: 1
+
+   .. grid-item-card:: :fas:`diamond` PyHMMER
+      :link: https://pyhmmer.readthedocs.io
+
+      Profile Hidden Markov Models (with HMMER).
+
+   .. grid-item-card:: :fas:`fire` Pyrodigal
+      :link: https://pyrodigal.readthedocs.io
+
+      Prokaryotic Gene Finding (with Prodigal).
+
+   .. grid-item-card:: :fas:`virus-covid` Pyrodigal-gv
+      :link: https://github.com/althonos/pyrodigal-gv
+
+      Pyrodigal for Giant Viruses.
+
+   .. grid-item-card:: :fas:`align-center` PyFAMSA
+      :link: https://pyfamsa.readthedocs.io
+
+      Multiple Sequence Alignment (with FAMSA).
+
+   .. grid-item-card:: :fas:`scissors` PytrimAl
+      :link: https://pytrimal.readthedocs.io
+
+      Alignment Trimming (with trimAl).
+
+   .. grid-item-card:: :fas:`music` LightMotif
+      :link: https://lightmotif.readthedocs.io
+
+      Platform-accelerated motif scoring.
+
+   .. grid-item-card:: :fas:`knife;fa-custom` Diced
+      :link: https://diced.readthedocs.io
+
+      CRISPR Detection (with MinCED).
+
+   .. grid-item-card:: :fas:`table-cells` Scoring Matrices
+      :link: https://scoring-matrices.readthedocs.io
+
+      Scoring matrices for Cython.
+
+   .. grid-item-card:: :fas:`chain` Pyskani
+      :link: https://pyskani.readthedocs.io
+
+      Average Nucleotide Identity (with skani).
+
+   .. grid-item-card:: :fas:`forward-fast` PyFastANI
+      :link: https://pyfastani.readthedocs.io
+
+      Average Nucleotide Identity (with FastANI).
+
+   .. grid-item-card:: :fas:`magnifying-glass` PyJess
+      :link: https://pyjess.readthedocs.io
+
+      Geometric Template Matching (with Jess).
+
+   .. grid-item-card:: :fas:`repeat` PyTantan
+      :link: https://pytantan.readthedocs.io
+
+      Tandem Repeat Masking (with Tantan).
+
+   .. grid-item-card:: :fas:`gem` PyOpal
+      :link: https://pyopal.readthedocs.io
+
+      Query/Database Aligner (with Opal).
+
+   .. grid-item-card:: :fas:`sword;fa-custom` PySWRD
+      :link: https://pyswrd.readthedocs.io
+
+      Database Heuristic Filtering (with SWORD).
+
+   .. grid-item-card:: :fas:`rocket` Mini3di
+      :link: https://github.com/althonos/mini3di
+
+      Protein structure to 3di in pure Python.
+
+   .. grid-item-card:: :fas:`calculator` ``peptides.py``
+      :link: https://peptides.readthedocs.io
+
+      Peptide descriptors for Python.
+
+   .. grid-item-card:: :fas:`diagram-project` Pronto
+      :link: https://pronto.readthedocs.io
+
+      Open Biomedical Ontologies for Python.
+
+   .. grid-item-card:: :fas:`box` NAFcodec
+      :link: https://nafcodec.readthedocs.io
+
+      Nucleotide Archival Format for Python.
+
+   .. grid-item-card:: :fas:`bank` ``gb-io.py``
+      :link: https://gb-io.readthedocs.io
+
+      Fast GenBank parser for Python (with ``gb-io``).
 
 
 License
 -------
 
 This library is provided under the `MIT License <https://choosealicense.com/licenses/mit/>`_.
-The HMMER3 and Easel code is available under
-the `BSD 3-clause <https://choosealicense.com/licenses/bsd-3-clause/>`_ license,
-which allows redistribution of their sources in the ``pyhmmer`` distribution.
+The Easel and HMMER3 codes are available under
+the `BSD <https://choosealicense.com/licenses/bsd-2-clause/>`_ and 
+`BSD 3-clause <https://choosealicense.com/licenses/bsd-3-clause/>`_ licenses
+respectively, which both allow redistribution of the sources in the 
+``pyhmmer`` distribution. See the :doc:`Copyright Notice <guide/copyright>` section for more information.
 
 *This project is in no way not affiliated, sponsored, or otherwise endorsed by
 the original* `HMMER <http://hmmer.org>`_ *authors. It was developed by*

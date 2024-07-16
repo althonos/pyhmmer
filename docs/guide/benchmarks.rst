@@ -16,7 +16,7 @@ the times for pressed HMMs, and dashed-lines the times for HMMs in text format.*
 v0.7.0 - 2022-12-04
 -------------------
 
-.. image:: _images/bench-v0.7.0.svg
+.. image:: /_images/bench-v0.7.0.svg
 
 Collections for storing HMMs and Sequences were updated to allow iterating 
 without the GIL. For `hmmscan`, the `OptimizedProfileBlock` store an array 
@@ -27,7 +27,7 @@ across different threads.
 v0.5.0 - 2022-03-14
 -------------------
 
-.. image:: _images/bench-v0.5.0.svg
+.. image:: /_images/bench-v0.5.0.svg
 
 A new dedicated collection has been added to store the target sequences of a
 `~pyhmmer.plan7.Pipeline`, saving some overhead if the same target sequences
@@ -37,7 +37,7 @@ are reused with multiple queries.
 v0.4.5 - 2021-07-19
 -------------------
 
-.. image:: _images/bench-v0.4.5.svg
+.. image:: /_images/bench-v0.4.5.svg
 
 By adding an extra requirement on the reference sequences passed to a `~pyhmmer.plan7.Pipeline`,
 the Cython code can now evaluate a single HMM against the entirety of the reference
@@ -59,7 +59,7 @@ optimal number of 5+1 threads (42.2s).
 v0.4.0 - 2021-06-05
 -------------------
 
-.. image:: _images/bench-v0.4.0.svg
+.. image:: /_images/bench-v0.4.0.svg
 
 The overhead of PyHMMER has been reduced, and has a much smaller effect when
 using a high number of threads.
@@ -79,7 +79,7 @@ speed up insertions by worker threads.
 v0.3.0 - 2021-03-11
 -------------------
 
-.. image:: _images/bench-v0.3.0.svg
+.. image:: /_images/bench-v0.3.0.svg
 
 The small number of proteins renders the HMMER parallelisation useless for
 any number of worker threads higher than 2 (because of the block size being

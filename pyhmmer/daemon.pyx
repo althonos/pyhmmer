@@ -107,7 +107,7 @@ cdef class Client:
         str address=DEFAULT_ADDRESS,
         uint16_t port=DEFAULT_PORT,
     ):
-        """__init__(self, address="127.0.0.1", port=51371)\n--
+        """__init__(self, address="127.0.0.1", port=51371)\n--\n
 
         Create a new `Client` connecting to the given HMMER daemon server.
 
@@ -144,10 +144,7 @@ cdef class Client:
     # --- C Methods ----------------------------------------------------------
 
     cdef bytearray _recvall(self, size_t message_size):
-        """_recvall(self, message_size)\n--
-
-        Receive exactly ``message_size`` bytes from ``self.socket``.
-
+        """Receive exactly ``message_size`` bytes from ``self.socket``.
         """
         cdef bytearray buffer = bytearray(message_size)
         cdef object    view   = memoryview(buffer)
@@ -169,9 +166,7 @@ cdef class Client:
         Pipeline pli,
         p7_pipemodes_e mode,
     ):
-        """_client(self, query, db, pli, mode)\n--
-
-        A generic implementation of the steps to communicate with the server.
+        """A generic implementation of the steps to communicate with the server.
 
         Arguments:
             query (`bytes`): A buffer storing the serialized query in
@@ -316,18 +311,12 @@ cdef class Client:
     # --- Python Methods -----------------------------------------------------
 
     def connect(self):
-        """connect(self)\n--
-
-        Connect the client to the HMMER daemon server.
-
+        """Connect the client to the HMMER daemon server.
         """
         self.socket.connect((self.address, self.port))
 
     def close(self):
-        """close(self)\n--
-
-        Close the connection to the HMMER daemon server.
-
+        """Close the connection to the HMMER daemon server.
         """
         self.socket.close()
 
@@ -338,9 +327,7 @@ cdef class Client:
         list ranges = None,
         **options
     ):
-        """search_seq(self, query, db=1, ranges=None, **options)\n--
-
-        Search the HMMER daemon database with a query sequence.
+        """Search the HMMER daemon database with a query sequence.
 
         Arguments:
             query (`~pyhmmer.easel.Sequence`): The sequence object to use
@@ -381,9 +368,7 @@ cdef class Client:
         list ranges = None,
         **options
     ):
-        """search_hmm(self, query, db=1, ranges=None, **options)\n--
-
-        Search the HMMER daemon database with a query HMM.
+        """Search the HMMER daemon database with a query HMM.
 
         Arguments:
             query (`~pyhmmer.easel.MSA`): The profile HMM object to use to
@@ -418,9 +403,7 @@ cdef class Client:
         return hits
 
     def scan_seq(self, Sequence query, uint64_t db = 1, **options):
-        """scan_seq(self, query, db=1, **options)\n--
-
-        Search the HMMER daemon database with a query sequence.
+        """Search the HMMER daemon database with a query sequence.
 
         Arguments:
             query (`~pyhmmer.easel.Sequence`): The sequence object to use
@@ -462,9 +445,7 @@ cdef class Client:
         object select_hits = None,
         **options
     ):
-        """iterate_seq(self, query, db=1, ranges=None, builder=None, select_hits=None, **options)\n--
-
-        Search iteratively against the daemon database with a query sequence.
+        """Search iteratively against the daemon database with a query sequence.
 
         Arguments:
             query (`~pyhmmer.easel.Sequence`): The sequence object to use
@@ -517,9 +498,7 @@ cdef class Client:
         object select_hits = None,
         **options
     ):
-        """iterate_hmm(self, query, db=1, ranges=None, builder=None, select_hits=None, **options)\n--
-
-        Search iteratively against the daemon database with a query HMM.
+        """Search iteratively against the daemon database with a query HMM.
 
         Arguments:
             query (`~pyhmmer.plan7.HMM`): The HMM object to use to query the
@@ -611,6 +590,15 @@ cdef class IterativeSearch(pyhmmer.plan7.IterativeSearch):
         object select_hits = None,
         dict options = None
     ):
+        """__init__(self, client, query, db, builder, ranges=None, select_hits=None, options=None)\n--\n
+
+        Create a new iterative search against the HMMER daemon.
+
+        Hint:
+            Use the `Client.iterate_hmm` method instead of creating this
+            object directly.
+
+        """
         self.client = client
         self.builder = builder
         self.select_hits = select_hits

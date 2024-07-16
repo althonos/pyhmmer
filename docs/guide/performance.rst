@@ -77,7 +77,7 @@ we annotated proteins from representative genomes of the
 `Pfam <http://pfam.xfam.org/>`_ collection of HMMs. ``hmmsearch`` runs
 are shown in green, ``pyhmmer`` runs in blue.
 
-.. image:: _images/progenomes-v0.4.5.svg
+.. image:: /_images/progenomes-v0.4.5.svg
 
 *The proteins of each genomes were extracted into one FASTA file per genome,
 and we measured the runtime of either the* ``hmmsearch`` *binary or the*

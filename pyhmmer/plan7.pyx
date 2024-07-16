@@ -486,11 +486,13 @@ cdef class Background:
         self.uniform = False
 
     def __init__(self, Alphabet alphabet, bint uniform=False):
-        """Create a new background model for the given ``alphabet``.
+        """__init__(self, alphabet, uniform=False)\n--\n
+        
+        Create a new background model for the given ``alphabet``.
 
         Arguments:
-          alphabet (`pyhmmer.easel.Alphabet`): The alphabet to create the
-              background model with.
+          alphabet (`~pyhmmer.easel.Alphabet`): The alphabet to create 
+              the background model with.
           uniform (`bool`): Whether or not to create the null model with
               uniform frequencies. Defaults to `False`.
 
@@ -655,7 +657,9 @@ cdef class Builder:
         object window_length=None,
         object window_beta=None,
     ):
-        """Create a new sequence builder with the given configuration.
+        """__init__(self, alphabet, *, architecture="fast", weighting="pb", effective_number="entropy", prior_scheme="alphabet", symfrac=0.5, fragthres=0.5, wid=0.62, esigma=45.0, eid=0.62, EmL=200, EmN=200, EvL=200, EvN=200, EfL=100, EfN=200, Eft=0.04, seed=42, ere=None, popen=None, pextend=None, score_matrix=None, window_length=None, window_beta=None)\n--\n
+        
+        Create a new sequence builder with the given configuration.
 
         Arguments:
             alphabet (`~pyhmmer.easel.Alphabet`): The alphabet the builder
@@ -1157,6 +1161,8 @@ cdef class Cutoffs:
         self._is_profile = True
 
     def __init__(self, object owner):
+        """__init__(self, owner)\n--\n
+        """
         cdef str ty
         if isinstance(owner, Profile):
             self._cutoffs = &(<Profile> owner)._gm.cutoff
@@ -1693,6 +1699,8 @@ cdef class EvalueParameters:
         self._evparams = NULL
 
     def __init__(self, object owner):
+        """__init__(self, owner)\n--\n
+        """
         cdef str ty
         if isinstance(owner, Profile):
             self._evparams = &(<Profile> owner)._gm.evparam
@@ -2276,7 +2284,9 @@ cdef class HMM:
         self._hmm = NULL
 
     def __init__(self, Alphabet alphabet not None, int M, bytes name not None):
-        """Create a new HMM from scratch.
+        """__init__(self, alphabet, M, name)\n--\n
+        
+        Create a new HMM from scratch.
 
         Arguments:
             alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
@@ -2755,7 +2765,7 @@ cdef class HMM:
         Columns correspond to the following transitions, in order:
         :math:`M_n \to M_{n+1}`, :math:`M_n \to I_n`, :math:`M_n \to D_{n+1}`,
         :math:`I_n \to I_n`, :math:`I_n \to M_{n+1}`, :math:`D_n \to D_{n+1}`,
-        :math:`D_n \to M_{n+1}`. Use the `~pyhmmer.plan7.Transitions` enum
+        :math:`D_n \to M_{n+1}`. Use the `pyhmmer.plan7.Transitions` enum
         instead of hardcoded indices to make your code more legible.
 
         Example:
@@ -3041,9 +3051,9 @@ cdef class HMM:
         """Calculate the match occupancy for each match state.
 
         Returns:
-            `~easel.VectorF`: A vector of size :math:`M+1` containing the
-            probability that each match state is used in a sample glocal
-            path through the model.
+            `~pyhmmer.easel.VectorF`: A vector of size :math:`M+1` 
+            containing the probability that each match state is used 
+            in a sample glocal path through the model.
 
         .. versionadded:: 0.4.10
 
@@ -3495,7 +3505,9 @@ cdef class HMMFile:
         self._name = None
 
     def __init__(self, object file, bint db = True):
-        """Create a new HMM reader from the given file.
+        """__init__(self, file, db=True)\n--\n
+        
+        Create a new HMM reader from the given file.
 
         Arguments:
             file (`str`, `bytes`, `os.PathLike` or file-like object): Either
@@ -3739,7 +3751,9 @@ cdef class HMMPressedFile:
         self._hfp = NULL
 
     def __init__(self, object file):
-        """Create a new pressed file from the given filename.
+        """__init__(self, file)\n--\n
+        
+        Create a new pressed file from the given filename.
 
         Arguments:
             file (`str`, `bytes` or `os.PathLike`): The path to the pressed
@@ -3949,6 +3963,8 @@ cdef class IterativeSearch:
         DigitalSequenceBlock targets,
         object select_hits = None,
     ):
+        """__init__(self, pipeline, builder, query, targets, select_hits=None)\n--\n
+        """
         self.pipeline = pipeline
         self.background = pipeline.background
         self.builder = builder
@@ -4051,7 +4067,9 @@ cdef class OptimizedProfile:
         self.alphabet = None
 
     def __init__(self, int M, Alphabet alphabet):
-        """Create a new optimized profile from scratch.
+        """__init__(self, M, alphabet)\n--\n
+        
+        Create a new optimized profile from scratch.
 
         Once allocated, you must call the `~OptimizedProfile.convert`
         method with a `~plan7.Profile` object. It's actually easier to
@@ -4644,6 +4662,11 @@ cdef class OptimizedProfileBlock:
         self.alphabet = alphabet
 
     def __init__(self, Alphabet alphabet, object iterable = ()):
+        """__init__(self, alphabet, iterable=())\n--\n
+
+        Create a new block from an iterable of `OptimizedProfile` objects.
+
+        """
         if self._block == NULL:
             self._block = p7_oprofile_CreateBlock(8)
             if self._block == NULL:
@@ -4894,6 +4917,8 @@ cdef class Offsets:
         self._offs  = NULL
 
     def __init__(self, object owner):
+        """__init__(self, owner)\n--\n
+        """
         cdef str ty
 
         if isinstance(owner, Profile):
@@ -5034,7 +5059,9 @@ cdef class Pipeline:
         object incdomT=None,
         str bit_cutoffs=None,
     ):
-        """Instantiate and configure a new accelerated comparison pipeline.
+        """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None, F1=0.02, F2=1e-3, F3=1e-5, E=10.0, T=None, domE=10.0, domT=None, incE=0.01, incT=None, incdomE=0.01, incdomT=None, bit_cutoffs=None)\n--\n
+        
+        Instantiate and configure a new accelerated comparison pipeline.
 
         Arguments:
             alphabet (`~pyhmmer.easel.Alphabet`): The biological alphabet the
@@ -6509,7 +6536,9 @@ cdef class LongTargetsPipeline(Pipeline):
         object window_beta=None,
         **kwargs,
     ):
-        """Instantiate and configure a new long targets pipeline.
+        """__init__(self, alphabet, background=None, *, F1=0.02, F2=3e-3, F3=3e-5, strand=None, B1=100, B2=240, B3=1000, block_length=0x40000, window_length=None, window_beta=None, **kwargs)\n--\n
+        
+        Instantiate and configure a new long targets pipeline.
 
         Arguments:
             alphabet (`~pyhmmer.easel.Alphabet`): The biological alphabet the
@@ -7282,7 +7311,9 @@ cdef class Profile:
         self.alphabet = None
 
     def __init__(self, int M, Alphabet alphabet):
-        """Create a new profile for the given ``alphabet``.
+        """__init__(self, M, alphabet)\n--\n
+        
+        Create a new profile for the given ``alphabet``.
 
         Arguments:
             M (`int`): The length of the profile, i.e. the number of nodes.
@@ -7582,7 +7613,8 @@ cdef class ScoreData:
         self._sd = NULL
 
     def __init__(self, OptimizedProfile om, Profile gm = None):
-
+        """__init__(self, om, gm=None)\n--\n
+        """
         cdef P7_PROFILE*  _gm = NULL if gm is None else gm._gm
         cdef P7_OPROFILE* _om = om._om
 
@@ -7646,7 +7678,10 @@ cdef class TopHits:
         memset(&self._pli, 0, sizeof(P7_PIPELINE))
 
     def __init__(self):
-        """Create an empty `TopHits` instance.
+        """__init__(self)\n--\n
+        
+        Create an empty `TopHits` instance.
+        
         """
         with nogil:
             # free allocated memory (in case __init__ is called more than once)
@@ -8592,7 +8627,9 @@ cdef class Trace:
         self.traces = None
 
     def __init__(self, posteriors=False):
-        """Create a new `Trace` object.
+        """__init__(self, posteriors=False)\n--\n
+        
+        Create a new `Trace` object.
 
         Arguments:
             posteriors (`bool`): Whether or not to allocate additional memory
@@ -8713,6 +8750,14 @@ cdef class Traces:
 
     def __dealloc__(self):
         libhmmer.p7_trace.p7_trace_DestroyArray(self._traces, self._ntraces)
+
+    def __init__(self):
+        """__init__(self)\n--\n
+
+        Create an empty list of traces.
+
+        """
+        pass
 
     def __len__(self):
         return self._ntraces

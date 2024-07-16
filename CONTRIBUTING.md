@@ -1,4 +1,4 @@
-# Contributing to pyHMMER
+# Contributing to PyHMMER
 
 For bug fixes or new features, please file an issue before submitting a
 pull request. If the change isn't trivial, it may be best to wait for
