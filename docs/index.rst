@@ -3,10 +3,11 @@
 
 .. |Logo| image:: /_images/logo.png
    :scale: 40%
+   :class: dark-light
 
 .. |Stars| image:: https://img.shields.io/github/stars/althonos/pyhmmer.svg?style=social&maxAge=3600&label=Star
    :target: https://github.com/althonos/pyhmmer/stargazers
-
+   :class: dark-light
 
 *Cython bindings and Python interface to* `HMMER3 <http://hmmer.org/>`_.
 
