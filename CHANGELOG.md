@@ -6,7 +6,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.13...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.14...HEAD
+
+
+## [v0.10.14] - 2024-07-16
+[v0.10.14]: https://github.com/althonos/pyhmmer/compare/v0.10.13...v0.10.14
+
+### Added
+- Detection of SSE flush modes to `setup.py` for possible performance gains on x86 platforms.
+
+### Changed
+- Migrate documentation to `pydata-sphinx-theme`.
+
+### Fixed
+- Documentation examples not using permanent resource links.
 
 
 ## [v0.10.13] - 2024-06-19
