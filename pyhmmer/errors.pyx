@@ -49,6 +49,8 @@ class UnexpectedError(RuntimeError):
     """
 
     def __init__(self, int code, str function):
+        """__init__(self, code, function)\n--\n
+        """
         self.code = code
         self.function = function
 
@@ -68,6 +70,8 @@ class AllocationError(MemoryError):
     """
 
     def __init__(self, str ctype, size_t itemsize, size_t count=1):
+        """__init__(self, ctype, itemsize, count=1)\n--\n
+        """
         self.ctype = ctype
         self.itemsize = itemsize
         self.count = count
@@ -89,6 +93,8 @@ class EaselError(RuntimeError):
     """
 
     def __init__(self, int code, str message):
+        """__init__(self, code, message)\n--\n
+        """
         self.code = code
         self.message = message
 
@@ -124,6 +130,8 @@ class AlphabetMismatch(ValueError):
     """
 
     def __init__(self, expected, actual=None):
+        """__init__(self, expected, actual=None)\n--\n
+        """
         super().__init__(self)
         self.expected = expected
         self.actual = actual
@@ -150,6 +158,8 @@ class ServerError(RuntimeError):
     """
 
     def __init__(self, int code, str message):
+        """__init__(self, code, message)\n--\n
+        """
         self.code = code
         self.message = message
 
@@ -176,6 +186,8 @@ class MissingCutoffs(ValueError):
     """
 
     def __init__(self, str model_name = None, str bit_cutoffs = None):
+        """__init__(self, model_name=None, bit_cutoffs=None)\n--\n
+        """
         self.model_name = model_name
         self.bit_cutoffs = bit_cutoffs
 
@@ -203,6 +215,8 @@ class InvalidParameter(ValueError):
     """
 
     def __init__(self, str name, object value, *, list choices=None, str hint=None):
+        """__init__(self, name, value, *, choices=None, hint=None)\n--\n
+        """
         self.name = name
         self.value = value
         self.choices = choices
@@ -241,6 +255,8 @@ class InvalidHMM(ValueError):
     """
 
     def __init__(self, object hmm, str message):
+        """__init__(self, hmm, message)\n--\n
+        """
         super().__init__(hmm, message)
         self.message = message
         self.hmm = hmm
