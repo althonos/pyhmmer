@@ -229,6 +229,7 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
 
   release:
+    permissions: write-all
     environment: GitHub Releases
     runs-on: ubuntu-latest
     if: "startsWith(github.ref, 'refs/tags/v')"
