@@ -155,6 +155,8 @@ html_context = {
     "doc_path": "docs",
 }
 
+html_favicon = '_images/favicon.ico'
+
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
