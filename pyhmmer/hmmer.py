@@ -1533,8 +1533,8 @@ if __name__ == "__main__":
                             print(
                                 hit.name.decode(),
                                 (hit.accession or b"-").decode(),
-                                (hits.query_name or b"-").decode(),
-                                (hits.query_accession or b"-").decode(),
+                                (hits.query.name or b"-").decode(),
+                                (hits.query.accession or b"-").decode(),
                                 hit.evalue,
                                 hit.score,
                                 hit.bias,
@@ -1655,8 +1655,8 @@ if __name__ == "__main__":
                             print(
                                 hit.name.decode(),
                                 (hit.accession or b"-").decode(),
-                                (hits.query_name or b"-").decode(),
-                                (hits.query_accession or b"-").decode(),
+                                (hits.query.name or b"-").decode(),
+                                (hits.query.accession or b"-").decode(),
                                 hit.evalue,
                                 hit.score,
                                 hit.bias,
