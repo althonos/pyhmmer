@@ -355,9 +355,7 @@ cdef class Client:
             txt = buffer.getvalue()
 
         hits = self._client(txt, db, ranges, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
-        hits._qname = query.name
-        hits._qacc = query.accession
-        hits._qlen = len(query)
+        hits._query = query
 
         return hits
 
@@ -396,9 +394,7 @@ cdef class Client:
             txt = buffer.getvalue()
 
         hits = self._client(txt, db, ranges, pli, p7_pipemodes_e.p7_SEARCH_SEQS)
-        hits._qname = query.name
-        hits._qacc = query.accession
-        hits._qlen = query.M
+        hits._query = query
 
         return hits
 
@@ -430,9 +426,7 @@ cdef class Client:
             txt = buffer.getvalue()
 
         hits = self._client(txt, db, None, pli, p7_pipemodes_e.p7_SCAN_MODELS)
-        hits._qname = query.name
-        hits._qacc = query.accession
-        hits._qlen = len(query)
+        hits._query = query
 
         return hits
 

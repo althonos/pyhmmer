@@ -7749,7 +7749,7 @@ cdef class TopHits:
             hits.append(offset)
 
         return {
-            "query": self.query,
+            "query": self._query,
             "unsrt": unsrt,
             "hit": hits,
             "Nalloc": self._th.Nalloc,
@@ -7815,7 +7815,7 @@ cdef class TopHits:
         cdef VectorU8 hit_state
 
         # record query name and accession
-        self.query = state["query"]
+        self._query = state["query"]
 
         # deallocate current data if needed
         if self._th != NULL:
@@ -7924,6 +7924,8 @@ cdef class TopHits:
         .. versionadded:: 0.6.1
 
         """
+        if self._query is None:
+            return None
         return self._query.name
 
     @property
@@ -7933,6 +7935,8 @@ cdef class TopHits:
         .. versionadded:: 0.6.1
 
         """
+        if self._query is None:
+            return None
         return self._query.accession
 
     @property
@@ -7942,6 +7946,8 @@ cdef class TopHits:
         .. versionadded:: 0.10.5
 
         """
+        if self._query is None:
+            return 0
         return self._query.M if isinstance(self._query, HMM) else len(self._query)
 
     @property
@@ -8214,9 +8220,7 @@ cdef class TopHits:
         cdef TopHits copy = TopHits.__new__(TopHits)
 
         # record query metatada
-        copy._qname = self._qname
-        copy._qacc = self._qacc
-        copy._qlen = self._qlen
+        copy._query = self._query
 
         with nogil:
             # copy pipeline configuration
@@ -8442,9 +8446,14 @@ cdef class TopHits:
         cdef FILE* file
         cdef str   fname
         cdef int   status
-        cdef char* unk    = b"-"
-        cdef char* qname  = unk if self._qname is None else <char*> self._qname
-        cdef char* qacc   = unk if self._qacc is None else <char*> self._qacc
+        cdef bytes qname  = b"-"
+        cdef bytes qacc   = b"-"
+
+        if self._query is not None:
+            if self._query.name is not None:
+                qname = self._query.name
+            if self._query.accession is not None:
+                qacc = self._query.accession
 
         file = fopen_obj(fh, "w")
         try:
@@ -8536,10 +8545,8 @@ cdef class TopHits:
             other_copy = other.copy()
 
             # just store the copy if merging inside an empty uninitialized `TopHits`
-            if merged._th.N == 0 and merged._qname is None and merged._qacc is None:
-                merged._qname = other._qname
-                merged._qacc = other._qacc
-                merged._qlen = other._qlen
+            if merged._th.N == 0 and merged._query is None:
+                merged._query = other._query
                 memcpy(&merged._pli, &other_copy._pli, sizeof(P7_PIPELINE))
                 merged._th, other_copy._th = other_copy._th, merged._th
                 continue
