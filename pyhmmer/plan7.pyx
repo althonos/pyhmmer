@@ -7924,6 +7924,12 @@ cdef class TopHits:
             Use ``TopHits.query`` to access the original query directly.
 
         """
+        warnings.warn(
+            "TopHits.query_name has been deprecated in v0.10.10 and will be "
+            "removed in v0.11.0, use TopHits.query to access the properties of "
+            "the original query object directly",
+            DeprecationWarning,
+        )
         if self._query is None:
             return None
         return self._query.name
@@ -7938,6 +7944,12 @@ cdef class TopHits:
             Use ``TopHits.query`` to access the original query directly.
 
         """
+        warnings.warn(
+            "TopHits.query_accession has been deprecated in v0.10.10 and will be "
+            "removed in v0.11.0, use TopHits.query to access the properties of "
+            "the original query object directly",
+            DeprecationWarning,
+        )
         if self._query is None:
             return None
         return self._query.accession
@@ -7952,6 +7964,12 @@ cdef class TopHits:
             Use ``TopHits.query`` to access the original query directly.
 
         """
+        warnings.warn(
+            "TopHits.query_length has been deprecated in v0.10.10 and will be "
+            "removed in v0.11.0, use TopHits.query to access the properties of "
+            "the original query object directly",
+            DeprecationWarning,
+        )
         if self._query is None:
             return 0
         return self._query.M if isinstance(self._query, HMM) else len(self._query)
@@ -7959,6 +7977,17 @@ cdef class TopHits:
     @property
     def query(self):
         """`object`: The query object these hits were obtained for.
+
+        The actual type of `TopHits.query` depends on the query that was given
+        to the `Pipeline`, or the `~pyhmmer.hmmer` function, that created the
+        object::
+
+        >>> hits = next(pyhmmer.hmmsearch(thioesterase, proteins))
+        >>> hits.query
+        <HMM alphabet=Alphabet.amino() M=243 name=b'Thioesterase'>
+
+        .. versionadded 0.10.10
+
         """
         return self._query
 
