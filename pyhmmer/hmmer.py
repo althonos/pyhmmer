@@ -81,9 +81,36 @@ _JACKHMMERQueryType = typing.Union[DigitalSequence, _AnyProfile]
 # `typing.Literal`` is only available in Python 3.8 and later
 if typing.TYPE_CHECKING:
     try:
-        from typing import Literal
+        from typing import Literal, TypedDict, Unpack
     except ImportError:
-        from typing_extensions import Literal  # type: ignore
+        from typing_extensions import Literal, TypedDict, Unpack  # type: ignore
+
+    from .plan7 import BIT_CUTOFFS
+
+    class PipelineOptions(TypedDict, total=False):
+        background: typing.Optional[Background]
+        bias_filter: bool
+        null2: bool
+        seed: int
+        Z: float
+        domZ: typing.Optional[float]
+        F1: float
+        F2: float
+        F3: float
+        E: float
+        T: typing.Optional[float]
+        domE: float
+        domT: typing.Optional[float]
+        incE: float
+        incT: typing.Optional[float]
+        incdomE: float
+        incdomT: typing.Optional[float]
+        bit_cutoffs: typing.Optional[BIT_CUTOFFS]
+
+    
+
+    
+
 
 # --- Result class -----------------------------------------------------------
 
@@ -189,7 +216,7 @@ class _BaseWorker(typing.Generic[_Q, _T, _R], threading.Thread):
         query_count: multiprocessing.Value,  # type: ignore
         kill_switch: threading.Event,
         callback: typing.Optional[typing.Callable[[_Q, int], None]],
-        options: typing.Dict[str, typing.Any],
+        options: "PipelineOptions",
         pipeline_class: typing.Type[Pipeline],
         alphabet: Alphabet,
         builder: typing.Optional[Builder] = None,
@@ -306,7 +333,7 @@ class _JACKHMMERWorker(
         query_count: multiprocessing.Value,  # type: ignore
         kill_switch: threading.Event,
         callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]],
-        options: typing.Dict[str, typing.Any],
+        options: PipelineOptions,
         pipeline_class: typing.Type[Pipeline],
         alphabet: Alphabet,
         builder: typing.Optional[Builder] = None,
@@ -445,7 +472,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
         alphabet: Alphabet = Alphabet.amino(),
         builder: typing.Optional[Builder] = None,
         timeout: int = 1,
-        **options,  # type: object
+        **options,  # type: Unpack[PipelineOptions]
     ) -> None:
         self.queries = queries
         self.targets: _T = targets
@@ -652,7 +679,7 @@ class _JACKHMMERDispatcher(
         max_iterations: typing.Optional[int] = 5,
         select_hits: typing.Optional[typing.Callable[["TopHits[_JACKHMMERQueryType]"], None]] = None,
         checkpoints: bool = False,
-        **options,  # type: object
+        **options,  # type: Unpack[PipelineOptions]
     ) -> None:
         super().__init__(
             queries=queries,
@@ -710,7 +737,7 @@ class _NHMMERDispatcher(
         alphabet: Alphabet = Alphabet.dna(),
         builder: typing.Optional[Builder] = None,
         timeout: int = 1,
-        **options,  # type: object
+        **options,  # type: Unpack[PipelineOptions]
     ) -> None:
         super().__init__(
             queries=queries,
@@ -786,12 +813,12 @@ class _SCANDispatcher(
 # --- hmmsearch --------------------------------------------------------------
 
 def hmmsearch(
-    queries: typing.Union[_P, typing.Iterable[_P]], #typing.Union[_SEARCHQueryType, typing.Iterable[_SEARCHQueryType]],
+    queries: typing.Union[_P, typing.Iterable[_P]],
     sequences: typing.Iterable[DigitalSequence],
     *,
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_P, int], None]] = None,
-    **options,  # type: object
+    **options,  # type: Unpack[PipelineOptions]
 ) -> typing.Iterator["TopHits[_P]"]:
     """Search HMM profiles against a sequence database.
 
@@ -889,7 +916,7 @@ def hmmsearch(
         alphabet=alphabet,
         builder=None,
         pipeline_class=Pipeline,
-        **options,  # type: ignore
+        **options,
     )
     return dispatcher.run()  # type: ignore
 
@@ -904,7 +931,7 @@ def phmmer(
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_M, int], None]] = None,
     builder: typing.Optional[Builder] = None,
-    **options,  # type: object
+    **options,  # type: Unpack[PipelineOptions]
 ) -> typing.Iterator["TopHits[_M]"]:
     """Search protein sequences against a sequence database.
 
@@ -983,7 +1010,7 @@ def phmmer(
         pipeline_class=Pipeline,
         alphabet=alphabet,
         builder=_builder,
-        **options,  # type: ignore
+        **options,
     )
     return dispatcher.run()  # type: ignore
 
@@ -1002,7 +1029,7 @@ def jackhmmer(
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
-    **options,  # type: object
+    **options,  # type: Unpack[PipelineOptions]
 ) -> typing.Iterator[typing.Iterable[IterationResult]]:
     ...
 
@@ -1018,7 +1045,7 @@ def jackhmmer(
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
-    **options,  # type: object
+    **options,  # type: Unpack[PipelineOptions]
 ) -> typing.Iterator[IterationResult]:
     ...
 
@@ -1034,7 +1061,7 @@ def jackhmmer(
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
-    **options,  # type: object
+    **options,  # type: Unpack[PipelineOptions]
 ) -> typing.Union[
     typing.Iterator[IterationResult], typing.Iterator[typing.Iterable[IterationResult]]
 ]:
@@ -1051,7 +1078,7 @@ def jackhmmer(
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
-    **options,  # type: object
+    **options,  # type: Unpack[PipelineOptions]
 ) -> typing.Union[
     typing.Iterator[IterationResult], typing.Iterator[typing.Iterable[IterationResult]]
 ]:
@@ -1171,7 +1198,7 @@ def nhmmer(
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_N, int], None]] = None,
     builder: typing.Optional[Builder] = None,
-    **options,  # type: object
+    **options,  # type: Unpack[PipelineOptions]
 ) -> typing.Iterator["TopHits[_N]"]:
     """Search nucleotide sequences against a sequence database.
 
@@ -1263,7 +1290,7 @@ def nhmmer(
         pipeline_class=LongTargetsPipeline,
         alphabet=alphabet,
         builder=_builder,
-        **options,  # type: ignore
+        **options,
     )
     return dispatcher.run()  # type: ignore
 
@@ -1400,7 +1427,7 @@ def hmmscan(
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
     background: typing.Optional[Background] = None,
-    **options,  # type: object
+    **options,  # type: Unpack[PipelineOptions]
 ) -> typing.Iterator["TopHits[DigitalSequence]"]:
     """Scan query sequences against a profile database.
 
