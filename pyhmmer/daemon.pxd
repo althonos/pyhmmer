@@ -22,7 +22,7 @@ cdef class Client:
     cdef bytearray _recvall(self, size_t message_size)
     cdef TopHits _client(
         self,
-        bytes query,
+        object query,
         uint64_t db,
         list ranges,
         Pipeline pli,
