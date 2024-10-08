@@ -19,6 +19,7 @@ import multiprocessing
 import os
 import operator
 import queue
+import sys
 import threading
 import time
 import typing
@@ -80,10 +81,16 @@ _JACKHMMERQueryType = typing.Union[DigitalSequence, _AnyProfile]
 
 # `typing.Literal`` is only available in Python 3.8 and later
 if typing.TYPE_CHECKING:
-    try:
-        from typing import Literal, TypedDict, Unpack
-    except ImportError:
-        from typing_extensions import Literal, TypedDict, Unpack  # type: ignore
+
+    if sys.version_info >= (3, 8):
+        from typing import Literal, TypedDict
+    else:
+        from typing_extensions import Literal, TypedDict  # type: ignore
+
+    if sys.version_info >= (3, 11):
+        from typing import Unpack
+    else:
+        from typing_extensions import Unpack
 
     from .plan7 import BIT_CUTOFFS, STRAND
 
@@ -116,9 +123,6 @@ if typing.TYPE_CHECKING:
         block_length: int
         window_length: typing.Optional[int]
         window_beta: typing.Optional[float]
-    
-
-    
 
 
 # --- Result class -----------------------------------------------------------
