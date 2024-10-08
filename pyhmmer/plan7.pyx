@@ -487,11 +487,11 @@ cdef class Background:
 
     def __init__(self, Alphabet alphabet, bint uniform=False):
         """__init__(self, alphabet, uniform=False)\n--\n
-        
+
         Create a new background model for the given ``alphabet``.
 
         Arguments:
-          alphabet (`~pyhmmer.easel.Alphabet`): The alphabet to create 
+          alphabet (`~pyhmmer.easel.Alphabet`): The alphabet to create
               the background model with.
           uniform (`bool`): Whether or not to create the null model with
               uniform frequencies. Defaults to `False`.
@@ -658,7 +658,7 @@ cdef class Builder:
         object window_beta=None,
     ):
         """__init__(self, alphabet, *, architecture="fast", weighting="pb", effective_number="entropy", prior_scheme="alphabet", symfrac=0.5, fragthres=0.5, wid=0.62, esigma=45.0, eid=0.62, EmL=200, EmN=200, EvL=200, EvN=200, EfL=100, EfN=200, Eft=0.04, seed=42, ere=None, popen=None, pextend=None, score_matrix=None, window_length=None, window_beta=None)\n--\n
-        
+
         Create a new sequence builder with the given configuration.
 
         Arguments:
@@ -2285,7 +2285,7 @@ cdef class HMM:
 
     def __init__(self, Alphabet alphabet not None, int M, bytes name not None):
         """__init__(self, alphabet, M, name)\n--\n
-        
+
         Create a new HMM from scratch.
 
         Arguments:
@@ -3051,8 +3051,8 @@ cdef class HMM:
         """Calculate the match occupancy for each match state.
 
         Returns:
-            `~pyhmmer.easel.VectorF`: A vector of size :math:`M+1` 
-            containing the probability that each match state is used 
+            `~pyhmmer.easel.VectorF`: A vector of size :math:`M+1`
+            containing the probability that each match state is used
             in a sample glocal path through the model.
 
         .. versionadded:: 0.4.10
@@ -3506,7 +3506,7 @@ cdef class HMMFile:
 
     def __init__(self, object file, bint db = True):
         """__init__(self, file, db=True)\n--\n
-        
+
         Create a new HMM reader from the given file.
 
         Arguments:
@@ -3752,7 +3752,7 @@ cdef class HMMPressedFile:
 
     def __init__(self, object file):
         """__init__(self, file)\n--\n
-        
+
         Create a new pressed file from the given filename.
 
         Arguments:
@@ -4068,7 +4068,7 @@ cdef class OptimizedProfile:
 
     def __init__(self, int M, Alphabet alphabet):
         """__init__(self, M, alphabet)\n--\n
-        
+
         Create a new optimized profile from scratch.
 
         Once allocated, you must call the `~OptimizedProfile.convert`
@@ -5060,7 +5060,7 @@ cdef class Pipeline:
         str bit_cutoffs=None,
     ):
         """__init__(self, alphabet, background=None, *, bias_filter=True, null2=True, seed=42, Z=None, domZ=None, F1=0.02, F2=1e-3, F3=1e-5, E=10.0, T=None, domE=10.0, domT=None, incE=0.01, incT=None, incdomE=0.01, incdomT=None, bit_cutoffs=None)\n--\n
-        
+
         Instantiate and configure a new accelerated comparison pipeline.
 
         Arguments:
@@ -5889,7 +5889,7 @@ cdef class Pipeline:
             raise TypeError(f"Expected DigitalSequenceBlock or SequenceFile, found {ty}")
         # record query metadata
         hits._query = query
-        return hits        
+        return hits
 
     cpdef TopHits search_seq(
         self,
@@ -6534,7 +6534,7 @@ cdef class LongTargetsPipeline(Pipeline):
         **kwargs,
     ):
         """__init__(self, alphabet, background=None, *, F1=0.02, F2=3e-3, F3=3e-5, strand=None, B1=100, B2=240, B3=1000, block_length=0x40000, window_length=None, window_beta=None, **kwargs)\n--\n
-        
+
         Instantiate and configure a new long targets pipeline.
 
         Arguments:
@@ -6563,6 +6563,8 @@ cdef class LongTargetsPipeline(Pipeline):
                 target sequences.
             window_length (`int`): The window length to use to compute
                 E-values.
+            window_beta (`float`): The tail mass at which window length
+                is determined.
             **kwargs: Any additional parameter will be passed to the
                 `~pyhmmer.plan7.Pipeline` constructor.
 
@@ -7068,7 +7070,7 @@ cdef class LongTargetsPipeline(Pipeline):
         else:
             ty = type(sequences).__name__
             raise TypeError(f"Expected DigitalSequenceBlock or SequenceFile, found {ty}")
-        
+
         hits._query = query
         return hits
 
@@ -7317,7 +7319,7 @@ cdef class Profile:
 
     def __init__(self, int M, Alphabet alphabet):
         """__init__(self, M, alphabet)\n--\n
-        
+
         Create a new profile for the given ``alphabet``.
 
         Arguments:
@@ -7682,9 +7684,9 @@ cdef class TopHits:
 
     def __init__(self, object query not None):
         """__init__(self, query)\n--\n
-        
+
         Create an empty `TopHits` instance.
-        
+
         """
         self._query = query
         with nogil:
@@ -8675,7 +8677,7 @@ cdef class Trace:
 
     def __init__(self, posteriors=False):
         """__init__(self, posteriors=False)\n--\n
-        
+
         Create a new `Trace` object.
 
         Arguments:

@@ -719,10 +719,6 @@ class Pipeline(object):
     def bit_cutoffs(self) -> typing.Optional[BIT_CUTOFFS]: ...
     @bit_cutoffs.setter
     def bit_cutoffs(self, bit_cutoffs: typing.Optional[BIT_CUTOFFS]) -> None: ...
-    @property
-    def strand(self) -> typing.Optional[STRAND]: ...
-    @strand.setter
-    def strand(self, strand: typing.Optional[STRAND]) -> None: ...
     def arguments(self) -> typing.List[str]: ...
     def clear(self) -> None: ...
     def search_hmm(
@@ -768,10 +764,13 @@ class LongTargetsPipeline(Pipeline):
         alphabet: Alphabet,
         background: typing.Optional[Background] = None,
         *,
+        strand: typing.Optional[STRAND] = None,
         B1: int = 100,
         B2: int = 240,
         B3: int = 1000,
         block_length: int = 1024 * 256,
+        window_length: typing.Optional[int] = None,
+        window_beta: typing.Optional[float] = None,
         bias_filter: bool = True,
         null2: bool = True,
         seed: typing.Optional[int] = None,
@@ -806,6 +805,14 @@ class LongTargetsPipeline(Pipeline):
     def strand(self) -> typing.Optional[STRAND]: ...
     @strand.setter
     def strand(self, strand: typing.Optional[STRAND]) -> None: ...
+    @property
+    def window_beta(self) -> float: ...
+    @window_beta.setter
+    def window_beta(self, window_beta: float) -> None: ...
+    @property
+    def window_length(self) -> typing.Optional[int]: ...
+    @window_length.setter
+    def window_length(self, window_length: typing.Optional[int]) -> None: ...
 
 class Profile(object):
     alphabet: Alphabet
