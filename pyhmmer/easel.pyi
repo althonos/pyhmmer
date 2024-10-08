@@ -582,7 +582,7 @@ class DigitalSequence(Sequence):
 
 # --- Sequence block ---------------------------------------------------------
 
-S = typing.TypeVar("S", bound=Sequence)
+S = typing.TypeVar("S", TextSequence, DigitalSequence)
 B = typing.TypeVar("B")
 
 class SequenceBlock(typing.MutableSequence[S], typing.Generic[S]):
@@ -626,7 +626,7 @@ class DigitalSequenceBlock(SequenceBlock[DigitalSequence]):
 
 # --- Sequence File ----------------------------------------------------------
 
-class SequenceFile(typing.ContextManager[SequenceFile], typing.Iterator[Sequence]):
+class SequenceFile(typing.Generic[S], typing.ContextManager[SequenceFile[S]], typing.Iterator[S]):
     _FORMATS: typing.ClassVar[typing.Dict[str, int]]
     alphabet: typing.Optional[Alphabet]
     name: typing.Optional[str]
@@ -636,24 +636,35 @@ class SequenceFile(typing.ContextManager[SequenceFile], typing.Iterator[Sequence
     ) -> Sequence: ...
     @classmethod
     def parseinto(cls, seq: Sequence, buffer: BUFFER, format: str) -> Sequence: ...
+    @typing.overload
     def __init__(
-        self,
+        self: SequenceFile[DigitalSequence],
         file: typing.Union[typing.AnyStr, os.PathLike[typing.AnyStr], typing.BinaryIO],
         format: typing.Optional[str] = None,
         *,
         ignore_gaps: bool = False,
-        digital: bool = False,
+        digital: Literal[True],
         alphabet: typing.Optional[Alphabet] = None,
     ) -> None: ...
-    def __enter__(self) -> SequenceFile: ...
+    @typing.overload
+    def __init__(
+        self: SequenceFile[TextSequence],
+        file: typing.Union[typing.AnyStr, os.PathLike[typing.AnyStr], typing.BinaryIO],
+        format: typing.Optional[str] = None,
+        *,
+        ignore_gaps: bool = False,
+        digital: Literal[False] = False,
+        alphabet: typing.Optional[Alphabet] = None,
+    ) -> None: ...
+    def __enter__(self) -> SequenceFile[S]: ...
     def __exit__(
         self,
         exc_type: typing.Optional[typing.Type[BaseException]],
         exc_value: typing.Optional[BaseException],
         traceback: typing.Optional[types.TracebackType],
     ) -> bool: ...
-    def __iter__(self) -> SequenceFile: ...
-    def __next__(self) -> Sequence: ...
+    def __iter__(self) -> SequenceFile[S]: ...
+    def __next__(self) -> S: ...
     def __repr__(self) -> str: ...
     @property
     def closed(self) -> bool: ...
@@ -663,15 +674,15 @@ class SequenceFile(typing.ContextManager[SequenceFile], typing.Iterator[Sequence
     def format(self) -> str: ...
     def read(
         self, skip_info: bool = False, skip_sequence: bool = False
-    ) -> typing.Optional[Sequence]: ...
+    ) -> typing.Optional[S]: ...
     def readinto(
         self, seq: Sequence, skip_info: bool = False, skip_sequence: bool = False
-    ) -> typing.Optional[Sequence]: ...
+    ) -> typing.Optional[S]: ...
     def read_block(
         self,
         sequences: typing.Optional[int] = None,
         residues: typing.Optional[int] = None,
-    ) -> SequenceBlock[Sequence]: ...
+    ) -> SequenceBlock[S]: ...
     def rewind(self) -> None: ...
     def close(self) -> None: ...
     def guess_alphabet(self) -> typing.Optional[Alphabet]: ...

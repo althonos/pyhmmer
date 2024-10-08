@@ -724,18 +724,18 @@ class Pipeline(object):
     def search_hmm(
         self,
         query: typing.Union[HMM, Profile, OptimizedProfile],
-        sequences: typing.Union[DigitalSequenceBlock, SequenceFile],
+        sequences: typing.Union[DigitalSequenceBlock, SequenceFile[DigitalSequence]],
     ) -> TopHits[typing.Union[HMM, Profile, OptimizedProfile]]: ...
     def search_msa(
         self,
         query: DigitalMSA,
-        sequences: typing.Union[DigitalSequenceBlock, SequenceFile],
+        sequences: typing.Union[DigitalSequenceBlock, SequenceFile[DigitalSequence]],
         builder: typing.Optional[Builder] = None,
     ) -> TopHits[DigitalMSA]: ...
     def search_seq(
         self,
         query: DigitalSequence,
-        sequences: typing.Union[DigitalSequenceBlock, SequenceFile],
+        sequences: typing.Union[DigitalSequenceBlock, SequenceFile[DigitalSequence]],
         builder: typing.Optional[Builder] = None,
     ) -> TopHits[DigitalSequence]: ...
     def scan_seq(
