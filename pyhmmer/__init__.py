@@ -17,7 +17,6 @@ References:
     :doi:`10.1093/bioinformatics/btad214`. :pmid:`37074928`.
 
 """
-
 import collections.abc as _collections_abc
 import contextlib as _contextlib
 import os as _os
