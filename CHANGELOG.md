@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 [Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.14...HEAD
 
 
+## [v0.10.15] - 2024-10-08
+[v0.10.15]: https://github.com/althonos/pyhmmer/compare/v0.10.14...v0.10.15
+
+### Added
+- `query` property `TopHits` referencing the original object used to create the `TopHits` [#76](https://github.com/althonos/pyhmmer/issues/76).
+
+### Changed
+- Require the query object to create a `TopHits` object.
+- Make `TopHits` generic over its `query` property.
+- Deprecate old query properties of `TopHits` (`query_name`, `query_length`, `query_accession`).
+
+### Removed
+- Detection of SSE flush from `setup.py` ([#71](https://github.com/althonos/pyhmmer/issues/71)).
+
+
 ## [v0.10.14] - 2024-07-16
 [v0.10.14]: https://github.com/althonos/pyhmmer/compare/v0.10.13...v0.10.14
 
