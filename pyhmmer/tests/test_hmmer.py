@@ -764,7 +764,7 @@ class TestHMMScan(unittest.TestCase):
             seqs_path, digital=True, alphabet=hmms[0].alphabet
         ) as seqs_file:
             for hits in pyhmmer.hmmer.hmmscan(seqs_file, hmms, cpus=1):
-                expected_lines = expected.get(hits.query_name.decode())
+                expected_lines = expected.get(hits.query.name.decode())
                 if expected_lines is None:
                     self.assertEqual(len(hits), 0)
                     continue
@@ -798,7 +798,7 @@ class TestHMMScan(unittest.TestCase):
         with SequenceFile(seqs_path, digital=True) as seqs_file:
             with HMMPressedFile(db_path) as pressed_file:
                 for hits in pyhmmer.hmmer.hmmscan(seqs_file, pressed_file, cpus=1):
-                    expected_lines = expected.get(hits.query_name.decode())
+                    expected_lines = expected.get(hits.query.name.decode())
                     if expected_lines is None:
                         self.assertEqual(len(hits), 0)
                         continue

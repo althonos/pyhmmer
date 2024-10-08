@@ -83,9 +83,9 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(sum(d.included for d in h1.domains), sum(d.included for d in h2.domains))
 
     def assertHitsEqual(self, hits1, hits2):
-        self.assertEqual(hits1.query_name, hits2.query_name)
-        self.assertEqual(hits1.query_accession, hits2.query_accession)
-        self.assertEqual(hits1.query_length, hits2.query_length)
+        self.assertEqual(hits1.query.name, hits2.query.name)
+        self.assertEqual(hits1.query.accession, hits2.query.accession)
+        self.assertEqual(hits1.query, hits2.query)
         self.assertEqual(len(hits1), len(hits2))
         self.assertEqual(len(hits1.included), len(hits2.included))
         self.assertEqual(len(hits1.reported), len(hits2.reported))
@@ -180,9 +180,9 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(merged_empty.domZ, 0.0)
 
         merged = empty.merge(self.hits)
-        self.assertEqual(merged.query_name, self.hits.query_name)
-        self.assertEqual(merged.query_length, self.hits.query_length)
-        self.assertEqual(merged.query_accession, self.hits.query_accession)
+        self.assertEqual(merged.query.name, self.hits.query.name)
+        self.assertEqual(merged.query.M, self.hits.query.M)
+        self.assertEqual(merged.query.accession, self.hits.query.accession)
         self.assertEqual(merged.E, self.hits.E)
         self.assertHitsEqual(merged, self.hits)
 
@@ -206,9 +206,10 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(merged.searched_sequences, hits.searched_sequences)
         self.assertEqual(merged.Z, hits.Z)
         self.assertEqual(merged.domZ, hits.domZ)
-        self.assertEqual(merged.query_name, hits.query_name)
-        self.assertEqual(merged.query_length, hits.query_length)
-        self.assertEqual(merged.query_accession, hits.query_accession)
+        self.assertIs(merged.query, hits.query)
+        self.assertEqual(merged.query.name, hits.query.name)
+        self.assertEqual(merged.query.M, hits.query.M)
+        self.assertEqual(merged.query.accession, hits.query.accession)
         self.assertEqual(merged.E, hits.E)
         self.assertEqual(merged.domE, hits.domE)
 
@@ -244,9 +245,10 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(merged.searched_sequences, hits.searched_sequences)
         self.assertEqual(merged.Z, hits.Z)
         self.assertEqual(merged.domZ, hits.domZ)
-        self.assertEqual(merged.query_name, hits.query_name)
-        self.assertEqual(merged.query_length, hits.query_length)
-        self.assertEqual(merged.query_accession, hits.query_accession)
+        self.assertIs(merged.query, hits.query)
+        self.assertEqual(merged.query.name, hits.query.name)
+        self.assertEqual(merged.query.M, hits.query.M)
+        self.assertEqual(merged.query.accession, hits.query.accession)
         self.assertEqual(merged.E, hits.E)
         self.assertEqual(merged.domE, hits.domE)
 
@@ -340,14 +342,17 @@ class TestTopHits(unittest.TestCase):
         pickled = pickle.loads(pickle.dumps(self.hits))
         self.assertHitsEqual(pickled, self.hits)
 
+    def test_query(self):
+        self.assertIs(self.hits.query, self.hmm)
+
     def test_query_name(self):
-        self.assertEqual(self.hits.query_name, self.hmm.name)
+        self.assertEqual(self.hits.query.name, self.hmm.name)
 
     def test_query_accession(self):
-        self.assertEqual(self.hits.query_accession, self.hmm.accession)
+        self.assertEqual(self.hits.query.accession, self.hmm.accession)
 
     def test_query_length(self):
-        self.assertEqual(self.hits.query_length, self.hmm.M)
+        self.assertEqual(self.hits.query.M, self.hmm.M)
 
     def test_write_target(self):
         buffer = io.BytesIO()
