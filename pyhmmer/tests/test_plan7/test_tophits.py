@@ -114,7 +114,7 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(search_hits.mode, "search")
 
     def test_bool(self):
-        self.assertFalse(pyhmmer.plan7.TopHits())
+        self.assertFalse(pyhmmer.plan7.TopHits(self.hmm))
         self.assertTrue(self.hits)
 
     def test_index_error(self):
@@ -131,36 +131,36 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(dom.name, dom_last.name)
 
     def test_Z(self):
-        empty = TopHits()
+        empty = TopHits(self.hmm)
         self.assertEqual(empty.Z, 0)
         self.assertEqual(self.hits.Z, len(self.seqs))
 
     def test_strand(self):
-        empty = TopHits()
+        empty = TopHits(self.hmm)
         self.assertIs(empty.strand, None)
 
     def test_searched_sequences(self):
-        empty = TopHits()
+        empty = TopHits(self.hmm)
         self.assertEqual(empty.searched_sequences, 0)
         self.assertEqual(self.hits.searched_sequences, len(self.seqs))
 
     def test_searched_nodes(self):
-        empty = TopHits()
+        empty = TopHits(self.hmm)
         self.assertEqual(empty.searched_nodes, 0)
         self.assertEqual(self.hits.searched_nodes, self.hmm.M)
 
     def test_searched_residues(self):
-        empty = TopHits()
+        empty = TopHits(self.hmm)
         self.assertEqual(empty.searched_residues, 0)
         self.assertEqual(self.hits.searched_residues, sum(map(len, self.seqs)))
 
     def test_searched_models(self):
-        empty = TopHits()
+        empty = TopHits(self.hmm)
         self.assertEqual(empty.searched_sequences, 0)
         self.assertEqual(self.hits.searched_models, 1)
 
     def test_merge_empty(self):
-        empty = TopHits()
+        empty = TopHits(self.hmm)
         self.assertFalse(empty.long_targets)
         self.assertEqual(empty.Z, 0.0)
         self.assertEqual(empty.domZ, 0.0)
@@ -170,7 +170,7 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(empty2.Z, 0.0)
         self.assertEqual(empty2.domZ, 0.0)
 
-        merged_empty = empty.merge(TopHits())
+        merged_empty = empty.merge(TopHits(self.hmm))
         self.assertHitsEqual(merged_empty, empty)
         self.assertEqual(merged_empty.searched_residues, 0)
         self.assertEqual(merged_empty.searched_sequences, 0)

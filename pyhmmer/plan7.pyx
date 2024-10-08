@@ -5763,7 +5763,7 @@ cdef class Pipeline:
         cdef P7_OPROFILE* om
         cdef int          status
         cdef int          allocM
-        cdef TopHits      hits   = TopHits()
+        cdef TopHits      hits   = TopHits(query)
 
         # check that the sequence file is in digital mode
         if SearchTargets is SequenceFile:
@@ -6141,7 +6141,7 @@ cdef class Pipeline:
         """
         cdef int                  allocM
         cdef Profile              profile
-        cdef TopHits              hits    = TopHits()
+        cdef TopHits              hits    = TopHits(query)
 
         assert self._pli != NULL
 
@@ -6840,7 +6840,7 @@ cdef class LongTargetsPipeline(Pipeline):
         cdef HMM                  hmm
         cdef int                  max_length
         cdef ScoreData            scoredata      = ScoreData.__new__(ScoreData)
-        cdef TopHits              hits           = TopHits()
+        cdef TopHits              hits           = TopHits(query)
         cdef P7_HIT*              hit            = NULL
         cdef P7_OPROFILE*         om             = NULL
 
@@ -7680,12 +7680,13 @@ cdef class TopHits:
         self._query = None
         memset(&self._pli, 0, sizeof(P7_PIPELINE))
 
-    def __init__(self):
-        """__init__(self)\n--\n
+    def __init__(self, object query not None):
+        """__init__(self, query)\n--\n
         
         Create an empty `TopHits` instance.
         
         """
+        self._query = query
         with nogil:
             # free allocated memory (in case __init__ is called more than once)
             libhmmer.p7_tophits.p7_tophits_Destroy(self._th)
@@ -7727,7 +7728,7 @@ cdef class TopHits:
         return self.merge(other)
 
     def __reduce__(self):
-        return TopHits, (), self.__getstate__()
+        return TopHits, (self.query,), self.__getstate__()
 
     def __getstate__(self):
         assert self._th != NULL
@@ -7749,7 +7750,6 @@ cdef class TopHits:
             hits.append(offset)
 
         return {
-            "query": self._query,
             "unsrt": unsrt,
             "hit": hits,
             "Nalloc": self._th.Nalloc,
@@ -7813,9 +7813,6 @@ cdef class TopHits:
         cdef uint32_t n
         cdef size_t   offset
         cdef VectorU8 hit_state
-
-        # record query name and accession
-        self._query = state["query"]
 
         # deallocate current data if needed
         if self._th != NULL:
@@ -7923,6 +7920,9 @@ cdef class TopHits:
 
         .. versionadded:: 0.6.1
 
+        .. deprecated:: 0.10.10
+            Use ``TopHits.query`` to access the original query directly.
+
         """
         if self._query is None:
             return None
@@ -7933,6 +7933,9 @@ cdef class TopHits:
         """`bytes` or `None`: The accession of the query, if any.
 
         .. versionadded:: 0.6.1
+
+        .. deprecated:: 0.10.10
+            Use ``TopHits.query`` to access the original query directly.
 
         """
         if self._query is None:
@@ -7945,10 +7948,19 @@ cdef class TopHits:
 
         .. versionadded:: 0.10.5
 
+        .. deprecated:: 0.10.10
+            Use ``TopHits.query`` to access the original query directly.
+
         """
         if self._query is None:
             return 0
         return self._query.M if isinstance(self._query, HMM) else len(self._query)
+
+    @property
+    def query(self):
+        """`object`: The query object these hits were obtained for.
+        """
+        return self._query
 
     @property
     def Z(self):
@@ -8189,7 +8201,7 @@ cdef class TopHits:
             raise ValueError("Trying to merge `TopHits` obtained from pipelines manually configured to different `domZ` values.")
         # check threshold modes are consistent
         if self._pli.by_E != other.by_E:
-            raise ValueError("Trying to merge `TopHits` obtained from pipelines with different reporting threshold modes")
+            raise ValueError(f"Trying to merge `TopHits` obtained from pipelines with different reporting threshold modes: {self._pli.by_E} != {other.by_E}")
         elif self._pli.dom_by_E != other.dom_by_E:
             raise ValueError("Trying to merge `TopHits` obtained from pipelines with different domain reporting threshold modes")
         elif self._pli.inc_by_E != other.inc_by_E:
@@ -8544,16 +8556,16 @@ cdef class TopHits:
             # not referenced anywhere else)
             other_copy = other.copy()
 
+            # check that names/accessions are consistent
+            if merged._query != other._query:
+                raise ValueError("Trying to merge `TopHits` obtained from different queries")
+
             # just store the copy if merging inside an empty uninitialized `TopHits`
-            if merged._th.N == 0 and merged._query is None:
+            if merged._th.N == 0:
                 merged._query = other._query
                 memcpy(&merged._pli, &other_copy._pli, sizeof(P7_PIPELINE))
                 merged._th, other_copy._th = other_copy._th, merged._th
                 continue
-
-            # check that names/accessions are consistent
-            if merged._query != other._query:
-                raise ValueError("Trying to merge `TopHits` obtained from different queries")
 
             # check that the parameters are the same
             merged._check_threshold_parameters(&other._pli)
