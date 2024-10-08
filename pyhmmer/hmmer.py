@@ -995,14 +995,13 @@ def phmmer(
         alphabet = alphabet or sequences.alphabet
         targets = sequences
     else:
-        alphabet = alphabet or Alphabet.amino()
-        targets = DigitalSequenceBlock(alphabet, sequences)
-
-    if builder is None:
-        builder = Builder(
-            alphabet, 
-            seed=options.get("seed", 42)
-        )
+        sequences = peekable(sequences)
+        try:
+            alphabet = alphabet or sequences.peek().alphabet or Alphabet.amino()
+            targets = DigitalSequenceBlock(alphabet, sequences)
+        except StopIteration:
+            alphabet = alphabet or Alphabet.amino()
+            targets = DigitalSequenceBlock(alphabet)
 
     if "alphabet" not in options:
         options["alphabet"] = alphabet
@@ -1170,8 +1169,13 @@ def jackhmmer(
         alphabet = alphabet or sequences.alphabet
         targets = sequences
     else:
-        alphabet = alphabet or Alphabet.amino()
-        targets = DigitalSequenceBlock(alphabet, sequences)
+        sequences = peekable(sequences)
+        try:
+            alphabet = alphabet or sequences.peek().alphabet or Alphabet.amino()
+            targets = DigitalSequenceBlock(alphabet, sequences)
+        except StopIteration:
+            alphabet = alphabet or Alphabet.amino()
+            targets = DigitalSequenceBlock(alphabet)
 
     if builder is None:
         builder = Builder(
@@ -1513,7 +1517,12 @@ def hmmscan(
     if not isinstance(queries, collections.abc.Iterable):
         queries = (queries,)
     if isinstance(profiles, HMMPressedFile):
-        alphabet = alphabet or Alphabet.amino() # FIXME: try to detect alphabet?
+        opt = profiles.read()
+        profiles.rewind()
+        if opt is not None:
+            alphabet = alphabet or opt.alphabet
+        else:
+            alphabet = Alphabet.amino()
         targets = profiles
     elif isinstance(profiles, OptimizedProfileBlock):
         alphabet = alphabet or profiles.alphabet
