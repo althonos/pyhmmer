@@ -31,6 +31,7 @@ from cpython.unicode cimport (
     PyUnicode_KIND,
     PyUnicode_READ,
     PyUnicode_GET_LENGTH,
+    PyUnicode_FromStringAndSize,
 )
 from cpython.pythread cimport (
     PyThread_type_lock,
@@ -2676,7 +2677,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CONS):
             return None
         assert self._hmm.consensus != NULL
-        return (&self._hmm.consensus[1]).decode("ascii")
+        return PyUnicode_FromStringAndSize(&self._hmm.consensus[1], self._hmm.M)
 
     @property
     def consensus_structure(self):
@@ -2689,7 +2690,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CS):
             return None
         assert self._hmm.cs != NULL
-        return (&self._hmm.cs[1]).decode("ascii")
+        return PyUnicode_FromStringAndSize(&self._hmm.cs[1], self._hmm.M)
 
     @property
     def consensus_accessibility(self):
@@ -2702,7 +2703,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CA):
             return None
         assert self._hmm.ca != NULL
-        return (&self._hmm.ca[1]).decode("ascii")
+        return PyUnicode_FromStringAndSize(&self._hmm.ca[1], self._hmm.M)
 
     @property
     def reference(self):
@@ -2719,7 +2720,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_RF):
             return None
         assert self._hmm.rf != NULL
-        return (&self._hmm.rf[1]).decode("ascii")
+        return PyUnicode_FromStringAndSize(&self._hmm.rf[1], self._hmm.M)
 
     @property
     def model_mask(self):
@@ -2732,7 +2733,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_MM):
             return None
         assert self._hmm.mm != NULL
-        return (&self._hmm.mm[1]).decode("ascii")
+        return PyUnicode_FromStringAndSize(&self._hmm.mm[1], self._hmm.M)
 
     @property
     def description(self):
@@ -4200,7 +4201,7 @@ cdef class OptimizedProfile:
         assert self._om != NULL
         if self._om.consensus[0] == b'\0':
             return None
-        return (&self._om.consensus[1]).decode("ascii")
+        return PyUnicode_FromStringAndSize(&self._om.consensus[1], self._om.M)
 
     @property
     def consensus_structure(self):
@@ -4212,7 +4213,7 @@ cdef class OptimizedProfile:
         assert self._om != NULL
         if self._om.cs[0] == b'\0':
             return None
-        return (&self._om.cs[1]).decode("ascii")
+        return PyUnicode_FromStringAndSize(&self._om.cs[1], self._om.M)
 
     @property
     def reference(self):
@@ -4229,7 +4230,7 @@ cdef class OptimizedProfile:
         assert self._om.rf != NULL
         if self._om.rf[0] == b'\0':
             return None
-        return (&self._om.rf[1]).decode("ascii")
+        return PyUnicode_FromStringAndSize(&self._om.rf[1], self._om.M)
 
     @property
     def model_mask(self):
@@ -4242,7 +4243,7 @@ cdef class OptimizedProfile:
         assert self._om.mm != NULL
         if self._om.mm[0] == b'\0':
             return None
-        return (&self._om.mm[1]).decode("ascii")
+        return PyUnicode_FromStringAndSize(&self._om.mm[1], self._om.M)
 
     # --- MSV Filter ---
 
