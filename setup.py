@@ -623,11 +623,11 @@ class configure(_build_clib):
                 raise RuntimeError("failed to compile platform-specific code, aborting.")
 
         # check zeroing mode for SSE code
-        if self.hmmer_impl == "SSE":
-            if self._check_denormals_zero_mode():
-                defines["HAVE_DENORMALS_ZERO_MODE"] = 1
-            if self._check_flush_zero_mode():
-                defines["HAVE_FLUSH_ZERO_MODE"] = 1
+        # if self.hmmer_impl == "SSE":
+        #     if self._check_denormals_zero_mode():
+        #         defines["HAVE_DENORMALS_ZERO_MODE"] = 1
+        #     if self._check_flush_zero_mode():
+        #         defines["HAVE_FLUSH_ZERO_MODE"] = 1
 
         # fill the defines if headers are found
         headers = headers or []
