@@ -442,27 +442,39 @@ class DigitalMSA(MSA):
 
 # --- MSA File ---------------------------------------------------------------
 
-class MSAFile(typing.ContextManager[MSAFile], typing.Iterator[MSA]):
+M = typing.TypeVar("M", TextMSA, DigitalMSA)
+
+class MSAFile(typing.Generic[M], typing.ContextManager[MSAFile[M]], typing.Iterator[M]):
     _FORMATS: typing.ClassVar[typing.Dict[str, int]]
     alphabet: typing.Optional[Alphabet]
     name: typing.Optional[str]
+    @typing.overload
     def __init__(
-        self,
+        self: MSAFile[DigitalMSA],
         file: typing.Union[typing.AnyStr, os.PathLike[typing.AnyStr], typing.BinaryIO],
         format: typing.Optional[str] = None,
         *,
-        digital: bool = False,
+        digital: Literal[True],
         alphabet: typing.Optional[Alphabet] = None,
     ) -> None: ...
-    def __enter__(self) -> MSAFile: ...
+    @typing.overload
+    def __init__(
+        self: MSAFile[TextMSA],
+        file: typing.Union[typing.AnyStr, os.PathLike[typing.AnyStr], typing.BinaryIO],
+        format: typing.Optional[str] = None,
+        *,
+        digital: Literal[False] = False,
+        alphabet: typing.Optional[Alphabet] = None,
+    ) -> None: ...
+    def __enter__(self) -> MSAFile[M]: ...
     def __exit__(
         self,
         exc_type: typing.Optional[typing.Type[BaseException]],
         exc_value: typing.Optional[BaseException],
         traceback: typing.Optional[types.TracebackType],
     ) -> bool: ...
-    def __iter__(self) -> MSAFile: ...
-    def __next__(self) -> MSA: ...
+    def __iter__(self) -> MSAFile[M]: ...
+    def __next__(self) -> M: ...
     def __repr__(self) -> str: ...
     @property
     def closed(self) -> bool: ...
@@ -470,7 +482,7 @@ class MSAFile(typing.ContextManager[MSAFile], typing.Iterator[MSA]):
     def digital(self) -> bool: ...
     @property
     def format(self) -> str: ...
-    def read(self) -> typing.Optional[MSA]: ...
+    def read(self) -> typing.Optional[M]: ...
     def close(self) -> None: ...
 
 # --- Randomness -------------------------------------------------------------
@@ -585,7 +597,7 @@ class DigitalSequence(Sequence):
 S = typing.TypeVar("S", TextSequence, DigitalSequence)
 B = typing.TypeVar("B", SequenceBlock[TextSequence], SequenceBlock[DigitalSequence])
 
-class SequenceBlock(typing.MutableSequence[S], typing.Generic[S]):
+class SequenceBlock(typing.Generic[S], typing.MutableSequence[S]):
     def __len__(self) -> int: ...
     @typing.overload
     def __getitem__(self, index: int) -> S: ...
