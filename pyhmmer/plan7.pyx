@@ -7982,9 +7982,9 @@ cdef class TopHits:
         to the `Pipeline`, or the `~pyhmmer.hmmer` function, that created the
         object::
 
-        >>> hits = next(pyhmmer.hmmsearch(thioesterase, proteins))
-        >>> hits.query
-        <HMM alphabet=Alphabet.amino() M=243 name=b'Thioesterase'>
+            >>> hits = next(pyhmmer.hmmsearch(thioesterase, proteins))
+            >>> hits.query is thioesterase
+            True
 
         .. versionadded 0.10.10
 
