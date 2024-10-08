@@ -45,22 +45,6 @@ def load_tests(loader, tests, ignore):
     _current_cwd = os.getcwd()
     _daemon_client = mock.patch("pyhmmer.daemon.Client")
 
-    def setUp(self):
-        warnings.simplefilter("ignore")
-        os.chdir(os.path.realpath(os.path.join(__file__, "..", "..")))
-        # mock the HMMPGMD client to show usage examples without having
-        # to actually spawn an HMMPGMD server in the background
-        _client = _daemon_client.__enter__()
-        _client.return_value = _client
-        _client.__enter__.return_value = _client
-        _client.connect.return_value = None
-        _client.search_hmm.return_value = pyhmmer.plan7.TopHits()
-
-    def tearDown(self):
-        os.chdir(_current_cwd)
-        warnings.simplefilter(warnings.defaultaction)
-        _daemon_client.__exit__(None, None, None)
-
     # doctests are not compatible with `green`, so we may want to bail out
     # early if `green` is running the tests
     if sys.argv[0].endswith("green"):
@@ -85,6 +69,22 @@ def load_tests(loader, tests, ignore):
     seq_path = os.path.join(data, "seqs", "LuxC.faa")
     with pyhmmer.easel.SequenceFile(seq_path, digital=True) as seq_file:
         reductase = next(seq for seq in seq_file if b"P12748" in seq.name)
+
+    def setUp(self):
+        warnings.simplefilter("ignore")
+        os.chdir(os.path.realpath(os.path.join(__file__, "..", "..")))
+        # mock the HMMPGMD client to show usage examples without having
+        # to actually spawn an HMMPGMD server in the background
+        _client = _daemon_client.__enter__()
+        _client.return_value = _client
+        _client.__enter__.return_value = _client
+        _client.connect.return_value = None
+        _client.search_hmm.return_value = pyhmmer.plan7.TopHits(thioesterase)
+
+    def tearDown(self):
+        os.chdir(_current_cwd)
+        warnings.simplefilter(warnings.defaultaction)
+        _daemon_client.__exit__(None, None, None)
 
     # recursively traverse all library submodules and load tests from them
     packages = [None, pyhmmer]

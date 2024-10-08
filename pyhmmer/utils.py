@@ -75,25 +75,33 @@ class singledispatchmethod(typing.Generic[_T]):
         return _method
 
     @typing.overload
-    def register(
-        self, cls: typing.Type[typing.Any], method: None = ...
+    def register(  # type: ignore
+        self, 
+        cls: typing.Type[typing.Any], 
+        method: None = ...
     ) -> typing.Callable[[typing.Callable[..., _T]], typing.Callable[..., _T]]:
         ...
 
     @typing.overload
-    def register(
-        self, cls: typing.Callable[..., _T], method: None = ...
+    def register(  # type: ignore
+        self, 
+        cls: typing.Callable[..., _T], 
+        method: None = ...
     ) -> typing.Callable[..., _T]:
         ...
 
     @typing.overload
-    def register(
-        self, cls: typing.Type[typing.Any], method: typing.Callable[..., _T]
+    def register(  # type: ignore
+        self, 
+        cls: typing.Type[typing.Any],
+        method: typing.Callable[..., _T]
     ) -> typing.Callable[..., _T]:
         ...
 
     def register(
-        self, cls: typing.Any, method: typing.Optional[typing.Callable[..., _T]] = None
+        self, 
+        cls: typing.Any, 
+        method: typing.Optional[typing.Callable[..., _T]] = None
     ) -> typing.Any:
         """Registers a new implementation for the given class."""
         return self.dispatcher.register(cls, func=method)

@@ -408,9 +408,11 @@ cdef class TopHits:
     #                  computed and thresholding can be done correctly.
     cdef P7_PIPELINE _pli
     cdef P7_TOPHITS* _th
-    cdef bytes       _qname
-    cdef bytes       _qacc
-    cdef int         _qlen
+    cdef object      _query
+
+    # cdef bytes       _qname
+    # cdef bytes       _qacc
+    # cdef int         _qlen
 
     cdef int _threshold(self, Pipeline pipeline) except 1 nogil
     cdef int _sort_by_key(self) except 1 nogil

@@ -8,7 +8,6 @@ Note:
     threads.
 
 """
-
 import abc
 import contextlib
 import collections
@@ -23,6 +22,7 @@ import queue
 import threading
 import time
 import typing
+from typing import Any
 
 import psutil
 
@@ -62,11 +62,21 @@ _T = typing.TypeVar("_T")
 _R = typing.TypeVar("_R")
 _I = typing.TypeVar("_I")
 
+# generic profile type
+_P = typing.TypeVar("_P", HMM, Profile, OptimizedProfile)
+# generic alignment type
+_M = typing.TypeVar("_M", DigitalSequence, DigitalMSA)
+# generic nucleotide query type
+_N = typing.TypeVar("_N", DigitalSequence, DigitalMSA, HMM, Profile, OptimizedProfile)
+
+# type aliases
+_AnyProfile = typing.Union[HMM, Profile, OptimizedProfile]
+
 # the query types for the different tasks
 _PHMMERQueryType = typing.Union[DigitalSequence, DigitalMSA]
-_SEARCHQueryType = typing.Union[HMM, Profile, OptimizedProfile]
-_NHMMERQueryType = typing.Union[_PHMMERQueryType, _SEARCHQueryType]
-_JACKHMMERQueryType = typing.Union[DigitalSequence, _SEARCHQueryType]
+_SEARCHQueryType = _AnyProfile
+_NHMMERQueryType = typing.Union[_PHMMERQueryType, _AnyProfile]
+_JACKHMMERQueryType = typing.Union[DigitalSequence, _AnyProfile]
 
 # `typing.Literal`` is only available in Python 3.8 and later
 if typing.TYPE_CHECKING:
@@ -243,11 +253,11 @@ class _SEARCHWorker(
     _BaseWorker[
         _SEARCHQueryType,
         typing.Union[DigitalSequenceBlock, SequenceFile],
-        TopHits,
+        "TopHits[_SEARCHQueryType]",
     ]
 ):
     @singledispatchmethod
-    def query(self, query) -> TopHits:  # type: ignore
+    def query(self, query) -> "TopHits[Any]":  # type: ignore
         raise TypeError(
             "Unsupported query type for `hmmsearch`: {}".format(type(query).__name__)
         )
@@ -255,7 +265,7 @@ class _SEARCHWorker(
     @query.register(HMM)
     @query.register(Profile)
     @query.register(OptimizedProfile)
-    def _(self, query: typing.Union[HMM, Profile, OptimizedProfile]) -> TopHits:  # type: ignore
+    def _(self, query: _AnyProfile) -> "TopHits[_AnyProfile]":  # type: ignore
         return self.pipeline.search_hmm(query, self.targets)
 
 
@@ -263,21 +273,21 @@ class _PHMMERWorker(
     _BaseWorker[
         _PHMMERQueryType,
         typing.Union[DigitalSequenceBlock, SequenceFile],
-        TopHits,
+        "TopHits[_PHMMERQueryType]",
     ]
 ):
     @singledispatchmethod
-    def query(self, query) -> TopHits:  # type: ignore
+    def query(self, query) -> "TopHits[Any]":  # type: ignore
         raise TypeError(
             "Unsupported query type for `phmmer`: {}".format(type(query).__name__)
         )
 
     @query.register(DigitalSequence)
-    def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
+    def _(self, query: DigitalSequence) -> "TopHits[DigitalSequence]":  # type: ignore
         return self.pipeline.search_seq(query, self.targets, self.builder)
 
     @query.register(DigitalMSA)
-    def _(self, query: DigitalMSA) -> TopHits:  # type: ignore
+    def _(self, query: DigitalMSA) -> "TopHits[DigitalMSA]":  # type: ignore
         return self.pipeline.search_msa(query, self.targets, self.builder)
 
 
@@ -301,7 +311,7 @@ class _JACKHMMERWorker(
         alphabet: Alphabet,
         builder: typing.Optional[Builder] = None,
         max_iterations: typing.Optional[int] = 5,
-        select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+        select_hits: typing.Optional[typing.Callable[["TopHits[_JACKHMMERQueryType]"], None]] = None,
         checkpoints: bool = False,
     ) -> None:
         super().__init__(
@@ -328,14 +338,20 @@ class _JACKHMMERWorker(
     @query.register(DigitalSequence)
     def _(self, query: DigitalSequence) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:  # type: ignore
         iterator = self.pipeline.iterate_seq(
-            query, self.targets, self.builder, self.select_hits
+            query,
+            self.targets,
+            self.builder,
+            self.select_hits  # type: ignore
         )
         return self._iterate(iterator, self.checkpoints)
 
     @query.register(HMM)
     def _(self, query: HMM) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:  # type: ignore
         iterator = self.pipeline.iterate_hmm(
-            query, self.targets, self.builder, self.select_hits
+            query,
+            self.targets,
+            self.builder,
+            self.select_hits  # type: ignore
         )
         return self._iterate(iterator, self.checkpoints)
 
@@ -373,27 +389,27 @@ class _NHMMERWorker(
     _BaseWorker[
         _NHMMERQueryType,
         typing.Union[DigitalSequenceBlock, SequenceFile],
-        TopHits,
+        "TopHits[_NHMMERQueryType]",
     ]
 ):
     @singledispatchmethod
-    def query(self, query) -> TopHits:  # type: ignore
+    def query(self, query) -> "TopHits[Any]":  # type: ignore
         raise TypeError(
             "Unsupported query type for `nhmmer`: {}".format(type(query).__name__)
         )
 
     @query.register(DigitalSequence)
-    def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
+    def _(self, query: DigitalSequence) -> "TopHits[DigitalSequence]":  # type: ignore
         return self.pipeline.search_seq(query, self.targets, self.builder)
 
     @query.register(DigitalMSA)
-    def _(self, query: DigitalMSA) -> TopHits:  # type: ignore
+    def _(self, query: DigitalMSA) -> "TopHits[DigitalMSA]":  # type: ignore
         return self.pipeline.search_msa(query, self.targets, self.builder)
 
     @query.register(HMM)
     @query.register(Profile)
     @query.register(OptimizedProfile)
-    def _(self, query: typing.Union[HMM, Profile, OptimizedProfile]) -> TopHits:  # type: ignore
+    def _(self, query: _AnyProfile) -> "TopHits[_AnyProfile]":  # type: ignore
         return self.pipeline.search_hmm(query, self.targets)
 
 
@@ -401,17 +417,17 @@ class _SCANWorker(
     _BaseWorker[
         DigitalSequence,
         typing.Union[OptimizedProfileBlock, HMMPressedFile],
-        TopHits,
+        "TopHits[DigitalSequence]",
     ]
 ):
     @singledispatchmethod
-    def query(self, query) -> TopHits:  # type: ignore
+    def query(self, query) -> "TopHits[Any]":  # type: ignore
         raise TypeError(
             "Unsupported query type for `hmmscan`: {}".format(type(query).__name__)
         )
 
     @query.register(DigitalSequence)
-    def _(self, query: DigitalSequence) -> TopHits:  # type: ignore
+    def _(self, query: DigitalSequence) -> "TopHits[DigitalSequence]":  # type: ignore
         return self.pipeline.scan_seq(query, self.targets)
 
 
@@ -544,12 +560,12 @@ class _SEARCHDispatcher(
     _BaseDispatcher[
         _SEARCHQueryType,
         typing.Union[DigitalSequenceBlock, SequenceFile],
-        TopHits,
+        "TopHits[_SEARCHQueryType]",
     ]
 ):
     def _new_thread(
         self,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_SEARCHQueryType, TopHits]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_SEARCHQueryType, TopHits[_SEARCHQueryType]]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _SEARCHWorker:
@@ -579,12 +595,12 @@ class _PHMMERDispatcher(
     _BaseDispatcher[
         _PHMMERQueryType,
         typing.Union[DigitalSequenceBlock, SequenceFile],
-        TopHits,
+        "TopHits[_PHMMERQueryType]",
     ]
 ):
     def _new_thread(
         self,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_PHMMERQueryType, TopHits]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_PHMMERQueryType, TopHits[_PHMMERQueryType]]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _PHMMERWorker:
@@ -634,7 +650,7 @@ class _JACKHMMERDispatcher(
         builder: typing.Optional[Builder] = None,
         timeout: int = 1,
         max_iterations: typing.Optional[int] = 5,
-        select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+        select_hits: typing.Optional[typing.Callable[["TopHits[_JACKHMMERQueryType]"], None]] = None,
         checkpoints: bool = False,
         **options,  # type: object
     ) -> None:
@@ -679,7 +695,7 @@ class _NHMMERDispatcher(
     _BaseDispatcher[
         _NHMMERQueryType,
         typing.Union[DigitalSequenceBlock, SequenceFile],
-        TopHits,
+        "TopHits[_NHMMERQueryType]",
     ]
 ):
     def __init__(
@@ -694,7 +710,7 @@ class _NHMMERDispatcher(
         alphabet: Alphabet = Alphabet.dna(),
         builder: typing.Optional[Builder] = None,
         timeout: int = 1,
-        **options,  # type: typing.Dict[str, object]
+        **options,  # type: object
     ) -> None:
         super().__init__(
             queries=queries,
@@ -710,7 +726,7 @@ class _NHMMERDispatcher(
 
     def _new_thread(
         self,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_NHMMERQueryType, TopHits]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[_NHMMERQueryType, TopHits[_NHMMERQueryType]]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _NHMMERWorker:
@@ -741,12 +757,12 @@ class _SCANDispatcher(
     _BaseDispatcher[
         DigitalSequence,
         typing.Union[OptimizedProfileBlock, HMMPressedFile],
-        TopHits,
+        "TopHits[DigitalSequence]",
     ]
 ):
     def _new_thread(
         self,
-        query_queue: "queue.Queue[typing.Optional[_Chore[DigitalSequence, TopHits]]]",
+        query_queue: "queue.Queue[typing.Optional[_Chore[DigitalSequence, TopHits[DigitalSequence]]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _SCANWorker:
@@ -769,15 +785,14 @@ class _SCANDispatcher(
 
 # --- hmmsearch --------------------------------------------------------------
 
-
 def hmmsearch(
-    queries: typing.Union[_SEARCHQueryType, typing.Iterable[_SEARCHQueryType]],
+    queries: typing.Union[_P, typing.Iterable[_P]], #typing.Union[_SEARCHQueryType, typing.Iterable[_SEARCHQueryType]],
     sequences: typing.Iterable[DigitalSequence],
     *,
     cpus: int = 0,
-    callback: typing.Optional[typing.Callable[[_SEARCHQueryType, int], None]] = None,
-    **options,  # type: typing.Dict[str, object]
-) -> typing.Iterator[TopHits]:
+    callback: typing.Optional[typing.Callable[[_P, int], None]] = None,
+    **options,  # type: object
+) -> typing.Iterator["TopHits[_P]"]:
     """Search HMM profiles against a sequence database.
 
     In HMMER many-to-many comparisons, a *search* is the operation of
@@ -870,27 +885,27 @@ def hmmsearch(
         queries=queries,
         targets=targets,
         cpus=_cpus,
-        callback=callback,
+        callback=callback,  # type: ignore
         alphabet=alphabet,
         builder=None,
         pipeline_class=Pipeline,
-        **options,
+        **options,  # type: ignore
     )
-    return dispatcher.run()
+    return dispatcher.run()  # type: ignore
 
 
 # --- phmmer -----------------------------------------------------------------
 
 
 def phmmer(
-    queries: typing.Union[_PHMMERQueryType, typing.Iterable[_PHMMERQueryType]],
+    queries: typing.Union[_M, typing.Iterable[_M]],
     sequences: typing.Iterable[DigitalSequence],
     *,
     cpus: int = 0,
-    callback: typing.Optional[typing.Callable[[_PHMMERQueryType, int], None]] = None,
+    callback: typing.Optional[typing.Callable[[_M, int], None]] = None,
     builder: typing.Optional[Builder] = None,
-    **options,  # type: typing.Dict[str, object]
-) -> typing.Iterator[TopHits]:
+    **options,  # type: object
+) -> typing.Iterator["TopHits[_M]"]:
     """Search protein sequences against a sequence database.
 
     Arguments:
@@ -964,13 +979,13 @@ def phmmer(
         queries=queries,
         targets=targets,
         cpus=_cpus,
-        callback=callback,
+        callback=callback,  # type: ignore
         pipeline_class=Pipeline,
         alphabet=alphabet,
         builder=_builder,
-        **options,
+        **options,  # type: ignore
     )
-    return dispatcher.run()
+    return dispatcher.run()  # type: ignore
 
 
 # --- jackhmmer -----------------------------------------------------------------
@@ -982,12 +997,12 @@ def jackhmmer(
     sequences: typing.Iterable[DigitalSequence],
     *,
     max_iterations: typing.Optional[int] = 5,
-    select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+    select_hits: typing.Optional[typing.Callable[["TopHits[_JACKHMMERQueryType]"], None]] = None,
     checkpoints: "Literal[True]",
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
-    **options,  # type: typing.Dict[str, object]
+    **options,  # type: object
 ) -> typing.Iterator[typing.Iterable[IterationResult]]:
     ...
 
@@ -998,12 +1013,12 @@ def jackhmmer(
     sequences: typing.Iterable[DigitalSequence],
     *,
     max_iterations: typing.Optional[int] = 5,
-    select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+    select_hits: typing.Optional[typing.Callable[["TopHits[_JACKHMMERQueryType]"], None]] = None,
     checkpoints: "Literal[False]",
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
-    **options,  # type: typing.Dict[str, object]
+    **options,  # type: object
 ) -> typing.Iterator[IterationResult]:
     ...
 
@@ -1014,12 +1029,12 @@ def jackhmmer(
     sequences: typing.Iterable[DigitalSequence],
     *,
     max_iterations: typing.Optional[int] = 5,
-    select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+    select_hits: typing.Optional[typing.Callable[["TopHits[_JACKHMMERQueryType]"], None]] = None,
     checkpoints: bool = False,
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
-    **options,  # type: typing.Dict[str, object]
+    **options,  # type: object
 ) -> typing.Union[
     typing.Iterator[IterationResult], typing.Iterator[typing.Iterable[IterationResult]]
 ]:
@@ -1031,7 +1046,7 @@ def jackhmmer(
     sequences: typing.Iterable[DigitalSequence],
     *,
     max_iterations: typing.Optional[int] = 5,
-    select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+    select_hits: typing.Optional[typing.Callable[["TopHits[_JACKHMMERQueryType]"], None]] = None,
     checkpoints: bool = False,
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
@@ -1130,7 +1145,7 @@ def jackhmmer(
         alphabet = _alphabet
         targets = DigitalSequenceBlock(_alphabet, sequences)
 
-    dispatcher = _JACKHMMERDispatcher(  # type: ignore
+    dispatcher = _JACKHMMERDispatcher(
         queries=queries,
         targets=targets,
         cpus=_cpus,
@@ -1141,7 +1156,7 @@ def jackhmmer(
         max_iterations=max_iterations,
         select_hits=select_hits,
         checkpoints=checkpoints,
-        **options,
+        **options,  # type: ignore
     )
     return dispatcher.run()
 
@@ -1150,14 +1165,14 @@ def jackhmmer(
 
 
 def nhmmer(
-    queries: typing.Union[_NHMMERQueryType, typing.Iterable[_NHMMERQueryType]],
+    queries: typing.Union[_N, typing.Iterable[_N]],
     sequences: typing.Iterable[DigitalSequence],
     *,
     cpus: int = 0,
-    callback: typing.Optional[typing.Callable[[_NHMMERQueryType, int], None]] = None,
+    callback: typing.Optional[typing.Callable[[_N, int], None]] = None,
     builder: typing.Optional[Builder] = None,
-    **options,  # type: typing.Dict[str, object]
-) -> typing.Iterator[TopHits]:
+    **options,  # type: object
+) -> typing.Iterator["TopHits[_N]"]:
     """Search nucleotide sequences against a sequence database.
 
     Arguments:
@@ -1214,9 +1229,9 @@ def nhmmer(
     if builder is None:
         _builder = Builder(
             _alphabet,
-            seed=options.get("seed", 42),
-            window_length=options.get("window_length"),
-            window_beta=options.get("window_beta"),
+            seed=typing.cast(int, options.get("seed", 42)),
+            window_length=typing.cast(typing.Optional[int], options.get("window_length")),
+            window_beta=typing.cast(typing.Optional[float], options.get("window_beta")),
         )
     else:
         _builder = builder
@@ -1244,13 +1259,13 @@ def nhmmer(
         queries=queries,
         targets=targets,
         cpus=_cpus,
-        callback=callback,
+        callback=callback,  # type: ignore
         pipeline_class=LongTargetsPipeline,
         alphabet=alphabet,
         builder=_builder,
-        **options,
+        **options,  # type: ignore
     )
-    return dispatcher.run()
+    return dispatcher.run()  # type: ignore
 
 
 # --- hmmpress ---------------------------------------------------------------
@@ -1385,8 +1400,8 @@ def hmmscan(
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
     background: typing.Optional[Background] = None,
-    **options,  # type: typing.Dict[str, object]
-) -> typing.Iterator[TopHits]:
+    **options,  # type: object
+) -> typing.Iterator["TopHits[DigitalSequence]"]:
     """Scan query sequences against a profile database.
 
     In HMMER many-to-many comparisons, a *scan* is the operation of querying
@@ -1460,7 +1475,7 @@ def hmmscan(
     _alphabet = Alphabet.amino()
     _cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count() or 1
     _background = Background(_alphabet) if background is None else background
-    options.setdefault("background", _background)  # type: ignore
+    options.setdefault("background", _background)
 
     if not isinstance(queries, collections.abc.Iterable):
         queries = (queries,)
@@ -1497,7 +1512,7 @@ def hmmscan(
         pipeline_class=Pipeline,
         alphabet=alphabet,
         builder=None,
-        **options,
+        **options,  # type: ignore
     )
     return dispatcher.run()
 
@@ -1533,8 +1548,8 @@ if __name__ == "__main__":
                             print(
                                 hit.name.decode(),
                                 (hit.accession or b"-").decode(),
-                                (hits.query_name or b"-").decode(),
-                                (hits.query_accession or b"-").decode(),
+                                (hits.query.name or b"-").decode(),
+                                (hits.query.accession or b"-").decode(),
                                 hit.evalue,
                                 hit.score,
                                 hit.bias,
@@ -1595,9 +1610,14 @@ if __name__ == "__main__":
                 sequences = sequences.read_block()  # type: ignore
             # load the query sequences or HMMs iteratively
             with open_query_file(args.queryfile, alphabet) as queries:
-                result = jackhmmer(queries, sequences, checkpoint=False, cpus=args.jobs)
-                for hits in result.hits_list:
-                    for hit in hits:
+                results = jackhmmer(
+                    typing.cast(typing.Iterable[HMM], queries),
+                    typing.cast(typing.Iterable[DigitalSequence], sequences),
+                    checkpoints=False,
+                    cpus=typing.cast(int, args.jobs)
+                )
+                for result in results:
+                    for hit in result.hits:
                         if hit.reported:
                             print(
                                 hit.name.decode(),
@@ -1655,8 +1675,8 @@ if __name__ == "__main__":
                             print(
                                 hit.name.decode(),
                                 (hit.accession or b"-").decode(),
-                                (hits.query_name or b"-").decode(),
-                                (hits.query_accession or b"-").decode(),
+                                (hits.query.name or b"-").decode(),
+                                (hits.query.accession or b"-").decode(),
                                 hit.evalue,
                                 hit.score,
                                 hit.bias,
