@@ -583,7 +583,7 @@ class DigitalSequence(Sequence):
 # --- Sequence block ---------------------------------------------------------
 
 S = typing.TypeVar("S", TextSequence, DigitalSequence)
-B = typing.TypeVar("B")
+B = typing.TypeVar("B", SequenceBlock[TextSequence], SequenceBlock[DigitalSequence])
 
 class SequenceBlock(typing.MutableSequence[S], typing.Generic[S]):
     def __len__(self) -> int: ...
@@ -678,6 +678,19 @@ class SequenceFile(typing.Generic[S], typing.ContextManager[SequenceFile[S]], ty
     def readinto(
         self, seq: Sequence, skip_info: bool = False, skip_sequence: bool = False
     ) -> typing.Optional[S]: ...
+    @typing.overload
+    def read_block(
+        self: SequenceFile[TextSequence],
+        sequences: typing.Optional[int] = None,
+        residues: typing.Optional[int] = None,
+    ) -> TextSequenceBlock: ... 
+    @typing.overload
+    def read_block(
+        self: SequenceFile[DigitalSequence],
+        sequences: typing.Optional[int] = None,
+        residues: typing.Optional[int] = None,
+    ) -> DigitalSequenceBlock: ...
+    @typing.overload
     def read_block(
         self,
         sequences: typing.Optional[int] = None,
