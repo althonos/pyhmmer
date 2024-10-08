@@ -13,6 +13,8 @@ from pyhmmer.plan7 import TopHits, HMM, Builder
 
 BIT_CUTOFFS = Literal["gathering", "trusted", "noise"]
 
+S = typing.TypeVar("S", bound=Sequence)
+
 class Client:
     address: str
     port: int
@@ -30,7 +32,7 @@ class Client:
     def close(self) -> None: ...
     def search_seq(
         self,
-        query: Sequence,
+        query: S,
         db: int = 1,
         ranges: typing.Optional[typing.List[typing.Tuple[int, int]]] = None,
         *,
@@ -51,7 +53,7 @@ class Client:
         incdomE: float = 0.01,
         incdomT: typing.Optional[float] = None,
         bit_cutoffs: typing.Optional[BIT_CUTOFFS] = None,
-    ) -> TopHits: ...
+    ) -> TopHits[S]: ...
     def search_hmm(
         self,
         query: HMM,
@@ -75,10 +77,10 @@ class Client:
         incdomE: float = 0.01,
         incdomT: typing.Optional[float] = None,
         bit_cutoffs: typing.Optional[BIT_CUTOFFS] = None,
-    ) -> TopHits: ...
+    ) -> TopHits[HMM]: ...
     def scan_seq(
         self,
-        query: Sequence,
+        query: S,
         db: int = 1,
         *,
         bias_filter: bool = True,
@@ -98,14 +100,14 @@ class Client:
         incdomE: float = 0.01,
         incdomT: typing.Optional[float] = None,
         bit_cutoffs: typing.Optional[BIT_CUTOFFS] = None,
-    ) -> TopHits: ...
+    ) -> TopHits[S]: ...
     def iterate_seq(
         self,
         query: Sequence,
         db: int = 1,
         ranges: typing.Optional[typing.List[typing.Tuple[int, int]]] = None,
         builder: typing.Optional[Builder] = None,
-        select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+        select_hits: typing.Optional[typing.Callable[[TopHits[HMM]], None]] = None,
         *,
         bias_filter: bool = True,
         null2: bool = True,
@@ -131,7 +133,7 @@ class Client:
         db: int = 1,
         ranges: typing.Optional[typing.List[typing.Tuple[int, int]]] = None,
         builder: typing.Optional[Builder] = None,
-        select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+        select_hits: typing.Optional[typing.Callable[[TopHits[HMM]], None]] = None,
         *,
         bias_filter: bool = True,
         null2: bool = True,
@@ -162,6 +164,6 @@ class IterativeSearch(pyhmmer.plan7.IterativeSearch):
         db: int,
         builder: Builder,
         ranges: typing.Optional[typing.List[typing.Tuple[int, int]]] = None,
-        select_hits: typing.Optional[typing.Callable[[TopHits], None]] = None,
+        select_hits: typing.Optional[typing.Callable[[TopHits[HMM]], None]] = None,
         options: typing.Optional[typing.Dict[str, object]] = None,
     ) -> None: ...
