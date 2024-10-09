@@ -49,16 +49,33 @@
 #cmakedefine HAVE_LIBGSL
 
 /* Headers */
-#cmakedefine HAVE_ENDIAN_H
-#cmakedefine HAVE_INTTYPES_H
-#cmakedefine HAVE_STDINT_H
-#cmakedefine HAVE_UNISTD_H
-#cmakedefine HAVE_SYS_TYPES_H
-#cmakedefine HAVE_STRINGS_H
-#cmakedefine HAVE_NETINET_IN_H	/* On FreeBSD, you need netinet/in.h for struct sockaddr_in */
-
-#cmakedefine HAVE_SYS_PARAM_H
-#cmakedefine HAVE_SYS_SYSCTL_H
+#ifndef HAVE_ENDIAN_H
+#cmakedefine HAVE_ENDIAN_H @HAVE_ENDIAN_H@
+#endif
+#ifndef HAVE_INTTYPES_H
+#cmakedefine HAVE_INTTYPES_H @HAVE_INTTYPES_H@
+#endif
+#ifndef HAVE_STDINT_H
+#cmakedefine HAVE_STDINT_H @HAVE_STDINT_H@
+#endif
+#ifndef HAVE_UNISTD_H
+#cmakedefine HAVE_UNISTD_H @HAVE_UNISTD_H@
+#endif
+#ifndef HAVE_SYS_TYPES_H
+#cmakedefine HAVE_SYS_TYPES_H @HAVE_SYS_TYPES_H@
+#endif
+#ifndef HAVE_STRINGS_H
+#cmakedefine HAVE_STRINGS_H @HAVE_STRINGS_H@
+#endif
+#ifndef HAVE_NETINET_IN_H
+#cmakedefine HAVE_NETINET_IN_H @HAVE_NETINET_IN_H@	/* On FreeBSD, you need netinet/in.h for struct sockaddr_in */
+#endif
+#ifndef HAVE_SYS_PARAM_H
+#cmakedefine HAVE_SYS_PARAM_H @HAVE_SYS_PARAM_H@
+#endif
+#ifndef HAVE_SYS_SYSCTL_H
+#cmakedefine HAVE_SYS_SYSCTL_H @HAVE_SYS_SYSCTL_H@
+#endif
 
 /* Types */
 #cmakedefine WORDS_BIGENDIAN
@@ -77,20 +94,45 @@
 #cmakedefine HAVE_FUNC_ATTRIBUTE_FORMAT   // Compiler supports __attribute__((format(a,b,c))), typechecking printf-like functions
 
 /* Functions */
-#cmakedefine HAVE_ALIGNED_ALLOC   // esl_alloc
-#cmakedefine HAVE_ERFC            // esl_stats
-#cmakedefine HAVE_GETCWD          // esl_getcwd
-#cmakedefine HAVE_GETPID          // esl_random
-#cmakedefine HAVE__MM_MALLOC      // esl_alloc
-#cmakedefine HAVE_POPEN           // various file parsers that check for piped input
-#cmakedefine HAVE_POSIX_MEMALIGN  // esl_alloc
-#cmakedefine HAVE_STRCASECMP      // easel::esl_strcasecmp()
-#cmakedefine HAVE_STRSEP          // easel::esl_strsep()
-#cmakedefine HAVE_SYSCONF         // esl_threads, asking system for cpu number
-#cmakedefine HAVE_SYSCTL          // esl_threads, ""
-#cmakedefine HAVE_TIMES           // esl_stopwatch
-
+#ifndef HAVE_ALIGNED_ALLOC
+#cmakedefine HAVE_ALIGNED_ALLOC   @HAVE_ALIGNED_ALLOC@  // esl_alloc
+#endif
+#ifndef HAVE_ERFC
+#cmakedefine HAVE_ERFC            @HAVE_ERFC@           // esl_stats
+#endif
+#ifndef HAVE_GETCWD
+#cmakedefine HAVE_GETCWD          @HAVE_GETCWD@         // esl_getcwd
+#endif
+#ifndef HAVE_GETPID
+#cmakedefine HAVE_GETPID          @HAVE_GETPID@         // esl_random
+#endif
+#ifndef HAVE__MM_MALLOC
+#cmakedefine HAVE__MM_MALLOC      @HAVE__MM_MALLOC@     // esl_alloc
+#endif
+#ifndef HAVE_POPEN
+#cmakedefine HAVE_POPEN           @HAVE_POPEN@          // various file parsers that check for piped input
+#endif
+#ifndef HAVE_POSIX_MEMALIGN
+#cmakedefine HAVE_POSIX_MEMALIGN  @HAVE_POSIX_MEMALIGN@ // esl_alloc
+#endif
+#ifndef HAVE_STRCASECMP
+#cmakedefine HAVE_STRCASECMP      @HAVE_STRCASECMP@     // easel::esl_strcasecmp()
+#endif
+#ifndef HAVE_STRSEP
+#cmakedefine HAVE_STRSEP          @HAVE_STRSEP@         // easel::esl_strsep()
+#endif
+#ifndef HAVE_SYSCONF
+#cmakedefine HAVE_SYSCONF         @HAVE_SYSCONF@        // esl_threads, asking system for cpu number
+#endif
+#ifndef HAVE_SYSCTL
+#cmakedefine HAVE_SYSCTL          @HAVE_SYSCTL@         // esl_threads, ""
+#endif
+#ifndef HAVE_TIMES
+#cmakedefine HAVE_TIMES           @HAVE_TIMES@          // esl_stopwatch
+#endif
+#ifndef HAVE_FSEEKO
 #cmakedefine HAVE_FSEEKO
+#endif
 
 /* System services */
 #cmakedefine _FILE_OFFSET_BITS    // Large file support; possibly archaic now?

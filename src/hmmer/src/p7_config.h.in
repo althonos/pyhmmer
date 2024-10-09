@@ -119,18 +119,24 @@
 
 /* System headers
  */
-#cmakedefine HAVE_NETINET_IN_H        /* On FreeBSD, you need netinet/in.h for struct sockaddr_in */
-#cmakedefine HAVE_SYS_PARAM_H         /* On OpenBSD, sys/sysctl.h needs sys/param.h */
-#cmakedefine HAVE_SYS_SYSCTL_H
+#ifndef HAVE_NETINET_IN_H
+#cmakedefine HAVE_NETINET_IN_H  @HAVE_NETINET_IN_H@    /* On FreeBSD, you need netinet/in.h for struct sockaddr_in */
+#endif
+#ifndef HAVE_SYS_PARAM_H
+#cmakedefine HAVE_SYS_PARAM_H   @HAVE_SYS_PARAM_H@     /* On OpenBSD, sys/sysctl.h needs sys/param.h */
+#endif
+#ifndef HAVE_SYS_SYSCTL_H
+#cmakedefine HAVE_SYS_SYSCTL_H  @HAVE_SYS_SYSCTL_H@
+#endif
 
 /* Optional parallel implementations
  */
 #cmakedefine HMMER_MPI
 #cmakedefine HMMER_THREADS
 
-/* Optional processor specific support
+/* Optional processor specific support -- never enable
  */
-#cmakedefine HAVE_FLUSH_ZERO_MODE
+// #cmakedefine HAVE_FLUSH_ZERO_MODE
 
 #endif /*P7_CONFIGH_INCLUDED*/
 

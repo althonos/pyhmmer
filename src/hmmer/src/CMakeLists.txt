@@ -1,4 +1,9 @@
 include(CheckIncludeFile)
+include(CheckFunctionExists)
+
+CHECK_INCLUDE_FILE("netinet/in.h" HAVE_NETINET_IN_H)
+CHECK_INCLUDE_FILE("sys/param.h" HAVE_SYS_PARAM_H)
+CHECK_INCLUDE_FILE("sys/sysctl.h" HAVE_SYS_SYSCTL_H)
 
 set(HMMER_DATE "Aug 2023")
 set(HMMER_COPYRIGHT "Copyright (C) 2023 Howard Hughes Medical Institute.")
