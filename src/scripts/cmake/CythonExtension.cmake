@@ -100,7 +100,11 @@ macro(cython_extension _name)
   string(REPLACE "/" "." _target ${_dest_folder}.${_name})
 
   # Add Python module
-  python_add_library(${_target} MODULE WITH_SOABI ${_name}.pyx ${_name}.pxd ${_name}.c)
+  set(EXTENSION_SOURCES ${_name}.pyx ${_name}.c)
+  if(EXISTS ${_name}.pxd)
+    set(EXTENSION_SOURCES ${EXTENSION_SOURCES} ${_name}.pxd)
+  endif()
+  python_add_library(${_target} MODULE WITH_SOABI ${EXTENSION_SOURCES})
   set_target_properties(${_target} PROPERTIES OUTPUT_NAME ${_name} )
   target_include_directories(${_target} AFTER PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})  
   target_link_libraries(${_target} PUBLIC ${CYTHON_EXTENSION_LINKS})

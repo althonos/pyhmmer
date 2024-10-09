@@ -9,3 +9,4 @@ destatic(../vendor/hmmer/src/p7_hmmfile.c ${CMAKE_CURRENT_BINARY_DIR}/hmmer/src/
 
 add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/easel ${CMAKE_CURRENT_BINARY_DIR}/easel/build)
 add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/hmmer ${CMAKE_CURRENT_BINARY_DIR}/hmmer/build)
+add_subdirectory(pyhmmer)
