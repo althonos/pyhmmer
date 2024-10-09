@@ -77,7 +77,6 @@ else()
   endforeach()
 
   unset(SSE2_C_FLAG_CANDIDATES)
-  string(STRIP "${SSE2_C_FLAGS_INTERNAL}" SSE2_C_FLAGS_INTERNAL)
 
   set(SSE2_C_FLAGS "${SSE2_C_FLAGS_INTERNAL}"
     CACHE STRING "C compiler flags for SSE2 intrinsics")

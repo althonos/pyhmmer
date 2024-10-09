@@ -70,7 +70,6 @@ else()
   endforeach()
 
   unset(VMX_C_FLAG_CANDIDATES)
-  string(STRIP "${VMX_C_FLAGS_INTERNAL}" VMX_C_FLAGS_INTERNAL)
 
   set(VMX_C_FLAGS "${VMX_C_FLAGS_INTERNAL}"
     CACHE STRING "C compiler flags for VMX intrinsics")
