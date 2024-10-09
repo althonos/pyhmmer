@@ -41,7 +41,7 @@ elseif(HAVE_VMX)
         add_compile_options(${NEON_C_FLAGS})
     endif()
 else()
-    error("Unsupported platform, neither SSE2 nor NEON available.")
+    message(FATAL_ERROR "Unsupported platform, none of SSE2, NEON or AltiVec available.")
 endif()
 
 # --- Setup include folders ----------------------------------------------------
