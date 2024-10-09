@@ -74,6 +74,7 @@ else()
   endforeach()
 
   unset(NEON_C_FLAG_CANDIDATES)
+  string(STRIP "${NEON_C_FLAGS_INTERNAL}" NEON_C_FLAGS_INTERNAL)
   
   set(NEON_C_FLAGS "${NEON_C_FLAGS_INTERNAL}"
     CACHE STRING "C compiler flags for NEON intrinsics")

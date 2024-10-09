@@ -81,6 +81,7 @@ else()
   endforeach()
 
   unset(AVX2_C_FLAG_CANDIDATES)
+  string(STRIP "${AVX2_C_FLAGS_INTERNAL}" AVX2_C_FLAGS_INTERNAL)
   
   set(AVX2_C_FLAGS "${AVX2_C_FLAGS_INTERNAL}"
     CACHE STRING "C compiler flags for AVX2 intrinsics")
