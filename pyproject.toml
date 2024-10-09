@@ -1,0 +1,113 @@
+[build-system]
+requires = ["scikit-build-core", "cython >= 3.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "pyhmmer"
+version = "0.10.15"
+description = "Cython bindings and Python interface to HMMER3."
+readme = "README.md"
+requires-python = ">=3.7"
+license = { file = "COPYING" }
+authors = [
+  { name = "Martin Larralde", email = "martin.larralde@embl.de" },
+]
+# platform = "posix"
+keywords = ["bioinformatics", "profile", "HMM", "sequence", "pfam"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX",
+    "Programming Language :: C",
+    "Programming Language :: Cython",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Typing :: Typed",
+]
+dependencies = [
+    "psutil ~=6.0"
+]
+
+[project.urls]
+"Documentation" = "https://pyhmmer.readthedocs.io/en/stable/"
+"Bug Tracker" = "https://github.com/althonos/pyhmmer/issues"
+"Changelog" = "https://github.com/althonos/pyhmmer/blob/master/CHANGELOG.md"
+"Coverage" = "https://codecov.io/gh/althonos/pyhmmer/"
+"Builds" = "https://github.com/althonos/pyhmmer/actions"
+"Paper" = "https://doi.org/10.1093/bioinformatics/btad214"
+"PyPI" = "https://pypi.org/project/pyhmmer"
+
+[project.optional-dependencies]
+test = ["importlib-resources ; python_version < '3.9'"]
+
+[tool.scikit-build]
+build-dir = "build/{build_type}"
+editable.rebuild = true
+editable.verbose = false
+
+[[tool.scikit-build.generate]]
+path = "src/pyhmmer/_version.py"
+template = '__version__ = "${version}"'
+location = 'source'
+
+[[tool.scikit-build.overrides]]
+if.state = "editable"
+cmake.build-type = "Debug"
+
+[[tool.scikit-build-overrides]]
+if.env.SCCACHE = true
+cmake.define.CMAKE_C_COMPILER_LAUNCHER = "sccache"
+cmake.define.CMAKE_CXX_COMPILER_LAUNCHER = "sccache"
+
+[[tool.scikit-build-overrides]]
+if.env.MOLD = true
+cmake.define.CMAKE_LINKER_TYPE = "mold"
+
+#[tool.coverage.run]
+#plugins = ["Cython.Coverage"]
+
+[tool.coverage.report]
+include = ["src/pyhmmer/*"]
+omit = ["src/pyhmmer/tests/*"]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if typing.TYPE_CHECKING:",
+    "@abc.abstractmethod",
+    "@abc.abstractproperty",
+    "raise NotImplementedError",
+    "return NotImplemented",
+    "raise UnexpectedError",
+    "raise AllocationError",
+]
+
+[tool.coverage.paths]
+source = [
+    "src/pyhmmer/",
+    "build/Debug/src/pyhmmer/",
+]
+
+[tool.mypy]
+disallow_any_decorated = true
+disallow_any_generics = true
+disallow_any_unimported = false
+disallow_subclassing_any = false
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_return_any = true
+
+["tool.mypy-pyhmmer.tests.*"]
+ignore_errors = true
