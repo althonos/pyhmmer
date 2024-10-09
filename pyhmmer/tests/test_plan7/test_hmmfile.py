@@ -93,6 +93,16 @@ class _TestHMMPath:
         with self.open_hmm(path) as f:
             self.check_hmmfile(f.optimized_profiles())
 
+    def test_optimized_profiles_length(self):
+        path = os.path.join(self.hmms_folder, "db", "{}.hmm".format(self.ID))
+        with self.open_hmm(path) as f:
+            profiles = f.optimized_profiles()
+            self.assertEqual(len(profiles), len(self.NAMES))
+            profiles.read()
+            self.assertEqual(len(profiles), len(self.NAMES) - 1)
+            profiles.rewind()
+            self.assertEqual(len(profiles), len(self.NAMES))
+
     def test_rewind(self):
         path = os.path.join(self.hmms_folder, "txt", "{}.hmm".format(self.ID))
         with self.open_hmm(path) as f:

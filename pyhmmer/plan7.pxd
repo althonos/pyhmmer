@@ -173,6 +173,7 @@ cdef class HMMPressedFile:
     cdef P7_HMMFILE* _hfp
     cdef Alphabet    _alphabet
     cdef HMMFile     _hmmfile
+    cdef size_t      _position
 
     cpdef void close(self) except *
     cpdef void rewind(self) except *

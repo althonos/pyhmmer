@@ -3750,6 +3750,7 @@ cdef class HMMPressedFile:
         self._alphabet = None
         self._hmmfile = None
         self._hfp = NULL
+        self._position = 0
 
     def __init__(self, object file):
         """__init__(self, file)\n--\n
@@ -3790,6 +3791,10 @@ cdef class HMMPressedFile:
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
 
+    def __len__(self):
+        assert self._hfp.ssi != NULL
+        return self._hfp.ssi.nprimary - self._position
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -3822,6 +3827,7 @@ cdef class HMMPressedFile:
         """Rewind the file back to the beginning.
         """
         self._hmmfile.rewind()
+        self._position = 0
 
     cpdef OptimizedProfile read(self):
         """Read the next optimized profile from the file.
@@ -3856,6 +3862,7 @@ cdef class HMMPressedFile:
 
         if status == libeasel.eslOK:
             om.alphabet = self._alphabet
+            self._position += 1
             return om
         elif status == libeasel.eslEOF:
             return None
