@@ -11,7 +11,7 @@ set_property(GLOBAL PROPERTY PYTHON_EXTENSIONS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE
 include("src/scripts/cmake/FindNEON.cmake")
 include("src/scripts/cmake/FindSSE2.cmake")
 include("src/scripts/cmake/FindSSE4.cmake")
-# include("src/scripts/cmake/FindVMX.cmake")
+include("src/scripts/cmake/FindVMX.cmake")
 include("src/scripts/cmake/Destatic.cmake")
 include("src/scripts/cmake/CythonExtension.cmake")
 
@@ -34,18 +34,20 @@ elseif(HAVE_NEON)
     if(NEON_C_FLAGS)
         add_compile_options(${NEON_C_FLAGS})
     endif()
+elseif(HAVE_VMX)
+    set(eslENABLE_VMX true)
+    set(HMMER_IMPL "VMX")
+    if(VMX_C_FLAGS)
+        add_compile_options(${NEON_C_FLAGS})
+    endif()
 else()
     error("Unsupported platform, neither SSE2 nor NEON available.")
 endif()
 
 # --- Setup include folders ----------------------------------------------------
 
-# include_directories(BEFORE PUBLIC ${CMAKE_CURRENT_LIST_DIR}/src/pyhmmer)
-# include_directories(AFTER  PUBLIC vendor/easel/include)
-# include_directories(AFTER  PUBLIC vendor/hmmer)
-
 set(CYTHON_HEADERS_DIR ${CMAKE_CURRENT_LIST_DIR}/include)
 
-# --- Compile Python extension -------------------------------------------------
+# --- Compile source code ------------------------------------------------------
 
 add_subdirectory("src")
