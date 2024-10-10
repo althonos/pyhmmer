@@ -1,6 +1,7 @@
 # build dependencies
 cython ~=3.0
 scikit-build-core
+ninja
 
 # run dependencies
 psutil ~=5.0
