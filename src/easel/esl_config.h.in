@@ -79,15 +79,15 @@
 
 /* Types */
 #cmakedefine WORDS_BIGENDIAN
-#cmakedefine int8_t
-#cmakedefine int16_t
-#cmakedefine int32_t
-#cmakedefine int64_t
-#cmakedefine uint8_t
-#cmakedefine uint16_t
-#cmakedefine uint32_t
-#cmakedefine uint64_t
-#cmakedefine off_t
+// #cmakedefine int8_t
+// #cmakedefine int16_t
+// #cmakedefine int32_t
+// #cmakedefine int64_t
+// #cmakedefine uint8_t
+// #cmakedefine uint16_t
+// #cmakedefine uint32_t
+// #cmakedefine uint64_t
+// #cmakedefine off_t
 
 /* Compiler characteristics */
 #cmakedefine HAVE_FUNC_ATTRIBUTE_NORETURN // Compiler supports __attribute__((__noreturn__)), helps w/ clang static analysis.

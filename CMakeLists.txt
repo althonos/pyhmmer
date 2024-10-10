@@ -17,8 +17,9 @@ include("src/scripts/cmake/CythonExtension.cmake")
 
 if(HAVE_SSE4)
     set(eslENABLE_SSE4 true)
-    if(SSE4_C_FLAGS)
-        add_compile_options(${SSE4_C_FLAGS})
+    string(STRIP "${SSE4_C_FLAGS}" IMPL_FLAGS)
+    if(IMPL_FLAGS)
+        add_compile_options(${IMPL_FLAGS})
     endif()
 endif()
 

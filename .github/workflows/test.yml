@@ -62,7 +62,7 @@ jobs:
     - name: Build C extension
       run: pip install -e . --no-build-isolation
     - name: Install test requirements
-      run: python -m pip install -r pyhmmer/tests/requirements.txt
+      run: python -m pip install -r src/pyhmmer/tests/requirements.txt
     - name: Test with coverage
       run: python -m coverage run -m unittest pyhmmer.tests -vv
     - name: Upload to Codecov
@@ -166,7 +166,7 @@ jobs:
     - name: Build C extension
       run: arch -x86_64 pip install -e . --no-build-isolation
     - name: Install test requirements
-      run: python -m pip install -r pyhmmer/tests/requirements.txt
+      run: python -m pip install -r src/pyhmmer/tests/requirements.txt
       if: matrix.python-impl == 'CPython'
     - name: Test with coverage
       run: python -m coverage run -m unittest pyhmmer.tests -vv
