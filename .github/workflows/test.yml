@@ -60,7 +60,7 @@ jobs:
     - name: Install Python requirements
       run: python -m pip install -r .github/workflows/requirements.txt
     - name: Build C extension
-      run: pip install -e . --no-build-isolation
+      run: pip install -vv -e . --no-build-isolation
     - name: Install test requirements
       run: python -m pip install -r src/pyhmmer/tests/requirements.txt
     - name: Test with coverage
@@ -164,7 +164,7 @@ jobs:
     - name: Install Python requirements
       run: python -m pip install -r .github/workflows/requirements.txt
     - name: Build C extension
-      run: arch -x86_64 pip install -e . --no-build-isolation
+      run: arch -x86_64 pip install -vv -e . --no-build-isolation
     - name: Install test requirements
       run: python -m pip install -r src/pyhmmer/tests/requirements.txt
       if: matrix.python-impl == 'CPython'
