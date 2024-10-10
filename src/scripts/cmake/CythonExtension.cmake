@@ -7,16 +7,16 @@ include(CheckCSourceCompiles)
 
 set(SAFE_CMAKE_REQUIRED_INCLUDES "${CMAKE_REQUIRED_INCLUDES}")
 set(CMAKE_REQUIRED_INCLUDES "${Python_INCLUDE_DIRS}")
-set(PYINTERPRETER_STATE_SOURCE
+set(PYINTERPRETER_STATE_SOURCE.github/workflows/requirements.txt
 "
-#include <stdint.h>
-    #include <stdlib.h>
-    #include <Python.h>
+  #include <stdint.h>
+  #include <stdlib.h>
+  #include <Python.h>
 
-    int main(int argc, char *argv[]) {{
-      PyInterpreterState_GetID(NULL);
-      return 0;
-    }
+  int main(int argc, char *argv[]) {
+    PyInterpreterState_GetID(NULL);
+    return 0;
+  }
 ")
 check_c_source_compiles("${PYINTERPRETER_STATE_SOURCE}" HAVE_PYINTERPRETERSTATE_GETID)
 set(CMAKE_REQUIRED_INCLUDES "${SAFE_CMAKE_REQUIRED_INCLUDES}")
