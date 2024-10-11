@@ -114,7 +114,7 @@ set(EASEL_SOURCES
     esl_rootfinder.c
     esl_scorematrix.c
     esl_sq.c
-    esl_sqio_ascii.c
+    esl_sqio_ascii.full.c
     esl_sqio.c
     esl_sqio_ncbi.c
     esl_sse.c

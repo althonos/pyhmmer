@@ -1,5 +1,7 @@
 macro(destatic source dest)
     file(READ ${source} FILE_CONTENTS)
     string(REPLACE "static " "" FILE_CONTENTS "${FILE_CONTENTS}")
-    file(WRITE ${dest} "${FILE_CONTENTS}")
+    if(NOT EXISTS ${dest})
+        file(WRITE ${dest} "${FILE_CONTENTS}")
+    endif()
 endmacro()

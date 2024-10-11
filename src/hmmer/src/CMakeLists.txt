@@ -61,7 +61,7 @@ set(HMMER_SOURCES
     p7_hmm.c 
     p7_hmmcache.c 
     p7_hmmd_search_stats.c 
-    p7_hmmfile.c 
+    p7_hmmfile.full.c 
     p7_hmmwindow.c 
     p7_pipeline.c 
     p7_prior.c 
