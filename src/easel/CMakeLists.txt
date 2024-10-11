@@ -34,7 +34,17 @@ set(EASEL_LICENSE  "Freely distributed under the BSD open source license.")
 set(EASEL_VERSION "0.49")
 set(EASEL_URL "http://bioeasel.org/")
 
-configure_file(esl_config.h.in esl_config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/esl_config.h.cmake esl_config.h)
+file(READ ${CMAKE_CURRENT_BINARY_DIR}/esl_config.h ESL_CONFIG_H)
+
+message(DEBUG "-- Show configuration ")
+message(DEBUG "HAVE_STLIB_H: ${HAVE_STLIB_H}")
+message(DEBUG "HAVE_STRINGS_H: ${HAVE_STRINGS_H}")
+message(DEBUG "HAVE_UNISTD_H: ${HAVE_UNISTD_H}")
+message(DEBUG "HAVE_STDINT_H: ${HAVE_STDINT_H}")
+message(DEBUG "-- Dumping esl_config.h --")
+message(DEBUG "${ESL_CONFIG_H}")
+message(DEBUG "-- End esl_config.h --")
 
 set(EASEL_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/esl_config.h

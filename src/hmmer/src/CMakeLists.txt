@@ -11,7 +11,7 @@ set(HMMER_LICENSE  "Freely distributed under the BSD open source license.")
 set(HMMER_VERSION "3.4")
 set(HMMER_URL "http://hmmer.org/")
 
-configure_file(p7_config.h.in p7_config.h)
+configure_file(p7_config.h.cmake p7_config.h)
 
 set(HMMER_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/p7_config.h

@@ -1,6 +1,6 @@
 /* esl_config.h.in  [input to configure]
  * 
- * System-dependent configuration of Easel, by autoconf.
+ * System-dependent configuration of Easel, by CMake.
  * 
  * This file should be included in all Easel .c files before
  * anything else, because it may set #define's that control
