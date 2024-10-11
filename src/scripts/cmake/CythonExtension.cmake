@@ -81,18 +81,22 @@ macro(cython_extension _name)
 
   # Generate C file from Cython file
   add_custom_command(
-    OUTPUT ${_name}.c
+    OUTPUT 
+      ${_name}.c
     COMMENT
       "Cythonizing ${_name}.pyx to ${_name}.c"
     COMMAND
       Python::Interpreter -m cython
         "${CMAKE_CURRENT_SOURCE_DIR}/${_name}.pyx"
         --output-file ${_name}.c
+        --depfile
         -I "${CYTHON_HEADERS_DIR}"
         ${CYTHON_DIRECTIVES}
         ${CYTHON_EXTENSION_DIRECTIVES}
     MAIN_DEPENDENCY
       ${_name}.pyx
+    DEPFILE
+      ${_name}.c.dep
     VERBATIM)
 
   # Build fully-qualified module name as the target name
