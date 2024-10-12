@@ -1,7 +1,7 @@
 # build dependencies
-setuptools >=46.4
-wheel >=0.34.0
 cython ~=3.0
+scikit-build-core
+ninja
 
 # run dependencies
 psutil ~=5.0
