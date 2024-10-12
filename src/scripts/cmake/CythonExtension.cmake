@@ -45,7 +45,6 @@ set(CYTHON_DIRECTIVES
     -E SYS_BYTEORDER=$<IF:$<STREQUAL:${CMAKE_C_BYTE_ORDER},BIG_ENDIAN>,big,little>
     -E PYPY=$<IF:$<STREQUAL:${Python_INTERPRETER_ID},PyPy>,True,False>
     -E PROJECT_VERSION=${CMAKE_PROJECT_VERSION}
-    -E HAVE_PYINTERPRETERSTATE_GETID=$<IF:$<BOOL:${HAVE_PYINTERPRETERSTATE_GETID}>,True,False>
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
@@ -118,6 +117,9 @@ macro(cython_extension _name)
   set_target_properties(${_target} PROPERTIES OUTPUT_NAME ${_name} )
   target_include_directories(${_target} AFTER PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})  
   target_link_libraries(${_target} PUBLIC ${CYTHON_EXTENSION_LINKS})
+  if(HAVE_PYINTERPRETERSTATE_GETID)
+    target_compile_definitions(${_target} PUBLIC HAVE_PYINTERPRETERSTATE_GETID)
+  endif()
 
   if(CMAKE_BUILD_TYPE STREQUAL Debug)
     if(NOT Python_INTERPRETER_ID STREQUAL PyPy)
