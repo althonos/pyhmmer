@@ -21,6 +21,10 @@ set(PYINTERPRETER_STATE_SOURCE.github/workflows/requirements.txt
 check_c_source_compiles("${PYINTERPRETER_STATE_SOURCE}" HAVE_PYINTERPRETERSTATE_GETID)
 set(CMAKE_REQUIRED_INCLUDES "${SAFE_CMAKE_REQUIRED_INCLUDES}")
 
+# --- Detect implementation ----------------------------------------------------
+
+string(TOLOWER "${Python_INTERPRETER_ID}" SYS_IMPLEMENTATION_NAME)
+
 # --- Prepare Cython directives and constants ----------------------------------
 
 set(CYTHON_DIRECTIVES
@@ -31,7 +35,7 @@ set(CYTHON_DIRECTIVES
     -E NEON_BUILD_SUPPORT=$<IF:$<BOOL:${HAVE_NEON}>,True,False>
     -E MMX_BUILD_SUPPORT=False
     -E AVX512_BUILD_SUPPORT=False
-    -E SYS_IMPLEMENTATION_NAME="cpython"
+    -E SYS_IMPLEMENTATION_NAME=${SYS_IMPLEMENTATION_NAME}
     -E SYS_VERSION_INFO_MAJOR=${Python_VERSION_MAJOR}
     -E SYS_VERSION_INFO_MINOR=${Python_VERSION_MINOR}
     -E TARGET_CPU=${CMAKE_SYSTEM_PROCESSOR}
