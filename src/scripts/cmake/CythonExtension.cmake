@@ -3,23 +3,10 @@ get_property(PYTHON_EXTENSIONS_SOURCE_DIR GLOBAL PROPERTY PYTHON_EXTENSIONS_SOUR
 
 # --- Detect PyInterpreterState_GetID ------------------------------------------
 
-include(CheckCSourceCompiles)
 include(CheckSymbolExists)
 
 set(SAFE_CMAKE_REQUIRED_INCLUDES "${CMAKE_REQUIRED_INCLUDES}")
 set(CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES} ${Python_INCLUDE_DIRS})
-# set(PYINTERPRETER_STATE_SOURCE
-# "
-#   #include <stdint.h>
-#   #include <stdlib.h>
-#   #include <Python.h>
-
-#   int main(int argc, char *argv[]) {
-#     PyInterpreterState_GetID(NULL);
-#     return 0;
-#   }
-# ")
-# check_c_source_compiles("${PYINTERPRETER_STATE_SOURCE}" HAVE_PYINTERPRETERSTATE_GETID)
 check_symbol_exists(PyInterpreterState_GetID "stdint.h;stdlib.h;Python.h" HAVE_PYINTERPRETERSTATE_GETID)
 set(CMAKE_REQUIRED_INCLUDES "${SAFE_CMAKE_REQUIRED_INCLUDES}")
 
