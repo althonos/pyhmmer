@@ -107,19 +107,18 @@ the repository and install the repository by running (with the admin rights):
     which may not even build, so consider using a versioned release instead.
 
 
-GitHub + ``setuptools``
-^^^^^^^^^^^^^^^^^^^^^^^
+GitHub + ``build``
+^^^^^^^^^^^^^^^^^^
 
 If you do not want to use ``pip``, you can still clone the repository and
-run the ``setup.py`` file manually, although you will need to install the
-build dependencies (mainly `Cython <https://pypi.org/project/cython>`_):
+use ``build`` and ``installer`` manually:
 
 .. code:: console
 
     $ git clone --recursive https://github.com/althonos/pyhmmer
     $ cd pyhmmer
-    $ python setup.py build
-    # python setup.py install
+    $ python -m build .
+    # python -m installer dist/*.whl
 
 .. Danger::
 
