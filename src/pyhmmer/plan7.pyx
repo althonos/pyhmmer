@@ -2280,6 +2280,30 @@ cdef class HMM:
             self._hmm.t[i][<int> p7h_transitions_e.p7H_IM] = 1.0
             self._hmm.t[i][<int> p7h_transitions_e.p7H_DM] = 1.0
 
+    cdef void _set_annotation_line(self, str line, char** ptr, int flag) except *:
+        assert self._hmm != NULL
+
+        cdef bytes _line
+        cdef const unsigned char[::1] view
+
+        if line is None:
+            self._hmm.flags &= (~flag)
+            free(ptr[0])
+            ptr[0] = NULL
+        else:
+            if len(line) != self._hmm.M:
+                raise ValueError(f"Annotation line must be of length {self._hmm.M}, got {len(line)}")
+            if ptr[0] == NULL:
+                ptr[0] = <char*> calloc(self._hmm.M + 2, sizeof(char))
+                if ptr[0] == NULL:
+                    raise AllocationError("char", sizeof(char), self._hmm.M + 2)
+                ptr[0][0] = ord(' ')
+                ptr[0][self._hmm.M + 1] = 0
+            self._hmm.flags |= flag
+            _line = line.encode()
+            view = _line
+            memcpy(&ptr[0][1], &view[0], self._hmm.M * sizeof(char))
+
     def __cinit__(self):
         self.alphabet = None
         self._hmm = NULL
@@ -2417,7 +2441,12 @@ cdef class HMM:
             "compo": self.composition,
             "offset": self._hmm.offset,
             "alphabet": self.alphabet,
-            "flags": self._hmm.flags
+            "flags": self._hmm.flags,
+            "consensus": self.consensus,
+            "consensus_structure": self.consensus_structure,
+            "consensus_accessibility": self.consensus_accessibility,
+            "model_mask": self.model_mask,
+            "reference": self.reference,
         }
 
         # copy alignment map if available
@@ -2426,22 +2455,6 @@ cdef class HMM:
             state["map"] = map_ = array.array('i')
             for i in range(self._hmm.M + 1):
                 map_.append(self._hmm.map[i])
-        # add optional annotations
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_RF:
-            assert self._hmm.rf != NULL
-            state["rf"] = PyBytes_FromStringAndSize(self._hmm.rf, self._hmm.M + 1)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_MM:
-            assert self._hmm.mm != NULL
-            state["mm"] = PyBytes_FromStringAndSize(self._hmm.mm, self._hmm.M + 1)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_CS:
-            assert self._hmm.cs != NULL
-            state["cs"] = PyBytes_FromStringAndSize(self._hmm.cs, self._hmm.M + 1)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_CA:
-            assert self._hmm.ca != NULL
-            state["ca"] = PyBytes_FromStringAndSize(self._hmm.ca, self._hmm.M + 1)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_CONS:
-            assert self._hmm.consensus != NULL
-            state["consensus"] = PyBytes_FromStringAndSize(self._hmm.consensus, self._hmm.M + 1)
 
         return state
 
@@ -2472,36 +2485,11 @@ cdef class HMM:
         self.description = state["desc"]
         self.command_line = state["comlog"]
         self.creation_time = state["ctime"]
-
-        # free old storage
-        free(self._hmm.rf)
-        free(self._hmm.mm)
-        free(self._hmm.consensus)
-        free(self._hmm.cs)
-        free(self._hmm.ca)
-        self._hmm.rf = self._hmm.mm = self._hmm.consensus = self._hmm.cs = self._hmm.ca = NULL
-
-        # strings that must be set manually
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_RF:
-            self._hmm.rf = strndup(<const char*> state["rf"], M+2)
-            if self._hmm.rf == NULL:
-                raise AllocationError("char", sizeof(char), M+2)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_MM:
-            self._hmm.mm = strndup(<const char*> state["mm"], M+2)
-            if self._hmm.mm == NULL:
-                raise AllocationError("char", sizeof(char), M+2)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_CONS:
-            self._hmm.consensus = strndup(<const char*> state["consensus"], M+2)
-            if self._hmm.consensus == NULL:
-                raise AllocationError("char", sizeof(char), M+2)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_CS:
-            self._hmm.cs = strndup(<const char*> state["cs"], M+2)
-            if self._hmm.cs == NULL:
-                raise AllocationError("char", sizeof(char), M+2)
-        if self._hmm.flags & libhmmer.p7_hmm.p7H_CA:
-            self._hmm.ca = strndup(<const char*> state["ca"], M+2)
-            if self._hmm.ca == NULL:
-                raise AllocationError("char", sizeof(char), M+2)
+        self.consensus = state["consensus"]
+        self.consensus_structure = state["consensus_structure"]
+        self.consensus_accessibility = state["consensus_accessibility"]
+        self.model_mask = state["model_mask"]
+        self.reference = state["reference"]
 
         # numerical values that can be set directly on the C struct
         self._hmm.nseq = state["nseq"]
@@ -2551,10 +2539,7 @@ cdef class HMM:
                 self._hmm.map = NULL
         else:
             map_ = state["map"]
-            if self._hmm.map != NULL:
-                self._hmm.map = <int*> realloc(self._hmm.map, (M + 1) * sizeof(int))
-            else:
-                self._hmm.map = <int*> calloc(M + 1, sizeof(int))
+            self._hmm.map = <int*> realloc(self._hmm.map, (M + 1) * sizeof(int))
             if self._hmm.map == NULL:
                 raise AllocationError("int", sizeof(int), M+1)
             assert map_.ndim == 1
@@ -2679,6 +2664,10 @@ cdef class HMM:
         assert self._hmm.consensus != NULL
         return PyUnicode_FromStringAndSize(&self._hmm.consensus[1], self._hmm.M)
 
+    @consensus.setter
+    def consensus(self, str consensus):
+        self._set_annotation_line(consensus, &self._hmm.consensus, libhmmer.p7_hmm.p7H_CONS)
+
     @property
     def consensus_structure(self):
         """`str` or `None`: The consensus structure of the HMM, if any.
@@ -2692,6 +2681,10 @@ cdef class HMM:
         assert self._hmm.cs != NULL
         return PyUnicode_FromStringAndSize(&self._hmm.cs[1], self._hmm.M)
 
+    @consensus_structure.setter
+    def consensus_structure(self, str cs):
+        self._set_annotation_line(cs, &self._hmm.cs, libhmmer.p7_hmm.p7H_CS)
+
     @property
     def consensus_accessibility(self):
         """`str` or `None`: The consensus accessibility of the HMM, if any.
@@ -2704,6 +2697,10 @@ cdef class HMM:
             return None
         assert self._hmm.ca != NULL
         return PyUnicode_FromStringAndSize(&self._hmm.ca[1], self._hmm.M)
+
+    @consensus_accessibility.setter
+    def consensus_accessibility(self, str ca):
+        self._set_annotation_line(ca, &self._hmm.ca, libhmmer.p7_hmm.p7H_CA)
 
     @property
     def reference(self):
@@ -2722,6 +2719,10 @@ cdef class HMM:
         assert self._hmm.rf != NULL
         return PyUnicode_FromStringAndSize(&self._hmm.rf[1], self._hmm.M)
 
+    @reference.setter
+    def reference(self, str rf):
+        self._set_annotation_line(rf, &self._hmm.rf, libhmmer.p7_hmm.p7H_RF)
+
     @property
     def model_mask(self):
         """`str` or `None`: The model mask line from the alignment, if any.
@@ -2734,6 +2735,10 @@ cdef class HMM:
             return None
         assert self._hmm.mm != NULL
         return PyUnicode_FromStringAndSize(&self._hmm.mm[1], self._hmm.M)
+
+    @model_mask.setter
+    def model_mask(self, str mm):
+        self._set_annotation_line(mm, &self._hmm.mm, libhmmer.p7_hmm.p7H_MM)
 
     @property
     def description(self):

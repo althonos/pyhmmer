@@ -137,6 +137,7 @@ cdef class HMM:
     cdef readonly Alphabet          alphabet
 
     cdef void _initialize(self) noexcept nogil
+    cdef void _set_annotation_line(self, str line, char** ptr, int flag) except *
 
     cpdef HMM copy(self)
     cpdef VectorF match_occupancy(self)
