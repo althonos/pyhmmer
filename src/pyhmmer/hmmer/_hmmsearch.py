@@ -135,6 +135,9 @@ def hmmsearch(
         callback (callable): A callback that is called everytime a query is
             processed with two arguments: the query, and the total number
             of queries. This can be used to display progress in UI.
+        backend (`str`): The parallel backend to use for workers to be
+            executed. Supports ``threading`` to use thread-based parallelism,
+            or ``multiprocessing`` to use process-based parallelism.
 
     Yields:
         `~pyhmmer.plan7.TopHits`: An object reporting *top hits* for each
@@ -153,6 +156,9 @@ def hmmsearch(
             >>> hits = next(hmmsearch(thioesterase, proteins, T=5))
             >>> hits[0].score
             8.601...
+
+        Since *version 0.11.0*, ``mypy`` should be able to detection which
+        keywords can be passed to `hmmsearch` using a `TypedDict` annotation.
 
     .. versionadded:: 0.1.0
 

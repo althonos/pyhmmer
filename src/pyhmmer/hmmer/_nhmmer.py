@@ -162,6 +162,9 @@ def nhmmer(
         builder (`~pyhmmer.plan7.Builder`, optional): A builder to configure
             how the queries are converted to HMMs. Passing `None` will create
             a default instance.
+        backend (`str`): The parallel backend to use for workers to be
+            executed. Supports ``threading`` to use thread-based parallelism,
+            or ``multiprocessing`` to use process-based parallelism.
 
     Yields:
         `~pyhmmer.plan7.TopHits`: A *top hits* instance for each query,

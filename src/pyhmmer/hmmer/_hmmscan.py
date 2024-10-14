@@ -129,6 +129,9 @@ def hmmscan(
         background (`pyhmmer.plan7.Background`, *optional*): A background
             object to use for configuring the profiles. If `None` given,
             create a default one.
+        backend (`str`): The parallel backend to use for workers to be
+            executed. Supports ``threading`` to use thread-based parallelism,
+            or ``multiprocessing`` to use process-based parallelism.
 
     Yields:
         `~pyhmmer.plan7.TopHits`: An object reporting *top hits* for each
