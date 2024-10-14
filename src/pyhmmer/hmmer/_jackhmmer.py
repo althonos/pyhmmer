@@ -41,7 +41,6 @@ class _JACKHMMERWorker(
         DigitalSequenceBlock,
         _I,
     ],
-    threading.Thread
 ):
     def __init__(
         self,
@@ -127,6 +126,14 @@ class _JACKHMMERWorker(
         return iteration_checkpoints if checkpoints else iteration
 
 
+class _JACKHMMERThread(_JACKHMMERWorker, threading.Thread):
+    pass
+
+
+class _JACKHMMERProcess(_JACKHMMERWorker, multiprocessing.Process):
+    pass
+
+
 # --- Dispatcher ---------------------------------------------------------------
 
 class _JACKHMMERDispatcher(
@@ -173,9 +180,7 @@ class _JACKHMMERDispatcher(
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _JACKHMMERWorker[_I]:
-        if self.backend != "threading":
-            raise ValueError(f"Invalid backend for `jackhmmer`: {self.backend!r}")
-        return _JACKHMMERWorker(
+        params = [
             self.targets,
             query_queue,
             query_count,
@@ -186,7 +191,13 @@ class _JACKHMMERDispatcher(
             self.max_iterations,
             self.select_hits,
             self.checkpoints,
-        )
+        ]
+        if self.backend == "threading":
+            return _JACKHMMERThread(*params)
+        elif self.backend == "multiprocessing":
+            return _JACKHMMERProcess(*params)
+        else:
+            raise ValueError(f"Invalid backend for `jackhmmer`: {self.backend!r}")
 
 
 # --- jackhmmer -----------------------------------------------------------------
@@ -295,6 +306,9 @@ def jackhmmer(
         builder (`~pyhmmer.plan7.Builder`, optional): A builder to configure
             how the queries are converted to HMMs. Passing `None` will create
             a default instance.
+        backend (`str`): The parallel backend to use for workers to be 
+            executed. Supports ``threading`` to use thread-based parallelism,
+            or ``multiprocessing`` to use process-based parallelism.
 
     Yields:
         `~pyhmmer.plan7.IterationResult`: An *iteration result* instance for
