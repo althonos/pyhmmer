@@ -1,0 +1,361 @@
+import abc
+import ctypes
+import collections
+import contextlib
+import itertools
+import multiprocessing
+import operator
+import queue
+import sys
+import typing
+import threading
+
+from ..easel import DigitalSequenceBlock, SequenceFile, DigitalSequence, DigitalMSA
+from ..plan7 import Pipeline, Builder, HMMPressedFile, HMM, Profile, OptimizedProfile, IterationResult, OptimizedProfileBlock
+from ..utils import singledispatchmethod
+
+# --- Type annotations ---------------------------------------------------------
+
+# the query type for the pipeline
+_Q = typing.TypeVar("_Q")
+# the target type for the pipeline
+_T = typing.TypeVar("_T")
+# the result type for the pipeline
+_R = typing.TypeVar("_R")
+
+# type aliases
+_AnyProfile = typing.Union[HMM, Profile, OptimizedProfile]
+
+# the query types for the different tasks
+_PHMMERQueryType = typing.Union[DigitalSequence, DigitalMSA]
+_SEARCHQueryType = _AnyProfile
+_NHMMERQueryType = typing.Union[_PHMMERQueryType, _AnyProfile]
+_JACKHMMERQueryType = typing.Union[DigitalSequence, _AnyProfile]
+
+# `typing.Literal`` is only available in Python 3.8 and later
+if typing.TYPE_CHECKING:
+
+    if sys.version_info >= (3, 8):
+        from typing import Literal, TypedDict
+    else:
+        from typing_extensions import Literal, TypedDict  # type: ignore
+
+    if sys.version_info >= (3, 11):
+        from typing import Unpack
+    else:
+        from typing_extensions import Unpack
+
+    from .plan7 import BIT_CUTOFFS, STRAND
+
+    class PipelineOptions(TypedDict, total=False):
+        alphabet: Alphabet
+        background: typing.Optional[Background]
+        bias_filter: bool
+        null2: bool
+        seed: int
+        Z: float
+        domZ: typing.Optional[float]
+        F1: float
+        F2: float
+        F3: float
+        E: float
+        T: typing.Optional[float]
+        domE: float
+        domT: typing.Optional[float]
+        incE: float
+        incT: typing.Optional[float]
+        incdomE: float
+        incdomT: typing.Optional[float]
+        bit_cutoffs: typing.Optional[BIT_CUTOFFS]
+
+    class LongTargetsPipelineOptions(PipelineOptions, total=False):
+        strand: typing.Optional[STRAND]
+        B1: int
+        B2: int
+        B3: int
+        block_length: int
+        window_length: typing.Optional[int]
+        window_beta: typing.Optional[float]
+
+
+# --- Result class -------------------------------------------------------------
+
+class _Chore(typing.Generic[_Q, _R]):
+    """A chore for a worker thread.
+
+    Attributes:
+        query (`object`): The query object to be processed by the worker
+            thread. Exact type depends on the pipeline type.
+        event (`threading.Event`): An event flag to set when the query
+            is done being processed.
+        hits (`pyhmmer.plan7.TopHits`): The hits obtained after processing
+            the query.
+        exception (`BaseException`): An exception that occured while
+            processing the query.
+
+    """
+
+    query: _Q
+    event: threading.Event
+    result: typing.Optional[_R]
+    exception: typing.Optional[BaseException]
+
+    __slots__ = ("query", "event", "result", "exception")
+
+    def __init__(self, query: _Q) -> None:
+        """Create a new chore from the given query."""
+        self.query = query
+        self.event = threading.Event()
+        self.result = None
+        self.exception = None
+
+    def available(self) -> bool:
+        """Return whether the chore is done and results are available."""
+        return self.event.is_set()
+
+    def wait(self, timeout: typing.Optional[float] = None) -> bool:
+        """Wait for the chore to be done."""
+        return self.event.wait(timeout)
+
+    def get(self) -> _R:
+        """Get the results of the chore, blocking if the chore was not done."""
+        self.event.wait()
+        if self.exception is not None:
+            raise self.exception
+        return typing.cast(_R, self.result)
+
+    def complete(self, result: _R) -> None:
+        """Mark the chore as done and record ``result`` as the results."""
+        self.result = result
+        self.event.set()
+
+    def fail(self, exception: BaseException) -> None:
+        """Mark the chore as done and record ``exception`` as the error."""
+        self.exception = exception
+        self.event.set()
+
+
+# --- Workers ------------------------------------------------------------------
+
+class _BaseWorker(typing.Generic[_Q, _T, _R], threading.Thread):
+    """A generic worker thread to parallelize a pipelined search.
+
+    Attributes:
+        targets (`DigitalSequenceBlock` or `OptimizedProfileBlock`): The
+            target to search for hits, either a digital sequence block while
+            in search mode, or an optimized profile block while in scan mode.
+        query_queue (`queue.Queue`): The queue used to pass queries
+            between threads. It contains the query, its index so that the
+            results can be returned in the same order, and a `_ResultBuffer`
+            where to store the result when the query has been processed.
+        query_count (`multiprocessing.Value`): An atomic counter storing
+            the total number of queries that have currently been loaded.
+            Passed to the ``callback`` so that an UI can show the total
+            for a progress bar.
+        kill_switch (`threading.Event`): An event flag shared between
+            all worker threads, used to notify emergency exit.
+        callback (`callable`, optional): An optional callback to be called
+            after each query has been processed. It should accept two
+            arguments: the query object that was processed, and the total
+            number of queries read until now.
+        options (`dict`): A dictionary of options to be passed to the
+            `pyhmmer.plan7.Pipeline` object wrapped by the worker thread.
+        pipeline_class (`type`): The pipeline class to use to search for
+            hits. Use `~plan7.LongTargetsPipeline` for `nhmmer`, and
+            `~plan7.Pipeline` everywhere else.
+        builder (`~pyhmmer.plan7.Builder`, *optional*): The builder to use
+            for translating sequence or alignment queries into `HMM` objects.
+            May be `None` if the queries are expected to be `HMM` only.
+
+    """
+
+    @staticmethod
+    def _none_callback(hmm: _Q, total: int) -> None:
+        pass
+
+    def __init__(
+        self,
+        targets: _T,
+        query_queue: "queue.Queue[typing.Optional[_Chore[_Q, _R]]]",
+        query_count: multiprocessing.Value,  # type: ignore
+        kill_switch: threading.Event,
+        callback: typing.Optional[typing.Callable[[_Q, int], None]],
+        options: "PipelineOptions",
+        pipeline_class: typing.Type[Pipeline],
+        builder: typing.Optional[Builder] = None,
+    ) -> None:
+        super().__init__()
+        self.options = options
+        self.targets: _T = targets
+        self.pipeline = pipeline_class(**options)
+        self.query_queue: "queue.Queue[typing.Optional[_Chore[_Q, _R]]]" = query_queue
+        self.query_count = query_count
+        self.callback: typing.Optional[typing.Callable[[_Q, int], None]] = (
+            callback or self._none_callback
+        )
+        self.kill_switch = kill_switch
+        self.builder = builder
+
+    def run(self) -> None:
+        while not self.kill_switch.is_set():
+            # attempt to get the next argument, with a timeout
+            # so that the thread can periodically check if it has
+            # been killed, even when no queries are available
+            try:
+                chore = self.query_queue.get(timeout=1)
+            except queue.Empty:
+                continue
+            # check if arguments from the queue are a poison-pill (`None`),
+            # in which case the thread will stop running
+            if chore is None:
+                break
+            # process the query, making sure to capture any exception
+            # and then mark the hits as "found" using a `threading.Event`
+            try:
+                hits = self.process(chore.query)
+                chore.complete(hits)
+            except BaseException as exc:
+                self.kill()
+                chore.fail(exc)
+        if isinstance(self.targets, (SequenceFile, HMMPressedFile)):
+            self.targets.close()
+
+    def kill(self) -> None:
+        """Set the synchronized kill switch for all threads."""
+        self.kill_switch.set()
+
+    def process(self, query: _Q) -> _R:
+        """Process a single query and return the resulting hits."""
+        if isinstance(self.targets, (HMMPressedFile, SequenceFile)):
+            self.targets.rewind()
+        hits = self.query(query)
+        self.callback(query, self.query_count.value)  # type: ignore
+        self.pipeline.clear()
+        return hits
+
+    @abc.abstractmethod
+    def query(self, query: _Q) -> _R:
+        """Run a single query against the target database."""
+        return NotImplemented
+
+
+# --- Dispatcher ---------------------------------------------------------------
+
+class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
+    def __init__(
+        self,
+        queries: typing.Iterable[_Q],
+        targets: _T,
+        cpus: int = 0,
+        callback: typing.Optional[typing.Callable[[_Q, int], None]] = None,
+        pipeline_class: typing.Type[Pipeline] = Pipeline,
+        builder: typing.Optional[Builder] = None,
+        timeout: int = 1,
+        **options,  # type: Unpack[PipelineOptions]
+    ) -> None:
+        self.queries = queries
+        self.targets: _T = targets
+        self.callback: typing.Optional[typing.Callable[[_Q, int], None]] = callback
+        self.options = options
+        self.pipeline_class = pipeline_class
+        self.builder = builder
+        self.timeout = timeout
+
+        # make sure a positive number of CPUs is requested
+        if cpus <= 0:
+            raise ValueError("`cpus` must be strictly positive, not {!r}".format(cpus))
+
+        # reduce the number of threads if there are less queries (at best
+        # use one thread by query)
+        hint = operator.length_hint(queries, -1)
+        self.cpus = 1 if hint == 0 else min(cpus, hint) if hint > 0 else cpus
+
+    @abc.abstractmethod
+    def _new_thread(
+        self,
+        query_queue: "queue.Queue[typing.Optional[_Chore[_Q, _R]]]",
+        query_count: "multiprocessing.Value[int]",  # type: ignore
+        kill_switch: threading.Event,
+    ) -> _BaseWorker[_Q, _T, _R]:
+        return NotImplemented
+
+    def _single_threaded(self) -> typing.Iterator[_R]:
+        # create the queues to pass the HMM objects around, as well as atomic
+        # values that we use to synchronize the threads
+        query_queue = queue.Queue()  # type: ignore
+        query_count = multiprocessing.Value(ctypes.c_ulong)
+        kill_switch = threading.Event()
+
+        # create the thread (to recycle code)
+        thread = self._new_thread(query_queue, query_count, kill_switch)
+
+        # process each HMM iteratively and yield the result
+        # immediately so that the user can iterate over the
+        # TopHits one at a time
+        for query in self.queries:
+            query_count.value += 1
+            yield thread.process(query)
+
+        # close the targets if they were coming from a file
+        if isinstance(thread.targets, (SequenceFile, HMMPressedFile)):
+            thread.targets.close()
+
+    def _multi_threaded(self) -> typing.Iterator[_R]:
+        # create the queues to pass the query objects around, as well as
+        # atomic values that we use to synchronize the threads
+        results: typing.Deque[_Chore[_Q, _R]] = collections.deque()
+        query_queue = queue.Queue(maxsize=2*self.cpus)  # type: ignore
+        query_count = multiprocessing.Value(ctypes.c_ulong)
+        kill_switch = threading.Event()
+
+        # create and launch one pipeline thread per CPU
+        threads = []
+        for _ in range(self.cpus):
+            thread = self._new_thread(query_queue, query_count, kill_switch)
+            thread.start()
+            threads.append(thread)
+
+        # catch exceptions to kill threads in the background before exiting
+        try:
+            # alternate between feeding queries to the threads and
+            # yielding back results, if available. the priority is
+            # given to filling the query queue, so that no worker
+            # ever idles.
+            for query in self.queries:
+                # prepare to add the next query to the queue
+                query_count.value += 1
+                chore: _Chore[_Q, _R] = _Chore(query)
+                # attempt to add the query to the query queue,
+                # but use a timeout so that it doesn't deadlock
+                # if the background thread errored (which would
+                # set the kill switch), typically because the
+                # user-provided callback failed
+                while not kill_switch.is_set():
+                    with contextlib.suppress(queue.Full):
+                        query_queue.put(chore, timeout=self.timeout)  # <-- blocks if too many chores in queue
+                        results.append(chore)
+                        break
+                # aggressively wait for the result with a very short
+                # timeout, and exit the loop if the queue is not full
+                if results[0].available():
+                    yield results[0].get()
+                    results.popleft()
+            # now that we exhausted all queries, poison pill the
+            # threads so they stop on their own gracefully
+            for _ in threads:
+                query_queue.put(None)
+            # yield all remaining results, in order
+            while results:
+                yield results[0].get()  # <-- blocks until result is available
+                results.popleft()
+        except BaseException:
+            # make sure threads are killed to avoid being stuck,
+            # e.g. after a KeyboardInterrupt, then re-raise
+            kill_switch.set()
+            raise
+
+    def run(self) -> typing.Iterator[_R]:
+        if self.cpus == 1:
+            return self._single_threaded()
+        else:
+            return self._multi_threaded()
