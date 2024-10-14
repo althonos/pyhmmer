@@ -4,6 +4,7 @@ import collections
 import contextlib
 import itertools
 import multiprocessing.synchronize
+import multiprocessing.connection
 import operator
 import queue
 import sys
@@ -76,6 +77,7 @@ if typing.TYPE_CHECKING:
 # --- Result class -------------------------------------------------------------
 
 class _BaseChore(typing.Generic[_Q, _R], abc.ABC):
+    query: _Q
 
     def __init__(self, query: _Q):
         self.query = query
@@ -118,7 +120,6 @@ class _ThreadChore(typing.Generic[_Q, _R], _BaseChore[_Q, _R]):
 
     """
 
-    query: _Q
     result: typing.Union[_R, BaseException, None]
     event: threading.Event
 
@@ -152,8 +153,20 @@ class _ThreadChore(typing.Generic[_Q, _R], _BaseChore[_Q, _R]):
 
 
 class _ProcessChore(typing.Generic[_Q, _R], _BaseChore[_Q, _R]):
+    """A chore for a worker process.
 
-    event: multiprocessing.synchronize.Event
+    Attributes:
+        query (`object`): The query object to be processed by the worker
+            thread. Exact type depends on the pipeline type.
+        conns (`multiprocessing.Connection`): The pipe end where the 
+            worker should send the result.
+        connr (`multiprocessing.Connection`): The pipe end where the 
+            dispatcher should receive the result.
+
+    """
+
+    connr: multiprocessing.connection.Connection
+    conns: multiprocessing.connection.Connection
 
     def __init__(self, query: _Q) -> None:
         """Create a new chore from the given query."""
@@ -192,18 +205,19 @@ class _ProcessChore(typing.Generic[_Q, _R], _BaseChore[_Q, _R]):
 # --- Workers ------------------------------------------------------------------
 
 class _BaseWorker(typing.Generic[_Q, _T, _R]):
-    """A generic worker thread to parallelize a pipelined search.
+    """A generic worker to parallelize a pipelined search.
 
     Attributes:
         targets (`DigitalSequenceBlock` or `OptimizedProfileBlock`): The
             target to search for hits, either a digital sequence block while
             in search mode, or an optimized profile block while in scan mode.
-        query_queue (`queue.Queue`): The queue used to pass queries
-            between threads. It contains the query, its index so that the
-            results can be returned in the same order, and a `_ResultBuffer`
-            where to store the result when the query has been processed.
+        query_queue (`queue.Queue`): The queue used to pass queries between 
+            the dispatcher and the workers. It contains the query, its index 
+            so that the results can be returned in the same order, and 
+            a way to pass back the results corresponding to that query
+            back to the dispatcher.
         query_count (`multiprocessing.Value`): An atomic counter storing
-            the total number of queries that have currently been loaded.
+            the total number of queries that have been loaded so far.
             Passed to the ``callback`` so that an UI can show the total
             for a progress bar.
         kill_switch (`threading.Event`): An event flag shared between
@@ -211,9 +225,10 @@ class _BaseWorker(typing.Generic[_Q, _T, _R]):
         callback (`callable`, optional): An optional callback to be called
             after each query has been processed. It should accept two
             arguments: the query object that was processed, and the total
-            number of queries read until now.
+            number of queries read until now. For `multiprocessing` workers,
+            this callback should be picklable.
         options (`dict`): A dictionary of options to be passed to the
-            `pyhmmer.plan7.Pipeline` object wrapped by the worker thread.
+            `pyhmmer.plan7.Pipeline` object wrapped by the worker.
         pipeline_class (`type`): The pipeline class to use to search for
             hits. Use `~plan7.LongTargetsPipeline` for `nhmmer`, and
             `~plan7.Pipeline` everywhere else.
@@ -255,7 +270,7 @@ class _BaseWorker(typing.Generic[_Q, _T, _R]):
     def run(self) -> None:
         while not self.is_killed():
             # attempt to get the next argument, with a timeout
-            # so that the thread can periodically check if it has
+            # so that the worker can periodically check if it has
             # been killed, even when no queries are available
             try:
                 chore = self.query_queue.get(timeout=1)
