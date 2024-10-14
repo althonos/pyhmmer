@@ -2,6 +2,7 @@ import collections
 import queue
 import multiprocessing
 import typing
+import os
 import threading
 
 import psutil
@@ -12,8 +13,10 @@ from ..utils import singledispatchmethod, peekable
 from ._base import _BaseDispatcher, _BaseWorker, _BaseChore, _AnyProfile, _ProcessChore
 
 _SEARCHQueryType = typing.Union[_AnyProfile]
-# generic profile type
 _P = typing.TypeVar("_P", HMM, Profile, OptimizedProfile)
+
+if typing.TYPE_CHECKING:
+    from ._base import Unpack, PipelineOptions
 
 # --- Worker -------------------------------------------------------------------
 
@@ -34,6 +37,7 @@ class _SEARCHWorker(
     @query.register(Profile)
     @query.register(OptimizedProfile)
     def _(self, query: _AnyProfile) -> "TopHits[_AnyProfile]":  # type: ignore
+        assert self.pipeline is not None
         return self.pipeline.search_hmm(query, self.targets)
 
 

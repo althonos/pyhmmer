@@ -1,18 +1,23 @@
 import collections
 import copy
+import os
 import queue
 import multiprocessing
 import typing
 import threading
 
-from ..easel import DigitalSequence, DigitalMSA, DigitalSequenceBlock, SequenceFile
+import psutil
+
+from ..easel import Alphabet, DigitalSequence, DigitalMSA, DigitalSequenceBlock, SequenceFile
 from ..plan7 import TopHits, HMM, Profile, OptimizedProfile, LongTargetsPipeline, Builder
 from ..utils import singledispatchmethod, peekable
 from ._base import _BaseDispatcher, _BaseWorker, _BaseChore, _AnyProfile
 
 _NHMMERQueryType = typing.Union[DigitalSequence, DigitalMSA, _AnyProfile]
-# generic nucleotide query type
 _N = typing.TypeVar("_N", DigitalSequence, DigitalMSA, HMM, Profile, OptimizedProfile)
+
+if typing.TYPE_CHECKING:
+    from ._base import Unpack, PipelineOptions, LongTargetsPipelineOptions
 
 # --- Worker -------------------------------------------------------------------
 
@@ -32,16 +37,19 @@ class _NHMMERWorker(
 
     @query.register(DigitalSequence)
     def _(self, query: DigitalSequence) -> "TopHits[DigitalSequence]":  # type: ignore
+        assert self.pipeline is not None
         return self.pipeline.search_seq(query, self.targets, self.builder)
 
     @query.register(DigitalMSA)
     def _(self, query: DigitalMSA) -> "TopHits[DigitalMSA]":  # type: ignore
+        assert self.pipeline is not None
         return self.pipeline.search_msa(query, self.targets, self.builder)
 
     @query.register(HMM)
     @query.register(Profile)
     @query.register(OptimizedProfile)
     def _(self, query: _AnyProfile) -> "TopHits[_AnyProfile]":  # type: ignore
+        assert self.pipeline is not None
         return self.pipeline.search_hmm(query, self.targets)
 
 

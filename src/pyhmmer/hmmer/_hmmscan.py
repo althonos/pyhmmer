@@ -1,15 +1,19 @@
 import collections
 import queue
 import multiprocessing
+import os
 import typing
 import threading
 
 import psutil
 
-from ..easel import DigitalSequence, DigitalMSA, DigitalSequenceBlock, SequenceFile
+from ..easel import Alphabet, DigitalSequence, DigitalMSA, DigitalSequenceBlock, SequenceFile
 from ..plan7 import TopHits, Builder, Pipeline, Background, HMM, Profile, OptimizedProfile, HMMFile, HMMPressedFile, OptimizedProfileBlock
 from ..utils import singledispatchmethod
 from ._base import _BaseDispatcher, _BaseWorker, _BaseChore, _AnyProfile
+
+if typing.TYPE_CHECKING:
+    from ._base import Unpack, PipelineOptions
 
 # --- Worker -------------------------------------------------------------------
 
@@ -29,6 +33,7 @@ class _SCANWorker(
 
     @query.register(DigitalSequence)
     def _(self, query: DigitalSequence) -> "TopHits[DigitalSequence]":  # type: ignore
+        assert self.pipeline is not None
         return self.pipeline.scan_seq(query, self.targets)
 
 

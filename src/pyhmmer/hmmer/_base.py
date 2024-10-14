@@ -3,7 +3,7 @@ import ctypes
 import collections
 import contextlib
 import itertools
-import multiprocessing
+import multiprocessing.synchronize
 import operator
 import queue
 import sys
@@ -26,12 +26,6 @@ _R = typing.TypeVar("_R")
 # type aliases
 _AnyProfile = typing.Union[HMM, Profile, OptimizedProfile]
 
-# the query types for the different tasks
-_PHMMERQueryType = typing.Union[DigitalSequence, DigitalMSA]
-_SEARCHQueryType = _AnyProfile
-_NHMMERQueryType = typing.Union[_PHMMERQueryType, _AnyProfile]
-_JACKHMMERQueryType = typing.Union[DigitalSequence, _AnyProfile]
-
 # `typing.Literal`` is only available in Python 3.8 and later
 if typing.TYPE_CHECKING:
 
@@ -45,7 +39,8 @@ if typing.TYPE_CHECKING:
     else:
         from typing_extensions import Unpack
 
-    from .plan7 import BIT_CUTOFFS, STRAND
+    from .plan7 import BIT_CUTOFFS, STRAND, Background
+    from .easel import Alphabet
 
     class PipelineOptions(TypedDict, total=False):
         alphabet: Alphabet
@@ -82,41 +77,32 @@ if typing.TYPE_CHECKING:
 
 class _BaseChore(typing.Generic[_Q, _R], abc.ABC):
 
+    def __init__(self, query: _Q):
+        self.query = query
+
     # --- Dispatcher methods ---
 
     @abc.abstractmethod
     def available(self) -> bool:
         """Return whether the chore is done and results are available."""
-        return self.event.is_set()
 
     @abc.abstractmethod
     def wait(self, timeout: typing.Optional[float] = None) -> bool:
         """Wait for the chore to be done."""
-        return self.event.wait(timeout)
 
     @abc.abstractmethod
     def get(self) -> _R:
         """Get the results of the chore, blocking if the chore was not done."""
-        self.event.wait()
-        assert self.result is not None
-        if isinstance(self.result, BaseException):
-            raise self.result
-        else:
-            return self.result
 
     # --- Worker methods ---
 
     @abc.abstractmethod
     def complete(self, result: _R) -> None:
         """Mark the chore as done and record ``result`` as the results."""
-        self.result = result
-        self.event.set()
-
+       
     @abc.abstractmethod
     def fail(self, exception: BaseException) -> None:
         """Mark the chore as done and record ``exception`` as the error."""
-        self.result = exception
-        self.event.set()
 
 
 class _ThreadChore(typing.Generic[_Q, _R], _BaseChore[_Q, _R]):
@@ -138,7 +124,7 @@ class _ThreadChore(typing.Generic[_Q, _R], _BaseChore[_Q, _R]):
 
     def __init__(self, query: _Q) -> None:
         """Create a new chore from the given query."""
-        self.query = query
+        super().__init__(query)
         self.event = threading.Event()
         self.result = None
 
@@ -167,11 +153,11 @@ class _ThreadChore(typing.Generic[_Q, _R], _BaseChore[_Q, _R]):
 
 class _ProcessChore(typing.Generic[_Q, _R], _BaseChore[_Q, _R]):
 
-    event: multiprocessing.Event
+    event: multiprocessing.synchronize.Event
 
     def __init__(self, query: _Q) -> None:
         """Create a new chore from the given query."""
-        self.query = query
+        super().__init__(query)
         self.connr, self.conns = multiprocessing.Pipe()
 
     def available(self) -> bool:
@@ -200,7 +186,7 @@ class _ProcessChore(typing.Generic[_Q, _R], _BaseChore[_Q, _R]):
         if isinstance(result, BaseException):
             raise result
         else:
-            return result
+            return result  # type: ignore
 
 
 # --- Workers ------------------------------------------------------------------
@@ -255,7 +241,7 @@ class _BaseWorker(typing.Generic[_Q, _T, _R]):
         super().__init__()
         self.options = options
         self.targets: _T = targets
-        self.pipeline = None
+        self.pipeline: typing.Optional[Pipeline] = None
         self.pipeline_options = options
         self.pipeline_class = pipeline_class
         self.query_queue: "queue.Queue[typing.Optional[_BaseChore[_Q, _R]]]" = query_queue
@@ -292,6 +278,9 @@ class _BaseWorker(typing.Generic[_Q, _T, _R]):
                 chore.fail(exc)
         if isinstance(self.targets, (SequenceFile, HMMPressedFile)):
             self.targets.close()
+
+    if typing.TYPE_CHECKING:
+        def start(self) -> None: ...
 
     def is_killed(self) -> bool:
         try:
@@ -409,12 +398,12 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
             results: typing.Deque[_BaseChore[_Q, _R]] = collections.deque()
             if self.backend == "multiprocessing":
                 manager = ctx.enter_context(multiprocessing.Manager())
-                query_queue = manager.Queue(maxsize=2*self.cpus)  # type: ignore
+                query_queue = manager.Queue(maxsize=2*self.cpus)
                 query_count = manager.Value(ctypes.c_ulong, 0)
                 kill_switch = manager.Event()
             elif self.backend == "threading":
-                query_queue = queue.Queue(maxsize=2*self.cpus)  # type: ignore
-                query_count = multiprocessing.Value(ctypes.c_ulong)
+                query_queue = queue.Queue(maxsize=2*self.cpus)
+                query_count = multiprocessing.Value(ctypes.c_ulong)  # type: ignore
                 kill_switch = threading.Event()
 
             # create and launch one pipeline thread per CPU

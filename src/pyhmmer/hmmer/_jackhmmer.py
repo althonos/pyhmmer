@@ -1,18 +1,36 @@
 import collections
 import copy
 import queue
+import os
 import itertools
 import multiprocessing
+import sys
 import typing
 import threading
 
-from ..easel import DigitalSequence, DigitalMSA, DigitalSequenceBlock, SequenceFile
+import psutil
+
+from ..easel import Alphabet, DigitalSequence, DigitalMSA, DigitalSequenceBlock, SequenceFile
 from ..plan7 import TopHits, HMM, Profile, OptimizedProfile, Pipeline, Builder, IterationResult
 from ..utils import singledispatchmethod, peekable
 from ._base import _BaseDispatcher, _BaseWorker, _BaseChore, _AnyProfile
 
 _JACKHMMERQueryType = typing.Union[DigitalSequence, _AnyProfile]
 _I = typing.TypeVar("_I") # generic iteration result
+
+if typing.TYPE_CHECKING:
+
+    if sys.version_info >= (3, 8):
+        from typing import Literal
+    else:
+        from typing_extensions import Literal  # type: ignore
+
+    if sys.version_info >= (3, 11):
+        from typing import Unpack
+    else:
+        from typing_extensions import Unpack
+
+    from ._base import PipelineOptions
 
 # --- Worker -------------------------------------------------------------------
 
@@ -61,6 +79,7 @@ class _JACKHMMERWorker(
 
     @query.register(DigitalSequence)
     def _(self, query: DigitalSequence) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:  # type: ignore
+        assert self.pipeline is not None
         iterator = self.pipeline.iterate_seq(
             query,
             self.targets,
@@ -71,6 +90,7 @@ class _JACKHMMERWorker(
 
     @query.register(HMM)
     def _(self, query: HMM) -> typing.Union[IterationResult, typing.Iterable[IterationResult]]:  # type: ignore
+        assert self.pipeline is not None
         iterator = self.pipeline.iterate_hmm(
             query,
             self.targets,
@@ -185,6 +205,7 @@ def jackhmmer(
     select_hits: typing.Optional[typing.Callable[["TopHits[_JACKHMMERQueryType]"], None]] = None,
     checkpoints: "Literal[True]",
     cpus: int = 0,
+    backend: str = "threading",
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
     **options,  # type: Unpack[PipelineOptions]
@@ -201,6 +222,7 @@ def jackhmmer(
     select_hits: typing.Optional[typing.Callable[["TopHits[_JACKHMMERQueryType]"], None]] = None,
     checkpoints: "Literal[False]",
     cpus: int = 0,
+    backend: str = "threading",
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
     **options,  # type: Unpack[PipelineOptions]
@@ -217,6 +239,7 @@ def jackhmmer(
     select_hits: typing.Optional[typing.Callable[["TopHits[_JACKHMMERQueryType]"], None]] = None,
     checkpoints: bool = False,
     cpus: int = 0,
+    backend: str = "threading",
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
     **options,  # type: Unpack[PipelineOptions]
@@ -234,6 +257,7 @@ def jackhmmer(
     select_hits: typing.Optional[typing.Callable[["TopHits[_JACKHMMERQueryType]"], None]] = None,
     checkpoints: bool = False,
     cpus: int = 0,
+    backend: str = "threading",
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
     **options,  # type: Unpack[PipelineOptions]
@@ -345,6 +369,7 @@ def jackhmmer(
         queries=queries,
         targets=targets,
         cpus=cpus,
+        backend="threading",
         callback=callback,
         pipeline_class=Pipeline,
         builder=builder,

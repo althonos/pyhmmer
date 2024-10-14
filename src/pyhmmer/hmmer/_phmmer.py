@@ -1,18 +1,23 @@
 import collections
 import copy
+import os
 import queue
 import multiprocessing
 import typing
 import threading
 
-from ..easel import DigitalSequence, DigitalMSA, DigitalSequenceBlock, SequenceFile
+import psutil
+
+from ..easel import Alphabet, DigitalSequence, DigitalMSA, DigitalSequenceBlock, SequenceFile
 from ..plan7 import TopHits, Builder, Pipeline
 from ..utils import singledispatchmethod, peekable
 from ._base import _BaseDispatcher, _BaseWorker, _BaseChore
 
 _PHMMERQueryType = typing.Union[DigitalSequence, DigitalMSA]
-# generic alignment type
 _M = typing.TypeVar("_M", DigitalSequence, DigitalMSA)
+
+if typing.TYPE_CHECKING:
+    from ._base import Unpack, PipelineOptions
 
 # --- Worker -------------------------------------------------------------------
 
@@ -32,10 +37,12 @@ class _PHMMERWorker(
 
     @query.register(DigitalSequence)
     def _(self, query: DigitalSequence) -> "TopHits[DigitalSequence]":  # type: ignore
+        assert self.pipeline is not None
         return self.pipeline.search_seq(query, self.targets, self.builder)
 
     @query.register(DigitalMSA)
     def _(self, query: DigitalMSA) -> "TopHits[DigitalMSA]":  # type: ignore
+        assert self.pipeline is not None
         return self.pipeline.search_msa(query, self.targets, self.builder)
 
 
