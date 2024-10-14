@@ -255,7 +255,9 @@ class _BaseWorker(typing.Generic[_Q, _T, _R]):
         super().__init__()
         self.options = options
         self.targets: _T = targets
-        self.pipeline = pipeline_class(**options)
+        self.pipeline = None
+        self.pipeline_options = options
+        self.pipeline_class = pipeline_class
         self.query_queue: "queue.Queue[typing.Optional[_BaseChore[_Q, _R]]]" = query_queue
         self.query_count = query_count
         self.callback: typing.Optional[typing.Callable[[_Q, int], None]] = (
@@ -310,6 +312,8 @@ class _BaseWorker(typing.Generic[_Q, _T, _R]):
         """Process a single query and return the resulting hits."""
         if isinstance(self.targets, (HMMPressedFile, SequenceFile)):
             self.targets.rewind()
+        if self.pipeline is None:
+            self.pipeline = self.pipeline_class(**self.pipeline_options)
         hits = self.query(query)
         self.callback(query, self.query_count.value)  # type: ignore
         self.pipeline.clear()
