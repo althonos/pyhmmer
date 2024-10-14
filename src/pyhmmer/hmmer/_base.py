@@ -43,6 +43,8 @@ if typing.TYPE_CHECKING:
     from .plan7 import BIT_CUTOFFS, STRAND, Background
     from .easel import Alphabet
 
+    BACKEND = Literal["threading", "multiprocessing"]
+
     class PipelineOptions(TypedDict, total=False):
         alphabet: Alphabet
         background: typing.Optional[Background]
@@ -341,7 +343,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
         pipeline_class: typing.Type[Pipeline] = Pipeline,
         builder: typing.Optional[Builder] = None,
         timeout: int = 1,
-        backend: str = "threading",
+        backend: "BACKEND" = "threading",
         **options,  # type: Unpack[PipelineOptions]
     ) -> None:
         self.queries = queries

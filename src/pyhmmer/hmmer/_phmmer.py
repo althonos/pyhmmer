@@ -17,7 +17,7 @@ _PHMMERQueryType = typing.Union[DigitalSequence, DigitalMSA]
 _M = typing.TypeVar("_M", DigitalSequence, DigitalMSA)
 
 if typing.TYPE_CHECKING:
-    from ._base import Unpack, PipelineOptions
+    from ._base import Unpack, PipelineOptions, BACKEND
 
 # --- Worker -------------------------------------------------------------------
 
@@ -103,7 +103,7 @@ def phmmer(
     *,
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_M, int], None]] = None,
-    backend: str = "threading",
+    backend: "BACKEND" = "threading",
     builder: typing.Optional[Builder] = None,
     **options,  # type: Unpack[PipelineOptions]
 ) -> typing.Iterator["TopHits[_M]"]:

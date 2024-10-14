@@ -13,7 +13,7 @@ from ..utils import singledispatchmethod
 from ._base import _BaseDispatcher, _BaseWorker, _BaseChore, _AnyProfile
 
 if typing.TYPE_CHECKING:
-    from ._base import Unpack, PipelineOptions
+    from ._base import Unpack, PipelineOptions, BACKEND
 
 # --- Worker -------------------------------------------------------------------
 
@@ -89,7 +89,7 @@ def hmmscan(
     *,
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
-    backend: str = "threading",
+    backend: "BACKEND" = "threading",
     **options,  # type: Unpack[PipelineOptions]
 ) -> typing.Iterator["TopHits[DigitalSequence]"]:
     """Scan query sequences against a profile database.

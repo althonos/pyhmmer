@@ -30,7 +30,7 @@ if typing.TYPE_CHECKING:
     else:
         from typing_extensions import Unpack
 
-    from ._base import PipelineOptions
+    from ._base import PipelineOptions, BACKEND
 
 # --- Worker -------------------------------------------------------------------
 
@@ -205,7 +205,7 @@ def jackhmmer(
     select_hits: typing.Optional[typing.Callable[["TopHits[_JACKHMMERQueryType]"], None]] = None,
     checkpoints: "Literal[True]",
     cpus: int = 0,
-    backend: str = "threading",
+    backend: "BACKEND" = "threading",
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
     **options,  # type: Unpack[PipelineOptions]
@@ -222,7 +222,7 @@ def jackhmmer(
     select_hits: typing.Optional[typing.Callable[["TopHits[_JACKHMMERQueryType]"], None]] = None,
     checkpoints: "Literal[False]",
     cpus: int = 0,
-    backend: str = "threading",
+    backend: "BACKEND" = "threading",
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
     **options,  # type: Unpack[PipelineOptions]
@@ -239,7 +239,7 @@ def jackhmmer(
     select_hits: typing.Optional[typing.Callable[["TopHits[_JACKHMMERQueryType]"], None]] = None,
     checkpoints: bool = False,
     cpus: int = 0,
-    backend: str = "threading",
+    backend: "BACKEND" = "threading",
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
     **options,  # type: Unpack[PipelineOptions]
@@ -257,7 +257,7 @@ def jackhmmer(
     select_hits: typing.Optional[typing.Callable[["TopHits[_JACKHMMERQueryType]"], None]] = None,
     checkpoints: bool = False,
     cpus: int = 0,
-    backend: str = "threading",
+    backend: "BACKEND" = "threading",
     callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]] = None,
     builder: typing.Optional[Builder] = None,
     **options,  # type: Unpack[PipelineOptions]

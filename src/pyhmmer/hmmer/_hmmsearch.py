@@ -16,7 +16,7 @@ _SEARCHQueryType = typing.Union[_AnyProfile]
 _P = typing.TypeVar("_P", HMM, Profile, OptimizedProfile)
 
 if typing.TYPE_CHECKING:
-    from ._base import Unpack, PipelineOptions
+    from ._base import Unpack, PipelineOptions, BACKEND
 
 # --- Worker -------------------------------------------------------------------
 
@@ -99,7 +99,7 @@ def hmmsearch(
     *,
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_P, int], None]] = None,
-    backend: str = "threading",
+    backend: "BACKEND" = "threading",
     **options,  # type: Unpack[PipelineOptions]
 ) -> typing.Iterator["TopHits[_P]"]:
     """Search HMM profiles against a sequence database.

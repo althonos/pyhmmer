@@ -17,7 +17,7 @@ _NHMMERQueryType = typing.Union[DigitalSequence, DigitalMSA, _AnyProfile]
 _N = typing.TypeVar("_N", DigitalSequence, DigitalMSA, HMM, Profile, OptimizedProfile)
 
 if typing.TYPE_CHECKING:
-    from ._base import Unpack, PipelineOptions, LongTargetsPipelineOptions
+    from ._base import Unpack, LongTargetsPipelineOptions, BACKEND
 
 # --- Worker -------------------------------------------------------------------
 
@@ -136,7 +136,7 @@ def nhmmer(
     *,
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_N, int], None]] = None,
-    backend: str = "threading",
+    backend: "BACKEND" = "threading",
     builder: typing.Optional[Builder] = None,
     **options,  # type: Unpack[LongTargetsPipelineOptions]
 ) -> typing.Iterator["TopHits[_N]"]:
