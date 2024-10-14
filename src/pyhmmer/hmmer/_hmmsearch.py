@@ -84,7 +84,7 @@ class _SEARCHDispatcher(
         elif self.backend == "multiprocessing":
             return _SEARCHProcess(*params)
         else:
-            raise ValueError(f"Invalid backend: {self.backend!r}")
+            raise ValueError(f"Invalid backend for `hmmsearch`: {self.backend!r}")
 
 
 # --- hmmsearch --------------------------------------------------------------

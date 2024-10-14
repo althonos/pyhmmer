@@ -39,6 +39,13 @@ class _PHMMERWorker(
         return self.pipeline.search_msa(query, self.targets, self.builder)
 
 
+class _PHMMERThread(_PHMMERWorker, threading.Thread):
+    pass
+
+
+class _PHMMERProcess(_PHMMERWorker, multiprocessing.Process):
+    pass
+
 # --- Dispatcher ---------------------------------------------------------------
 
 class _PHMMERDispatcher(
@@ -64,7 +71,7 @@ class _PHMMERDispatcher(
             )
         else:
             targets = self.targets  # type: ignore
-        return _PHMMERWorker(
+        params = [
             targets,
             query_queue,
             query_count,
@@ -73,8 +80,13 @@ class _PHMMERDispatcher(
             self.options,
             self.pipeline_class,
             copy.copy(self.builder),
-        )
-
+        ]
+        if self.backend == "threading":
+            return _PHMMERThread(*params)
+        elif self.backend == "multiprocessing":
+            return _PHMMERProcess(*params)
+        else:
+            raise ValueError(f"Invalid backend for `phmmer`: {self.backend!r}")
 
 # --- phmmer -----------------------------------------------------------------
 
@@ -84,6 +96,7 @@ def phmmer(
     *,
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_M, int], None]] = None,
+    backend: str = "threading",
     builder: typing.Optional[Builder] = None,
     **options,  # type: Unpack[PipelineOptions]
 ) -> typing.Iterator["TopHits[_M]"]:
@@ -165,6 +178,7 @@ def phmmer(
         queries=queries,
         targets=targets,
         cpus=cpus,
+        backend=backend,
         callback=callback,  # type: ignore
         pipeline_class=Pipeline,
         builder=builder,

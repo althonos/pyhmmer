@@ -45,6 +45,14 @@ class _NHMMERWorker(
         return self.pipeline.search_hmm(query, self.targets)
 
 
+class _NHMMERThread(_NHMMERWorker, threading.Thread):
+    pass
+
+
+class _NHMMERProcess(_NHMMERWorker, multiprocessing.Process):
+    pass
+
+
 # --- Dispatcher ---------------------------------------------------------------
 
 class _NHMMERDispatcher(
@@ -94,7 +102,7 @@ class _NHMMERDispatcher(
             )
         else:
             targets = self.targets  # type: ignore
-        return _NHMMERWorker(
+        params = [
             targets,
             query_queue,
             query_count,
@@ -103,7 +111,13 @@ class _NHMMERDispatcher(
             self.options,
             self.pipeline_class,
             copy.copy(self.builder),
-        )
+        ]
+        if self.backend == "threading":
+            return _NHMMERThread(*params)
+        elif self.backend == "multiprocessing":
+            return _NHMMERProcess(*params)
+        else:
+            raise ValueError(f"Invalid backend for `nhmmer`: {self.backend!r}")
 
 
 # --- nhmmer -----------------------------------------------------------------
@@ -114,6 +128,7 @@ def nhmmer(
     *,
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_N, int], None]] = None,
+    backend: str = "threading",
     builder: typing.Optional[Builder] = None,
     **options,  # type: Unpack[LongTargetsPipelineOptions]
 ) -> typing.Iterator["TopHits[_N]"]:
@@ -202,6 +217,7 @@ def nhmmer(
         queries=queries,
         targets=targets,
         cpus=cpus,
+        backend=backend,
         callback=callback,  # type: ignore
         pipeline_class=LongTargetsPipeline,
         builder=builder,

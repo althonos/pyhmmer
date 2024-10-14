@@ -32,6 +32,13 @@ class _SCANWorker(
         return self.pipeline.scan_seq(query, self.targets)
 
 
+class _SCANThread(_SCANWorker, threading.Thread):
+    pass
+
+
+class _SCANProcess(_SCANWorker, multiprocessing.Process):
+    pass
+
 # --- Dispatcher ---------------------------------------------------------------
 
 class _SCANDispatcher(
@@ -52,7 +59,7 @@ class _SCANDispatcher(
             targets = HMMPressedFile(self.targets.name)
         else:
             targets = self.targets  # type: ignore
-        return _SCANWorker(
+        params = [
             targets,
             query_queue,
             query_count,
@@ -60,7 +67,13 @@ class _SCANDispatcher(
             self.callback,
             self.options,
             self.pipeline_class,
-        )
+        ]
+        if self.backend == "threading":
+            return _SCANThread(*params)
+        elif self.backend == "multiprocessing":
+            return _SCANProcess(*params)
+        else:
+            raise ValueError(f"Invalid backend for `hmmsearch`: {self.backend!r}")
 
 
 # --- hmmscan ----------------------------------------------------------------
@@ -71,6 +84,7 @@ def hmmscan(
     *,
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[DigitalSequence, int], None]] = None,
+    backend: str = "threading",
     **options,  # type: Unpack[PipelineOptions]
 ) -> typing.Iterator["TopHits[DigitalSequence]"]:
     """Scan query sequences against a profile database.
@@ -195,6 +209,7 @@ def hmmscan(
         queries=queries,
         targets=targets,
         cpus=cpus,
+        backend=backend,
         callback=callback,
         pipeline_class=Pipeline,
         builder=None,
