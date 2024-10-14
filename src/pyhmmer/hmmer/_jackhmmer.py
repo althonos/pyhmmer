@@ -157,6 +157,8 @@ class _JACKHMMERDispatcher(
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _JACKHMMERWorker[_I]:
+        if self.backend != "threading":
+            raise ValueError(f"Invalid backend for `jackhmmer`: {self.backend!r}")
         return _JACKHMMERWorker(
             self.targets,
             query_queue,

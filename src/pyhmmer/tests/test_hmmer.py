@@ -277,7 +277,19 @@ class TestHmmsearchSingle(TestHmmsearch, unittest.TestCase):
     def test_no_queries(self):
         with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
             seqs = list(seqs_file)
-        hits = pyhmmer.hmmsearch([], seqs)
+        hits = pyhmmer.hmmsearch([], seqs, cpus=1)
+        self.assertIs(None, next(hits, None))
+
+
+class TestHmmsearchProcess(TestHmmsearch, unittest.TestCase):
+    def get_hits(self, hmm, seqs):
+        return list(pyhmmer.hmmsearch(hmm, seqs, cpus=2, backend="multiprocessing"))[0]
+
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
+    def test_no_queries(self):
+        with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
+            seqs = list(seqs_file)
+        hits = pyhmmer.hmmsearch([], seqs, cpus=2, backend="multiprocessing")
         self.assertIs(None, next(hits, None))
 
 

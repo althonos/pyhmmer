@@ -294,9 +294,11 @@ class _BaseWorker(typing.Generic[_Q, _T, _R]):
     def is_killed(self) -> bool:
         try:
             return self.kill_switch.is_set()
-        except BrokenPipeError:
+        except BrokenPipeError:  # the connection was closed already
             return True
-        except ConnectionResetError:
+        except ConnectionResetError:  # the connection was closed already
+            return True
+        except FileNotFoundError:  # the Event manager has been closed already
             return True
 
     def kill(self) -> None:
