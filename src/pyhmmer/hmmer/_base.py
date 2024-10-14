@@ -231,14 +231,13 @@ class _BaseWorker(typing.Generic[_Q, _T, _R]):
             this callback should be picklable.
         options (`dict`): A dictionary of options to be passed to the
             `pyhmmer.plan7.Pipeline` object wrapped by the worker.
-        pipeline_class (`type`): The pipeline class to use to search for
-            hits. Use `~plan7.LongTargetsPipeline` for `nhmmer`, and
-            `~plan7.Pipeline` everywhere else.
         builder (`~pyhmmer.plan7.Builder`, *optional*): The builder to use
             for translating sequence or alignment queries into `HMM` objects.
             May be `None` if the queries are expected to be `HMM` only.
 
     """
+
+    pipeline_class: typing.ClassVar[typing.Type[Pipeline]] = Pipeline
 
     @staticmethod
     def _none_callback(hmm: _Q, total: int) -> None:
@@ -252,7 +251,6 @@ class _BaseWorker(typing.Generic[_Q, _T, _R]):
         kill_switch: threading.Event,
         callback: typing.Optional[typing.Callable[[_Q, int], None]],
         options: "PipelineOptions",
-        pipeline_class: typing.Type[Pipeline],
         builder: typing.Optional[Builder] = None,
     ) -> None:
         super().__init__()
@@ -260,7 +258,6 @@ class _BaseWorker(typing.Generic[_Q, _T, _R]):
         self.targets: _T = targets
         self.pipeline: typing.Optional[Pipeline] = None
         self.pipeline_options = options
-        self.pipeline_class = pipeline_class
         self.query_queue: "queue.Queue[typing.Optional[_BaseChore[_Q, _R]]]" = query_queue
         self.query_count = query_count
         self.callback: typing.Optional[typing.Callable[[_Q, int], None]] = (
@@ -340,7 +337,6 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
         targets: _T,
         cpus: int = 0,
         callback: typing.Optional[typing.Callable[[_Q, int], None]] = None,
-        pipeline_class: typing.Type[Pipeline] = Pipeline,
         builder: typing.Optional[Builder] = None,
         timeout: int = 1,
         backend: "BACKEND" = "threading",
@@ -350,7 +346,6 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
         self.targets: _T = targets
         self.callback: typing.Optional[typing.Callable[[_Q, int], None]] = callback
         self.options = options
-        self.pipeline_class = pipeline_class
         self.builder = builder
         self.timeout = timeout
 

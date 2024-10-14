@@ -51,7 +51,6 @@ class _JACKHMMERWorker(
         kill_switch: threading.Event,
         callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]],
         options: "PipelineOptions",
-        pipeline_class: typing.Type[Pipeline],
         builder: typing.Optional[Builder] = None,
         max_iterations: typing.Optional[int] = 5,
         select_hits: typing.Optional[typing.Callable[["TopHits[_JACKHMMERQueryType]"], None]] = None,
@@ -64,7 +63,6 @@ class _JACKHMMERWorker(
             kill_switch=kill_switch,
             callback=callback,
             options=options,
-            pipeline_class=pipeline_class,
             builder=builder,
         )
         self.select_hits = select_hits
@@ -149,7 +147,6 @@ class _JACKHMMERDispatcher(
         callback: typing.Optional[
             typing.Callable[[_JACKHMMERQueryType, int], None]
         ] = None,
-        pipeline_class: typing.Type[Pipeline] = Pipeline,
         builder: typing.Optional[Builder] = None,
         timeout: int = 1,
         max_iterations: typing.Optional[int] = 5,
@@ -162,7 +159,6 @@ class _JACKHMMERDispatcher(
             targets=targets,
             cpus=cpus,
             callback=callback,
-            pipeline_class=pipeline_class,
             builder=builder,
             timeout=timeout,
             **options,
@@ -186,7 +182,6 @@ class _JACKHMMERDispatcher(
             kill_switch,
             self.callback,
             self.options,
-            self.pipeline_class,
             copy.copy(self.builder),
             self.max_iterations,
             self.select_hits,
@@ -371,7 +366,6 @@ def jackhmmer(
         cpus=cpus,
         backend="threading",
         callback=callback,
-        pipeline_class=Pipeline,
         builder=builder,
         max_iterations=max_iterations,
         select_hits=select_hits,

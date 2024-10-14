@@ -29,6 +29,9 @@ class _NHMMERWorker(
     ],
     threading.Thread
 ):
+
+    pipeline_class = LongTargetsPipeline
+
     @singledispatchmethod
     def query(self, query) -> "TopHits[Any]":  # type: ignore
         raise TypeError(
@@ -78,7 +81,6 @@ class _NHMMERDispatcher(
         callback: typing.Optional[
             typing.Callable[[_NHMMERQueryType, int], None]
         ] = None,
-        pipeline_class: typing.Type[LongTargetsPipeline] = LongTargetsPipeline,
         builder: typing.Optional[Builder] = None,
         timeout: int = 1,
         **options,  # type: Unpack[LongTargetsPipelineOptions]
@@ -88,7 +90,6 @@ class _NHMMERDispatcher(
             targets=targets,
             cpus=cpus,
             callback=callback,
-            pipeline_class=pipeline_class,
             builder=builder,
             timeout=timeout,
             **options,  # type: ignore
@@ -117,7 +118,6 @@ class _NHMMERDispatcher(
             kill_switch,
             self.callback,
             self.options,
-            self.pipeline_class,
             copy.copy(self.builder),
         ]
         if self.backend == "threading":
@@ -227,7 +227,6 @@ def nhmmer(
         cpus=cpus,
         backend=backend,
         callback=callback,  # type: ignore
-        pipeline_class=LongTargetsPipeline,
         builder=builder,
         **options,
     )

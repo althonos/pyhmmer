@@ -81,7 +81,6 @@ class _SEARCHDispatcher(
             kill_switch,
             self.callback,
             self.options,
-            self.pipeline_class,
         ]
         if self.backend == "threading":
             return _SEARCHThread(*params)
@@ -200,7 +199,6 @@ def hmmsearch(
         backend=backend,
         callback=callback,  # type: ignore
         builder=None,
-        pipeline_class=Pipeline,
         **options,
     )
     return dispatcher.run()  # type: ignore

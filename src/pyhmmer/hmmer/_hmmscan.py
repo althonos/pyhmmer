@@ -71,7 +71,6 @@ class _SCANDispatcher(
             kill_switch,
             self.callback,
             self.options,
-            self.pipeline_class,
         ]
         if self.backend == "threading":
             return _SCANThread(*params)
@@ -216,7 +215,6 @@ def hmmscan(
         cpus=cpus,
         backend=backend,
         callback=callback,
-        pipeline_class=Pipeline,
         builder=None,
         **options,
     )

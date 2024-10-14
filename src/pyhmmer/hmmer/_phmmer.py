@@ -85,7 +85,6 @@ class _PHMMERDispatcher(
             kill_switch,
             self.callback,
             self.options,
-            self.pipeline_class,
             copy.copy(self.builder),
         ]
         if self.backend == "threading":
@@ -187,7 +186,6 @@ def phmmer(
         cpus=cpus,
         backend=backend,
         callback=callback,  # type: ignore
-        pipeline_class=Pipeline,
         builder=builder,
         **options,
     )
