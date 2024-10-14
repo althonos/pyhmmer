@@ -14,6 +14,7 @@ EASEL_FOLDER = os.path.realpath(
         os.pardir,
         os.pardir,
         os.pardir,
+        os.pardir,
         "vendor",
         "easel",
     )
@@ -22,6 +23,7 @@ EASEL_FOLDER = os.path.realpath(
 HMMER_FOLDER = os.path.realpath(
     os.path.join(
         __file__,
+        os.pardir,
         os.pardir,
         os.pardir,
         os.pardir,
