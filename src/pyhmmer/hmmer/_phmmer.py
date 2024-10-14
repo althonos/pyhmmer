@@ -8,7 +8,7 @@ import threading
 from ..easel import DigitalSequence, DigitalMSA, DigitalSequenceBlock, SequenceFile
 from ..plan7 import TopHits, Builder, Pipeline
 from ..utils import singledispatchmethod, peekable
-from ._base import _BaseDispatcher, _BaseWorker, _Chore
+from ._base import _BaseDispatcher, _BaseWorker, _BaseChore
 
 _PHMMERQueryType = typing.Union[DigitalSequence, DigitalMSA]
 # generic alignment type
@@ -21,7 +21,8 @@ class _PHMMERWorker(
         _PHMMERQueryType,
         typing.Union[DigitalSequenceBlock, "SequenceFile[DigitalSequence]"],
         "TopHits[_PHMMERQueryType]",
-    ]
+    ],
+    threading.Thread
 ):
     @singledispatchmethod
     def query(self, query) -> "TopHits[Any]":  # type: ignore
@@ -47,9 +48,9 @@ class _PHMMERDispatcher(
         "TopHits[_PHMMERQueryType]",
     ]
 ):
-    def _new_thread(
+    def _new_worker(
         self,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_PHMMERQueryType, TopHits[_PHMMERQueryType]]]]",
+        query_queue: "queue.Queue[typing.Optional[_BaseChore[_PHMMERQueryType, TopHits[_PHMMERQueryType]]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _PHMMERWorker:

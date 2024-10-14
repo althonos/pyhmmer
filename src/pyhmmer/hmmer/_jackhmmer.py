@@ -9,7 +9,7 @@ import threading
 from ..easel import DigitalSequence, DigitalMSA, DigitalSequenceBlock, SequenceFile
 from ..plan7 import TopHits, HMM, Profile, OptimizedProfile, Pipeline, Builder, IterationResult
 from ..utils import singledispatchmethod, peekable
-from ._base import _BaseDispatcher, _BaseWorker, _Chore, _AnyProfile
+from ._base import _BaseDispatcher, _BaseWorker, _BaseChore, _AnyProfile
 
 _JACKHMMERQueryType = typing.Union[DigitalSequence, _AnyProfile]
 _I = typing.TypeVar("_I") # generic iteration result
@@ -23,11 +23,12 @@ class _JACKHMMERWorker(
         DigitalSequenceBlock,
         _I,
     ],
+    threading.Thread
 ):
     def __init__(
         self,
         targets: DigitalSequenceBlock,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, _I]]]",
+        query_queue: "queue.Queue[typing.Optional[_BaseChore[_JACKHMMERQueryType, _I]]]",
         query_count: multiprocessing.Value,  # type: ignore
         kill_switch: threading.Event,
         callback: typing.Optional[typing.Callable[[_JACKHMMERQueryType, int], None]],
@@ -150,9 +151,9 @@ class _JACKHMMERDispatcher(
         self.select_hits = select_hits
         self.checkpoints = checkpoints
 
-    def _new_thread(
+    def _new_worker(
         self,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_JACKHMMERQueryType, _I]]]",
+        query_queue: "queue.Queue[typing.Optional[_BaseChore[_JACKHMMERQueryType, _I]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _JACKHMMERWorker[_I]:

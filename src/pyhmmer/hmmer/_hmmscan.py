@@ -9,7 +9,7 @@ import psutil
 from ..easel import DigitalSequence, DigitalMSA, DigitalSequenceBlock, SequenceFile
 from ..plan7 import TopHits, Builder, Pipeline, Background, HMM, Profile, OptimizedProfile, HMMFile, HMMPressedFile, OptimizedProfileBlock
 from ..utils import singledispatchmethod
-from ._base import _BaseDispatcher, _BaseWorker, _Chore, _AnyProfile
+from ._base import _BaseDispatcher, _BaseWorker, _BaseChore, _AnyProfile
 
 # --- Worker -------------------------------------------------------------------
 
@@ -18,7 +18,8 @@ class _SCANWorker(
         DigitalSequence,
         typing.Union[OptimizedProfileBlock, HMMPressedFile],
         "TopHits[DigitalSequence]",
-    ]
+    ],
+    threading.Thread
 ):
     @singledispatchmethod
     def query(self, query) -> "TopHits[Any]":  # type: ignore
@@ -40,9 +41,9 @@ class _SCANDispatcher(
         "TopHits[DigitalSequence]",
     ]
 ):
-    def _new_thread(
+    def _new_worker(
         self,
-        query_queue: "queue.Queue[typing.Optional[_Chore[DigitalSequence, TopHits[DigitalSequence]]]]",
+        query_queue: "queue.Queue[typing.Optional[_BaseChore[DigitalSequence, TopHits[DigitalSequence]]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _SCANWorker:

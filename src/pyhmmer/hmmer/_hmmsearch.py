@@ -9,7 +9,7 @@ import psutil
 from ..easel import Alphabet, DigitalSequence, DigitalMSA, DigitalSequenceBlock, SequenceFile
 from ..plan7 import TopHits, Builder, Pipeline, HMM, Profile, OptimizedProfile, HMMPressedFile, OptimizedProfileBlock
 from ..utils import singledispatchmethod, peekable
-from ._base import _BaseDispatcher, _BaseWorker, _Chore, _AnyProfile
+from ._base import _BaseDispatcher, _BaseWorker, _BaseChore, _AnyProfile, _ProcessChore
 
 _SEARCHQueryType = typing.Union[_AnyProfile]
 # generic profile type
@@ -22,7 +22,7 @@ class _SEARCHWorker(
         _SEARCHQueryType,
         typing.Union[DigitalSequenceBlock, "SequenceFile[DigitalSequence]"],
         "TopHits[_SEARCHQueryType]",
-    ]
+    ],
 ):
     @singledispatchmethod
     def query(self, query) -> "TopHits[Any]":  # type: ignore
@@ -37,6 +37,14 @@ class _SEARCHWorker(
         return self.pipeline.search_hmm(query, self.targets)
 
 
+class _SEARCHThread(_SEARCHWorker, threading.Thread):
+    pass
+
+
+class _SEARCHProcess(_SEARCHWorker, multiprocessing.Process):
+    pass
+
+
 # --- Dispatcher ---------------------------------------------------------------
 
 class _SEARCHDispatcher(
@@ -46,9 +54,9 @@ class _SEARCHDispatcher(
         "TopHits[_SEARCHQueryType]",
     ]
 ):
-    def _new_thread(
+    def _new_worker(
         self,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_SEARCHQueryType, TopHits[_SEARCHQueryType]]]]",
+        query_queue: "queue.Queue[typing.Optional[_BaseChore[_SEARCHQueryType, TopHits[_SEARCHQueryType]]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _SEARCHWorker:
@@ -62,7 +70,7 @@ class _SEARCHDispatcher(
             )
         else:
             targets = self.targets  # type: ignore
-        return _SEARCHWorker(
+        params = [
             targets,
             query_queue,
             query_count,
@@ -70,7 +78,13 @@ class _SEARCHDispatcher(
             self.callback,
             self.options,
             self.pipeline_class,
-        )
+        ]
+        if self.backend == "threading":
+            return _SEARCHThread(*params)
+        elif self.backend == "multiprocessing":
+            return _SEARCHProcess(*params)
+        else:
+            raise ValueError(f"Invalid backend: {self.backend!r}")
 
 
 # --- hmmsearch --------------------------------------------------------------
@@ -81,6 +95,7 @@ def hmmsearch(
     *,
     cpus: int = 0,
     callback: typing.Optional[typing.Callable[[_P, int], None]] = None,
+    backend: str = "threading",
     **options,  # type: Unpack[PipelineOptions]
 ) -> typing.Iterator["TopHits[_P]"]:
     """Search HMM profiles against a sequence database.
@@ -178,6 +193,7 @@ def hmmsearch(
         queries=queries,
         targets=targets,
         cpus=cpus,
+        backend=backend,
         callback=callback,  # type: ignore
         builder=None,
         pipeline_class=Pipeline,

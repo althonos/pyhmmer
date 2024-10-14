@@ -8,7 +8,7 @@ import threading
 from ..easel import DigitalSequence, DigitalMSA, DigitalSequenceBlock, SequenceFile
 from ..plan7 import TopHits, HMM, Profile, OptimizedProfile, LongTargetsPipeline, Builder
 from ..utils import singledispatchmethod, peekable
-from ._base import _BaseDispatcher, _BaseWorker, _Chore, _AnyProfile
+from ._base import _BaseDispatcher, _BaseWorker, _BaseChore, _AnyProfile
 
 _NHMMERQueryType = typing.Union[DigitalSequence, DigitalMSA, _AnyProfile]
 # generic nucleotide query type
@@ -21,7 +21,8 @@ class _NHMMERWorker(
         _NHMMERQueryType,
         typing.Union[DigitalSequenceBlock, "SequenceFile[DigitalSequence]"],
         "TopHits[_NHMMERQueryType]",
-    ]
+    ],
+    threading.Thread
 ):
     @singledispatchmethod
     def query(self, query) -> "TopHits[Any]":  # type: ignore
@@ -77,9 +78,9 @@ class _NHMMERDispatcher(
             **options,  # type: ignore
         )
 
-    def _new_thread(
+    def _new_worker(
         self,
-        query_queue: "queue.Queue[typing.Optional[_Chore[_NHMMERQueryType, TopHits[_NHMMERQueryType]]]]",
+        query_queue: "queue.Queue[typing.Optional[_BaseChore[_NHMMERQueryType, TopHits[_NHMMERQueryType]]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _NHMMERWorker:
