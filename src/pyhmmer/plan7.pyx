@@ -7750,11 +7750,14 @@ cdef class TopHits:
 
         cdef size_t    i
         cdef ptrdiff_t offset
-        cdef Hit       hit    = Hit.__new__(Hit, self, 0)
+        cdef Hit       hit    = None
         cdef list      unsrt  = []
         cdef list      hits   = []
 
-        hit.hits = self
+        if self._th.N > 0:
+            hit = Hit.__new__(Hit, self, 0)
+            hit.hits = self
+
         for i in range(self._th.N):
             hit._hit = &self._th.unsrt[i]
             state = hit.__getstate__()
