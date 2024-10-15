@@ -20,18 +20,19 @@ the standard library. Running them requires the extension to be built
 locally:
 
 ```console
-$ python setup.py build_ext --debug --inplace
-$ python -m unittest discover -vv
+$ python -m pip install -e . -v --no-build-isolation
+$ python -m unittest pyhmmer.tests -vv
 ```
 
 ## Running benchmarks
 
 Benchmarks require the HMMER binaries to be available in the `$PATH`,
 as well as the [`hyperfine`](https://github.com/sharkdp/hyperfine) 
-binary. Then make sure to have the extensions compiled in release mode:
+binary. Then make sure to have the extensions compiled and installed
+in release mode:
 
 ```console
-$ python setup.py build_ext --inplace --force
+$ python -m pip install . -v --no-build-isolation
 ```
 
 Then run the benchmarks using the UNIX shell script:
@@ -42,13 +43,13 @@ $ ./benches/run.sh
 
 ## Coding guidelines
 
-This project targets Python 3.6 or later.
+This project targets Python 3.7 or later.
 
 Python objects should be typed; since it is not supported by Cython,
 you must manually declare types in type stubs (`.pyi` files). In Python
 files, you can add type annotations to function signatures (supported in
 Python 3.5) or in variable assignments (supported from Python 3.6
-onward).
+onward). 
 
 ### Interfacing with C
 
