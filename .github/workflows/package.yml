@@ -169,7 +169,7 @@ jobs:
     - name: Install build requirements
       run: python -m pip install -r .github/workflows/requirements.txt
     - name: Build wheel distribution
-      run: python setup.py sdist
+      run: python -m build --sdist
     - name: Store built wheels
       uses: actions/upload-artifact@v4
       with:
