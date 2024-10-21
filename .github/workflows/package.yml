@@ -268,7 +268,7 @@ jobs:
         path: dist/
         merge-multiple: true
     - name: Extract package version
-      run: "echo PKGVER=$( grep 'version =' pyproject.toml | cut -d\\\" -f2 ) >> $GITHUB_ENV"
+      run: echo PKGVER=$(echo '${{ github.ref }}' | cut -d'v' -f2) >> $GITHUB_ENV
     - name: Compute SHA256 of source distribution
       run: "echo SHA256=$(sha256sum dist/pyhmmer-${{ env.PKGVER }}.tar.gz | cut -f1 -d' ') >> $GITHUB_ENV"
     - name: Generate PKGBUILD
