@@ -76,6 +76,12 @@ cmake.define.CMAKE_LINKER_TYPE = "mold"
 #[tool.coverage.run]
 #plugins = ["Cython.Coverage"]
 
+[tool.cibuildwheel]
+before-build = "pip install scikit-build-core cython"
+build-frontend = { name = "pip", args = ["--no-build-isolation"] }
+test-command = "python -m unittest pyhmmer.tests -v"
+build-verbosity = 1
+
 [tool.coverage.report]
 include = ["src/pyhmmer/*"]
 omit = ["src/pyhmmer/tests/*"]
