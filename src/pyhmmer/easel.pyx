@@ -4825,6 +4825,24 @@ cdef class TextSequence(Sequence):
             )
         )
 
+    def __getbuffer__(self, Py_buffer* buffer, int flags):
+        assert self._sq != NULL
+
+        if flags & PyBUF_FORMAT:
+            buffer.format = 'B'
+        else:
+            buffer.format = NULL
+        buffer.buf = self._sq.seq
+        buffer.internal = NULL
+        buffer.itemsize = sizeof(unsigned char)
+        buffer.len = self._sq.n * sizeof(unsigned char)
+        buffer.ndim = 1
+        buffer.obj = self
+        buffer.readonly = 1
+        buffer.shape = NULL
+        buffer.suboffsets = NULL
+        buffer.strides = NULL
+
     # --- Properties ---------------------------------------------------------
 
     @property
@@ -5050,6 +5068,24 @@ cdef class DigitalSequence(Sequence):
                 self.residue_markups,
             )
         )
+
+    def __getbuffer__(self, Py_buffer* buffer, int flags):
+        assert self._sq != NULL
+
+        if flags & PyBUF_FORMAT:
+            buffer.format = 'B'
+        else:
+            buffer.format = NULL
+        buffer.buf = &self._sq.dsq[1]
+        buffer.internal = NULL
+        buffer.itemsize = sizeof(ESL_DSQ)
+        buffer.len = self._sq.n * sizeof(ESL_DSQ)
+        buffer.ndim = 1
+        buffer.obj = self
+        buffer.readonly = 1
+        buffer.shape = NULL
+        buffer.suboffsets = NULL
+        buffer.strides = NULL
 
     # --- Properties ---------------------------------------------------------
 
