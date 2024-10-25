@@ -168,6 +168,11 @@ class TestDigitalSequence(_TestSequenceBase, unittest.TestCase):
     def test_invalid_characters(self):
         self.assertRaises(ValueError, easel.DigitalSequence, self.abc, name=b"TEST", sequence=b"test")
 
+    def test_memoryview(self):
+        seq = easel.TextSequence(sequence="ATGC").digitize(self.abc)
+        mem = memoryview(seq)
+        self.assertEqual(mem.tobytes(), b"\0\3\2\1")
+
     def test_translate(self):
         gencode = easel.GeneticCode()
         seq = easel.TextSequence(sequence="ATGCTGCCCGGTTTGGCACTGCTCCTGCTGGCCGCC").digitize(gencode.nucleotide_alphabet)
@@ -219,6 +224,11 @@ class TestTextSequence(_TestSequenceBase, unittest.TestCase):
         seq1 = easel.TextSequence(name=b"TEST", sequence=">v3ry 1nv4l1d")
         self.assertRaises(ValueError, seq1.digitize, easel.Alphabet.dna())
         self.assertRaises(ValueError, seq1.digitize, easel.Alphabet.amino())
+
+    def test_memoryview(self):
+        seq = self.Sequence(sequence="ATGC")
+        mem = memoryview(seq)
+        self.assertEqual(mem.tobytes(), b"ATGC")
 
     def test_reverse_complement(self):
         seq = easel.TextSequence(sequence="ATGC")
