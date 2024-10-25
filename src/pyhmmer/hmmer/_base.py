@@ -275,6 +275,9 @@ class _BaseWorker(typing.Generic[_Q, _T, _R]):
                 chore = self.query_queue.get(timeout=1)
             except queue.Empty:
                 continue
+            except BrokenPipeError:
+                self.kill()
+                break
             except ConnectionResetError:
                 self.kill()
                 break
