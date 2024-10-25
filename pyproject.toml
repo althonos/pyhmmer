@@ -79,8 +79,9 @@ cmake.define.CMAKE_LINKER_TYPE = "mold"
 [tool.cibuildwheel]
 before-build = "pip install scikit-build-core cython"
 build-frontend = { name = "pip", args = ["--no-build-isolation"] }
-test-command = "python -m unittest pyhmmer.tests -v"
 build-verbosity = 1
+test-command = "python -m unittest pyhmmer.tests -v"
+test-requires = "importlib-resources"
 
 [tool.coverage.report]
 include = ["src/pyhmmer/*"]

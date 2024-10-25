@@ -10,20 +10,6 @@ jobs:
   wheel-linux-aarch64:
     name: Build Linux wheels (Aarch64)
     runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        python-tag:
-        - cp36-manylinux_aarch64
-        - cp37-manylinux_aarch64
-        - cp38-manylinux_aarch64
-        - cp39-manylinux_aarch64
-        - cp310-manylinux_aarch64
-        - cp311-manylinux_aarch64
-        - cp312-manylinux_aarch64
-        # - pp37-manylinux_aarch64
-        # - pp38-manylinux_aarch64
-        # - pp39-manylinux_aarch64
-        # - pp310-manylinux_aarch64
     steps:
     - uses: actions/checkout@v3
       with:
@@ -37,35 +23,20 @@ jobs:
       uses: pypa/cibuildwheel@v2.16.5
       env:
         CIBW_ARCHS: aarch64
-        CIBW_BUILD: ${{ matrix.python-tag }}
+        CIBW_BUILD: 'cp*-manylinux_aarch64'
         CIBW_BEFORE_BUILD: pip install cython
         CIBW_BUILD_VERBOSITY: 2
-        CIBW_TEST_COMMAND: python -m unittest pyhmmer.tests -vv
         CIBW_TEST_REQUIRES: importlib-resources
       with:
         output-dir: dist
     - uses: actions/upload-artifact@v4
       with:
-        name: wheels-${{ matrix.python-tag }}
+        name: wheels-manylinux_aarch64
         path: dist/*
 
   wheel-linux-x86_64:
     name: Build Linux wheels (x86-64)
     runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        python-tag:
-        - cp36-manylinux_x86_64
-        - cp37-manylinux_x86_64
-        - cp38-manylinux_x86_64
-        - cp39-manylinux_x86_64
-        - cp310-manylinux_x86_64
-        - cp311-manylinux_x86_64
-        - cp312-manylinux_x86_64
-        # - pp37-manylinux_x86_64
-        # - pp38-manylinux_x86_64
-        # - pp39-manylinux_x86_64
-        # - pp310-manylinux_x86_64
     steps:
     - uses: actions/checkout@v4
       with:
@@ -74,35 +45,20 @@ jobs:
       uses: pypa/cibuildwheel@v2.16.5
       env:
         CIBW_ARCHS: x86_64
-        CIBW_BUILD: ${{ matrix.python-tag }}
+        CIBW_BUILD: 'cp*-manylinux_x86_64'
         CIBW_BEFORE_BUILD: pip install cython
         CIBW_BUILD_VERBOSITY: 2
-        CIBW_TEST_COMMAND: python -m unittest pyhmmer.tests -vv
         CIBW_TEST_REQUIRES: importlib-resources
       with:
         output-dir: dist
     - uses: actions/upload-artifact@v4
       with:
-        name: wheels-${{ matrix.python-tag }}
+        name: wheels-manylinux_x86_64
         path: dist/*
 
   wheel-macos-x86_64:
     name: Build MacOS wheels (x86-64)
     runs-on: macOS-12
-    strategy:
-      matrix:
-        python-tag:
-        - cp36-macosx_x86_64
-        - cp37-macosx_x86_64
-        - cp38-macosx_x86_64
-        - cp39-macosx_x86_64
-        - cp310-macosx_x86_64
-        - cp311-macosx_x86_64
-        - cp312-macosx_x86_64
-        # - pp37-macosx_x86_64
-        # - pp38-macosx_x86_64
-        # - pp39-macosx_x86_64
-        # - pp310-macosx_x86_64
     steps:
     - uses: actions/checkout@v4
       with:
@@ -111,29 +67,20 @@ jobs:
       uses: pypa/cibuildwheel@v2.16.5
       env:
         CIBW_ARCHS: x86_64
-        CIBW_BUILD: ${{ matrix.python-tag }}
+        CIBW_BUILD: 'cp*-macosx_x86_64'
         CIBW_BEFORE_BUILD: pip install cython
         CIBW_BUILD_VERBOSITY: 2
-        CIBW_TEST_COMMAND: python -m unittest pyhmmer.tests -vv
         CIBW_TEST_REQUIRES: importlib-resources
       with:
         output-dir: dist
     - uses: actions/upload-artifact@v4
       with:
-        name: wheels-${{ matrix.python-tag }}
+        name: wheels-macosx_x86_64
         path: dist/*
 
   wheel-macos-aarch64:
     name: Build MacOS wheels (Aarch64)
     runs-on: macOS-12
-    strategy:
-      matrix:
-        python-tag:
-        - cp38-macosx_arm64
-        - cp39-macosx_arm64
-        - cp310-macosx_arm64
-        - cp311-macosx_arm64
-        - cp312-macosx_arm64
     steps:
     - uses: actions/checkout@v4
       with:
@@ -142,16 +89,15 @@ jobs:
       uses: pypa/cibuildwheel@v2.16.5
       env:
         CIBW_ARCHS: arm64
-        CIBW_BUILD: ${{ matrix.python-tag }}
+        CIBW_BUILD: 'cp*-macosx_arm64'
         CIBW_BEFORE_BUILD: pip install cython
         CIBW_BUILD_VERBOSITY: 2
-        CIBW_TEST_COMMAND: python -m unittest pyhmmer.tests -vv
         CIBW_TEST_REQUIRES: importlib-resources
       with:
         output-dir: dist
     - uses: actions/upload-artifact@v4
       with:
-        name: wheels-${{ matrix.python-tag }}
+        name: wheels-macosx_arm64
         path: dist/*
 
   sdist:
