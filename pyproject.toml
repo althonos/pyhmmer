@@ -82,6 +82,7 @@ build-frontend = { name = "pip", args = ["--no-build-isolation"] }
 build-verbosity = 1
 test-command = "python -m unittest pyhmmer.tests -v"
 test-requires = "importlib-resources"
+free-threaded-support = false
 
 [tool.coverage.report]
 include = ["src/pyhmmer/*"]
