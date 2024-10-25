@@ -12,7 +12,7 @@ to facilitate the development of biological software in C. It is used by
 
 cimport cython
 from cpython cimport Py_buffer
-from cpython.buffer cimport PyBUF_FORMAT, PyBUF_READ
+from cpython.buffer cimport PyBUF_FORMAT, PyBUF_READ, PyBuffer_FillInfo
 from cpython.bytes cimport PyBytes_FromString, PyBytes_FromStringAndSize, PyBytes_AsString
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.memoryview cimport PyMemoryView_FromMemory
@@ -4832,16 +4832,10 @@ cdef class TextSequence(Sequence):
             buffer.format = 'B'
         else:
             buffer.format = NULL
-        buffer.buf = self._sq.seq
         buffer.internal = NULL
         buffer.itemsize = sizeof(unsigned char)
-        buffer.len = self._sq.n * sizeof(unsigned char)
         buffer.ndim = 1
-        buffer.obj = self
-        buffer.readonly = 1
-        buffer.shape = NULL
-        buffer.suboffsets = NULL
-        buffer.strides = NULL
+        PyBuffer_FillInfo(buffer, self, self._sq.seq, self._sq.n * sizeof(unsigned char), True, flags)
 
     # --- Properties ---------------------------------------------------------
 
@@ -5076,16 +5070,10 @@ cdef class DigitalSequence(Sequence):
             buffer.format = 'B'
         else:
             buffer.format = NULL
-        buffer.buf = &self._sq.dsq[1]
         buffer.internal = NULL
         buffer.itemsize = sizeof(ESL_DSQ)
-        buffer.len = self._sq.n * sizeof(ESL_DSQ)
         buffer.ndim = 1
-        buffer.obj = self
-        buffer.readonly = 1
-        buffer.shape = NULL
-        buffer.suboffsets = NULL
-        buffer.strides = NULL
+        PyBuffer_FillInfo(buffer, self, &self._sq.dsq[1], self._sq.n * sizeof(ESL_DSQ), True, flags)
 
     # --- Properties ---------------------------------------------------------
 
