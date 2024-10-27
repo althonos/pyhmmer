@@ -6,7 +6,6 @@
 
 # -- Imports -----------------------------------------------------------------
 
-import configparser
 import datetime
 import os
 import sys
@@ -40,15 +39,6 @@ copyright = '{}, {}'.format("2020" if year==2020 else "2020-{}".format(year), au
 semver = semantic_version.Version.coerce(pyhmmer.__version__)
 version = str(semver.truncate(level="patch"))
 release = str(semver)
-
-# extract the project URLs from ``setup.cfg``
-cfgparser = configparser.ConfigParser()
-cfgparser.read(os.path.join(project_dir, "setup.cfg"))
-project_urls = dict(
-    map(str.strip, line.split(" = ", 1))
-    for line in cfgparser.get("metadata", "project_urls").splitlines()
-    if line.strip()
-)
 
 # patch the docstring of `pyhmmer` so that we don't show the link to redirect
 # to the docs (we don't want to see it when reading the docs already, duh!)
