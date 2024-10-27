@@ -93,6 +93,39 @@ if(HMMER_IMPL STREQUAL "SSE")
         impl_sse/stotrace.c
         impl_sse/vitfilter.c
     )
+elseif(HMMER_IMPL STREQUAL "NEON")
+    set(HMMER_SOURCES
+        ${HMMER_SOURCES}
+        impl_neon/decoding.c
+        impl_neon/fwdback.c
+        impl_neon/io.c
+        impl_neon/mpi.c
+        impl_neon/msvfilter.c
+        impl_neon/null2.c
+        impl_neon/optacc.c
+        impl_neon/p7_omx.c
+        impl_neon/p7_oprofile.c
+        impl_neon/ssvfilter.c
+        impl_neon/stotrace.c
+        impl_neon/vitfilter.c
+    )
+elseif(HMMER_IMPL STREQUAL "VMX")
+    set(HMMER_SOURCES
+        ${HMMER_SOURCES}
+        impl_vmx/decoding.c
+        impl_vmx/fwdback.c
+        impl_vmx/io.c
+        impl_vmx/mpi.c
+        impl_vmx/msvfilter.c
+        impl_vmx/null2.c
+        impl_vmx/optacc.c
+        impl_vmx/p7_omx.c
+        impl_vmx/p7_oprofile.c
+        impl_vmx/stotrace.c
+        impl_vmx/vitfilter.c
+    )
+else()
+    message(FATAL_ERROR "No HMMER implementation defined")
 endif()
 
 add_library(libhmmer ${HMMER_SOURCES})
