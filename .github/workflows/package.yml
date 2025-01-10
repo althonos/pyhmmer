@@ -209,9 +209,9 @@ jobs:
     - name: Compute SHA256 of source distribution
       run: "echo SHA256=$(sha256sum dist/pyhmmer-${{ env.PKGVER }}.tar.gz | cut -f1 -d' ') >> $GITHUB_ENV"
     - name: Generate PKGBUILD
-      run: 'sed -e "s/%pkgver/${{ github.ref }}/g" -e "s/%sha256sum/${{ env.SHA256 }}/g" pkg/aur/PKGBUILD.in > pkg/aur/PKGBUILD'
+      run: 'sed -e "s/%pkgver/${{ env.PKGVER }}/g" -e "s/%sha256sum/${{ env.SHA256 }}/g" pkg/aur/PKGBUILD.in > pkg/aur/PKGBUILD'
     - name: Update package
-      uses: KSXGitHub/github-actions-deploy-aur@v2.7.2
+      uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
       with:
         pkgname: python-pyhmmer
         pkgbuild: pkg/aur/PKGBUILD
