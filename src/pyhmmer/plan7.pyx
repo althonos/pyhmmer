@@ -7933,66 +7933,6 @@ cdef class TopHits:
         return "search" if self._pli.mode == p7_pipemodes_e.p7_SEARCH_SEQS else "scan"
 
     @property
-    def query_name(self):
-        """`bytes` or `None`: The name of the query, if any.
-
-        .. versionadded:: 0.6.1
-
-        .. deprecated:: 0.10.10
-            Use ``TopHits.query`` to access the original query directly.
-
-        """
-        warnings.warn(
-            "TopHits.query_name has been deprecated in v0.10.10 and will be "
-            "removed in v0.11.0, use TopHits.query to access the properties of "
-            "the original query object directly",
-            DeprecationWarning,
-        )
-        if self._query is None:
-            return None
-        return self._query.name
-
-    @property
-    def query_accession(self):
-        """`bytes` or `None`: The accession of the query, if any.
-
-        .. versionadded:: 0.6.1
-
-        .. deprecated:: 0.10.10
-            Use ``TopHits.query`` to access the original query directly.
-
-        """
-        warnings.warn(
-            "TopHits.query_accession has been deprecated in v0.10.10 and will be "
-            "removed in v0.11.0, use TopHits.query to access the properties of "
-            "the original query object directly",
-            DeprecationWarning,
-        )
-        if self._query is None:
-            return None
-        return self._query.accession
-
-    @property
-    def query_length(self):
-        """`int`: The length of the query.
-
-        .. versionadded:: 0.10.5
-
-        .. deprecated:: 0.10.10
-            Use ``TopHits.query`` to access the original query directly.
-
-        """
-        warnings.warn(
-            "TopHits.query_length has been deprecated in v0.10.10 and will be "
-            "removed in v0.11.0, use TopHits.query to access the properties of "
-            "the original query object directly",
-            DeprecationWarning,
-        )
-        if self._query is None:
-            return 0
-        return self._query.M if isinstance(self._query, HMM) else len(self._query)
-
-    @property
     def query(self):
         """`object`: The query object these hits were obtained for.
 
@@ -8004,7 +7944,12 @@ cdef class TopHits:
             >>> hits.query is thioesterase
             True
 
-        .. versionadded 0.10.10
+        Hint:
+            This property replaces the ``query_name``, ``query_accession``
+            and ``query_length`` properties that were deprecated in 
+            *v0.10.15* and removed in *v0.11.0*.
+
+        .. versionadded 0.10.15
 
         """
         return self._query
