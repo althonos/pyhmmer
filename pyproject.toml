@@ -47,6 +47,7 @@ dependencies = [
 "Builds" = "https://github.com/althonos/pyhmmer/actions"
 "Paper" = "https://doi.org/10.1093/bioinformatics/btad214"
 "PyPI" = "https://pypi.org/project/pyhmmer"
+"PiWheels" = "https://piwheels.org/project/pyhmmer/"
 
 [project.optional-dependencies]
 test = ["importlib-resources ; python_version < '3.9'"]
