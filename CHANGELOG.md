@@ -6,7 +6,37 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.10.14...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.11.0...HEAD
+
+
+## [v0.11.0] - 2025-01-10
+[v0.11.0]: https://github.com/althonos/pyhmmer/compare/v0.10.14...v0.10.15
+
+### Added
+- Missing type annotations to specific options of `LongTargetsPipeline`.
+- `__len__` implementation for `HMMPressedFile` using the entries in the SSI index.
+- Setters for residue-wise annotation properties in `HMM`.
+- Support for process-based parallelism in `pyhmmer.hmmer` in addition to thread-based.
+- Read-only buffer protocol implementation for `TextSequence` and `DigitalSequence` classes.
+
+### Changed
+- Drop support for Python 3.6.
+- Use CMake and `scikit-build-core` to build the package instead of `setuptools`.
+- Use `TypedDict` API to mark allowed keyword arguments in `pyhmmer.hmmer` functions.
+- Reorganize detection and handling of alphabets for arbitrary queries in `pyhmmer.hmmer`.
+- Allow passing a `SequenceFile` to most `pyhmmer.hmmer` functions.
+- Use faster `PyUnicode_FromStringAndSize` function to decode strings of known lengths in several `plan7` classes.
+- Make `SequenceFile` and `MSAFile` generic on the individual sequence and MSA types.
+- Reorganize `pyhmmer.hmmer` into different submodules.
+
+### Fixed
+- Type annotations not using `typing-extensions` for Python3.8 to 3.10.
+- Logic error causing out-of-bounds memory access in `TopHits.__getstate__`.
+- Avoid creating a new `Pipeline` object when running single-threaded searches in `pyhmmer.hmmer`.
+- Detect the appropriate `SequenceFile` type based on the `digital` flag value ([#72](https://github.com/althonos/pyhmmer/issues/72)).
+
+### Removed
+- Deprecated properties of `TopHits` (`query_name`, `query_length`, `query_accession`).
 
 
 ## [v0.10.15] - 2024-10-08

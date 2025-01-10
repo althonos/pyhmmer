@@ -25,13 +25,12 @@ from . import errors
 from . import easel
 from . import plan7
 from . import daemon
-
+from ._version import __version__
 from .hmmer import hmmalign, hmmsearch, hmmpress, nhmmer, hmmscan, phmmer, jackhmmer
 
 
 __author__ = "Martin Larralde <martin.larralde@embl.de>"
 __license__ = "MIT"
-__version__ = "0.10.15"
 __all__ = [
     "errors",
     "easel",

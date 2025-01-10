@@ -4,6 +4,8 @@
 .vscode
 *.BAK
 
+src/pyhmmer/_version.py
+
 ### C ###
 # Prerequisites
 *.d
