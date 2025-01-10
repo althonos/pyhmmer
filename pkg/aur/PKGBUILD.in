@@ -23,6 +23,7 @@ check() {
     local machine=$(python -c 'import platform; print(platform.machine())')
     whl="${srcdir}/${_name}-${pkgver}/dist/${_name}-${pkgver}-cp${abitag}-cp${abitag}-linux_${machine}.whl"
 
+    rm -rf "${srcdir}/env"
     python -m venv --symlinks --system-site-packages "${srcdir}/env"
     source "${srcdir}/env/bin/activate"
     python -m installer "$whl"
