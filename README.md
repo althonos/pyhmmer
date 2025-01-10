@@ -62,9 +62,10 @@ HMMER internals, which has the following advantages over CLI wrappers
   the `hmmsearch` binary from HMMER, which can help getting the most of
   multiple CPUs when annotating smaller sequence databases.
 
-*This library is still a work-in-progress, and in an experimental stage,
-but it should already pack enough features to run biological analyses or
-workflows involving `hmmsearch`, `hmmscan`, `nhmmer`, `phmmer`, `hmmbuild`
+*This library is still a work-in-progress. It follows [semantic-versioning](https://semver.org/),
+so API changes will be documented, but past `v0.10` the API has been more or
+less stable. It should already pack enough features to run biological analyses 
+or workflows involving `hmmsearch`, `hmmscan`, `nhmmer`, `phmmer`, `hmmbuild`
 and `hmmalign`.*
 
 
