@@ -6495,7 +6495,7 @@ cdef int    DEFAULT_LONG_B3           = 1000
 cdef int    DEFAULT_LONG_BLOCK_LENGTH = 0x40000
 
 cdef class LongTargetsPipeline(Pipeline):
-    """An HMMER3 pipeline tuned for long targets.
+    r"""An HMMER3 pipeline tuned for long targets.
 
     The default HMMER3 pipeline is configured not to accept target sequences
     longer than 100,000 residues. Although there is no strong limitation for
