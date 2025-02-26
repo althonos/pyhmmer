@@ -71,14 +71,15 @@ PyHMMER is being used in several projects, including:
 - `Pharokka <https://github.com/gbouras13/pharokka>`_, a rapid standardised
   annotation tool for bacteriophage genomes and metagenomes, uses PyHMMER
   to annotate genes with the `PHROGS <https://phrogs.lmge.uca.fr/>`_ HMMs.
-- `VEBA <https://github.com/jolespin/veba>`_, A modular end-to-end suite 
-  for in silico recovery, clustering, and analysis of prokaryotic, microeukaryotic, 
+- `VEBA <https://github.com/jolespin/veba>`_, A modular end-to-end suite
+  for in silico recovery, clustering, and analysis of prokaryotic, microeukaryotic,
   and viral genomes from metagenomes.  Uses PyHMMER to annotate proteins with
-  homology to Pfam, KOfam, NCBIfam-AMR, and AntiFam.
-- `PyHMMSearch <https://github.com/jolespin/pyhmmsearch>`_, Fast implementation of 
-  HMMSEARCH optimized for high-memory systems using PyHMMER
-- `PyKOfamSearch <https://github.com/jolespin/pyhmmsearch>`_, Fast implementation of 
-  KofamScan optimized for high-memory systems using PyHMMER
+  homology to `Pfam`_, KOfam, NCBIfam-AMR, and `AntiFam`_.
+- `PyHMMSearch <https://github.com/jolespin/pyhmmsearch>`_, Fast implementation of
+  HMMSEARCH optimized for high-memory systems using PyHMMER.
+- `PyKOfamSearch <https://github.com/jolespin/pyhmmsearch>`_, Fast implementation of
+  KofamScan optimized for high-memory systems using PyHMMER.
+
 .. hint::
 
     If you use PyHMMER in a scientific context, feel free to open a
