@@ -3,7 +3,7 @@
 
 # --- C imports --------------------------------------------------------------
 
-from libc.stdint cimport int64_t, uint8_t, uint16_t, uint32_t
+from libc.stdint cimport int64_t, uint8_t, uint16_t, uint32_t, uint64_t
 from posix.types cimport off_t
 
 cimport libeasel.sq
@@ -170,6 +170,19 @@ cdef class DigitalMSA(MSA):
     cpdef DigitalMSA copy(self)
     cpdef TextMSA textize(self)
 
+    cpdef DigitalMSA identity_filter(
+        self, 
+        float max_identity=*, 
+        float fragment_threshold=*,
+        float consensus_fraction=*,
+        bint ignore_rf=*, 
+        bint sample=*, 
+        int sample_threshold=*, 
+        int sample_count=*,
+        int max_fragments=*,
+        uint64_t seed=?,
+        str preference=*,
+    )
 
 # --- MSA File ---------------------------------------------------------------
 

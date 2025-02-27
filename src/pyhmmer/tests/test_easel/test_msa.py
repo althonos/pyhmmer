@@ -184,7 +184,7 @@ class TestTextMSA(TestMSA, unittest.TestCase):
 class TestDigitalMSA(TestMSA, unittest.TestCase):
 
     alphabet = easel.Alphabet.dna()
-    MSA = functools.partial(easel.DigitalMSA, alphabet)
+    MSA = staticmethod(functools.partial(easel.DigitalMSA, alphabet))
 
     @staticmethod
     def read_msa(sto):
@@ -284,3 +284,33 @@ class TestDigitalMSA(TestMSA, unittest.TestCase):
         self.assertTrue(msa_t)
         self.assertEqual(msa_t.sequences[0].name, b"seq1")
         self.assertEqual(msa_t.sequences[0].sequence, "ACGT")
+
+
+    def test_identity_filter(self):
+        # adapted from `utest_idfilter` in `esl_msaweight.c`
+        dna = easel.Alphabet.dna()
+        s1 = easel.DigitalSequence
+
+        buffer = io.BytesIO(
+            b"# STOCKHOLM 1.0\n\n"
+            b"seq1  ..AAAAAAAA\n"
+            b"seq2  AAAAAAAAAA\n"
+            b"seq3  CCCCCCCCCC\n"
+            b"seq4  GGGGGGGGGG\n"
+            b"//\n"
+        )
+
+        with easel.MSAFile(buffer, format="stockholm", digital=True, alphabet=dna) as msa_file:
+            msa = msa_file.read()
+
+        msa2 = msa.identity_filter(1.0)
+        self.assertEqual(len(msa2.sequences), 3)
+        self.assertEqual(msa2.names[0], b"seq2")
+
+        msa3 = msa.identity_filter(1.0, preference="origorder")
+        self.assertEqual(len(msa3.sequences), 3)
+        self.assertEqual(msa3.names[0], b"seq1")
+
+        msa3 = msa.identity_filter(1.0, preference="random")
+        self.assertEqual(len(msa3.sequences), 3)
+        self.assertIn(msa3.names[0], [b"seq1", b"seq2"])

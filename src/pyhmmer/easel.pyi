@@ -13,6 +13,7 @@ except ImportError:
     from typing_extensions import Literal  # type: ignore
 
 BUFFER = typing.Union[bytes, bytearray, memoryview]
+IDENTITY_FILTER_PREFERENCE = Literal["conscover", "origorder", "random"]
 
 # --- Alphabet ---------------------------------------------------------------
 
@@ -442,6 +443,19 @@ class DigitalMSA(MSA):
     def textize(self) -> TextMSA: ...
     @property
     def sequences(self) -> _DigitalMSASequences: ...
+    def identity_filter(
+        self,
+        max_identity: float = 0.8,
+        fragment_threshold: float = ...,
+        consensus_fraction: float = ...,
+        ignore_rf: bool = ...,
+        sample: bool = ...,
+        sample_threshold: int = ...,
+        sample_count: int = ...,
+        max_fragments: int = ...,
+        seed: int = ...,
+        preference: IDENTITY_FILTER_PREFERENCE = "conscover",
+    ) -> DigitalMSA: ...
 
 # --- MSA File ---------------------------------------------------------------
 

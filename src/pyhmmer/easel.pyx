@@ -41,6 +41,7 @@ cimport libeasel.keyhash
 cimport libeasel.matrixops
 cimport libeasel.msa
 cimport libeasel.msafile
+cimport libeasel.msaweight
 cimport libeasel.random
 cimport libeasel.sq
 cimport libeasel.sqio
@@ -50,6 +51,7 @@ cimport libeasel.vec
 from libeasel cimport ESL_DSQ, esl_pos_t, eslERRBUFSIZE
 from libeasel.buffer cimport ESL_BUFFER
 from libeasel.gencode cimport ESL_GENCODE
+from libeasel.msaweight cimport ESL_MSAWEIGHT_CFG
 from libeasel.sq cimport ESL_SQ
 from libeasel.sqio cimport ESL_SQFILE, ESL_SQASCII_DATA
 from libeasel.random cimport ESL_RANDOMNESS
@@ -147,6 +149,12 @@ cdef dict SEQUENCE_FILE_FORMATS = {
 
 cdef dict SEQUENCE_FILE_FORMATS_INDEX = {
     v:k for k,v in SEQUENCE_FILE_FORMATS.items()
+}
+
+cdef dict MSA_WEIGHT_PREFERENCES = {
+    "conscover": libeasel.msaweight.eslMSAWEIGHT_FILT_CONSCOVER,
+    "origorder": libeasel.msaweight.eslMSAWEIGHT_FILT_ORIGORDER,
+    "random": libeasel.msaweight.eslMSAWEIGHT_FILT_RANDOM,
 }
 
 # --- Alphabet ---------------------------------------------------------------
@@ -3987,6 +3995,114 @@ cdef class DigitalMSA(MSA):
             return new
         else:
             raise UnexpectedError(status, "esl_msa_Textize")
+
+    cpdef DigitalMSA identity_filter(
+        self, 
+        float max_identity=0.8, 
+        float fragment_threshold=libeasel.msaweight.eslMSAWEIGHT_FRAGTHRESH,
+        float consensus_fraction=libeasel.msaweight.eslMSAWEIGHT_SYMFRAC,
+        bint ignore_rf=libeasel.msaweight.eslMSAWEIGHT_IGNORE_RF, 
+        bint sample=libeasel.msaweight.eslMSAWEIGHT_ALLOW_SAMP, 
+        int sample_threshold=libeasel.msaweight.eslMSAWEIGHT_SAMPTHRESH, 
+        int sample_count=libeasel.msaweight.eslMSAWEIGHT_NSAMP, 
+        int max_fragments=libeasel.msaweight.eslMSAWEIGHT_MAXFRAG, 
+        uint64_t seed=libeasel.msaweight.eslMSAWEIGHT_RNGSEED,
+        str preference="conscover",
+    ):
+        r"""Filter the alignment sequences by percent identity.
+
+        Arguments:
+            max_identity (`float`): The maximum fractional identity 
+                allowed between two alignment sequences. Sequences with 
+                fractional identity :math:`\geq` this number will be 
+                removed, with the remaining one selected according to
+                the given ``preference``.
+
+        Keyword Arguments:
+            fragment_threshold (`float`): The threshold for determining
+                which sequences of the alignment are fragments. An 
+                sequence spanning columns :math:`i` to :math:`j` of an
+                alignment of width :math:`W` will be flagged as a fragment 
+                if :math:`\frac{j - i}{ W } < \text{fragment_threshold}`,
+            consensus_fraction (`float`): The parameter for determining
+                with columns of the alignment are consensus columns.
+                A column containing :math:`n` symbols and :math:`m` gaps
+                will be marked a consensus column if 
+                :math:`\frac{n}{n + m} \ge \text{consensus_fraction}`.
+            ignore_rf (`bool`): Set to `True` to ignore the *RF* line
+                of the alignment (if present) and to force building the 
+                consensus.
+            sample (`bool`): Whether or not to enable consensus determination 
+                by subsampling for large alignments. Set to `False` to force
+                using all sequences.
+            sample_threshold (`int`): The minimum number of sequences the
+                alignment must contain to use subsampling for consensus
+                determination (when ``sample`` is `True`).
+            sample_count (`int`): The number of sequences to use when 
+                determining consensus by random subsampling.
+            max_fragments (`int`): The maximum number of allowed fragments
+                in the sample used for determining consensus. If the sample
+                contains more than ``max_fragments`` fragments, the 
+                consensus determination is done with all sequences instead.
+            seed (`int`): The seed to use for initializing the random 
+                number generator (used when ``preference`` is ``random``
+                or when ``sample`` is `True`). If ``0`` or `None` is given, 
+                an arbitrary seed will be chosen using the system clock.
+            preference (`str`): The strategy to use for selecting the 
+                representative sequence in case of duplicates. Supported
+                strategies are ``conscover`` (the default), which prefers
+                the sequence with an alignment span that covers more 
+                consensus columns; ``origorder`` to use the first sequence
+                in the original alignment order; and ``random`` to select
+                the sequence at random. 
+
+        Returns:
+            `~pyhmmer.easel.MSA`: The multiple sequence alignments with 
+            duplicate sequence removed. Unparsed Sotckholm markup is not
+            propagated.
+
+        """
+        assert self._msa != NULL
+
+        cdef int status
+        cdef int filterpref
+        cdef ESL_MSAWEIGHT_CFG cfg
+        cdef DigitalMSA msa = DigitalMSA.__new__(DigitalMSA, self.alphabet)
+
+        # validate arguments
+        if fragment_threshold < 0 or fragment_threshold > 1:
+            raise InvalidParameter("fragment_threshold", fragment_threshold, hint="real number between 0 and 1")
+        if consensus_fraction < 0 or consensus_fraction > 1:
+            raise InvalidParameter("consensus_fraction", consensus_fraction, hint="real number between 0 and 1")
+        if sample_threshold < 0:
+            raise InvalidParameter("sample_threshold", sample_threshold, hint="positive integer")
+        if sample_count < 0:
+            raise InvalidParameter("sample_count", sample_count, hint="positive integer")
+        if max_fragments < 0:
+            raise InvalidParameter("max_fragments", max_fragments, hint="positive integer")
+        if preference not in MSA_WEIGHT_PREFERENCES:
+            raise InvalidParameter("preference", preference, choices=list(MSA_WEIGHT_PREFERENCES))
+
+        # prepare configuration
+        cfg.fragthresh = fragment_threshold
+        cfg.symfrac = consensus_fraction
+        cfg.sampthresh = sample_threshold
+        cfg.ignore_rf = ignore_rf
+        cfg.allow_samp = sample
+        cfg.sampthresh = sample_threshold
+        cfg.nsamp = sample_count
+        cfg.maxfrag = max_fragments
+        cfg.seed = seed
+        cfg.filterpref = MSA_WEIGHT_PREFERENCES[preference]
+
+        # run filtering
+        with nogil:
+            status = libeasel.msaweight.esl_msaweight_IDFilter_adv(&cfg, self._msa, max_identity, &msa._msa)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_msaweight_IDFilter_adv")            
+
+        return msa
+    
 
 
 # --- MSA File ---------------------------------------------------------------
