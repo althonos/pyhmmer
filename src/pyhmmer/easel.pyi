@@ -446,14 +446,15 @@ class DigitalMSA(MSA):
     def identity_filter(
         self,
         max_identity: float = 0.8,
-        fragment_threshold: float = ...,
-        consensus_fraction: float = ...,
-        ignore_rf: bool = ...,
-        sample: bool = ...,
-        sample_threshold: int = ...,
-        sample_count: int = ...,
-        max_fragments: int = ...,
-        seed: int = ...,
+        *,
+        fragment_threshold: float = 0.5,
+        consensus_fraction: float = 0.5,
+        ignore_rf: bool = False,
+        sample: bool = True,
+        sample_threshold: int = 50000,
+        sample_count: int = 10000,
+        max_fragments: int = 5000,
+        seed: int = 42,
         preference: IDENTITY_FILTER_PREFERENCE = "conscover",
     ) -> DigitalMSA: ...
 
