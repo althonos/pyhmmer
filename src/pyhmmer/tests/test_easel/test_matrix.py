@@ -212,6 +212,12 @@ class _TestMatrixBase(object):
         m4 = mat[-3:-1]
         self.assertEqual(m4, self.Matrix([[5, 6, 7, 8], [9, 10, 11, 12]]))
 
+        m5 = mat[1:]
+        self.assertEqual(m5, self.Matrix([[5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]))
+
+        m6 = mat[:]
+        self.assertEqual(m6, mat)
+
 
 class TestMatrix(unittest.TestCase):
 

@@ -2721,7 +2721,7 @@ cdef class MatrixF(Matrix):
 
         elif isinstance(index, slice):
             start, stop, step = index.indices(self._m)
-            if stop < 0 or stop >= self._m or start < 0 or start >= self._m:
+            if stop < 0 or stop > self._m or start < 0 or start >= self._m:
                 raise IndexError("matrix row index out of range")
 
             new = MatrixF.__new__(MatrixF)
@@ -2989,7 +2989,7 @@ cdef class MatrixU8(Matrix):
 
         elif isinstance(index, slice):
             start, stop, step = index.indices(self._m)
-            if stop < 0 or stop >= self._m or start < 0 or start >= self._m:
+            if stop < 0 or stop > self._m or start < 0 or start >= self._m:
                 raise IndexError("matrix row index out of range")
 
             new = MatrixU8.__new__(MatrixU8)
