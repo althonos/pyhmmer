@@ -56,3 +56,23 @@ keywords:
   - bioinformatics
   - hmm
 license: MIT
+preferred-citation:
+  type: article
+  authors:
+  - given-names: Martin
+    family-names: Larralde
+    email: martin.larralde@embl.de
+    affiliation: European Molecular Biology Laboratory
+    orcid: 'https://orcid.org/0000-0002-3947-4444'
+  - given-names: Georg
+    family-names: Zeller
+    email: zeller@embl.de
+    affiliation: European Molecular Biology Laboratory
+    orcid: 'https://orcid.org/0000-0003-1429-7485'
+  doi: 10.1093/bioinformatics/btad214
+  journal: "Bioinformatics"
+  month: 5
+  title: "PyHMMER: a Python library binding to HMMER for efficient sequence analysis"
+  issue: 5
+  volume: 39
+  year: 2023
