@@ -8,7 +8,8 @@ import tempfile
 
 from pyhmmer import easel
 
-from ..utils import EASEL_FOLDER
+from .. import __name__ as __package__
+from .utils import EASEL_FOLDER, resource_files
 
 
 class TestMSA(object):
@@ -314,3 +315,17 @@ class TestDigitalMSA(TestMSA, unittest.TestCase):
         msa3 = msa.identity_filter(1.0, preference="random")
         self.assertEqual(len(msa3.sequences), 3)
         self.assertIn(msa3.names[0], [b"seq1", b"seq2"])
+
+    @unittest.skipUnless(resource_files, "importlib.resources.files not available")
+    def test_identity_filter_luxc(self):
+        luxc = resource_files(__package__).joinpath("data", "msa", "LuxC.sto")
+        msa = self.read_msa(luxc)
+        filtered = msa.identity_filter()
+
+        weighted = resource_files(__package__).joinpath("data", "msa", "LuxC.weighted.sto")
+        expected = self.read_msa(weighted)
+
+        self.assertEqual(len(filtered.sequences), len(expected.sequences))
+        self.assertEqual(len(filtered.names), len(expected.names))
+        for s1, s2 in zip(filtered.sequences, expected.sequences):
+            self.assertEqual(s1, s2)
