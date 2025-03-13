@@ -4349,7 +4349,7 @@ cdef class MSAFile:
             `ValueError`: if this methods is called after the file was closed.
 
         Example:
-            >>> with MSAFile("tests/data/msa/laccase.clw") as mf:
+            >>> with MSAFile("tests/data/msa/LuxC.sto") as mf:
             ...     mf.guess_alphabet()
             Alphabet.amino()
 

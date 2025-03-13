@@ -212,19 +212,19 @@ class TestBuilderMSA(_TestBuilderBase, unittest.TestCase):
         bg = Background(alphabet=amino)
         self.assertRaises(AlphabetMismatch, builder.build_msa, self.msa, bg)
 
-    def test_laccase(self):
+    def test_luxc(self):
         # create a new protein builder
         abc = Alphabet.amino()
         builder = Builder(alphabet=abc)
         # open the MSA
-        msa_path = resource_files(__package__).joinpath("data", "msa", "laccase.clw")
+        msa_path = resource_files(__package__).joinpath("data", "msa", "LuxC.sto")
         with MSAFile(msa_path, digital=True, alphabet=abc) as msa_file:
             msa = msa_file.read()
-            msa.name = b"laccase"
+            msa.name = b"LuxC"
         # read the expected HMM
-        hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "laccase.hmm")
+        hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "LuxC.hmm")
         with HMMFile(hmm_path) as hmm_file:
-            hmm_hmmbuild = next(hmm_file)
+            hmm_hmmbuild = hmm_file.read()
             hmm_hmmbuild.creation_time = None
         # build the HMM from the MSA
         hmm_pyhmmer, _, _ = builder.build_msa(msa, Background(abc))
@@ -235,4 +235,8 @@ class TestBuilderMSA(_TestBuilderBase, unittest.TestCase):
         self.assertEqual(hmm_pyhmmer.M, hmm_hmmbuild.M)
         for i in range(hmm_pyhmmer.M):
             for t1, t2 in zip(hmm_pyhmmer.transition_probabilities[i], hmm_hmmbuild.transition_probabilities[i]):
+                self.assertAlmostEqual(t1, t2, places=5)
+            for t1, t2 in zip(hmm_pyhmmer.insert_emissions[i], hmm_hmmbuild.insert_emissions[i]):
+                self.assertAlmostEqual(t1, t2, places=5)
+            for t1, t2 in zip(hmm_pyhmmer.match_emissions[i], hmm_hmmbuild.match_emissions[i]):
                 self.assertAlmostEqual(t1, t2, places=5)
