@@ -126,8 +126,8 @@ Citation
 
 PyHMMER is scientific software, with a
 `published paper <https://doi.org/10.1093/bioinformatics/btad214>`_
-in the `Bioinformatics <https://academic.oup.com/bioinformatics>`_. Check the
-:doc:`Publications page <guide/publications>` to see how to cite PyHMMER.
+in the `Bioinformatics <https://academic.oup.com/bioinformatics>`_ journal. 
+Check the :doc:`Publications page <guide/publications>` to see how to cite PyHMMER.
 
 
 Library
@@ -162,6 +162,6 @@ section for more information.
 
 *This project is in no way not affiliated, sponsored, or otherwise endorsed by
 the original* `HMMER <http://hmmer.org>`_ *authors. It was developed by*
-`Martin Larralde <https://github.com/althonos/pyhmmer>`_ *during his PhD project
+`Martin Larralde <https://github.com/althonos>`_ *during his PhD project
 at the* `European Molecular Biology Laboratory <https://www.embl.de/>`_
 *in the* `Zeller team <https://github.com/zellerlab>`_.
