@@ -97,6 +97,12 @@ class TestSearchPipeline(unittest.TestCase):
         self.assertEqual(hits.query.name, b"test")
         self.assertIs(hits.query.accession, None)
 
+    def test_search_hmm_unsupported(self):
+        pipeline = Pipeline(alphabet=self.alphabet)
+        with self.assertRaises(TypeError):
+            with SequenceFile(self.reference_path, digital=True, alphabet=self.alphabet) as seqs_file:
+                hits = pipeline.search_hmm(object(), seqs_file)
+
     def test_search_seq_block(self):
         seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name=b"seq1", accession=b"SQ001")
         pipeline = Pipeline(alphabet=self.alphabet)
@@ -114,6 +120,12 @@ class TestSearchPipeline(unittest.TestCase):
         self.assertEqual(hits.query.name, seq.name)
         self.assertEqual(hits.query.accession, seq.accession) # NOTE: p7_SingleBuilder doesn't copy the accession...
 
+    def test_search_seq_unsupported(self):
+        pipeline = Pipeline(alphabet=self.alphabet)
+        with self.assertRaises(TypeError):
+            with SequenceFile(self.reference_path, digital=True, alphabet=self.alphabet) as seqs_file:
+                hits = pipeline.search_seq(object(), seqs_file)
+
     def test_search_msa_block(self):
         pipeline = Pipeline(alphabet=self.alphabet)
         hits = pipeline.search_msa(self.msa, self.references)
@@ -128,6 +140,12 @@ class TestSearchPipeline(unittest.TestCase):
         self.assertEqual(len(hits), 1)
         self.assertEqual(hits.query.name, self.msa.name)
         self.assertEqual(hits.query.accession, self.msa.accession)
+
+    def test_search_msa_unsupported(self):
+        pipeline = Pipeline(alphabet=self.alphabet)
+        with self.assertRaises(TypeError):
+            with SequenceFile(self.reference_path, digital=True, alphabet=self.alphabet) as seqs_file:
+                hits = pipeline.search_msa(object(), seqs_file)
 
     def test_Z(self):
         seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name=b"seq1")

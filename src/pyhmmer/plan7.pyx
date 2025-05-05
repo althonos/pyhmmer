@@ -6919,7 +6919,7 @@ cdef class LongTargetsPipeline(Pipeline):
         max_length = om.max_length
         if self._window_length > 0:
             max_length = om.max_length = self._window_length
-        elif isinstance(query, HMM):
+        elif SearchQuery is HMM:
             hmm = query
             libhmmer.p7_builder.p7_Builder_MaxLength(hmm._hmm, self._window_beta)
             max_length = hmm._hmm.max_length
