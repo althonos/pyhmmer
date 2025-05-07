@@ -585,6 +585,7 @@ class Sequence(typing.Sized, abc.ABC):
 class TextSequence(Sequence):
     def __init__(
         self,
+        *,
         name: typing.Optional[bytes] = None,
         description: typing.Optional[bytes] = None,
         accession: typing.Optional[bytes] = None,
@@ -610,6 +611,7 @@ class DigitalSequence(Sequence):
     def __init__(
         self,
         alphabet: Alphabet,
+        *,
         name: typing.Optional[bytes] = None,
         description: typing.Optional[bytes] = None,
         accession: typing.Optional[bytes] = None,

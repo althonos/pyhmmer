@@ -323,6 +323,26 @@ cdef class Alphabet:
         assert self._abc != NULL
         return libeasel.alphabet.esl_abc_DecodeType(self._abc.type).decode('ascii')
 
+    @property
+    def gap_symbol(self):
+        """`str`: The alphabet gap symbol.
+
+        .. versionadded:: 0.11.1
+
+        """
+        assert self._abc != NULL
+        return chr(libeasel.alphabet.esl_abc_CGetGap(self._abc))
+
+    @property
+    def gap_index(self):
+        """`int`: The alphabet gap index.
+        
+        .. versionadded:: 0.11.1
+
+        """
+        assert self._abc != NULL
+        return libeasel.alphabet.esl_abc_XGetGap(self._abc)
+
     # --- Utils --------------------------------------------------------------
 
     cdef inline bint _eq(self, Alphabet other) nogil:
@@ -5091,6 +5111,7 @@ cdef class TextSequence(Sequence):
 
     def __init__(
         self,
+        *args,
         bytes name=None,
         bytes description=None,
         bytes accession=None,
@@ -5107,6 +5128,25 @@ cdef class TextSequence(Sequence):
 
         """
         cdef bytes sq
+
+        # TODO: Remove in 0.12.0 (deprecation)
+        if len(args) > 0:
+            warnings.warn(
+                "TextSequence.__init__ will not accept positional arguments after v0.12.0",
+                category=DeprecationWarning
+            )
+            if len(args) > 0:
+                name = args[0]
+            if len(args) > 1:
+                description = args[1]
+            if len(args) > 2:
+                accession = args[2]
+            if len(args) > 3:
+                sequence = args[3]
+            if len(args) > 4:
+                source = args[4]
+            if len(args) > 5:
+                residue_markups = args[5]
 
         if sequence is not None:
             sq = sequence.encode("ascii")
@@ -5299,6 +5339,7 @@ cdef class DigitalSequence(Sequence):
 
     def __init__(self,
               Alphabet              alphabet      not None,
+              *args,
               bytes                 name            = None,
               bytes                 description     = None,
               bytes                 accession       = None,
@@ -5323,6 +5364,25 @@ cdef class DigitalSequence(Sequence):
         cdef int     status
         cdef int64_t i
         cdef int64_t n
+
+        # TODO: Remove in 0.12.0 (deprecation)
+        if len(args) > 0:
+            warnings.warn(
+                "DigialSequence.__init__ will not accept positional arguments besides `alphabet` after v0.12.0",
+                category=DeprecationWarning
+            )
+            if len(args) > 0:
+                name = args[0]
+            if len(args) > 1:
+                description = args[1]
+            if len(args) > 2:
+                accession = args[2]
+            if len(args) > 3:
+                sequence = args[3]
+            if len(args) > 4:
+                source = args[4]
+            if len(args) > 5:
+                residue_markups = args[5]
 
         # create an empty digital sequence
         self._sq = libeasel.sq.esl_sq_CreateDigital(alphabet._abc)
