@@ -153,7 +153,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
             seqs = seqs_file.read_block()
 
         with self.hmm_file("RREFam") as hmm_file:
-            all_hits = self.get_hits_multi(hmm_file, seqs)
+            all_hits = self.get_hits_multi(list(hmm_file), seqs)
 
         hits = (hit for hits in all_hits for hit in hits)
         with self.table("RREFam.tbl") as table:
@@ -184,8 +184,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
                 self.assertEqual(domain.hit.name.decode(), fields[0])
                 self.assertAlmostEqual(domain.score, float(fields[13]), places=1)
                 self.assertAlmostEqual(domain.bias, float(fields[14]), places=1)
-                # FIXME: it looks like domZ is not extracted properly
-                # self.assertEqual(f"{domain.c_evalue:9.2g}", f"{float(fields[11]):9.2g}")
+                self.assertEqual(f"{domain.c_evalue:9.2g}", f"{float(fields[11]):9.2g}")
                 self.assertEqual(f"{domain.i_evalue:9.2g}", f"{float(fields[12]):9.2g}")
 
     @unittest.skipUnless(resource_files, "importlib.resources not available")
@@ -308,13 +307,27 @@ class TestHmmsearchProcess(TestHmmsearch, unittest.TestCase):
         self.assertIs(None, next(hits, None))
 
 
+class TestHmmsearchReverse(TestHmmsearch):
+    parallel = "targets"
+
+    @unittest.skip("unsupported parallel mode with sequence file")
+    def test_pf02826_file(self):
+        pass
+
 class TestHmmsearchReverseSingle(TestHmmsearchSingle):
     parallel = "targets"
+
+    @unittest.skip("unsupported parallel mode with sequence file")
+    def test_pf02826_file(self):
+        pass
 
 
 class TestHmmsearchReverseProcess(TestHmmsearchProcess):
     parallel = "targets"
 
+    @unittest.skip("unsupported parallel mode with sequence file")
+    def test_pf02826_file(self):
+        pass
 
 
 class TestPipelinesearch(_TestSearch, unittest.TestCase):
