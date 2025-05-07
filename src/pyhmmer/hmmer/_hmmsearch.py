@@ -96,9 +96,9 @@ class _SEARCHDispatcher(
 
 class _ReverseSEARCHDispatcher(
     _BaseDispatcher[
-        HMM,
+        "_SEARCHQueryType",
         DigitalSequenceBlock,
-        "TopHits[HMM]",
+        "TopHits[_SEARCHQueryType]",
     ]
 ):
     """A ``hmmsearch`` dispatcher that parallelizes on the targets.
@@ -106,10 +106,10 @@ class _ReverseSEARCHDispatcher(
 
     def __init__(
         self,
-        queries: typing.Iterable[HMM],
+        queries: typing.Iterable["_SEARCHQueryType"],
         targets: DigitalSequenceBlock,
         cpus: int = 0,
-        callback: typing.Optional[typing.Callable[[HMM, int], None]] = None,
+        callback: typing.Optional[typing.Callable[["_SEARCHQueryType", int], None]] = None,
         builder: typing.Optional[Builder] = None,
         timeout: int = 1,
         backend: "BACKEND" = "threading",
@@ -203,9 +203,9 @@ class _ReverseSEARCHDispatcher(
                 # one item at a time since we synchronize query-by-query
                 results: typing.Deque[_BaseChore[_Q, _R]] = collections.deque()
                 if self.backend == "multiprocessing":
-                    query_queue = manager.Queue(maxsize=1)
+                    query_queue = manager.Queue()
                 elif self.backend == "threading":
-                    query_queue = queue.Queue(maxsize=1)
+                    query_queue = queue.Queue()
                 # create worker
                 worker = self._new_worker(query_queue, query_count, kill_switch, targets=self.target_chunks[i])
                 worker.start()
@@ -214,8 +214,12 @@ class _ReverseSEARCHDispatcher(
 
             # catch exceptions to kill threads in the background before exiting
             try:
+                hits = None
                 # process queries sequentially
                 for i, query in enumerate(self.queries):
+                    # yield hits obtained at the previous iteration
+                    if hits is not None:
+                        yield hits
                     query_count.value += 1
                     # create one chore per worker
                     chores = []
@@ -235,19 +239,25 @@ class _ReverseSEARCHDispatcher(
                     # call callback here after the hits have been merged
                     if self.callback is not None:
                         self.callback(chore.query, query_count.value)
-                    yield hits
                 # now that we exhausted all queries, poison pill the
                 # threads so they stop on their own gracefully
                 for worker_queue in queues:
                     worker_queue.put(None)
-            except BaseException:
+                for worker in workers:
+                    worker.join()
+                # yield the final hits
+                if hits is not None:
+                    yield hits
+            except BaseException as e:
                 # make sure threads are killed to avoid being stuck,
                 # e.g. after a KeyboardInterrupt, then re-raise
                 try:
                     kill_switch.set()
                 except queue.Full:
                     pass
-                raise
+                for worker in workers:
+                    worker.join()
+                raise e
 
 
 # --- hmmsearch --------------------------------------------------------------
@@ -287,7 +297,7 @@ def hmmsearch(
             database of sequences to query. If you plan on using the
             same sequences several times, consider storing them into
             a `~pyhmmer.easel.DigitalSequenceBlock` directly. If a
-            `~pyhmmer.easel.SequenceFile` is given, profiles will be loaded 
+            `~pyhmmer.easel.SequenceFile` is given, profiles will be loaded
             iteratively from disk rather than prefetched.
         cpus (`int`): The number of threads to run in parallel. Pass ``1``
             to run everything in the main thread, ``0`` to automatically
@@ -300,11 +310,11 @@ def hmmsearch(
             executed. Supports ``threading`` to use thread-based parallelism,
             or ``multiprocessing`` to use process-based parallelism.
         parallel (`str`): The parallel strategy to use. Supports ``queries``
-            to run queries in parallel, or ``targets`` to parallelize on 
-            targets while running one query at a time. If `None` given, 
+            to run queries in parallel, or ``targets`` to parallelize on
+            targets while running one query at a time. If `None` given,
             use ``queries`` by default unless we can detect that there is
             a single or a small number of queries. Note that parallelization
-            on ``targets`` does not work with `~pyhmmer.easel.SequenceFile` 
+            on ``targets`` does not work with `~pyhmmer.easel.SequenceFile`
             targets.
 
     Yields:
@@ -314,7 +324,7 @@ def hmmsearch(
     Raises:
         `~pyhmmer.errors.AlphabetMismatch`: When any of the query HMMs
             and the sequences do not share the same alphabet.
-        `RuntimeError`: When attempting to use ``targets`` parallel 
+        `RuntimeError`: When attempting to use ``targets`` parallel
             strategy with targets from a `~pyhmmer.easel.SequenceFile`.
 
     Note:
