@@ -7,6 +7,7 @@ import os
 import unittest
 import tempfile
 import threading
+import multiprocessing.resource_sharer
 
 import pyhmmer
 from pyhmmer.plan7 import Pipeline, HMMFile, HMMPressedFile, TopHits, Hit
@@ -15,6 +16,10 @@ from pyhmmer.easel import Alphabet, DigitalMSA, MSAFile, SequenceFile, TextSeque
 from .utils import resource_files
 
 class _TestSearch(metaclass=abc.ABCMeta):
+
+    def tearDown(self):
+        multiprocessing.resource_sharer.stop()
+
     @abc.abstractmethod
     def get_hits(self, hmm, sequences):
         return NotImplemented
