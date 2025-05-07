@@ -3502,7 +3502,7 @@ cdef class MSA:
         else:
             vlen = strlen(value)
             if vlen != alen:
-                raise ValueError(f"invalid length for reference {vlen} (expected {alen})")
+                raise ValueError(f"invalid length (expected {alen}, found {vlen})")
             if field[0] == NULL:
                 field[0] = <char*> calloc(alen, sizeof(char))
                 if field[0] == NULL:
@@ -3532,6 +3532,88 @@ cdef class MSA:
             return checksum
         else:
             raise UnexpectedError(status, "esl_msa_Checksum")
+
+    cpdef MSA select(self, sequences = None, columns = None):
+        """Select and copy a subset of the multiple sequence alignment.
+
+        Arguments:
+            sequences (iterable of `int`, or `None`): The indices of sequences 
+                to retain in the alignment subset. If `None` given, retain
+                all sequences.
+            columns (iterable of `int`, or `None`): The indices of columns to 
+                retain in the alignment subset. If `None` given, retain all
+                columns.
+
+        Raises:
+            `IndexError`: When given indices that are out of bounds for the
+                sequences or columns.
+
+        Example:
+            >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
+            >>> s2 = TextSequence(name=b"seq2", sequence="ATCC")
+            >>> s3 = TextSequence(name=b"seq3", sequence="ATGA")
+            >>> msa = TextMSA(name=b"msa", sequences=[s1, s2, s3])
+            >>> msa.select(sequences=[0, 2]).names
+            (b'seq1', b'seq3')
+            >>> msa.select(columns=range(1,4)).alignment
+            ('TGC', 'TCC', 'TGA')
+
+        .. versionadded:: 0.11.1
+
+        """
+        assert self._msa != NULL
+
+        # NB: This function does a copy first just to set the Python object
+        #     properly; it would be 
+
+        cdef size_t              i 
+        cdef char[eslERRBUFSIZE] errbuf
+        cdef int                 status
+        cdef int*                mask   = NULL
+        cdef MSA                 msa    = self.copy()
+        cdef size_t              alen   = self._msa.alen
+        cdef size_t              nseq   = self._msa.nseq
+
+        try:
+            if sequences is not None:
+                # allocate mask array
+                mask = <int*> realloc(mask, sizeof(int) * nseq)
+                if mask == NULL:
+                    raise AllocationError("int", sizeof(int), nseq)
+                memset(mask, 0, sizeof(int) * nseq)
+                # build array from Python arguments
+                for i in sequences:
+                    if i >= nseq:
+                        raise IndexError(i)
+                    mask[i] = True
+                # clear old memory
+                libeasel.msa.esl_msa_Destroy(msa._msa)
+                # subset sequences
+                status = libeasel.msa.esl_msa_SequenceSubset(self._msa, mask, &msa._msa)
+                if status != libeasel.eslOK:
+                    _reraise_error()
+                    raise UnexpectedError(status, "esl_msa_SequenceSubset")
+            if columns is not None:
+                # allocate mask array
+                mask = <int*> realloc(mask, sizeof(int) * alen)
+                if mask == NULL:
+                    raise AllocationError("int", sizeof(int), alen)
+                memset(mask, 0, sizeof(int) * alen)
+                # build array from Python arguments
+                for i in columns:
+                    if i >= alen:
+                        raise IndexError(i)
+                    mask[i] = True
+                # subset sequences
+                status = libeasel.msa.esl_msa_ColumnSubset(msa._msa, <char*> &errbuf, mask)
+                if status != libeasel.eslOK:
+                    _reraise_error()
+                    raise UnexpectedError(status, "esl_msa_SequenceSubset")
+        finally:
+            free(mask)
+
+        return msa
+        
 
     cpdef void write(self, object fh, str format) except *:
         """Write the multiple sequence alignement to a file handle.

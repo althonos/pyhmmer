@@ -148,6 +148,7 @@ cdef class MSA:
     cdef int _set_annotation(self, char** field, char* value) except 1 nogil
 
     cpdef uint32_t checksum(self)
+    cpdef MSA select(self, sequences = ?, columns = ?)
     cpdef void write(self, object fh, str format) except *
 
 
