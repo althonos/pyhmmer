@@ -96,9 +96,9 @@ class _SEARCHDispatcher(
 
 class _ReverseSEARCHDispatcher(
     _BaseDispatcher[
-        _SEARCHQueryType,
+        HMM,
         DigitalSequenceBlock,
-        "TopHits[_SEARCHQueryType]",
+        "TopHits[HMM]",
     ]
 ):
     """A ``hmmsearch`` dispatcher that parallelizes on the targets.
@@ -127,7 +127,7 @@ class _ReverseSEARCHDispatcher(
         )
         # only use as many CPUs as there are targets (if only a few), but
         # that may be a waste for less than N sequences per CPUs?
-        self.cpus = min(cpus, len(targets)) 
+        self.cpus = max(1, min(cpus, len(targets)))
         # attempt to balance the chunks so that every thread gets about the
         # same number of *residues* (not the same number of *sequences*!)
         self.target_chunks = self._make_chunks(targets)
@@ -157,8 +157,10 @@ class _ReverseSEARCHDispatcher(
         query_queue,
         query_count,
         kill_switch: threading.Event,
-        targets: DigitalSequenceBlock,
+        targets: DigitalSequenceBlock = None,
     ):
+        if targets is None:
+            targets = self.targets
         params = [
             targets,
             query_queue,
@@ -175,7 +177,13 @@ class _ReverseSEARCHDispatcher(
         else:
             raise ValueError(f"Invalid backend for `hmmsearch`: {self.backend!r}")
 
-    def _multi_threaded(self) -> typing.Iterator["_R"]:
+    def _single_threaded(self) -> typing.Iterator["TopHits[_SEARCHQueryType]"]:
+        for i, hits in enumerate(super()._single_threaded(), start=1):
+            if self.callback is not None:
+                self.callback(hits.query, i)
+            yield hits
+
+    def _multi_threaded(self) -> typing.Iterator["TopHits[_SEARCHQueryType]"]:
         with contextlib.ExitStack() as ctx:
             # single shared kill switch and query count
             if self.backend == "multiprocessing":
@@ -212,7 +220,10 @@ class _ReverseSEARCHDispatcher(
                     # create one chore per worker
                     chores = []
                     for worker, worker_queue in zip(workers, queues):
-                        chore = self._new_chore(query)
+                        if isinstance(query, OptimizedProfile):
+                            chore = self._new_chore(query.copy())
+                        else:
+                            chore = self._new_chore(query)
                         chores.append(chore)
                         worker_queue.put(chore)
                     # collect hits
