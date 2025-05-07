@@ -3423,6 +3423,70 @@ cdef class MSA:
         else:
             self._set_annotation(&self._msa.mm, <char*> model_mask)
 
+    @property
+    def secondary_structure(self):
+        """`bytes` or `None`: The consensus secondary structure, if any.
+
+        .. versionadded:: 0.11.1
+
+        """
+        assert self._msa != NULL
+
+        if self._msa.ss_cons == NULL:
+            return None
+        return PyBytes_FromStringAndSize(self._msa.ss_cons, self._msa.alen)
+
+    @secondary_structure.setter
+    def secondary_structure(self, secondary_structure: bytes):
+        assert self._msa != NULL
+        if secondary_structure is None:
+            self._set_annotation(&self._msa.ss_cons, NULL)
+        else:
+            self._set_annotation(&self._msa.ss_cons, <char*> secondary_structure)
+
+    @property
+    def surface_accessibility(self):
+        """`bytes` or `None`: The consensus surface accessibility, if any.
+
+        .. versionadded:: 0.11.1
+
+        """
+        assert self._msa != NULL
+
+        if self._msa.sa_cons == NULL:
+            return None
+        return PyBytes_FromStringAndSize(self._msa.sa_cons, self._msa.alen)
+
+    @surface_accessibility.setter
+    def surface_accessibility(self, surface_accessibility: bytes):
+        assert self._msa != NULL
+        if surface_accessibility is None:
+            self._set_annotation(&self._msa.sa_cons, NULL)
+        else:
+            self._set_annotation(&self._msa.sa_cons, <char*> surface_accessibility)
+
+    @property
+    def posterior_probabilities(self):
+        """`bytes` or `None`: The consensus posterior probabilities, if any.
+
+        .. versionadded:: 0.11.1
+
+        """
+        assert self._msa != NULL
+
+        if self._msa.pp_cons == NULL:
+            return None
+        return PyBytes_FromStringAndSize(self._msa.pp_cons, self._msa.alen)
+
+    @posterior_probabilities.setter
+    def posterior_probabilities(self, posterior_probabilities: bytes):
+        assert self._msa != NULL
+        if posterior_probabilities is None:
+            self._set_annotation(&self._msa.pp_cons, NULL)
+        else:
+            self._set_annotation(&self._msa.pp_cons, <char*> posterior_probabilities)
+
+
     # TODO: Implement `weights` property exposing the sequence weights as
     #       a `Vector` object, needs implementation of a new `VectorD` class
     #       given that MSA.wgt is an array of `double`

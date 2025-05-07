@@ -69,6 +69,13 @@ class TestMSAFile(unittest.TestCase):
         self.assertEqual(msa.reference, b"......xxxxxxx xxxx xxxxxx......")
         self.assertIsNone(msa.model_mask)
 
+    @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
+    def test_secondary_structure(self):
+        selex = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "selex", "selex.good.4")
+        with easel.MSAFile(selex, format="selex") as f:
+            msa = f.read()
+        self.assertEqual(msa.secondary_structure, b"......>>>>+>> ^^^^ <<<<<<......")
+
 
 class _TestReadFilename(object):
 
