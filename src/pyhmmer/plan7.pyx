@@ -2560,7 +2560,8 @@ cdef class HMM:
         """`bytes`: The name of the HMM.
         """
         assert self._hmm != NULL
-        return None if self._hmm.name == NULL else <bytes> self._hmm.name
+        assert self._hmm.name != NULL
+        return <bytes> self._hmm.name
 
     @name.setter
     def name(self, bytes name not None):
