@@ -280,7 +280,7 @@ class _BaseWorker(typing.Generic[_Q, _T, _R]):
             except BrokenPipeError:
                 self.kill()
                 break
-            except ConnectionResetError:
+            except ConnectionError:
                 self.kill()
                 break
             # check if arguments from the queue are a poison-pill (`None`),
@@ -306,7 +306,7 @@ class _BaseWorker(typing.Generic[_Q, _T, _R]):
             return self.kill_switch.is_set()
         except BrokenPipeError:  # the connection was closed already
             return True
-        except ConnectionResetError:  # the connection was closed already
+        except ConnectionError:  # the connection was closed already
             return True
         except FileNotFoundError:  # the Event manager has been closed already
             return True
