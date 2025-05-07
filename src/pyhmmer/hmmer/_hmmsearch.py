@@ -203,7 +203,7 @@ class _ReverseSEARCHDispatcher(
                 # one item at a time since we synchronize query-by-query
                 results: typing.Deque[_BaseChore[_Q, _R]] = collections.deque()
                 if self.backend == "multiprocessing":
-                    query_queue = manager.Queue()
+                    query_queue = ctx.enter_context(contextlib.closing(multiprocessing.Queue()))
                 elif self.backend == "threading":
                     query_queue = queue.Queue()
                 # create worker
@@ -241,10 +241,11 @@ class _ReverseSEARCHDispatcher(
                         self.callback(chore.query, query_count.value)
                 # now that we exhausted all queries, poison pill the
                 # threads so they stop on their own gracefully
-                for worker_queue in queues:
-                    worker_queue.put(None)
                 for worker in workers:
+                    worker.query_queue.put(None)
                     worker.join()
+                    if self.backend == "multiprocessing":
+                        worker.query_queue.close()
                 # yield the final hits
                 if hits is not None:
                     yield hits
@@ -257,6 +258,9 @@ class _ReverseSEARCHDispatcher(
                     pass
                 for worker in workers:
                     worker.join()
+                    if self.backend == "multiprocessing":
+                        worker.query_queue.close()
+                        worker.query_queue.join_thread()
                 raise e
 
 

@@ -408,76 +408,79 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
             thread.targets.close()
 
     def _multi_threaded(self) -> typing.Iterator[_R]:
-        # with contextlib.ExitStack() as ctx:
-        ctx = multiprocessing.get_context('spawn')
+        with contextlib.ExitStack() as ctx:
+            # create the queues to pass the query objects around, as well as
+            # atomic values that we use to synchronize the threads
+            results: typing.Deque[_BaseChore[_Q, _R]] = collections.deque()
+            if self.backend == "multiprocessing":
+                manager = ctx.enter_context(multiprocessing.Manager())
+                query_queue = ctx.enter_context(contextlib.closing(multiprocessing.Queue(maxsize=2*self.cpus)))
+                query_count = manager.Value(ctypes.c_ulong, 0)
+                kill_switch = manager.Event()
+            elif self.backend == "threading":
+                query_queue = queue.Queue(maxsize=2*self.cpus)
+                query_count = multiprocessing.Value(ctypes.c_ulong)  # type: ignore
+                kill_switch = threading.Event()
 
-        # create the queues to pass the query objects around, as well as
-        # atomic values that we use to synchronize the threads
-        results: typing.Deque[_BaseChore[_Q, _R]] = collections.deque()
-        if self.backend == "multiprocessing":
-            # manager = ctx.enter_context(multiprocessing.Manager())
-            query_queue = ctx.Queue()#maxsize=2*self.cpus)
-            query_count = ctx.Value(ctypes.c_ulong, 0)
-            kill_switch = ctx.Event()
-        elif self.backend == "threading":
-            query_queue = queue.Queue()#maxsize=2*self.cpus)
-            query_count = ctx.Value(ctypes.c_ulong)  # type: ignore
-            kill_switch = threading.Event()
+            # create and launch one pipeline thread per CPU
+            workers = []
+            for _ in range(self.cpus):
+                worker = self._new_worker(query_queue, query_count, kill_switch)
+                worker.start()
+                workers.append(worker)
 
-        # create and launch one pipeline thread per CPU
-        workers = []
-        for _ in range(self.cpus):
-            worker = self._new_worker(query_queue, query_count, kill_switch)
-            worker.start()
-            workers.append(worker)
-
-        # catch exceptions to kill threads in the background before exiting
-        try:
-            # alternate between feeding queries to the threads and
-            # yielding back results, if available. the priority is
-            # given to filling the query queue, so that no worker
-            # ever idles.
-            for query in self.queries:
-                # prepare to add the next query to the queue
-                query_count.value += 1
-                chore = self._new_chore(query)
-                # attempt to add the query to the query queue,
-                # but use a timeout so that it doesn't deadlock
-                # if the background thread errored (which would
-                # set the kill switch), typically because the
-                # user-provided callback failed
-                while not kill_switch.is_set():
-                    with contextlib.suppress(queue.Full):
-                        query_queue.put(chore, timeout=self.timeout)  # <-- blocks if too many chores in queue
-                        results.append(chore)
-                        break
-                # aggressively wait for the result with a very short
-                # timeout, and exit the loop if the queue is not full
-                if results[0].available():
-                    yield results[0].get()
-                    results.popleft()
-            # now that we exhausted all queries, poison pill the
-            # threads so they stop on their own gracefully
-            for _ in workers:
-                query_queue.put(None)
-            # wait for final workers
-            for worker in workers:
-                worker.join()
-            # yield all remaining results, in order
-            while results:
-                result = results[0].get()  # <-- blocks until result is available
-                results.popleft()
-                yield result
-        except BaseException as e:
-            # make sure threads are killed to avoid being stuck,
-            # e.g. after a KeyboardInterrupt, then re-raise
+            # catch exceptions to kill threads in the background before exiting
             try:
-                kill_switch.set()
-            except queue.Full:
-                pass
-            for worker in workers:
-                worker.join()
-            raise e
+                # alternate between feeding queries to the threads and
+                # yielding back results, if available. the priority is
+                # given to filling the query queue, so that no worker
+                # ever idles.
+                for query in self.queries:
+                    # prepare to add the next query to the queue
+                    query_count.value += 1
+                    chore = self._new_chore(query)
+                    # attempt to add the query to the query queue,
+                    # but use a timeout so that it doesn't deadlock
+                    # if the background thread errored (which would
+                    # set the kill switch), typically because the
+                    # user-provided callback failed
+                    while not kill_switch.is_set():
+                        with contextlib.suppress(queue.Full):
+                            query_queue.put(chore, timeout=self.timeout)  # <-- blocks if too many chores in queue
+                            results.append(chore)
+                            break
+                    # aggressively wait for the result with a very short
+                    # timeout, and exit the loop if the queue is not full
+                    if results[0].available():
+                        yield results[0].get()
+                        results.popleft()
+                # now that we exhausted all queries, poison pill the
+                # threads so they stop on their own gracefully
+                for _ in workers:
+                    query_queue.put(None)
+                # wait for final workers
+                for worker in workers:
+                    worker.join()
+                if self.backend == "multiprocessing":
+                    worker.query_queue.close()
+                    worker.query_queue.join_thread()
+                # yield all remaining results, in order
+                while results:
+                    result = results[0].get()  # <-- blocks until result is available
+                    results.popleft()
+                    yield result
+            except BaseException as e:
+                # make sure threads are killed to avoid being stuck,
+                # e.g. after a KeyboardInterrupt, then re-raise
+                try:
+                    kill_switch.set()
+                except queue.Full:
+                    pass
+                for worker in workers:
+                    worker.join()
+                    if self.backend == "multiprocessing":
+                        worker.query_queue.close()
+                raise e
 
     def run(self) -> typing.Iterator[_R]:
         if self.cpus == 1:
