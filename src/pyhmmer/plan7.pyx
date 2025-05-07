@@ -5835,6 +5835,7 @@ cdef class Pipeline:
 
         # record the query metadata
         hits._query = query
+        hits._empty = False
         # return the hits
         return hits
 
@@ -5902,6 +5903,7 @@ cdef class Pipeline:
         hits = self.search_hmm[OptimizedProfile, SearchTargets](opt, sequences)
         # record query metadata
         hits._query = query
+        hits._empty = False
         return hits
 
     cpdef TopHits search_seq(
@@ -5963,6 +5965,7 @@ cdef class Pipeline:
         hits = self.search_hmm[OptimizedProfile, SearchTargets](opt, sequences)
         # record query metadata
         hits._query = query
+        hits._empty = False
         return hits
 
     @staticmethod
@@ -6192,6 +6195,7 @@ cdef class Pipeline:
 
         # record the query metadata
         hits._query = query
+        hits._empty = False
         # return the hits
         return hits
 
@@ -6987,6 +6991,7 @@ cdef class LongTargetsPipeline(Pipeline):
 
         # record the query metadata
         hits._query = query
+        hits._empty = False
         # return the hits
         return hits
 
@@ -7047,6 +7052,7 @@ cdef class LongTargetsPipeline(Pipeline):
         assert hmm._hmm.max_length != -1
         hits = self.search_hmm[HMM, SearchTargets](hmm, sequences)
         hits._query = query
+        hits._empty = False
         return hits
 
     cpdef TopHits search_msa(
@@ -7107,6 +7113,7 @@ cdef class LongTargetsPipeline(Pipeline):
         assert hmm._hmm.max_length != -1
         hits = self.search_hmm[HMM, SearchTargets](hmm, sequences)
         hits._query = query
+        hits._empty = False
         return hits
 
     @staticmethod
@@ -7715,6 +7722,7 @@ cdef class TopHits:
     def __cinit__(self):
         self._th = NULL
         self._query = None
+        self._empty = True
         memset(&self._pli, 0, sizeof(P7_PIPELINE))
 
     def __init__(self, object query not None):
@@ -7790,6 +7798,7 @@ cdef class TopHits:
             hits.append(offset)
 
         return {
+            "_empty": self._empty,
             "unsrt": unsrt,
             "hit": hits,
             "Nalloc": self._th.Nalloc,
@@ -7895,6 +7904,9 @@ cdef class TopHits:
             )
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_hit_Deserialize")
+
+        # recover hits flag
+        self._empty = state["_empty"]
 
         # copy pipeline configuration
         self._pli.by_E = state["pipeline"]["by_E"]
@@ -8247,6 +8259,7 @@ cdef class TopHits:
 
         # record query metatada
         copy._query = self._query
+        copy._empty = self._empty
 
         with nogil:
             # copy pipeline configuration
@@ -8562,9 +8575,8 @@ cdef class TopHits:
         cdef TopHits merged     = self.copy()
         cdef int     status     = libeasel.eslOK
 
-        for other in others:
+        for i, other in enumerate(others):
             assert other._th != NULL
-
             # copy hits (`p7_tophits_Merge` effectively destroys the old storage
             # but because of Python references we cannot be sure that the data is
             # not referenced anywhere else)
@@ -8575,10 +8587,11 @@ cdef class TopHits:
                 raise ValueError("Trying to merge `TopHits` obtained from different queries")
 
             # just store the copy if merging inside an empty uninitialized `TopHits`
-            if merged._th.N == 0:
+            if merged._empty:
                 merged._query = other._query
                 memcpy(&merged._pli, &other_copy._pli, sizeof(P7_PIPELINE))
                 merged._th, other_copy._th = other_copy._th, merged._th
+                merged._empty = other_copy._empty
                 continue
 
             # check that the parameters are the same

@@ -183,6 +183,7 @@ class TestTopHits(unittest.TestCase):
         self.assertEqual(merged.query.name, self.hits.query.name)
         self.assertEqual(merged.query.M, self.hits.query.M)
         self.assertEqual(merged.query.accession, self.hits.query.accession)
+        self.assertEqual(merged.Z, self.hits.Z)
         self.assertEqual(merged.E, self.hits.E)
         self.assertHitsEqual(merged, self.hits)
 

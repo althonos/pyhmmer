@@ -417,6 +417,7 @@ cdef class TopHits:
     cdef P7_PIPELINE _pli
     cdef P7_TOPHITS* _th
     cdef object      _query
+    cdef bint        _empty
 
     # cdef bytes       _qname
     # cdef bytes       _qacc
