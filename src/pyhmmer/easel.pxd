@@ -145,6 +145,8 @@ cdef class MSA:
     cdef ESL_MSA* _msa
 
     cdef int _rehash(self) except 1 nogil
+    cdef int _set_annotation(self, char** field, char* value) except 1 nogil
+
     cpdef uint32_t checksum(self)
     cpdef void write(self, object fh, str format) except *
 

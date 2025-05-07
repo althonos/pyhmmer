@@ -3381,11 +3381,70 @@ cdef class MSA:
 
         return names
 
+    @property
+    def reference(self):
+        """`bytes` or `None`: The reference annotation (`#=GC RF`), if any.
+
+        .. versionadded:: 0.11.1
+
+        """
+        assert self._msa != NULL
+
+        if self._msa.rf == NULL:
+            return None
+        return PyBytes_FromStringAndSize(self._msa.rf, self._msa.alen)
+
+    @reference.setter
+    def reference(self, reference: bytes):
+        assert self._msa != NULL
+        if reference is None:
+            self._set_annotation(&self._msa.rf, NULL)
+        else:
+            self._set_annotation(&self._msa.rf, <char*> reference)
+
+    @property
+    def model_mask(self):
+        """`bytes` or `None`: The model mask (`#=GC MM`), if any.
+
+        .. versionadded:: 0.11.1
+
+        """
+        assert self._msa != NULL
+
+        if self._msa.mm == NULL:
+            return None
+        return PyBytes_FromStringAndSize(self._msa.mm, self._msa.alen)
+
+    @model_mask.setter
+    def model_mask(self, model_mask: bytes):
+        assert self._msa != NULL
+        if model_mask is None:
+            self._set_annotation(&self._msa.mm, NULL)
+        else:
+            self._set_annotation(&self._msa.mm, <char*> model_mask)
+
     # TODO: Implement `weights` property exposing the sequence weights as
     #       a `Vector` object, needs implementation of a new `VectorD` class
     #       given that MSA.wgt is an array of `double`
 
     # --- Utils --------------------------------------------------------------
+
+    cdef int _set_annotation(self, char** field, char* value) except 1 nogil:
+        cdef size_t alen = self._msa.alen
+        cdef size_t vlen 
+        if value == NULL:
+            if field[0] == NULL:
+                free(field[0])
+        else:
+            vlen = strlen(value)
+            if vlen != alen:
+                raise ValueError(f"invalid length for reference {vlen} (expected {alen})")
+            if field[0] == NULL:
+                field[0] = <char*> calloc(alen, sizeof(char))
+                if field[0] == NULL:
+                    raise AllocationError("char", sizeof(char), alen)
+            memcpy(field[0], value, alen * sizeof(char))
+        return 0
 
     cdef int _rehash(self) except 1 nogil:
         """Rehash the sequence names for faster lookup.

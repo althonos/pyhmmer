@@ -70,6 +70,16 @@ class TestMSA(object):
         msa = self.MSA(accession=acc)
         self.assertEqual(msa.accession, acc)
 
+    def test_rf(self):
+        s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")
+        s2 = easel.TextSequence(name=b"seq2", sequence="ATGG")
+        msa = easel.TextMSA(sequences=[s1, s2])
+        self.assertIsNone(msa.reference)
+        msa.reference = b"xxxx"
+        self.assertEqual(msa.reference, b"xxxx")
+        with self.assertRaises(ValueError):
+            msa.reference = b"x"
+
 
 class TestTextMSA(TestMSA, unittest.TestCase):
 
