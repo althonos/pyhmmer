@@ -44,6 +44,7 @@ if typing.TYPE_CHECKING:
     from .easel import Alphabet
 
     BACKEND = Literal["threading", "multiprocessing"]
+    PARALLEL = Literal["queries", "targets"]
 
     class PipelineOptions(TypedDict, total=False):
         alphabet: Alphabet

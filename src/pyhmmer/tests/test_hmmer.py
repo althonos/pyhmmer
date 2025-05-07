@@ -19,6 +19,9 @@ class _TestSearch(metaclass=abc.ABCMeta):
     def get_hits(self, hmm, sequences):
         return NotImplemented
 
+    def get_hits_multi(self, hmms, sequences):
+        return [self.get_hits(hmm, sequences) for hmm in hmms]
+
     @staticmethod
     def table(name):
         path = resource_files(__package__).joinpath("data", "tables", name)
@@ -95,7 +98,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
     @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_pf02826_file(self):
         with self.hmm_file("PF02826") as hmm_file:
-            hmm = next(hmm_file)
+            hmm = hmm_file.read()
         with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
             hits = self.get_hits(hmm, seqs_file)
             self.assertEqual(len(hits), 22)
@@ -120,7 +123,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
     @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_pf02826_block(self):
         with self.hmm_file("PF02826") as hmm_file:
-            hmm = next(hmm_file)
+            hmm = hmm_file.read()
         with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
             seqs = seqs_file.read_block()
 
@@ -150,7 +153,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
             seqs = seqs_file.read_block()
 
         with self.hmm_file("RREFam") as hmm_file:
-            all_hits = [self.get_hits(hmm, seqs) for hmm in hmm_file]
+            all_hits = self.get_hits_multi(hmm_file, seqs)
 
         hits = (hit for hits in all_hits for hit in hits)
         with self.table("RREFam.tbl") as table:
@@ -226,8 +229,13 @@ class _TestSearch(metaclass=abc.ABCMeta):
 
 
 class TestHmmsearch(_TestSearch, unittest.TestCase):
+    parallel = "queries"
+
     def get_hits(self, hmm, seqs):
-        return list(pyhmmer.hmmsearch(hmm, seqs))[0]
+        return list(pyhmmer.hmmsearch(hmm, seqs, parallel=self.parallel))[0]
+
+    def get_hits_multi(self, hmms, seqs):
+        return list(pyhmmer.hmmsearch(hmms, seqs, parallel=self.parallel))
 
     @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_callback_error(self):
@@ -243,11 +251,11 @@ class TestHmmsearch(_TestSearch, unittest.TestCase):
         with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
             seqs = seqs_file.read_block()
 
-        hits = pyhmmer.hmmsearch(hmm, seqs, cpus=1, callback=callback)
+        hits = pyhmmer.hmmsearch(hmm, seqs, cpus=1, callback=callback, parallel=self.parallel)
         with self.assertRaises(MyException):
             hit = next(hits)
 
-        hits = pyhmmer.hmmsearch(hmm, seqs, cpus=2, callback=callback)
+        hits = pyhmmer.hmmsearch(hmm, seqs, cpus=2, callback=callback, parallel=self.parallel)
         with self.assertRaises(MyException):
             hit = next(hits)
 
@@ -265,13 +273,17 @@ class TestHmmsearch(_TestSearch, unittest.TestCase):
     def test_no_queries(self):
         with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
             seqs = list(seqs_file)
-        hits = pyhmmer.hmmsearch([], seqs)
+        hits = pyhmmer.hmmsearch([], seqs, parallel=self.parallel)
         self.assertIs(None, next(hits, None))
 
 
 class TestHmmsearchSingle(TestHmmsearch, unittest.TestCase):
+
     def get_hits(self, hmm, seqs):
-        return list(pyhmmer.hmmsearch(hmm, seqs, cpus=1))[0]
+        return list(pyhmmer.hmmsearch(hmm, seqs, cpus=1, parallel=self.parallel))
+
+    def get_hits(self, hmm, seqs):
+        return list(pyhmmer.hmmsearch(hmm, seqs, cpus=1, parallel=self.parallel))[0]
 
     @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_no_queries(self):
@@ -283,14 +295,26 @@ class TestHmmsearchSingle(TestHmmsearch, unittest.TestCase):
 
 class TestHmmsearchProcess(TestHmmsearch, unittest.TestCase):
     def get_hits(self, hmm, seqs):
-        return list(pyhmmer.hmmsearch(hmm, seqs, cpus=2, backend="multiprocessing"))[0]
+        return list(pyhmmer.hmmsearch(hmm, seqs, cpus=2, backend="multiprocessing", parallel=self.parallel))[0]
+
+    def get_hits_multi(self, hmm, seqs):
+        return list(pyhmmer.hmmsearch(hmm, seqs, cpus=2, backend="multiprocessing", parallel=self.parallel))
 
     @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_no_queries(self):
         with self.seqs_file("938293.PRJEB85.HG003687", digital=True) as seqs_file:
             seqs = list(seqs_file)
-        hits = pyhmmer.hmmsearch([], seqs, cpus=2, backend="multiprocessing")
+        hits = pyhmmer.hmmsearch([], seqs, cpus=2, backend="multiprocessing", parallel=self.parallel)
         self.assertIs(None, next(hits, None))
+
+
+class TestHmmsearchReverseSingle(TestHmmsearchSingle):
+    parallel = "targets"
+
+
+class TestHmmsearchReverseProcess(TestHmmsearchProcess):
+    parallel = "targets"
+
 
 
 class TestPipelinesearch(_TestSearch, unittest.TestCase):
