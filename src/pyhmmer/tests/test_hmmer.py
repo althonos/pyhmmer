@@ -299,6 +299,7 @@ class TestHmmsearchSingle(TestHmmsearch, unittest.TestCase):
         self.assertIs(None, next(hits, None))
 
 
+@unittest.skipIf(platform.system() == "Darwin", "may deadlock on MacOS")
 class TestHmmsearchProcess(TestHmmsearch, unittest.TestCase):
     def get_hits(self, hmm, seqs):
         return list(pyhmmer.hmmsearch(hmm, seqs, cpus=2, backend="multiprocessing", parallel=self.parallel))[0]
@@ -321,6 +322,7 @@ class TestHmmsearchReverse(TestHmmsearch):
     def test_pf02826_file(self):
         pass
 
+
 class TestHmmsearchReverseSingle(TestHmmsearchSingle):
     parallel = "targets"
 
@@ -329,7 +331,7 @@ class TestHmmsearchReverseSingle(TestHmmsearchSingle):
         pass
 
 
-@unittest.skipIf(platform.system() == "Darwin", "deadlock on MacOS")
+@unittest.skipIf(platform.system() == "Darwin", "may deadlock on MacOS")
 class TestHmmsearchReverseProcess(TestHmmsearchProcess):
     parallel = "targets"
 
