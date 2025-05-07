@@ -8574,6 +8574,7 @@ cdef class TopHits:
         cdef TopHits other_copy
         cdef TopHits merged     = self.copy()
         cdef int     status     = libeasel.eslOK
+        cdef bint    mismatch   = False
 
         for i, other in enumerate(others):
             assert other._th != NULL
@@ -8582,8 +8583,17 @@ cdef class TopHits:
             # not referenced anywhere else)
             other_copy = other.copy()
 
-            # check that names/accessions are consistent
-            if merged._query != other._query:
+            # NOTE: we cannot always check for equality in case the query is
+            #       an optimized profile, because optimized profiles have a
+            #       different content if they are configured for different
+            #       sequences -- in that case we can only
+            if isinstance(merged._query, OptimizedProfile) and isinstance(other._query, OptimizedProfile):
+                mismatch = merged._query.name != other._query.name
+                mismatch |= merged._query.M != other._query.M
+                mismatch |= merged._query.accession != other._query.accession
+            else:
+                mismatch = merged._query != other._query
+            if mismatch:
                 raise ValueError("Trying to merge `TopHits` obtained from different queries")
 
             # just store the copy if merging inside an empty uninitialized `TopHits`
