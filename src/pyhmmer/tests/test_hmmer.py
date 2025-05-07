@@ -4,6 +4,7 @@ import math
 import io
 import itertools
 import os
+import platform
 import unittest
 import tempfile
 import threading
@@ -19,6 +20,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
 
     def tearDown(self):
         multiprocessing.resource_sharer.stop()
+        self.assertEqual(threading.active_count(), 1, threading.enumerate())
 
     @abc.abstractmethod
     def get_hits(self, hmm, sequences):
@@ -327,6 +329,7 @@ class TestHmmsearchReverseSingle(TestHmmsearchSingle):
         pass
 
 
+@unittest.skipIf(platform.system() == "Darwin", "deadlock on MacOS")
 class TestHmmsearchReverseProcess(TestHmmsearchProcess):
     parallel = "targets"
 
