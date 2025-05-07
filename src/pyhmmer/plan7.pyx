@@ -998,7 +998,7 @@ cdef class Builder:
             )
         if status == libeasel.eslOK:
             hmm.command_line = " ".join(sys.argv)
-        elif status == libeasel.eslEINVAL:
+        elif status == libeasel.eslEINVAL or status == libeasel.eslEFORMAT:
             msg = self._bld.errbuf.decode("utf-8", "replace")
             raise ValueError(f"Could not build HMM: {msg}")
         else:
@@ -1101,7 +1101,7 @@ cdef class Builder:
             )
         if status == libeasel.eslOK:
             hmm.command_line = " ".join(sys.argv)
-        elif status == libeasel.eslEINVAL:
+        elif status == libeasel.eslEINVAL or status == libeasel.eslEFORMAT:
             msg = self._bld.errbuf.decode("utf-8", "replace")
             raise ValueError(f"Could not build HMM: {msg}")
         else:
