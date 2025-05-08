@@ -1004,12 +1004,15 @@ cdef class KeyHash:
         Create a new empty key-hash collection.
 
         """
+        cdef int status
         with nogil:
             if self._kh == NULL:
                 self._kh = libeasel.keyhash.esl_keyhash_Create()
             else:
-                libeasel.keyhash.esl_keyhash_Reuse(self._kh)
-        if not self._kh:
+                status = libeasel.keyhash.esl_keyhash_Reuse(self._kh)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "esl_keyhash_Reuse")
+        if self._kh == NULL:
             raise AllocationError("ESL_KEYHASH", sizeof(ESL_KEYHASH))
 
     def __copy__(self):
@@ -3218,7 +3221,7 @@ class _MSAIndex(collections.abc.Mapping):
                 msa._rehash()
         self.msa = msa
 
-    def __getitem__(self,  item):
+    def __getitem__(self, object item):
         cdef int                      status
         cdef int                      index  = -1
         cdef const unsigned char[::1] key    = item
@@ -3236,22 +3239,25 @@ class _MSAIndex(collections.abc.Mapping):
             raise UnexpectedError(status, "esl_keyhash_Lookup")
 
     def __len__(self):
+        cdef ESL_KEYHASH* kh
         cdef MSA          msa = self.msa
-        cdef ESL_KEYHASH* kh  = msa._msa.index
-        return libeasel.keyhash.esl_keyhash_GetNumber(kh)
+
+        assert msa._msa != NULL
+        assert msa._msa.index != NULL
+
+        return libeasel.keyhash.esl_keyhash_GetNumber(msa._msa.index)
 
     def __iter__(self):
         cdef int          i
-        cdef char*        key
-        cdef int          offset
-        cdef MSA          msa    = self.msa
-        cdef ESL_KEYHASH* kh     = msa._msa.index
+        cdef ESL_KEYHASH* kh
+        cdef MSA          msa = self.msa
 
+        assert msa._msa != NULL
+        assert msa._msa.index != NULL
+
+        kh = msa._msa.index
         for i in range(libeasel.keyhash.esl_keyhash_GetNumber(kh)):
-            # NB: this is an inlined version of `esl_keyhash_Get`
-            offset = kh.key_offset[i]
-            key = &kh.smem[offset]
-            yield <bytes> key
+            yield <bytes> libeasel.keyhash.esl_keyhash_Get(kh, i)
 
 
 @cython.freelist(8)
@@ -6024,6 +6030,58 @@ cdef class DigitalSequence(Sequence):
 
 # --- Sequence Block ---------------------------------------------------------
 
+class _SequenceBlockIndex(collections.abc.Mapping):
+    """A read-only mapping of sequence names to sequences of a block.
+    """
+    __slots__ = ("block",)
+
+    def __init__(self, SequenceBlock block):
+        self.block = block
+        if len(block._indexed) != len(block):
+            with nogil:
+                block._rehash()
+
+    def __len__(self):
+        cdef SequenceBlock block = self.block
+        return libeasel.keyhash.esl_keyhash_GetNumber(block._indexed._kh)
+
+    def __getitem__(self, object item):
+        cdef int                      status
+        cdef int                      index  = -1
+        cdef const unsigned char[::1] key    = item
+        cdef esl_pos_t                length = key.shape[0]
+        cdef SequenceBlock            block  = self.block
+
+        assert block._indexed is not None
+        assert block._indexed._kh != NULL
+
+        with nogil:
+            status = libeasel.keyhash.esl_keyhash_Lookup(
+                block._indexed._kh,
+                <const char*> &key[0],
+                length,
+                &index
+            )
+        if status == libeasel.eslOK:
+            return block[index]
+        elif status == libeasel.eslENOTFOUND:
+            raise KeyError(item)
+        else:
+            raise UnexpectedError(status, "esl_keyhash_Lookup")
+
+    def __iter__(self):
+        cdef size_t        i
+        cdef size_t        length
+        cdef SequenceBlock block  = self.block
+
+        assert block._indexed is not None
+        assert block._indexed._kh != NULL
+
+        length = libeasel.keyhash.esl_keyhash_GetNumber(block._indexed._kh)
+        for i in range(length):
+            yield <bytes> libeasel.keyhash.esl_keyhash_Get(block._indexed._kh, i)
+
+
 cdef class SequenceBlock:
     """An abstract container for storing `Sequence` objects.
 
@@ -6058,6 +6116,7 @@ cdef class SequenceBlock:
         self._storage = []
         self._largest = -1
         self._owner = None
+        self._indexed = KeyHash()
 
     def __init__(self):
         raise TypeError("Can't instantiate abstract class 'SequenceBlock'")
@@ -6125,6 +6184,36 @@ cdef class SequenceBlock:
     def __sizeof__(self):
         return sizeof(self) + self._capacity * sizeof(ESL_SQ*)
 
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def indexed(self):
+        """`~collections.abc.Mapping`: A mapping of names to sequences.
+
+        This property can be used to access the sequence of a sequence block
+        by name. An index is created the first time this property is accessed.
+        An error is raised if the block contains duplicate sequence names.
+
+        Raises:
+            `KeyError`: When attempting to create an index for an alignment
+                containing duplicate sequence names.
+
+        Example:
+            >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
+            >>> s2 = TextSequence(name=b"seq2", sequence="ATTA")
+            >>> block = TextSequenceBlock([s1, s2])
+            >>> block.indexed[b'seq1'].sequence
+            'ATGC'
+            >>> block.indexed[b'seq3']
+            Traceback (most recent call last):
+            ...
+            KeyError: b'seq3'
+
+        .. versionadded:: 0.11.1
+
+        """
+        return _SequenceBlockIndex(self)
+
     # --- C methods ----------------------------------------------------------
 
     cdef void _allocate(self, size_t n) except *:
@@ -6142,8 +6231,35 @@ cdef class SequenceBlock:
         # for i in range(self._length, self._capacity):
         #     self._refs[i] = NULL
 
-    cdef void _on_modification(self) except *:
+    cdef void _on_modification(self) noexcept:
         self._largest = -1 # invalidate cache
+        self._indexed.clear()
+
+    cdef int _rehash(self) except 1 nogil:
+        assert self._indexed is not None
+        assert self._indexed._kh != NULL
+
+        cdef size_t      idx
+        cdef const char* name
+        cdef int         status
+
+        status = libeasel.keyhash.esl_keyhash_Reuse(self._indexed._kh)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_keyhash_Reuse")
+
+        for idx in range(self._length):
+            status = libeasel.keyhash.esl_keyhash_Store(
+                self._indexed._kh,
+                self._refs[idx].name,
+                -1,
+                NULL,
+            )
+            if status == libeasel.eslEDUP:
+                raise KeyError("duplicate keys in sequence block")
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_keyhash_Store")
+
+        return 0
 
     # --- Python methods -----------------------------------------------------
 

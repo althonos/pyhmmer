@@ -70,15 +70,15 @@ class TestMSA(object):
         msa = self.MSA(accession=acc)
         self.assertEqual(msa.accession, acc)
 
-    def test_rf(self):
-        s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")
-        s2 = easel.TextSequence(name=b"seq2", sequence="ATGG")
-        msa = easel.TextMSA(sequences=[s1, s2])
-        self.assertIsNone(msa.reference)
-        msa.reference = b"xxxx"
-        self.assertEqual(msa.reference, b"xxxx")
-        with self.assertRaises(ValueError):
-            msa.reference = b"x"
+    def test_indexed_key_error(self):
+        msa = self.MSA()
+        with self.assertRaises(KeyError):
+            msa.indexed[b"xxx"]
+
+    def test_indexed_type_error(self):
+        msa = self.MSA()
+        with self.assertRaises(TypeError):
+            msa.indexed[1]
 
 
 class TestTextMSA(TestMSA, unittest.TestCase):
@@ -89,6 +89,24 @@ class TestTextMSA(TestMSA, unittest.TestCase):
     def read_msa(sto):
         with easel.MSAFile(sto, "stockholm") as msa_file:
             return msa_file.read()
+
+    def test_indexed(self):
+        s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")
+        s2 = easel.TextSequence(name=b"seq2", sequence="ATGG")
+        msa = easel.TextMSA(sequences=[s1, s2])
+        self.assertEqual(len(msa.indexed), 2)
+        self.assertEqual(msa.indexed[b"seq1"], msa.sequences[0])
+        self.assertEqual(msa.indexed[b"seq2"], msa.sequences[1])
+
+    def test_rf(self):
+        s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")
+        s2 = easel.TextSequence(name=b"seq2", sequence="ATGG")
+        msa = easel.TextMSA(sequences=[s1, s2])
+        self.assertIsNone(msa.reference)
+        msa.reference = b"xxxx"
+        self.assertEqual(msa.reference, b"xxxx")
+        with self.assertRaises(ValueError):
+            msa.reference = b"x"
 
     def test_eq(self):
         s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")

@@ -256,6 +256,37 @@ class _TestSequenceBlock(abc.ABC):
         self.assertEqual(block[1], block_pickled[1])
         self.assertEqual(block[2], block_pickled[2])
 
+    def test_indexed(self):
+        seq1 = self._new_sequence(b"seq1", "ATGC")
+        seq2 = self._new_sequence(b"seq2", "ATGCA")
+        seq3 = self._new_sequence(b"seq3", "TTGA")
+
+        block = self._new_block([seq1, seq2, seq3])
+
+        self.assertEqual(len(block.indexed), 3)
+        self.assertEqual(block.indexed[b"seq1"], block[0])
+        self.assertEqual(block.indexed[b"seq2"], block[1])
+        self.assertEqual(block.indexed[b"seq3"], block[2])
+
+    def test_indexed_duplicates(self):
+        seq1a = self._new_sequence(b"seq1", "ATGC")
+        seq1b = self._new_sequence(b"seq1", "ATGCA")
+
+        block = self._new_block([seq1a, seq1b])
+
+        with self.assertRaises(KeyError):
+            block.indexed[b"seq1"]
+
+    def test_indexed_key_error(self):
+        block = self._new_block([])
+        with self.assertRaises(KeyError):
+            block.indexed[b"xxx"]
+
+    def test_indexed_type_error(self):
+        block = self._new_block([])
+        with self.assertRaises(TypeError):
+            block.indexed[1]    
+
 
 class TestTextSequenceBlock(_TestSequenceBlock, unittest.TestCase):
 

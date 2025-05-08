@@ -162,13 +162,13 @@ cdef class DigitalMSA(MSA):
     cpdef TextMSA textize(self)
 
     cpdef DigitalMSA identity_filter(
-        self, 
-        float max_identity=*, 
+        self,
+        float max_identity=*,
         float fragment_threshold=*,
         float consensus_fraction=*,
-        bint ignore_rf=*, 
-        bint sample=*, 
-        int sample_threshold=*, 
+        bint ignore_rf=*,
+        bint sample=*,
+        int sample_threshold=*,
         int sample_count=*,
         int max_fragments=*,
         uint64_t seed=?,
@@ -242,8 +242,10 @@ cdef class SequenceBlock:
     cdef          list       _storage  # the actual Python list where `Sequence` objects are stored
     cdef          object     _owner    # the owner, if the object is just a shallow copy
     cdef          ssize_t    _largest  # the index of the largest sequence, or -1
+    cdef readonly KeyHash    _indexed  # a mapping of sequence names to sequences indices
 
-    cdef void _on_modification(self) except *
+    cdef void _on_modification(self) noexcept
+    cdef int _rehash(self) except 1 nogil
 
     cdef void _allocate(self, size_t n) except *
     cdef void _append(self, Sequence sequence) except *
