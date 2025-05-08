@@ -55,6 +55,16 @@ test = ["importlib-resources ; python_version < '3.9'"]
 build-dir = "build/{build_type}"
 editable.rebuild = true
 editable.verbose = false
+sdist.exclude = [
+    "build",
+    "benches",
+    "vendor/easel/documentation",
+    "vendor/easel/demotic",
+    "vendor/easel/miniapps",
+    "vendor/hmmer/documentation",
+    "vendor/**/*.ai",
+    "vendor/**/*.pl",
+]
 
 [[tool.scikit-build.generate]]
 path = "src/pyhmmer/_version.py"
