@@ -279,9 +279,9 @@ def jackhmmer(
         sequences (iterable of `~pyhmmer.easel.DigitalSequence`): A database
             of sequences to query. If you plan on using the same sequences
             several times, consider storing them into a
-            `~pyhmmer.easel.DigitalSequenceBlock` directly. `jackhmmer` does
-            not support passing a `~pyhmmer.easel.SequenceFile` at the
-            moment.
+            `~pyhmmer.easel.DigitalSequenceBlock` directly. `jackhmmer` also
+            supports passing a `~pyhmmer.easel.SequenceFile` as the target
+            sequences which will be open again at each iteration.
         max_iterations (`int`): The maximum number of iterations for the
             search. Hits will be returned early if the searched converged.
         select_hits (callable, optional): A function or callable object
