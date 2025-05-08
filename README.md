@@ -131,7 +131,7 @@ object is yielded for every [`HMM`] passed in the input iterable.
 import pyhmmer
 
 with pyhmmer.easel.SequenceFile("pyhmmer/tests/data/seqs/938293.PRJEB85.HG003687.faa", digital=True) as seq_file:
-    sequences = list(seq_file)
+    sequences = seq_file.read_block()
 
 with pyhmmer.plan7.HMMFile("pyhmmer/tests/data/hmms/txt/t2pks.hmm") as hmm_file:
     for hits in pyhmmer.hmmsearch(hmm_file, sequences, cpus=4):
