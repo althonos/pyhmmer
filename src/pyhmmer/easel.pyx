@@ -3179,8 +3179,18 @@ class _MSASequences(collections.abc.Sequence):
 
     __slots__ = ("msa",)
 
-    def __cinit__(self):
-        self.msa = None
+    def __init__(self, MSA msa):
+        self.msa = msa
+
+    def __len__(self):
+        assert (<MSA> self.msa)._msa != NULL
+        return (<MSA> self.msa)._msa.nseq
+
+
+class _MSAAlignment(collections.abc.Sequence):
+    """A read-only view over the aligned sequences (i.e. rows) of an MSA.
+    """
+    __slots__ = ("msa",)
 
     def __init__(self, MSA msa):
         self.msa = msa
@@ -3188,6 +3198,7 @@ class _MSASequences(collections.abc.Sequence):
     def __len__(self):
         assert (<MSA> self.msa)._msa != NULL
         return (<MSA> self.msa)._msa.nseq
+
 
 class _MSAIndex(collections.abc.Mapping):
     """A read-only mapping of sequence names to sequences of an MSA.
@@ -3764,7 +3775,7 @@ class _TextMSASequences(_MSASequences):
     """
 
     def __init__(self, TextMSA msa):
-        self.msa = msa
+        super().__init__(msa)
 
     def __getitem__(self, int idx):
         cdef int          status
@@ -3823,7 +3834,7 @@ class _TextMSASequences(_MSASequences):
             if hash_index != idx:
                 msa._rehash()
 
-class _TextMSAAlignment(collections.abc.Sequence):
+class _TextMSAAlignment(_MSAAlignment):
     """A read-only view over the alignment of an MSA in text mode.
 
     .. versionadded:: 0.11.1
@@ -3831,11 +3842,7 @@ class _TextMSAAlignment(collections.abc.Sequence):
     """
 
     def __init__(self, TextMSA msa):
-        self.msa = msa
-
-    def __len__(self):
-        cdef MSA msa = self.msa
-        return msa._msa.nseq
+        super().__init__(msa)
 
     def __getitem__(self, int idx):
         cdef int          status
@@ -4120,7 +4127,7 @@ class _DigitalMSASequences(_MSASequences):
     __slots__ = ("msa", "alphabet")
 
     def __init__(self, DigitalMSA msa):
-        self.msa = msa
+        super().__init__(msa)
         self.alphabet = msa.alphabet
 
     def __getitem__(self, int idx):
@@ -4183,6 +4190,35 @@ class _DigitalMSASequences(_MSASequences):
             (<DigitalMSA> msa)._set_sequence(idx, seq._sq)
             if hash_index != idx:
                 msa._rehash()
+
+
+class _DigitalMSAAlignment(_MSAAlignment):
+    """A read-only view over the alignment of an MSA in digital mode.
+
+    .. versionadded:: 0.11.1
+
+    """
+
+    def __init__(self, DigitalMSA msa):
+        super().__init__(msa)
+
+    def __getitem__(self, int idx):
+        cdef int          status
+        cdef VectorU8     row
+        cdef MSA          msa    = self.msa
+
+        assert msa._msa != NULL
+
+        if idx < 0:
+            idx += msa._msa.nseq
+        if idx >= msa._msa.nseq or idx < 0:
+            raise IndexError("list index out of range")
+
+        row = VectorU8.__new__(VectorU8)
+        row._n = row._shape[0] = msa._msa.alen
+        row._data = &msa._msa.ax[idx][1]
+        row._owner = self
+        return row
 
 
 cdef class DigitalMSA(MSA):
@@ -4349,6 +4385,20 @@ cdef class DigitalMSA(MSA):
 
 
     # --- Properties ---------------------------------------------------------
+
+    @property
+    def alignment(self):
+        """`collections.abc.Sequence`: A view of the aligned sequence data.
+
+        This property gives access to the aligned rows of the alignment
+        in their encoded form.
+
+        .. versionadded:: 0.11.1
+
+        """
+        assert self._msa != NULL
+        assert (self._msa.flags & libeasel.msa.eslMSA_DIGITAL)
+        return _DigitalMSAAlignment(self)
 
     @property
     def sequences(self):
