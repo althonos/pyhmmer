@@ -426,6 +426,8 @@ class _TextMSASequences(_MSASequences, typing.Sequence[TextSequence]):
     def __setitem__(self, idx: int, item: TextSequence) -> None: ...
 
 class TextMSA(MSA):
+    @classmethod
+    def sample(cls, max_length: int, randomness: Randomness) -> TextMSA: ...
     def __init__(
         self,
         *,
@@ -451,6 +453,8 @@ class _DigitalMSASequences(_MSASequences, typing.Sequence[DigitalSequence]):
 
 class DigitalMSA(MSA):
     alphabet: Alphabet
+    @classmethod
+    def sample(cls, alphabet: Alphabet, max_length: int, randomness: Randomness) -> DigitalMSA: ...
     def __init__(
         self,
         *,

@@ -2225,6 +2225,10 @@ cdef class HMM:
         Returns:
             `~pyhmmer.plan7.HMM`: A new HMM generated at random.
 
+        Hint:
+            This constructor is only useful for testing and should not be 
+            used in production code.
+
         .. versionadded:: 0.7.0
 
         """

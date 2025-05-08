@@ -5152,6 +5152,48 @@ cdef class TextSequence(Sequence):
 
     """
 
+    @classmethod
+    def sample(
+        cls,
+        int max_length,
+        Randomness randomness not None,
+    ):
+        """Sample a sequence of length at most ``L`` at random.
+
+        Arguments:
+            max_length (`int`): The maximum length of the sequence to 
+                generate (the actual sequence length is sampled).
+            randomness (`~pyhmmer.easel.Randomness`): The random number
+                generator to use for sampling.
+
+        Returns:
+            `~pyhmmer.easel.TextSequence`: A new text sequence generated 
+            at random.
+
+        Hint:
+            This constructor is only useful for testing and should not be 
+            used to generate random sequences to e.g. compute a background 
+            distribution for a statistical method, since this function 
+            samples alphabet residues at random irrespective of prior 
+            frequences.
+
+        .. versionadded:: 0.11.1
+
+        """
+        cdef int          status
+        cdef TextSequence seq    = TextSequence.__new__(TextSequence)
+
+        status = libeasel.sq.esl_sq_Sample(
+            randomness._rng, 
+            NULL,
+            max_length,
+            &seq._sq
+        )
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_sq_Sample")
+
+        return seq
+
     # --- Magic methods ------------------------------------------------------
 
     def __init__(
@@ -5378,6 +5420,51 @@ cdef class DigitalSequence(Sequence):
         `pickle` protocol support.
 
     """
+
+    @classmethod
+    def sample(
+        cls,
+        Alphabet alphabet not None,
+        int max_length,
+        Randomness randomness not None,
+    ):
+        """Sample a sequence of length at most ``L`` at random.
+
+        Arguments:
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the 
+                sequence.
+            max_length (`int`): The maximum length of the sequence to 
+                generate (the actual sequence length is sampled).
+            randomness (`~pyhmmer.easel.Randomness`): The random number
+                generator to use for sampling.
+
+        Returns:
+            `~pyhmmer.easel.DigitalSequence`: A new digital sequence 
+            generated at random, including degenerate symbols.
+
+        Hint:
+            This constructor is only useful for testing and should not be 
+            used to generate random sequences to e.g. compute a background 
+            distribution for a statistical method, since this function 
+            samples alphabet residues at random irrespective of prior 
+            frequences.
+
+        .. versionadded:: 0.11.1
+
+        """
+        cdef int             status
+        cdef DigitalSequence seq    = DigitalSequence.__new__(DigitalSequence, alphabet)
+
+        status = libeasel.sq.esl_sq_Sample(
+            randomness._rng, 
+            alphabet._abc,
+            max_length,
+            &seq._sq
+        )
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_sq_Sample")
+
+        return seq
 
     # --- Magic methods ------------------------------------------------------
 
