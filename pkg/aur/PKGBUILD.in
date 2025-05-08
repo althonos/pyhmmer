@@ -29,6 +29,7 @@ check() {
     python -m installer "$whl"
 
     python -m unittest ${_name}.tests
+    deactivate
 }
 
 package() {
