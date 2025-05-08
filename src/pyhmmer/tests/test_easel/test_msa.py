@@ -95,8 +95,8 @@ class TestTextMSA(TestMSA, unittest.TestCase):
         s2 = easel.TextSequence(name=b"seq2", sequence="ATGG")
         msa = easel.TextMSA(sequences=[s1, s2])
         self.assertEqual(len(msa.indexed), 2)
-        self.assertEqual(msa.indexed[b"seq1"], msa.sequences[0])
-        self.assertEqual(msa.indexed[b"seq2"], msa.sequences[1])
+        self.assertEqual(msa.indexed[b"seq1"], s1)
+        self.assertEqual(msa.indexed[b"seq2"], s2)
 
     def test_rf(self):
         s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")

@@ -3786,7 +3786,7 @@ class _TextMSASequences(_MSASequences):
     def __getitem__(self, int idx):
         cdef int          status
         cdef TextSequence seq
-        cdef MSA          msa    = self.msa
+        cdef TextMSA      msa    = self.msa
 
         assert msa._msa != NULL
 
@@ -3797,8 +3797,11 @@ class _TextMSASequences(_MSASequences):
 
         seq = TextSequence.__new__(TextSequence)
         status = libeasel.sq.esl_sq_FetchFromMSA(msa._msa, idx, &seq._sq)
-
         if status == libeasel.eslOK:
+            # TODO(@althonos): This is needed at the moment because of a bug
+            #                  `esl_sq_FetchFromMSA`, remove when patch for
+            #                  EddyRivasLab/easel#80 is released.
+            seq._sq.abc = NULL
             return seq
         else:
             raise UnexpectedError(status, "esl_sq_FetchFromMSA")
