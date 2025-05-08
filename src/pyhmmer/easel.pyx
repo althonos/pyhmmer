@@ -3197,8 +3197,8 @@ class _MSAIndex(collections.abc.Mapping):
 
     def __init__(self, MSA msa):
         assert msa._msa != NULL
-        
-        cdef int          status 
+
+        cdef int          status
         cdef int          nseq   = msa._msa.nseq
         cdef ESL_KEYHASH* kh     = msa._msa.index
 
@@ -3214,7 +3214,7 @@ class _MSAIndex(collections.abc.Mapping):
         cdef esl_pos_t                length = key.shape[0]
         cdef MSA                      msa    = self.msa
         cdef ESL_KEYHASH*             kh     = msa._msa.index
-        
+
         with nogil:
             status = libeasel.keyhash.esl_keyhash_Lookup(kh, <const char*> &key[0], length, &index)
         if status == libeasel.eslOK:
@@ -3570,7 +3570,7 @@ cdef class MSA:
     def indexed(self):
         """`~collections.abc.Mapping`: A mapping of names to sequences.
 
-        This property can be used to access the sequence of a multiple 
+        This property can be used to access the sequence of a multiple
         sequence alignment by name. An index is created the first time this
         property is accessed.
 
@@ -3617,7 +3617,7 @@ cdef class MSA:
         """Rehash the sequence names for faster lookup.
 
         Raises:
-            `KeyError`: When the multiple sequence alignment contains 
+            `KeyError`: When the multiple sequence alignment contains
                 duplicate sequence names.
 
         """
@@ -3665,7 +3665,7 @@ cdef class MSA:
             >>> msa = TextMSA(name=b"msa", sequences=[s1, s2, s3])
             >>> msa.select(sequences=[0, 2]).names
             (b'seq1', b'seq3')
-            >>> msa.select(columns=range(1,4)).alignment
+            >>> tuple(msa.select(columns=range(1,4)).alignment)
             ('TGC', 'TCC', 'TGA')
 
         .. versionadded:: 0.11.1
@@ -3823,6 +3823,33 @@ class _TextMSASequences(_MSASequences):
             if hash_index != idx:
                 msa._rehash()
 
+class _TextMSAAlignment(collections.abc.Sequence):
+    """A read-only view over the alignment of an MSA in text mode.
+
+    .. versionadded:: 0.11.1
+
+    """
+
+    def __init__(self, TextMSA msa):
+        self.msa = msa
+
+    def __len__(self):
+        cdef MSA msa = self.msa
+        return msa._msa.nseq
+
+    def __getitem__(self, int idx):
+        cdef int          status
+        cdef MSA          msa    = self.msa
+
+        assert msa._msa != NULL
+
+        if idx < 0:
+            idx += msa._msa.nseq
+        if idx >= msa._msa.nseq or idx < 0:
+            raise IndexError("list index out of range")
+
+        return PyUnicode_DecodeASCII(msa._msa.aseq[idx], msa._msa.alen, NULL)
+
 
 cdef class TextMSA(MSA):
     """A multiple sequence alignement stored in text mode.
@@ -3925,7 +3952,7 @@ cdef class TextMSA(MSA):
 
     @property
     def alignment(self):
-        """`tuple` of `str`: A view of the aligned sequences as strings.
+        """`collections.abc.Sequence`: A view of the aligned sequence data.
 
         This property gives access to the aligned sequences, including gap
         characters, so that they can be displayed or processed column by
@@ -3955,28 +3982,17 @@ cdef class TextMSA(MSA):
 
         .. versionadded:: 0.4.8
 
+        .. versionchanged:: 0.11.1
+           Change the return type to a lazy `collections.abc.Sequence`.
+
         """
         assert self._msa != NULL
         assert not (self._msa.flags & libeasel.msa.eslMSA_DIGITAL)
-
-        cdef int64_t i
-        cdef str     seq
-        cdef tuple   aligned
-
-        if self._msa.alen == 0 or self._msa.nseq == 0:
-            return ()
-
-        aligned = PyTuple_New(self._msa.nseq)
-        for i in range(self._msa.nseq):
-            seq = PyUnicode_DecodeASCII(self._msa.aseq[i], self._msa.alen, NULL)
-            Py_INCREF(seq) # refcount increased because PyTuple_SET_ITEM won't
-            PyTuple_SET_ITEM(aligned, i, seq)
-
-        return aligned
+        return _TextMSAAlignment(self)
 
     @property
     def sequences(self):
-        """`_TextMSASequences`: A view of the sequences in the alignment.
+        """`collections.abc.Sequence`: A view of the alignment sequences.
 
         This property lets you access the individual sequences in the
         multiple sequence alignment as `TextSequence` instances.
@@ -4336,7 +4352,7 @@ cdef class DigitalMSA(MSA):
 
     @property
     def sequences(self):
-        """`_DigitalMSASequences`: A view of the sequences in the alignment.
+        """`collections.abc.Sequence`: A view of the alignment sequences.
 
         This property lets you access the individual sequences in the
         multiple sequence alignment as `DigitalSequence` instances.
