@@ -6,7 +6,40 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.11.1-rc.1...HEAD
+
+
+## [v0.11.1-rc.1] - 2025-05-08
+[v0.11.1-rc.1]: https://github.com/althonos/pyhmmer/compare/v0.11.0...v0.11.1-rc.1
+
+### Added
+- `DigitalMSA.identity_filter` method to remove sequences too similar from a multiple sequence alignment ([#84](https://github.com/althonos/pyhmmer/issues/84)).
+- `reference`, `model_mask`, `secondary_structure`, `surface_accessibility`, `posterior_probabilities` properties of `MSA` to get and set additional column annotation for a sequence alignment.
+- `MSA.select` to select a subset of columns and rows of a sequence alignment given an iterable of indices.
+- New parallelization strategy in `hmmsearch` suitable for low query count (<#CPUs) to parallelize on target chunks rather than individual queries (more similar to original HMMER).
+- `TextSequence.sample` and `DigitalSequence.sample` constructors to generate random sequences for testing.
+- `DigitalMSA.sample` constructor to generate a random multiple sequence alignment for testing.
+- `MSA.indexed` and `SequenceBlock.indexed` to get the sequences of an alignment or block by name.
+- `DigitalMSA.alignment` to get the rows of an alignment in digital mode as `VectorU8` objects.
+
+### Changed
+- Remove some test data from `pyhmmer.tests.data` to reduce distribution size.
+- Use fused types to specialize queries of `Pipeline` search methods
+- Improve error reporting message in `Builder.build_msa` on input format errors.
+- Deprecate positional arguments in `TextSequence`, `DigitalSequence`, `TextMSA` and `DigitalMSA` constructors.
+- Ensure to poison workers before yielding the last result in `pyhmmer.hmmer` dispatchers.
+- Allow passing a seed integer or `None` to `HMM.sample`.
+- Use pure-Python `collections.abc.Sequence` classes to expose `MSA.sequences` instead of Cython class.
+- Use pure-Python `collections.abc.Sequence` classes to expose `TextMSA.alignment` instead of generating a `tuple` on demand.
+
+### Fixed
+- Deployment to Arch User Repository.
+- Use of deprecated API in documentation.
+- `Matrix.__getitem__` raising `IndexError` when slicing with a slice without upper bound.
+- `TopHits.merge` not properly merging book-keeping attributes when merging `TopHits` with zero hits.
+- Relax equality comparison in `TopHits.merge` when the query was an `OptimizedProfile`.
+- Some uncaught connection errors in `pyhmmer.hmmer` background workers.
+- Broken assertion in `TextMSA.sequences` due to Easel bug in `esl_sq_FetchFromMSA` ([EddyRivasLab/easel#80](https://github.com/EddyRivasLab/easel/issues/80)).
 
 
 ## [v0.11.0] - 2025-01-10
