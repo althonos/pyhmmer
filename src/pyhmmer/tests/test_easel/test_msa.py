@@ -202,6 +202,22 @@ class TestDigitalMSA(TestMSA, unittest.TestCase):
         with easel.MSAFile(sto, "stockholm", digital=True) as msa_file:
             return msa_file.read()
 
+    def test_sample(self):
+        rng = easel.Randomness(42)
+        msa = easel.DigitalMSA.sample(self.alphabet, 10, 50, rng)
+        self.assertLessEqual(len(msa.sequences), 10)
+        self.assertLessEqual(len(msa), 50)
+
+    def test_sample_seed(self):
+        msa1 = easel.DigitalMSA.sample(self.alphabet, 10, 50, randomness=easel.Randomness(42))
+        msa2 = easel.DigitalMSA.sample(self.alphabet, 10, 50, randomness=42)
+        self.assertEqual(msa1, msa2)
+        msa3 = easel.DigitalMSA.sample(self.alphabet, 10, 50, randomness=100)
+        self.assertNotEqual(msa3, msa2)
+
+        with self.assertRaises(TypeError):
+            msa4 = easel.DigitalMSA.sample(self.alphabet, 10, 50, randomness="xxx")
+
     def test_eq(self):
         s1 = easel.DigitalSequence(self.alphabet, name=b"seq1", sequence=bytearray([1, 2, 3, 4]))
         s2 = easel.DigitalSequence(self.alphabet, name=b"seq2", sequence=bytearray([1, 2, 3, 3]))

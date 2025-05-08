@@ -451,6 +451,14 @@ class _DigitalMSASequences(_MSASequences, typing.Sequence[DigitalSequence]):
 
 class DigitalMSA(MSA):
     alphabet: Alphabet
+    @classmethod
+    def sample(
+        cls,
+        alphabet: Alphabet,
+        max_sequences: int,
+        max_length: int,
+        randomness: typing.Union[Randomness, int, None] = None,
+    ) -> DigitalMSA: ...
     def __init__(
         self,
         *,
@@ -587,8 +595,8 @@ class Sequence(typing.Sized, abc.ABC):
 class TextSequence(Sequence):
     @classmethod
     def sample(
-        cls, 
-        max_length: int, 
+        cls,
+        max_length: int,
         randomness: typing.Union[Randomness, int, None] = None,
     ) -> TextSequence: ...
     def __init__(
@@ -618,9 +626,9 @@ class DigitalSequence(Sequence):
     alphabet: Alphabet
     @classmethod
     def sample(
-        cls, 
-        alphabet: Alphabet, 
-        max_length: int, 
+        cls,
+        alphabet: Alphabet,
+        max_length: int,
         randomness: typing.Union[Randomness, int, None] = None,
     ) -> DigitalSequence: ...
     def __init__(
@@ -753,7 +761,7 @@ class SequenceFile(typing.Generic[S], typing.ContextManager[SequenceFile[S]], ty
         self: SequenceFile[TextSequence],
         sequences: typing.Optional[int] = None,
         residues: typing.Optional[int] = None,
-    ) -> TextSequenceBlock: ... 
+    ) -> TextSequenceBlock: ...
     @typing.overload
     def read_block(
         self: SequenceFile[DigitalSequence],

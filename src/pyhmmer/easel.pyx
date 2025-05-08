@@ -336,7 +336,7 @@ cdef class Alphabet:
     @property
     def gap_index(self):
         """`int`: The alphabet gap index.
-        
+
         .. versionadded:: 0.11.1
 
         """
@@ -499,7 +499,7 @@ cdef class GeneticCode:
         Alphabet amino_alphabet not None = Alphabet.amino(),
     ):
         """__init__(self, translation_table=1, *, nucleotide_alphabet=None, amino_alphabet=None)\n--\n
-        
+
         Create a new genetic code for translating nucleotide sequences.
 
         Arguments:
@@ -738,7 +738,7 @@ cdef class Bitfield:
 
     def __init__(self, object iterable):
         """__init__(self, iterable)\n--\n
-        
+
         Create a new bitfield from an iterable of objects.
 
         Objects yielded by the iterable can be of any type and will be
@@ -1000,9 +1000,9 @@ cdef class KeyHash:
 
     def __init__(self):
         """__init__(self)\n--\n
-        
+
         Create a new empty key-hash collection.
-        
+
         """
         with nogil:
             if self._kh == NULL:
@@ -1271,9 +1271,9 @@ cdef class Vector:
 
     def __init__(self, object iterable = ()):
         """__init__(self, iterable=())\n--\n
-        
+
         Create a new vector from the given iterable of values.
-        
+
         """
         raise TypeError("Can't instantiate abstract class 'Vector'")
 
@@ -1525,9 +1525,9 @@ cdef class VectorF(Vector):
 
     def __init__(self, object iterable = ()):
         """__init__(self, iterable=())\n--\n
-        
+
         Create a new float vector from the given data.
-        
+
         """
         cdef int        n
         cdef size_t     i
@@ -1952,9 +1952,9 @@ cdef class VectorU8(Vector):
 
     def __init__(self, object iterable = ()):
         """__init__(self, iterable=())\n--\n
-        
+
         Create a new byte vector from the given data.
-        
+
         """
         cdef int          n
         cdef size_t       i
@@ -3515,7 +3515,7 @@ cdef class MSA:
 
     cdef int _set_annotation(self, char** field, char* value) except 1 nogil:
         cdef size_t alen = self._msa.alen
-        cdef size_t vlen 
+        cdef size_t vlen
         if value == NULL:
             if field[0] == NULL:
                 free(field[0])
@@ -3557,10 +3557,10 @@ cdef class MSA:
         """Select and copy a subset of the multiple sequence alignment.
 
         Arguments:
-            sequences (iterable of `int`, or `None`): The indices of sequences 
+            sequences (iterable of `int`, or `None`): The indices of sequences
                 to retain in the alignment subset. If `None` given, retain
                 all sequences.
-            columns (iterable of `int`, or `None`): The indices of columns to 
+            columns (iterable of `int`, or `None`): The indices of columns to
                 retain in the alignment subset. If `None` given, retain all
                 columns.
 
@@ -3584,9 +3584,9 @@ cdef class MSA:
         assert self._msa != NULL
 
         # NB: This function does a copy first just to set the Python object
-        #     properly; it would be 
+        #     properly; it would be
 
-        cdef size_t              i 
+        cdef size_t              i
         cdef char[eslERRBUFSIZE] errbuf
         cdef int                 status
         cdef int*                mask   = NULL
@@ -3633,7 +3633,7 @@ cdef class MSA:
             free(mask)
 
         return msa
-        
+
 
     cpdef void write(self, object fh, str format) except *:
         """Write the multiple sequence alignement to a file handle.
@@ -3748,7 +3748,7 @@ cdef class TextMSA(MSA):
         bytes author=None,
     ):
         """__init__(self, name=None, description=None, accession=None, sequences=None, author=None)\n--\n
-        
+
         Create a new text-mode alignment with the given ``sequences``.
 
         Keyword Arguments:
@@ -4082,6 +4082,64 @@ cdef class DigitalMSA(MSA):
 
     """
 
+    @classmethod
+    def sample(
+        cls,
+        Alphabet alphabet not None,
+        int max_sequences,
+        int max_length,
+        RandomnessOrSeed randomness = None,
+    ):
+        """Sample a sequence of length at most ``L`` at random.
+
+        Arguments:
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the
+                multiple sequence alignment.
+            max_sequences (`int`): The maximum number of sequences to
+                sample for the alignment (the actual sequence number is
+                sampled).
+            max_length (`int`): The maximum length of the alignment to
+                generate (the actual sequence length is sampled).
+            randomness (`~pyhmmer.easel.Randomness`, `int` or `None`): The
+                random number generator to use for sampling, or a seed to
+                initialize a generator. If `None` or ``0`` given, create
+                a new random number generator with a random seed.
+
+        Returns:
+            `~pyhmmer.easel.DigitalMSA`: A new digital multiple sequence
+            alignment generated at random.
+
+        Hint:
+            This constructor is only useful for testing and should not be
+            used to generate random sequences to e.g. compute a background
+            distribution for a statistical method, since this function
+            samples alphabet residues at random irrespective of prior
+            frequences.
+
+        .. versionadded:: 0.11.1
+
+        """
+        cdef int        status
+        cdef Randomness rng
+        cdef DigitalMSA msa    = DigitalMSA.__new__(DigitalMSA, alphabet)
+
+        if RandomnessOrSeed is Randomness:
+            rng = randomness
+        else:
+            rng = Randomness(randomness)
+
+        status = libeasel.msa.esl_msa_Sample(
+            rng._rng,
+            alphabet._abc,
+            max_sequences,
+            max_length,
+            &msa._msa,
+        )
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_msa_Sample")
+
+        return msa
+
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self, Alphabet alphabet, *args, **kwargs):
@@ -4099,7 +4157,7 @@ cdef class DigitalMSA(MSA):
         bytes author=None,
     ):
         """__init__(self, alphabet, name=None, description=None, accession=None, sequences=None, author=None)\n--\n
-        
+
         Create a new digital-mode alignment with the given ``sequences``.
 
         Arguments:
@@ -4267,67 +4325,67 @@ cdef class DigitalMSA(MSA):
             raise UnexpectedError(status, "esl_msa_Textize")
 
     cpdef DigitalMSA identity_filter(
-        self, 
-        float max_identity=0.8, 
+        self,
+        float max_identity=0.8,
         float fragment_threshold=libeasel.msaweight.eslMSAWEIGHT_FRAGTHRESH,
         float consensus_fraction=libeasel.msaweight.eslMSAWEIGHT_SYMFRAC,
-        bint ignore_rf=libeasel.msaweight.eslMSAWEIGHT_IGNORE_RF, 
-        bint sample=libeasel.msaweight.eslMSAWEIGHT_ALLOW_SAMP, 
-        int sample_threshold=libeasel.msaweight.eslMSAWEIGHT_SAMPTHRESH, 
-        int sample_count=libeasel.msaweight.eslMSAWEIGHT_NSAMP, 
-        int max_fragments=libeasel.msaweight.eslMSAWEIGHT_MAXFRAG, 
+        bint ignore_rf=libeasel.msaweight.eslMSAWEIGHT_IGNORE_RF,
+        bint sample=libeasel.msaweight.eslMSAWEIGHT_ALLOW_SAMP,
+        int sample_threshold=libeasel.msaweight.eslMSAWEIGHT_SAMPTHRESH,
+        int sample_count=libeasel.msaweight.eslMSAWEIGHT_NSAMP,
+        int max_fragments=libeasel.msaweight.eslMSAWEIGHT_MAXFRAG,
         uint64_t seed=libeasel.msaweight.eslMSAWEIGHT_RNGSEED,
         str preference="conscover",
     ):
         r"""Filter the alignment sequences by percent identity.
 
         Arguments:
-            max_identity (`float`): The maximum fractional identity 
-                allowed between two alignment sequences. Sequences with 
-                fractional identity :math:`\geq` this number will be 
+            max_identity (`float`): The maximum fractional identity
+                allowed between two alignment sequences. Sequences with
+                fractional identity :math:`\geq` this number will be
                 removed, with the remaining one selected according to
                 the given ``preference``.
 
         Keyword Arguments:
             fragment_threshold (`float`): The threshold for determining
-                which sequences of the alignment are fragments. An 
+                which sequences of the alignment are fragments. An
                 sequence spanning columns :math:`i` to :math:`j` of an
-                alignment of width :math:`W` will be flagged as a fragment 
+                alignment of width :math:`W` will be flagged as a fragment
                 if :math:`\frac{j - i}{ W } < \text{fragment_threshold}`,
             consensus_fraction (`float`): The parameter for determining
                 with columns of the alignment are consensus columns.
                 A column containing :math:`n` symbols and :math:`m` gaps
-                will be marked a consensus column if 
+                will be marked a consensus column if
                 :math:`\frac{n}{n + m} \ge \text{consensus_fraction}`.
             ignore_rf (`bool`): Set to `True` to ignore the *RF* line
-                of the alignment (if present) and to force building the 
+                of the alignment (if present) and to force building the
                 consensus.
-            sample (`bool`): Whether or not to enable consensus determination 
+            sample (`bool`): Whether or not to enable consensus determination
                 by subsampling for large alignments. Set to `False` to force
                 using all sequences.
             sample_threshold (`int`): The minimum number of sequences the
                 alignment must contain to use subsampling for consensus
                 determination (when ``sample`` is `True`).
-            sample_count (`int`): The number of sequences to use when 
+            sample_count (`int`): The number of sequences to use when
                 determining consensus by random subsampling.
             max_fragments (`int`): The maximum number of allowed fragments
                 in the sample used for determining consensus. If the sample
-                contains more than ``max_fragments`` fragments, the 
+                contains more than ``max_fragments`` fragments, the
                 consensus determination is done with all sequences instead.
-            seed (`int`): The seed to use for initializing the random 
+            seed (`int`): The seed to use for initializing the random
                 number generator (used when ``preference`` is ``random``
-                or when ``sample`` is `True`). If ``0`` or `None` is given, 
+                or when ``sample`` is `True`). If ``0`` or `None` is given,
                 an arbitrary seed will be chosen using the system clock.
-            preference (`str`): The strategy to use for selecting the 
+            preference (`str`): The strategy to use for selecting the
                 representative sequence in case of duplicates. Supported
                 strategies are ``conscover`` (the default), which prefers
-                the sequence with an alignment span that covers more 
+                the sequence with an alignment span that covers more
                 consensus columns; ``origorder`` to use the first sequence
                 in the original alignment order; and ``random`` to select
-                the sequence at random. 
+                the sequence at random.
 
         Returns:
-            `~pyhmmer.easel.MSA`: The multiple sequence alignments with 
+            `~pyhmmer.easel.MSA`: The multiple sequence alignments with
             duplicate sequence removed. Unparsed Sotckholm markup is not
             propagated.
 
@@ -4369,10 +4427,10 @@ cdef class DigitalMSA(MSA):
         with nogil:
             status = libeasel.msaweight.esl_msaweight_IDFilter_adv(&cfg, self._msa, max_identity, &msa._msa)
         if status != libeasel.eslOK:
-            raise UnexpectedError(status, "esl_msaweight_IDFilter_adv")            
+            raise UnexpectedError(status, "esl_msaweight_IDFilter_adv")
 
         return msa
-    
+
 
 
 # --- MSA File ---------------------------------------------------------------
@@ -4459,7 +4517,7 @@ cdef class MSAFile:
         Alphabet alphabet = None,
     ):
         """__init__(self, file, format=None, *, digital=False, alphabet=False)\n--\n
-        
+
         Create a new MSA file parser wrapping the given ``file``.
 
         Arguments:
@@ -4709,7 +4767,7 @@ cdef class Randomness:
 
     def __init__(self, object seed=None, bint fast=False):
         """__init__(self, seed=None, fast=False)\n--\n
-        
+
         Create a new random number generator with the given seed.
 
         Arguments:
@@ -5161,22 +5219,22 @@ cdef class TextSequence(Sequence):
         """Sample a sequence of length at most ``L`` at random.
 
         Arguments:
-            max_length (`int`): The maximum length of the sequence to 
+            max_length (`int`): The maximum length of the sequence to
                 generate (the actual sequence length is sampled).
-            randomness (`~pyhmmer.easel.Randomness`, `int` or `None`): The 
+            randomness (`~pyhmmer.easel.Randomness`, `int` or `None`): The
                 random number generator to use for sampling, or a seed to
                 initialize a generator. If `None` or ``0`` given, create
                 a new random number generator with a random seed.
 
         Returns:
-            `~pyhmmer.easel.TextSequence`: A new text sequence generated 
+            `~pyhmmer.easel.TextSequence`: A new text sequence generated
             at random.
 
         Hint:
-            This constructor is only useful for testing and should not be 
-            used to generate random sequences to e.g. compute a background 
-            distribution for a statistical method, since this function 
-            samples alphabet residues at random irrespective of prior 
+            This constructor is only useful for testing and should not be
+            used to generate random sequences to e.g. compute a background
+            distribution for a statistical method, since this function
+            samples alphabet residues at random irrespective of prior
             frequences.
 
         .. versionadded:: 0.11.1
@@ -5192,7 +5250,7 @@ cdef class TextSequence(Sequence):
             rng = Randomness(randomness)
 
         status = libeasel.sq.esl_sq_Sample(
-            rng._rng, 
+            rng._rng,
             NULL,
             max_length,
             &seq._sq
@@ -5215,7 +5273,7 @@ cdef class TextSequence(Sequence):
         dict  residue_markups=None,
     ):
         """__init__(self, name=None, description=None, accession=None, sequence=None, source=None, residue_markups=None)\n--\n
-        
+
         Create a new text-mode sequence with the given attributes.
 
         .. versionadded:: 0.10.4
@@ -5439,24 +5497,24 @@ cdef class DigitalSequence(Sequence):
         """Sample a sequence of length at most ``L`` at random.
 
         Arguments:
-            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the 
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the
                 sequence.
-            max_length (`int`): The maximum length of the sequence to 
+            max_length (`int`): The maximum length of the sequence to
                 generate (the actual sequence length is sampled).
-            randomness (`~pyhmmer.easel.Randomness`, `int` or `None`): The 
+            randomness (`~pyhmmer.easel.Randomness`, `int` or `None`): The
                 random number generator to use for sampling, or a seed to
                 initialize a generator. If `None` or ``0`` given, create
                 a new random number generator with a random seed.
 
         Returns:
-            `~pyhmmer.easel.DigitalSequence`: A new digital sequence 
+            `~pyhmmer.easel.DigitalSequence`: A new digital sequence
             generated at random, including degenerate symbols.
 
         Hint:
-            This constructor is only useful for testing and should not be 
-            used to generate random sequences to e.g. compute a background 
-            distribution for a statistical method, since this function 
-            samples alphabet residues at random irrespective of prior 
+            This constructor is only useful for testing and should not be
+            used to generate random sequences to e.g. compute a background
+            distribution for a statistical method, since this function
+            samples alphabet residues at random irrespective of prior
             frequences.
 
         .. versionadded:: 0.11.1
@@ -5472,7 +5530,7 @@ cdef class DigitalSequence(Sequence):
             rng = Randomness(randomness)
 
         status = libeasel.sq.esl_sq_Sample(
-            rng._rng, 
+            rng._rng,
             alphabet._abc,
             max_length,
             &seq._sq
@@ -5498,7 +5556,7 @@ cdef class DigitalSequence(Sequence):
               dict                  residue_markups = None,
     ):
         """__init__(self, alphabet, name=None, description=None, accession=None, sequence=None, source=None, residue_markups=None)\n--\n
-        
+
         Create a new digital-mode sequence with the given attributes.
 
         Raises:
@@ -6198,7 +6256,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
 
     def __init__(self, Alphabet alphabet not None, object iterable = ()):
         """__init__(self, alphabet, iterable=())\n--\n
-        
+
         Create a new digital sequence block with the given alphabet.
 
         Arguments:
@@ -6335,7 +6393,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
                 recognized, or because the sequence has an invalid length.
 
         See Also:
-            `DigitalSequence.translate` for more information on how 
+            `DigitalSequence.translate` for more information on how
             ambiguous nucleotides are handled.
 
         """
@@ -6741,7 +6799,7 @@ cdef class SequenceFile:
         Alphabet alphabet = None,
     ):
         """__init__(self, file, format=None, *, digital=False, alphabet=None)\n--\n
-        
+
         Create a new sequence file parser wrapping the given ``file``.
 
         Arguments:
@@ -7181,7 +7239,7 @@ cdef class SSIReader:
 
     def __init__(self, object file):
         """__init__(self, file)\n--\n
-        
+
         Create a new SSI file reader for the file at the given location.
 
         Arguments:
@@ -7275,7 +7333,7 @@ cdef class SSIWriter:
 
     def __init__(self, object file, bint exclusive = False):
         """__init__(self, file, exclusive=False)\n--\n
-        
+
         Create a new SSI file write for the file at the given location.
 
         Arguments:
