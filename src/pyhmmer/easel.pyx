@@ -3187,6 +3187,59 @@ cdef class _MSASequences:
         assert self.msa._msa != NULL
         return self.msa._msa.nseq
 
+class _MSAIndex(collections.abc.Mapping):
+    """A read-only mapping of sequence names to sequences of an MSA.
+    """
+
+    __slots__ = ("msa",)
+
+    def __init__(self, MSA msa):
+        assert msa._msa != NULL
+        
+        cdef int          status 
+        cdef int          nseq   = msa._msa.nseq
+        cdef ESL_KEYHASH* kh     = msa._msa.index
+
+        if libeasel.keyhash.esl_keyhash_GetNumber(kh) != nseq:
+            with nogil:
+                msa._rehash()
+        self.msa = msa
+
+    def __getitem__(self,  item):
+        cdef int                      status
+        cdef int                      index  = -1
+        cdef const unsigned char[::1] key    = item
+        cdef esl_pos_t                length = key.shape[0]
+        cdef MSA                      msa    = self.msa
+        cdef ESL_KEYHASH*             kh     = msa._msa.index
+        
+        with nogil:
+            status = libeasel.keyhash.esl_keyhash_Lookup(kh, <const char*> &key[0], length, &index)
+        if status == libeasel.eslOK:
+            return self.msa.sequences[index]
+        elif status == libeasel.eslENOTFOUND:
+            raise KeyError(item)
+        else:
+            raise UnexpectedError(status, "esl_keyhash_Lookup")
+
+    def __len__(self):
+        cdef MSA          msa = self.msa
+        cdef ESL_KEYHASH* kh  = msa._msa.index
+        return libeasel.keyhash.esl_keyhash_GetNumber(kh)
+
+    def __iter__(self):
+        cdef int          i
+        cdef char*        key
+        cdef int          offset
+        cdef MSA          msa    = self.msa
+        cdef ESL_KEYHASH* kh     = msa._msa.index
+
+        for i in range(libeasel.keyhash.esl_keyhash_GetNumber(kh)):
+            # NB: this is an inlined version of `esl_keyhash_Get`
+            offset = kh.key_offset[i]
+            key = &kh.smem[offset]
+            yield <bytes> key
+
 
 @cython.freelist(8)
 cdef class MSA:
@@ -3511,6 +3564,34 @@ cdef class MSA:
     #       a `Vector` object, needs implementation of a new `VectorD` class
     #       given that MSA.wgt is an array of `double`
 
+    @property
+    def indexed(self):
+        """`~collections.abc.Mapping`: A mapping of names to sequences.
+
+        This property can be used to access the sequence of a multiple 
+        sequence alignment by name. An index is created the first time this
+        property is accessed.
+
+        Raises:
+            `KeyError`: When attempting to create an index for an alignment
+                containing duplicate sequence names.
+
+        Example:
+            >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
+            >>> s2 = TextSequence(name=b"seq2", sequence="ATTA")
+            >>> msa = TextMSA(name=b"msa", sequences=[s1, s2])
+            >>> msa.indexed[b'seq1'].sequence
+            'ATGC'
+            >>> msa.indexed[b'seq3']
+            Traceback (most recent call last):
+            ...
+            KeyError: b'seq3'
+
+        .. versionadded:: 0.11.1
+
+        """
+        return _MSAIndex(self)
+
     # --- Utils --------------------------------------------------------------
 
     cdef int _set_annotation(self, char** field, char* value) except 1 nogil:
@@ -3532,10 +3613,17 @@ cdef class MSA:
 
     cdef int _rehash(self) except 1 nogil:
         """Rehash the sequence names for faster lookup.
+
+        Raises:
+            `KeyError`: When the multiple sequence alignment contains 
+                duplicate sequence names.
+
         """
         cdef int status = libeasel.msa.esl_msa_Hash(self._msa)
         if status == libeasel.eslOK:
             return 0
+        elif status == libeasel.eslEDUP:
+            raise KeyError("duplicate sequence names")
         else:
             raise UnexpectedError(status, "esl_msa_Hash")
 
