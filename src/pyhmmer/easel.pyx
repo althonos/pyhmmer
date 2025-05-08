@@ -3173,9 +3173,11 @@ cdef class MatrixU8(Matrix):
 
 # --- Multiple Sequences Alignment -------------------------------------------
 
-cdef class _MSASequences:
+class _MSASequences(collections.abc.Sequence):
     """A read-only view over the individual sequences of an MSA.
     """
+
+    __slots__ = ("msa",)
 
     def __cinit__(self):
         self.msa = None
@@ -3184,8 +3186,8 @@ cdef class _MSASequences:
         self.msa = msa
 
     def __len__(self):
-        assert self.msa._msa != NULL
-        return self.msa._msa.nseq
+        assert (<MSA> self.msa)._msa != NULL
+        return (<MSA> self.msa)._msa.nseq
 
 class _MSAIndex(collections.abc.Mapping):
     """A read-only mapping of sequence names to sequences of an MSA.
@@ -3757,7 +3759,7 @@ cdef class MSA:
             raise UnexpectedError(status, "esl_sqascii_WriteFasta")
 
 
-cdef class _TextMSASequences(_MSASequences):
+class _TextMSASequences(_MSASequences):
     """A read-only view over the sequences of an MSA in text mode.
     """
 
@@ -3765,18 +3767,19 @@ cdef class _TextMSASequences(_MSASequences):
         self.msa = msa
 
     def __getitem__(self, int idx):
-        assert self.msa._msa != NULL
-
         cdef int          status
         cdef TextSequence seq
+        cdef MSA          msa    = self.msa
+
+        assert msa._msa != NULL
 
         if idx < 0:
-            idx += self.msa._msa.nseq
-        if idx >= self.msa._msa.nseq or idx < 0:
+            idx += msa._msa.nseq
+        if idx >= msa._msa.nseq or idx < 0:
             raise IndexError("list index out of range")
 
         seq = TextSequence.__new__(TextSequence)
-        status = libeasel.sq.esl_sq_FetchFromMSA(self.msa._msa, idx, &seq._sq)
+        status = libeasel.sq.esl_sq_FetchFromMSA(msa._msa, idx, &seq._sq)
 
         if status == libeasel.eslOK:
             return seq
@@ -3784,15 +3787,16 @@ cdef class _TextMSASequences(_MSASequences):
             raise UnexpectedError(status, "esl_sq_FetchFromMSA")
 
     def __setitem__(self, int idx, TextSequence seq):
-        assert self.msa is not None
-        assert seq._sq != NULL
-
         cdef int status
         cdef int hash_index
+        cdef MSA msa        = self.msa
+
+        assert msa._msa != NULL
+        assert seq._sq != NULL
 
         if idx < 0:
-            idx += self.msa._msa.nseq
-        if idx >= self.msa._msa.nseq or idx < 0:
+            idx += msa._msa.nseq
+        if idx >= msa._msa.nseq or idx < 0:
             raise IndexError("list index out of range")
 
         # make sure the sequence has a name
@@ -3800,12 +3804,12 @@ cdef class _TextMSASequences(_MSASequences):
             raise ValueError("cannot set an alignment sequence with an empty name")
 
         # make sure the sequence has the right length
-        if len(seq) != len(self.msa):
+        if len(seq) != msa._msa.alen:
             raise ValueError("sequence does not have the expected length")
 
         # make sure inserting the sequence will not create a name duplicate
         status = libeasel.keyhash.esl_keyhash_Lookup(
-            self.msa._msa.index,
+            msa._msa.index,
             seq._sq.name,
             -1,
             &hash_index
@@ -3815,9 +3819,9 @@ cdef class _TextMSASequences(_MSASequences):
 
         # set the new sequence
         with nogil:
-            (<TextMSA> self.msa)._set_sequence(idx, seq._sq)
+            (<TextMSA> msa)._set_sequence(idx, seq._sq)
             if hash_index != idx:
-                self.msa._rehash()
+                msa._rehash()
 
 
 cdef class TextMSA(MSA):
@@ -4093,43 +4097,47 @@ cdef class TextMSA(MSA):
             raise UnexpectedError(status, "esl_msa_Digitize")
 
 
-cdef class _DigitalMSASequences(_MSASequences):
+class _DigitalMSASequences(_MSASequences):
     """A read-only view over the sequences of an MSA in digital mode.
     """
+
+    __slots__ = ("msa", "alphabet")
 
     def __init__(self, DigitalMSA msa):
         self.msa = msa
         self.alphabet = msa.alphabet
 
     def __getitem__(self, int idx):
-        assert self.msa._msa != NULL
-
         cdef int             status
         cdef DigitalSequence seq
+        cdef MSA             msa    = self.msa
+
+        assert msa._msa != NULL
 
         if idx < 0:
-            idx += self.msa._msa.nseq
-        if idx >= self.msa._msa.nseq or idx < 0:
+            idx += msa._msa.nseq
+        if idx >= msa._msa.nseq or idx < 0:
             raise IndexError("list index out of range")
 
         seq = DigitalSequence.__new__(DigitalSequence, self.alphabet)
         with nogil:
-            status = libeasel.sq.esl_sq_FetchFromMSA(self.msa._msa, idx, &seq._sq)
+            status = libeasel.sq.esl_sq_FetchFromMSA(msa._msa, idx, &seq._sq)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_sq_FetchFromMSA")
 
         return seq
 
     def __setitem__(self, int idx, DigitalSequence seq):
-        assert self.msa is not None
-        assert seq._sq != NULL
-
         cdef int status
         cdef int hash_index
+        cdef MSA msa        = self.msa
+
+        assert msa._msa != NULL
+        assert seq._sq != NULL
 
         if idx < 0:
-            idx += self.msa._msa.nseq
-        if idx >= self.msa._msa.nseq or idx < 0:
+            idx += msa._msa.nseq
+        if idx >= msa._msa.nseq or idx < 0:
             raise IndexError("list index out of range")
 
         # make sure the sequence has a name
@@ -4137,16 +4145,16 @@ cdef class _DigitalMSASequences(_MSASequences):
             raise ValueError("cannot set an alignment sequence with an empty name")
 
         # make sure the sequence has the right length
-        if len(seq) != len(self.msa):
+        if len(seq) != msa._msa.alen:
             raise ValueError("sequence does not have the expected length")
 
         # make sure the sequence has the right alphabet
-        if not (<Alphabet> self.msa.alphabet)._eq(seq.alphabet):
-            raise AlphabetMismatch(self.msa.alphabet, seq.alphabet)
+        if not (<Alphabet> msa.alphabet)._eq(seq.alphabet):
+            raise AlphabetMismatch(msa.alphabet, seq.alphabet)
 
         # make sure inserting the sequence will not create a name duplicate
         status = libeasel.keyhash.esl_keyhash_Lookup(
-            self.msa._msa.index,
+            msa._msa.index,
             seq._sq.name,
             -1,
             &hash_index
@@ -4156,9 +4164,9 @@ cdef class _DigitalMSASequences(_MSASequences):
 
         # set the new sequence
         with nogil:
-            (<TextMSA> self.msa)._set_sequence(idx, (<TextSequence> seq)._sq)
+            (<DigitalMSA> msa)._set_sequence(idx, seq._sq)
             if hash_index != idx:
-                self.msa._rehash()
+                msa._rehash()
 
 
 cdef class DigitalMSA(MSA):

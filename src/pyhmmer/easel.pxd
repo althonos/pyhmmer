@@ -137,10 +137,6 @@ cdef class MatrixU8(Matrix):
 
 # --- Multiple Sequences Alignment -------------------------------------------
 
-cdef class _MSASequences:
-    cdef MSA msa
-
-
 cdef class MSA:
     cdef ESL_MSA* _msa
 
@@ -152,18 +148,10 @@ cdef class MSA:
     cpdef void write(self, object fh, str format) except *
 
 
-cdef class _TextMSASequences(_MSASequences):
-    pass
-
-
 cdef class TextMSA(MSA):
     cdef int _set_sequence(self, int idx, ESL_SQ* seq) except 1 nogil
     cpdef TextMSA copy(self)
     cpdef DigitalMSA digitize(self, Alphabet alphabet)
-
-
-cdef class _DigitalMSASequences(_MSASequences):
-    cdef readonly Alphabet alphabet
 
 
 cdef class DigitalMSA(MSA):
