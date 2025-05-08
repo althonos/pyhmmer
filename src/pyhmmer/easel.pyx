@@ -3740,6 +3740,7 @@ cdef class TextMSA(MSA):
 
     def __init__(
         self,
+        *args,
         bytes name=None,
         bytes description=None,
         bytes accession=None,
@@ -3750,7 +3751,7 @@ cdef class TextMSA(MSA):
         
         Create a new text-mode alignment with the given ``sequences``.
 
-        Arguments:
+        Keyword Arguments:
             name (`bytes`, optional): The name of the alignment, if any.
             description (`bytes`, optional): The description of the
                 alignment, if any.
@@ -3778,7 +3779,28 @@ cdef class TextMSA(MSA):
         .. versionchanged:: 0.3.0
            Allow creating an alignment from an iterable of `TextSequence`.
 
+        .. deprecated:: 0.11.1
+            Passing positional arguments to constructor.
+
         """
+
+        # TODO: Remove in 0.12.0 (deprecation)
+        if len(args) > 0:
+            warnings.warn(
+                "TextMSA.__init__ will not accept positional arguments after v0.12.0",
+                category=DeprecationWarning
+            )
+            if len(args) > 0:
+                name = args[0]
+            if len(args) > 1:
+                description = args[1]
+            if len(args) > 2:
+                accession = args[2]
+            if len(args) > 3:
+                sequences = args[3]
+            if len(args) > 4:
+                author = args[4]
+
         cdef TextSequence seq
         cdef int          i
         cdef list         seqs  = [] if sequences is None else list(sequences)
@@ -4069,6 +4091,7 @@ cdef class DigitalMSA(MSA):
     def __init__(
         self,
         Alphabet alphabet,
+        *args,
         bytes name=None,
         bytes description=None,
         bytes accession=None,
@@ -4081,6 +4104,8 @@ cdef class DigitalMSA(MSA):
 
         Arguments:
             alphabet (`Alphabet`): The alphabet of the alignmed sequences.
+
+        Keyword Arguments:
             name (`bytes`, optional): The name of the alignment, if any.
             description (`bytes`, optional): The description of the
                 alignment, if any.
@@ -4096,7 +4121,27 @@ cdef class DigitalMSA(MSA):
         .. versionchanged:: 0.3.0
            Allow creating an alignment from an iterable of `DigitalSequence`.
 
+        .. deprecated:: 0.11.1
+            Passing positional arguments other than ``alphabet``.
+
         """
+        # TODO: Remove in 0.12.0 (deprecation)
+        if len(args) > 0:
+            warnings.warn(
+                "DigitalMSA.__init__ will not accept positional arguments besides `alphabet` after v0.12.0",
+                category=DeprecationWarning
+            )
+            if len(args) > 0:
+                name = args[0]
+            if len(args) > 1:
+                description = args[1]
+            if len(args) > 2:
+                accession = args[2]
+            if len(args) > 3:
+                sequences = args[3]
+            if len(args) > 4:
+                author = args[4]
+
         cdef DigitalSequence seq
         cdef list            seqs  = [] if sequences is None else list(sequences)
         cdef set             names = { seq.name for seq in seqs }
@@ -5126,6 +5171,9 @@ cdef class TextSequence(Sequence):
         .. versionadded:: 0.10.4
             The ``residue_markups`` argument.
 
+        .. deprecated:: 0.11.1
+            Passing positional arguments to constructor.
+
         """
         cdef bytes sq
 
@@ -5360,6 +5408,9 @@ cdef class DigitalSequence(Sequence):
         .. versionadded:: 0.10.4
             The ``residue_markups`` argument.
 
+        .. deprecated:: 0.11.1
+            Passing positional arguments other than ``alphabet``.
+
         """
         cdef int     status
         cdef int64_t i
@@ -5368,7 +5419,7 @@ cdef class DigitalSequence(Sequence):
         # TODO: Remove in 0.12.0 (deprecation)
         if len(args) > 0:
             warnings.warn(
-                "DigialSequence.__init__ will not accept positional arguments besides `alphabet` after v0.12.0",
+                "DigitalSequence.__init__ will not accept positional arguments besides `alphabet` after v0.12.0",
                 category=DeprecationWarning
             )
             if len(args) > 0:

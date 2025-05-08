@@ -428,6 +428,7 @@ class _TextMSASequences(_MSASequences, typing.Sequence[TextSequence]):
 class TextMSA(MSA):
     def __init__(
         self,
+        *,
         name: typing.Optional[bytes] = None,
         description: typing.Optional[bytes] = None,
         accession: typing.Optional[bytes] = None,
@@ -452,6 +453,7 @@ class DigitalMSA(MSA):
     alphabet: Alphabet
     def __init__(
         self,
+        *,
         alphabet: Alphabet,
         name: typing.Optional[bytes] = None,
         description: typing.Optional[bytes] = None,
