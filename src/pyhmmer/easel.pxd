@@ -215,6 +215,11 @@ cdef class Randomness:
     cpdef double normalvariate(self, double mu, double sigma)
 
 
+ctypedef fused RandomnessOrSeed:
+    Randomness
+    object
+
+
 # --- Sequence ---------------------------------------------------------------
 
 cdef class Sequence:

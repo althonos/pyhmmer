@@ -5156,15 +5156,17 @@ cdef class TextSequence(Sequence):
     def sample(
         cls,
         int max_length,
-        Randomness randomness not None,
+        RandomnessOrSeed randomness = None,
     ):
         """Sample a sequence of length at most ``L`` at random.
 
         Arguments:
             max_length (`int`): The maximum length of the sequence to 
                 generate (the actual sequence length is sampled).
-            randomness (`~pyhmmer.easel.Randomness`): The random number
-                generator to use for sampling.
+            randomness (`~pyhmmer.easel.Randomness`, `int` or `None`): The 
+                random number generator to use for sampling, or a seed to
+                initialize a generator. If `None` or ``0`` given, create
+                a new random number generator with a random seed.
 
         Returns:
             `~pyhmmer.easel.TextSequence`: A new text sequence generated 
@@ -5181,10 +5183,16 @@ cdef class TextSequence(Sequence):
 
         """
         cdef int          status
+        cdef Randomness   rng
         cdef TextSequence seq    = TextSequence.__new__(TextSequence)
 
+        if RandomnessOrSeed is Randomness:
+            rng = randomness
+        else:
+            rng = Randomness(randomness)
+
         status = libeasel.sq.esl_sq_Sample(
-            randomness._rng, 
+            rng._rng, 
             NULL,
             max_length,
             &seq._sq
@@ -5426,7 +5434,7 @@ cdef class DigitalSequence(Sequence):
         cls,
         Alphabet alphabet not None,
         int max_length,
-        Randomness randomness not None,
+        RandomnessOrSeed randomness = None,
     ):
         """Sample a sequence of length at most ``L`` at random.
 
@@ -5435,8 +5443,10 @@ cdef class DigitalSequence(Sequence):
                 sequence.
             max_length (`int`): The maximum length of the sequence to 
                 generate (the actual sequence length is sampled).
-            randomness (`~pyhmmer.easel.Randomness`): The random number
-                generator to use for sampling.
+            randomness (`~pyhmmer.easel.Randomness`, `int` or `None`): The 
+                random number generator to use for sampling, or a seed to
+                initialize a generator. If `None` or ``0`` given, create
+                a new random number generator with a random seed.
 
         Returns:
             `~pyhmmer.easel.DigitalSequence`: A new digital sequence 
@@ -5453,10 +5463,16 @@ cdef class DigitalSequence(Sequence):
 
         """
         cdef int             status
+        cdef Randomness      rng
         cdef DigitalSequence seq    = DigitalSequence.__new__(DigitalSequence, alphabet)
 
+        if RandomnessOrSeed is Randomness:
+            rng = randomness
+        else:
+            rng = Randomness(randomness)
+
         status = libeasel.sq.esl_sq_Sample(
-            randomness._rng, 
+            rng._rng, 
             alphabet._abc,
             max_length,
             &seq._sq

@@ -174,6 +174,7 @@ from .easel cimport (
     MatrixF,
     MatrixU8,
     Randomness,
+    RandomnessOrSeed,
 )
 from .reexports.p7_tophits cimport p7_tophits_Reuse
 from .reexports.p7_hmmfile cimport (
@@ -2203,7 +2204,7 @@ cdef class HMM:
         cls,
         Alphabet alphabet not None,
         int M,
-        Randomness randomness not None,
+        RandomnessOrSeed randomness = None,
         bint ungapped=False,
         bint enumerable=False,
     ):
@@ -2213,8 +2214,10 @@ cdef class HMM:
             alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
             M (`int`): The length of the model to generate (i.e. the
                 number of nodes).
-            randomness (`~pyhmmer.easel.Randomness`): The random number
-                generator to use for sampling.
+            randomness (`~pyhmmer.easel.Randomness`, `int` or `None`): The 
+                random number generator to use for sampling, or a seed to
+                initialize a generator. If `None` or ``0`` given, create
+                a new random number generator with a random seed.
             ungapped (`bool`): Set to `True` to build an ungapped HMM, i.e.
                 an HMM where the :math:`M_n \to M_{n+1}` are all one and the
                 remaining transitions are zero. Ignored when ``enumerable``
@@ -2231,15 +2234,24 @@ cdef class HMM:
 
         .. versionadded:: 0.7.0
 
+        .. versionchanged:: 0.11.1
+            Support passing an `int` or `None` as ``randomness`` argument.
+
         """
-        cdef str fname
-        cdef int status
-        cdef HMM hmm    = cls.__new__(cls)
+        cdef Randomness rng
+        cdef str        fname
+        cdef int        status
+        cdef HMM        hmm    = cls.__new__(cls)
+
+        if RandomnessOrSeed is Randomness:
+            rng = randomness
+        else:
+            rng = Randomness(randomness)
 
         if enumerable:
             fname = "p7_hmm_SampleEnumerable"
             status = libhmmer.p7_hmm.p7_hmm_SampleEnumerable(
-                randomness._rng,
+                rng._rng,
                 M,
                 alphabet._abc,
                 &hmm._hmm
@@ -2247,7 +2259,7 @@ cdef class HMM:
         elif ungapped:
             fname = "p7_hmm_SampleUngapped"
             status = libhmmer.p7_hmm.p7_hmm_SampleUngapped(
-                randomness._rng,
+                rng._rng,
                 M,
                 alphabet._abc,
                 &hmm._hmm
@@ -2255,7 +2267,7 @@ cdef class HMM:
         else:
             fname = "p7_hmm_Sample"
             status = libhmmer.p7_hmm.p7_hmm_Sample(
-                randomness._rng,
+                rng._rng,
                 M,
                 alphabet._abc,
                 &hmm._hmm

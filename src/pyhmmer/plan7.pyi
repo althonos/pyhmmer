@@ -340,7 +340,7 @@ class HMM(object):
         cls,
         alphabet: Alphabet,
         M: int,
-        randomness: Randomness,
+        randomness: typing.Union[Randomness, int, None] = None,
         ungapped: bool = False,
         enumerate: bool = False,
     ) -> HMM: ...

@@ -131,6 +131,21 @@ class TestDigitalSequence(_TestSequenceBase, unittest.TestCase):
             kwargs["sequence"] = cls.abc.encode(seq)
         return easel.DigitalSequence(cls.abc, **kwargs)
 
+    def test_sample(self):
+        seq = easel.DigitalSequence.sample(self.abc, 10)
+        self.assertLessEqual(len(seq), 10)
+        self.assertIs(seq.alphabet, self.abc)
+
+    def test_sample_seed(self):
+        seq1 = easel.DigitalSequence.sample(self.abc, 10, randomness=easel.Randomness(42))
+        seq2 = easel.DigitalSequence.sample(self.abc, 10, randomness=42)
+        self.assertEqual(seq1, seq2)
+        seq3 = easel.DigitalSequence.sample(self.abc, 10, randomness=100)
+        self.assertNotEqual(seq1, seq3)
+
+        with self.assertRaises(TypeError):
+            seq4 = easel.DigitalSequence.sample(self.abc, 10, randomness="abc")
+
     def test_init_kwargs(self):
         arr = bytearray([0, 1, 2, 3])
         seq = easel.DigitalSequence(self.abc, name=b"TEST", sequence=arr)
@@ -204,6 +219,20 @@ class TestTextSequence(_TestSequenceBase, unittest.TestCase):
     @classmethod
     def Sequence(cls, **kwargs):
         return easel.TextSequence(**kwargs)
+
+    def test_sample(self):
+        seq = easel.TextSequence.sample(10)
+        self.assertLessEqual(len(seq), 10)
+
+    def test_sample_seed(self):
+        seq1 = easel.TextSequence.sample(10, randomness=easel.Randomness(42))
+        seq2 = easel.TextSequence.sample(10, randomness=42)
+        self.assertEqual(seq1, seq2)
+        seq3 = easel.TextSequence.sample(10, randomness=100)
+        self.assertNotEqual(seq1, seq3)
+
+        with self.assertRaises(TypeError):
+            seq4 = easel.TextSequence.sample(10, randomness="abc")
 
     def test_init_kwargs(self):
         seq = easel.TextSequence(name=b"TEST", sequence="ATGC")
