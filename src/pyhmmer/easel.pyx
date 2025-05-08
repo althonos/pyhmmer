@@ -5222,17 +5222,16 @@ cdef class TextSequence(Sequence):
         assert self._sq.acc != NULL
 
     def __reduce__(self):
-        return (
+        constructor = functools.partial(
             type(self),
-            (
-                self.name,
-                self.description,
-                self.accession,
-                self.sequence,
-                self.source,
-                self.residue_markups,
-            )
+            name=self.name,
+            description=self.description,
+            accession=self.accession,
+            sequence=self.sequence,
+            source=self.source,
+            residue_markups=self.residue_markups,
         )
+        return constructor, ()
 
     def __getbuffer__(self, Py_buffer* buffer, int flags):
         assert self._sq != NULL
@@ -5482,18 +5481,16 @@ cdef class DigitalSequence(Sequence):
         assert self._sq.acc != NULL
 
     def __reduce__(self):
-        return (
+        constructor = functools.partial(
             type(self),
-            (
-                self.alphabet,
-                self.name,
-                self.description,
-                self.accession,
-                self.sequence,
-                self.source,
-                self.residue_markups,
-            )
+            name=self.name,
+            description=self.description,
+            accession=self.accession,
+            sequence=self.sequence,
+            source=self.source,
+            residue_markups=self.residue_markups,
         )
+        return constructor, (self.alphabet,)
 
     def __getbuffer__(self, Py_buffer* buffer, int flags):
         assert self._sq != NULL
@@ -6007,7 +6004,7 @@ cdef class TextSequenceBlock(SequenceBlock):
         return False
 
     def __reduce__(self):
-        return (type(self), (), None, iter(self))
+        return type(self), (), None, iter(self)
 
     # --- Python methods -----------------------------------------------------
 
@@ -6159,7 +6156,7 @@ cdef class DigitalSequenceBlock(SequenceBlock):
         return False
 
     def __reduce__(self):
-        return (type(self), (self.alphabet,), None, iter(self))
+        return type(self), (self.alphabet,), None, iter(self)
 
     # --- Python methods -----------------------------------------------------
 
