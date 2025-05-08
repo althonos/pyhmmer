@@ -685,7 +685,7 @@ cdef class Builder:
             symfrac (`float`): The residue occurrence threshold for fast
                 architecture determination.
             fragthresh (`float`): A threshold such that a sequence is called
-                a fragment when :math:`L \\le fragthresh \times alen`.
+                a fragment when :math:`L \\le fragthresh \\times alen`.
             wid (`double`): The percent identity threshold for BLOSUM relative
                 weighting.
             esigma (`float`): The minimum total relative entropy parameter
