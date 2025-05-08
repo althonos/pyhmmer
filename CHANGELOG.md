@@ -6,17 +6,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.11.1-rc.1...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.11.1...HEAD
 
 
-## [v0.11.1-rc.1] - 2025-05-08
-[v0.11.1-rc.1]: https://github.com/althonos/pyhmmer/compare/v0.11.0...v0.11.1-rc.1
+## [v0.11.1] - 2025-05-08
+[v0.11.1]: https://github.com/althonos/pyhmmer/compare/v0.11.0...v0.11.1
 
 ### Added
 - `DigitalMSA.identity_filter` method to remove sequences too similar from a multiple sequence alignment ([#84](https://github.com/althonos/pyhmmer/issues/84)).
 - `reference`, `model_mask`, `secondary_structure`, `surface_accessibility`, `posterior_probabilities` properties of `MSA` to get and set additional column annotation for a sequence alignment.
 - `MSA.select` to select a subset of columns and rows of a sequence alignment given an iterable of indices.
-- New parallelization strategy in `hmmsearch` suitable for low query count (<#CPUs) to parallelize on target chunks rather than individual queries (more similar to original HMMER).
+- New parallelization strategy in `hmmsearch` suitable for low query counts to parallelize on target chunks rather than individual queries (more similar to original HMMER).
 - `TextSequence.sample` and `DigitalSequence.sample` constructors to generate random sequences for testing.
 - `DigitalMSA.sample` constructor to generate a random multiple sequence alignment for testing.
 - `MSA.indexed` and `SequenceBlock.indexed` to get the sequences of an alignment or block by name.
