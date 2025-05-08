@@ -24,22 +24,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 - Remove some test data from `pyhmmer.tests.data` to reduce distribution size.
-- Use fused types to specialize queries of `Pipeline` search methods
+- Use fused types to specialize queries of `Pipeline` search methods.
 - Improve error reporting message in `Builder.build_msa` on input format errors.
 - Deprecate positional arguments in `TextSequence`, `DigitalSequence`, `TextMSA` and `DigitalMSA` constructors.
 - Ensure to poison workers before yielding the last result in `pyhmmer.hmmer` dispatchers.
 - Allow passing a seed integer or `None` to `HMM.sample`.
 - Use pure-Python `collections.abc.Sequence` classes to expose `MSA.sequences` instead of Cython class.
 - Use pure-Python `collections.abc.Sequence` classes to expose `TextMSA.alignment` instead of generating a `tuple` on demand.
+- Relax `psutil` dependency to support both `6.0` and `7.0`.
 
 ### Fixed
 - Deployment to Arch User Repository.
 - Use of deprecated API in documentation.
+- `Pipeline` methods not raising errors on unsupported targets ([#87](https://github.com/althonos/pyhmmer/issues/87)).
 - `Matrix.__getitem__` raising `IndexError` when slicing with a slice without upper bound.
 - `TopHits.merge` not properly merging book-keeping attributes when merging `TopHits` with zero hits.
 - Relax equality comparison in `TopHits.merge` when the query was an `OptimizedProfile`.
 - Some uncaught connection errors in `pyhmmer.hmmer` background workers.
 - Broken assertion in `TextMSA.sequences` due to Easel bug in `esl_sq_FetchFromMSA` ([EddyRivasLab/easel#80](https://github.com/EddyRivasLab/easel/issues/80)).
+- Fused Cython methods not being properly documented in Sphinx documentation.
 
 
 ## [v0.11.0] - 2025-01-10
