@@ -146,8 +146,8 @@ class _ReverseSEARCHDispatcher(
             if current_size > chunksize:
                 chunk_indices.append(i)
                 current_size = 0
-        chunk_indices.append(len(targets))
-        assert len(chunk_indices) == self.cpus + 1
+        while len(chunk_indices) <= self.cpus:
+            chunk_indices.append(len(targets))
         # NB: this does not copy data, as `DigitalSequenceBlock` are implemented
         #     as views of `DigitalSequence` objects, so slicing is cheap.
         return [targets[i:j] for i,j in zip(chunk_indices, chunk_indices[1:])]
