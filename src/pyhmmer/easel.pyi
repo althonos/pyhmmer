@@ -14,6 +14,10 @@ except ImportError:
 
 BUFFER = typing.Union[bytes, bytearray, memoryview]
 IDENTITY_FILTER_PREFERENCE = Literal["conscover", "origorder", "random"]
+MSA_FORMAT = Literal[
+    "stockholm", "pfam", "a2m", "psiblast", "selex", "afa", "clustal", 
+    "clustallike", "phylip", "phylips"
+]
 
 # --- Alphabet ---------------------------------------------------------------
 
@@ -415,7 +419,7 @@ class MSA(abc.ABC, typing.Sized):
     def copy(self: _M) -> _M: ...
     def checksum(self) -> int: ...
     def select(self: _M, sequences: typing.Optional[typing.Iterable[int]] = None, columns: typing.Optional[typing.Iterable[int]] = None) -> _M: ...
-    def write(self, fh: typing.BinaryIO, format: str) -> None: ...
+    def write(self, fh: typing.BinaryIO, format: MSA_FORMAT) -> None: ...
 
 class TextMSA(MSA):
     def __init__(
@@ -486,14 +490,14 @@ class DigitalMSA(MSA):
 M = typing.TypeVar("M", TextMSA, DigitalMSA)
 
 class MSAFile(typing.Generic[M], typing.ContextManager[MSAFile[M]], typing.Iterator[M]):
-    _FORMATS: typing.ClassVar[typing.Dict[str, int]]
+    _FORMATS: typing.ClassVar[typing.Dict[MSA_FORMAT, int]]
     alphabet: typing.Optional[Alphabet]
     name: typing.Optional[str]
     @typing.overload
     def __init__(
         self: MSAFile[DigitalMSA],
         file: typing.Union[typing.AnyStr, os.PathLike[typing.AnyStr], typing.BinaryIO],
-        format: typing.Optional[str] = None,
+        format: typing.Optional[MSA_FORMAT] = None,
         *,
         digital: Literal[True],
         alphabet: typing.Optional[Alphabet] = None,
@@ -522,7 +526,7 @@ class MSAFile(typing.Generic[M], typing.ContextManager[MSAFile[M]], typing.Itera
     @property
     def digital(self) -> bool: ...
     @property
-    def format(self) -> str: ...
+    def format(self) -> MSA_FORMAT: ...
     def read(self) -> typing.Optional[M]: ...
     def close(self) -> None: ...
 

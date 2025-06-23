@@ -3748,7 +3748,13 @@ cdef class MSA:
         Arguments:
             fh (`io.IOBase`): A Python file handle, opened in binary mode.
             format (`str`): The name of the multiple sequence alignment
-                file format to use.
+                file format to use. Supported values are: ``stockholm``,
+                ``pfam`` (equivalent to the ``stockholm`` format but with
+                a single alignment line per sequence), ``a2m``, ``psiblast``,
+                ``selex``, ``afa`` (aligned FASTA), ``clustal``,
+                ``clustallike`` (equivalent to ``clustal`` without the strict
+                ``CLUSTAL 2.1`` header line), ``phylip`` (interleaved),
+                ``phylips`` (sequential).
 
         .. versionadded:: 0.3.0
 
