@@ -1006,7 +1006,7 @@ cdef class KeyHash:
         """
         cdef int status
         with nogil:
-            if self._kh == NULL:
+            if self._kh == NULL or self._kh.kalloc == 0 or self._kh.salloc == 0:
                 self._kh = libeasel.keyhash.esl_keyhash_Create()
             else:
                 status = libeasel.keyhash.esl_keyhash_Reuse(self._kh)
@@ -1177,6 +1177,11 @@ cdef class KeyHash:
         cdef       int    index
         cdef const char*  k      = key
         cdef       size_t length = len(key)
+
+        if self._kh.kalloc == 0:
+            raise RuntimeError("attempted to use an unallocated ESL_KEYHASH (kalloc=0)")
+        elif self._kh.salloc == 0:
+            raise RuntimeError("attempted to use an unallocated ESL_KEYHASH (salloc=0)")
 
         with nogil:
             status = libeasel.keyhash.esl_keyhash_Store(self._kh, k, length, &index)
@@ -6252,11 +6257,18 @@ cdef class SequenceBlock:
         cdef const char* name
         cdef int         status
 
+        if self._indexed._kh.kalloc == 0:
+            raise RuntimeError("attempted to use an unallocated ESL_KEYHASH (kalloc=0)")
+        elif self._indexed._kh.salloc == 0:
+            raise RuntimeError("attempted to use an unallocated ESL_KEYHASH (salloc=0)")
+
         status = libeasel.keyhash.esl_keyhash_Reuse(self._indexed._kh)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_keyhash_Reuse")
 
         for idx in range(self._length):
+            if self._refs[idx].name == NULL:
+                raise RuntimeError("sequence block contains sequences missing a name")
             status = libeasel.keyhash.esl_keyhash_Store(
                 self._indexed._kh,
                 self._refs[idx].name,
