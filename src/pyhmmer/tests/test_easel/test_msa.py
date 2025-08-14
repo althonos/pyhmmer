@@ -12,7 +12,7 @@ from .. import __name__ as __package__
 from .utils import EASEL_FOLDER, resource_files
 
 
-class TestMSA(object):
+class _TestMSA(object):
     @classmethod
     def setUpClass(cls):
         cls.formats_folder = os.path.join(EASEL_FOLDER, "formats")
@@ -81,7 +81,7 @@ class TestMSA(object):
             msa.indexed[1]
 
 
-class TestTextMSA(TestMSA, unittest.TestCase):
+class TestTextMSA(_TestMSA, unittest.TestCase):
 
     MSA = easel.TextMSA
 
@@ -210,7 +210,7 @@ class TestTextMSA(TestMSA, unittest.TestCase):
         self.assertRaises(ValueError, msa_t.digitize, dna)
 
 
-class TestDigitalMSA(TestMSA, unittest.TestCase):
+class TestDigitalMSA(_TestMSA, unittest.TestCase):
 
     alphabet = easel.Alphabet.dna()
     MSA = staticmethod(functools.partial(easel.DigitalMSA, alphabet))
