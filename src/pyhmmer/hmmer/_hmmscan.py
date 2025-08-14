@@ -153,7 +153,7 @@ def hmmscan(
 
             >>> with HMMFile("tests/data/hmms/db/PF02826.hmm") as hmm_file:
             ...     targets = hmm_file.optimized_profiles()
-            ...     all_hits = list(hmmscan(proteins, targets, E=1e-10))
+            ...     all_hits = list(hmmscan(proteins, targets, E=1e-10, cpus=1))
             >>> sum(len(hits) for hits in all_hits)
             6
 
