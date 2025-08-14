@@ -60,18 +60,18 @@ jobs:
       run: pip install -vv -e . --no-build-isolation
     - name: Install test requirements
       run: python -m pip install -r src/pyhmmer/tests/requirements.txt
-    - name: Test with coverage
-      run: python -m coverage run -m unittest pyhmmer.tests -vv
-    - name: Upload to Codecov
-      if: matrix.python-impl == 'CPython'
-      uses: codecov/codecov-action@v3
-      with:
-        flags: ${{ matrix.python-release }}
-        env_vars: OS
-        name: test-python-${{ matrix.python-version }}
-        fail_ci_if_error: false
-        token: ${{ secrets.CODECOV_TOKEN }}
-        verbose: true
+    - name: Test without coverage
+      run: python -m unittest pyhmmer.tests -vv
+    #- name: Upload to Codecov
+    #  if: matrix.python-impl == 'CPython'
+    #  uses: codecov/codecov-action@v3
+    #  with:
+    #    flags: ${{ matrix.python-release }}
+    #    env_vars: OS
+    #    name: test-python-${{ matrix.python-version }}
+    #    fail_ci_if_error: false
+    #    token: ${{ secrets.CODECOV_TOKEN }}
+    #    verbose: true
 
 #  test_linux_arm64:
 #    name: Test (Linux, arm64)
