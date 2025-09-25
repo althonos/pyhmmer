@@ -40,12 +40,12 @@ HMMER internals, which has the following advantages over CLI wrappers
   you have control on, making it easier to pass your inputs to HMMER without
   needing to write them to a temporary file. Output retrieval is also done
   in memory, via instances of the
-  [`pyhmmer.plan7.TopHits`](https://pyhmmer.readthedocs.io/en/stable/api/plan7.html#pyhmmer.plan7.TopHits)
+  [`pyhmmer.plan7.TopHits`](https://pyhmmer.readthedocs.io/en/stable/api/plan7/results.html#pyhmmer.plan7.TopHits)
   class.
 - **no input formatting**: The Easel object model is exposed in the
-  [`pyhmmer.easel`](https://pyhmmer.readthedocs.io/en/stable/api/easel.html)
+  [`pyhmmer.easel`](https://pyhmmer.readthedocs.io/en/stable/api/easel/index.html)
   module, and you have the possibility to build a
-  [`DigitalSequence`](https://pyhmmer.readthedocs.io/en/stable/api/easel.html#pyhmmer.easel.DigitalSequence)
+  [`DigitalSequence`](https://pyhmmer.readthedocs.io/en/stable/api/easel/seq.html#pyhmmer.easel.DigitalSequence)
   object yourself to pass to the HMMER pipeline. This is useful if your sequences are already
   loaded in memory, for instance because you obtained them from another
   Python library (such as [Pyrodigal](https://github.com/althonos/pyrodigal)
@@ -57,7 +57,7 @@ HMMER internals, which has the following advantages over CLI wrappers
 - **efficient**: Using `pyhmmer` to launch `hmmsearch` on sequences
   and HMMs in disk storage is typically as fast as directly using the
   `hmmsearch` binary (see the [Benchmarks section](#%EF%B8%8F-benchmarks)).
-  [`pyhmmer.hmmer.hmmsearch`](https://pyhmmer.readthedocs.io/en/stable/api/hmmer.html#hmmsearch)
+  [`pyhmmer.hmmer.hmmsearch`](https://pyhmmer.readthedocs.io/en/stable/api/hmmer/profile.html#pyhmmer.hmmer.hmmsearch)
   uses a different parallelisation strategy compared to
   the `hmmsearch` binary from HMMER, which can help getting the most of
   multiple CPUs when annotating smaller sequence databases.
@@ -97,7 +97,7 @@ an academic work, for instance as:
 
 > PyHMMER (Larralde *et al.*, 2023), a Python library binding to HMMER (Eddy, 2011).
 
-Detailed references are available on the [Publications page](https://pyhmmer.readthedocs.io/en/stable/publications.html) of the
+Detailed references are available on the [Publications page](https://pyhmmer.readthedocs.io/en/stable/guide/publications.html) of the
 [online documentation](https://pyhmmer.readthedocs.io/).
 
 
@@ -116,16 +116,16 @@ $ pydoc pyhmmer.plan7
 ## 💡 Example
 
 Use `pyhmmer` to run `hmmsearch` to search for Type 2 PKS domains
-([`t2pks.hmm`](https://raw.githubusercontent.com/althonos/pyhmmer/master/pyhmmer/tests/data/hmms/txt/t2pks.hmm))
+([`t2pks.hmm`](https://raw.githubusercontent.com/althonos/pyhmmer/v0.7.0/pyhmmer/tests/data/hmms/txt/t2pks.hmm))
 inside proteins extracted from the genome of *Anaerococcus provencensis*
-([`938293.PRJEB85.HG003687.faa`](https://raw.githubusercontent.com/althonos/pyhmmer/master/pyhmmer/tests/data/seqs/938293.PRJEB85.HG003687.faa)).
+([`938293.PRJEB85.HG003687.faa`](https://raw.githubusercontent.com/althonos/pyhmmer/v0.7.0/pyhmmer/tests/data/seqs/938293.PRJEB85.HG003687.faa)).
 This will produce an iterable over
 [`TopHits`] that can be used for further sorting/querying in Python.
 Processing happens in parallel using Python threads, and a [`TopHits`]
 object is yielded for every [`HMM`] passed in the input iterable.
 
-[`HMM`]: https://pyhmmer.readthedocs.io/en/stable/api/plan7.html#pyhmmer.plan7.HMM
-[`TopHits`]: https://pyhmmer.readthedocs.io/en/stable/api/plan7.html#pyhmmer.plan7.TopHits
+[`HMM`]: https://pyhmmer.readthedocs.io/en/stable/api/plan7/hmms.html#pyhmmer.plan7.HMM
+[`TopHits`]: https://pyhmmer.readthedocs.io/en/stable/api/plan7/results.html#pyhmmer.plan7.TopHits
 
 ```python
 import pyhmmer
@@ -180,7 +180,7 @@ platform-specific code requires too many [SIMD](https://en.wikipedia.org/wiki/SI
 registers per thread to benefit from [simultaneous multi-threading](https://en.wikipedia.org/wiki/Simultaneous_multithreading).
 
 To read more about how PyHMMER achieves better parallelism than HMMER for
-many-to-many searches, have a look at the [Performance page](https://pyhmmer.readthedocs.io/en/stable/performance.html)
+many-to-many searches, have a look at the [Performance page](https://pyhmmer.readthedocs.io/en/stable/guide/performance.html)
 of the documentation.
 
 
