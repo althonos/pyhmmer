@@ -3888,7 +3888,7 @@ cdef class TextMSA(MSA):
         object sequences=None,
         bytes author=None,
     ):
-        """__init__(self, name=None, description=None, accession=None, sequences=None, author=None)\n--\n
+        """__init__(self, *, name=None, description=None, accession=None, sequences=None, author=None)\n--\n
 
         Create a new text-mode alignment with the given ``sequences``.
 
@@ -4319,7 +4319,7 @@ cdef class DigitalMSA(MSA):
         object sequences=None,
         bytes author=None,
     ):
-        """__init__(self, alphabet, name=None, description=None, accession=None, sequences=None, author=None)\n--\n
+        """__init__(self, alphabet, *, name=None, description=None, accession=None, sequences=None, author=None)\n--\n
 
         Create a new digital-mode alignment with the given ``sequences``.
 
@@ -5449,7 +5449,7 @@ cdef class TextSequence(Sequence):
         bytes source=None,
         dict  residue_markups=None,
     ):
-        """__init__(self, name=None, description=None, accession=None, sequence=None, source=None, residue_markups=None)\n--\n
+        """__init__(self, *, name=None, description=None, accession=None, sequence=None, source=None, residue_markups=None)\n--\n
 
         Create a new text-mode sequence with the given attributes.
 
@@ -5732,7 +5732,7 @@ cdef class DigitalSequence(Sequence):
               bytes                 source          = None,
               dict                  residue_markups = None,
     ):
-        """__init__(self, alphabet, name=None, description=None, accession=None, sequence=None, source=None, residue_markups=None)\n--\n
+        """__init__(self, alphabet, *, name=None, description=None, accession=None, sequence=None, source=None, residue_markups=None)\n--\n
 
         Create a new digital-mode sequence with the given attributes.
 
