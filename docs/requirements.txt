@@ -1,5 +1,5 @@
 # build dependencies, used to compile the code in ReadTheDocs.io
-setuptools >=46.4
+scikit-build-core
 cython ~=3.0
 
 # sphinx documentation dependencies
