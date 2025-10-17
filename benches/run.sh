@@ -2,8 +2,8 @@
 
 N=$(nproc)
 
-cp pyhmmer/tests/data/seqs/CP040672.1.genes_100.fna /tmp/CP040672.1.genes_100.fna
-cp pyhmmer/tests/data/seqs/CP000560.2.fna /tmp/CP000560.2.fna
+cp src/pyhmmer/tests/data/seqs/CP040672.1.genes_100.fna /tmp/CP040672.1.genes_100.fna
+cp src/pyhmmer/tests/data/seqs/CP000560.2.fna /tmp/CP000560.2.fna
 
 if [ ! -e "/tmp/562.PRJEB4685.faa" ]; then
 	wget "https://progenomes.embl.de/dumpSequence.cgi?p=562.PRJEB4685&t=p&a=562" -O- | gunzip > /tmp/562.PRJEB4685.faa

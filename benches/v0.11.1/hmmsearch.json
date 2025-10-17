@@ -1,0 +1,50 @@
+{
+  "results": [
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 1 hmmsearch /tmp/Pfam.v33-1.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 226.71858119962,
+      "stddev": 0.245632282895682,
+      "median": 226.65867415962,
+      "user": 226.01228256666664,
+      "system": 0.2884576266666667,
+      "min": 226.50844394862,
+      "max": 226.98862549062,
+      "times": [
+        226.65867415962,
+        226.98862549062,
+        226.50844394862
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "1"
+      }
+    },
+    {
+      "command": "python -m pyhmmer.hmmer --jobs 1 hmmsearch /tmp/Pfam.v33-1.pressed.hmm /tmp/562.PRJEB4685.faa",
+      "mean": 204.2143343869533,
+      "stddev": 0.2310982138123911,
+      "median": 204.15543766662,
+      "user": 203.63166723333333,
+      "system": 0.21361262666666667,
+      "min": 204.01838361962,
+      "max": 204.46918187462,
+      "times": [
+        204.01838361962,
+        204.15543766662,
+        204.46918187462
+      ],
+      "exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "parameters": {
+        "threads": "1"
+      }
+    }
+  ]
+}
