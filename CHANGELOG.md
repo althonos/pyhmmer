@@ -6,7 +6,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.11.1...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.11.2...HEAD
+
+
+## [v0.11.2] - 2025-10-27
+[v0.11.2]: https://github.com/althonos/pyhmmer/compare/v0.11.1...v0.11.2
+
+### Added
+- Support for Python 3.14.
+### Fixed
+- Issue with HMMER manually settings `denormals-are-zero` flags on x86-64 with SSE4.1 enabled ([#71](https://github.com/althonos/pyhmmer/issues/71)).
+- Missing documentation of multiple `easel` class constructors.
+### Changed
+- Improve documentation of supported `MSA` formats ([#93](https://github.com/althonos/pyhmmer/issues/93)).
 
 
 ## [v0.11.1] - 2025-05-08
