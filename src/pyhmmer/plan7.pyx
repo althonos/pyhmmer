@@ -2214,7 +2214,7 @@ cdef class HMM:
             alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
             M (`int`): The length of the model to generate (i.e. the
                 number of nodes).
-            randomness (`~pyhmmer.easel.Randomness`, `int` or `None`): The 
+            randomness (`~pyhmmer.easel.Randomness`, `int` or `None`): The
                 random number generator to use for sampling, or a seed to
                 initialize a generator. If `None` or ``0`` given, create
                 a new random number generator with a random seed.
@@ -2229,7 +2229,7 @@ cdef class HMM:
             `~pyhmmer.plan7.HMM`: A new HMM generated at random.
 
         Hint:
-            This constructor is only useful for testing and should not be 
+            This constructor is only useful for testing and should not be
             used in production code.
 
         .. versionadded:: 0.7.0
@@ -9073,5 +9073,23 @@ class Transitions(enum.IntEnum):
 
 # --- Module init code -------------------------------------------------------
 
-impl_Init()
 p7_FLogsumInit()
+
+# NOTE(@althonos): This function is called to initialize the HMMER platform
+#                  specific code. It is no-op on NEON and VMX, but on SSE
+#                  it has the following behaviour
+#                      - If configured at compile-time with the `HAVE_FLUSH_ZERO_MODE`,
+#                        it calls `_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON)`
+#                        to disable subnormals values.
+#                      - If the <pmmintrin.h> header was included (typically
+#                        from enabling SSE4.1 code), it calls
+#                        `_MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON)`
+#                        which sets the denormals to zero.
+#                  This second part means whenever this function is called after
+#                  having been compiled with SSE4.1 support, it will cause the
+#                  rest of the program to execute as-if it was compiled with
+#                  `-ffast-math`. The simple way to avoid this is not to call
+#                  this function, but beware that no other "useful" code is
+#                  included in the `impl_Init` code in a future HMMER release.
+#
+#impl_Init()
