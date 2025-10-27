@@ -55,6 +55,7 @@ else()
       " "
       #clang
       "-msse4.1"
+      "-msse4"
     )
   endif()
 
