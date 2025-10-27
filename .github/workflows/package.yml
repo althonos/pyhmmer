@@ -15,7 +15,7 @@ jobs:
       with:
         submodules: true
     - name: Build manylinux wheels
-      uses: pypa/cibuildwheel@v2.22.0
+      uses: pypa/cibuildwheel@v3.2.1
       env:
         CIBW_ARCHS: aarch64
         CIBW_BUILD: 'cp*-manylinux_aarch64'
@@ -35,7 +35,7 @@ jobs:
       with:
         submodules: true
     - name: Build manylinux wheels
-      uses: pypa/cibuildwheel@v2.22.0
+      uses: pypa/cibuildwheel@v3.2.1
       env:
         CIBW_ARCHS: x86_64
         CIBW_BUILD: 'cp*-manylinux_x86_64'
@@ -55,7 +55,7 @@ jobs:
       with:
         submodules: true
     - name: Build manylinux wheels
-      uses: pypa/cibuildwheel@v2.22.0
+      uses: pypa/cibuildwheel@v3.2.1
       env:
         CIBW_ARCHS: x86_64
         CIBW_BUILD: 'cp*-macosx_x86_64'
@@ -75,7 +75,7 @@ jobs:
       with:
         submodules: true
     - name: Build manylinux wheels
-      uses: pypa/cibuildwheel@v2.22.0
+      uses: pypa/cibuildwheel@v3.2.1
       env:
         CIBW_ARCHS: arm64
         CIBW_BUILD: 'cp*-macosx_arm64'
