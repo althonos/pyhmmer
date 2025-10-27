@@ -12,6 +12,11 @@ and the version 33.1 of the `Pfam <https://pfam.xfam.org/>`_ HMM library contain
 18,259 domains. Commands were run 4 times on a warm SSD. *Plain lines show
 the times for pressed HMMs, and dashed-lines the times for HMMs in text format.*
 
+v0.11.1 - 2025-05-08
+--------------------
+
+.. image:: /_images/bench-v0.11.1.svg
+
 
 v0.7.0 - 2022-12-04
 -------------------
