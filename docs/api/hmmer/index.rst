@@ -17,8 +17,8 @@ Sequence Searches
 
 .. autosummary::
 
-    hmmsearch
-    hmmscan
+    phmmer
+    nhmmer
 
 
 Profile Searches
@@ -32,8 +32,8 @@ Profile Searches
 
 .. autosummary::
 
-    phmmer
-    nhmmer
+    hmmsearch
+    hmmscan
 
 
 Iterative Searches
