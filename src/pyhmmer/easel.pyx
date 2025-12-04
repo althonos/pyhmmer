@@ -4309,6 +4309,19 @@ cdef class MSA:
         else:
             self._set_annotation(&self._msa.pp_cons, <char*> posterior_probabilities)
 
+    @property
+    def sequence_weights(self):
+        """`~pyhmmer.easel.VectorD`: The alignment sequence weights.
+
+        .. versionadded:: 0.11.3
+
+        """
+        assert self._msa != NULL
+        cdef VectorD w = VectorD.__new__(VectorD)
+        w._data = <void*> self._msa.wgt
+        w._n = w._shape[0] = self._msa.alen
+        w._owner = self
+        return w
 
     # TODO: Implement `weights` property exposing the sequence weights as
     #       a `Vector` object, needs implementation of a new `VectorD` class
