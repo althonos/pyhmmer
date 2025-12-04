@@ -87,6 +87,18 @@ cdef class Vector:
     cdef const char* _format(self) noexcept
     cdef int _allocate(self, size_t n) except -1
 
+cdef class VectorD(Vector):
+    cpdef int argmax(self) except -1
+    cpdef int argmin(self) except -1
+    cpdef VectorD copy(self)
+    cpdef double entropy(self) except *
+    cpdef double max(self) except *
+    cpdef double min(self) except *
+    cpdef object normalize(self)
+    cpdef double relative_entropy(self, VectorD other) except *
+    cpdef object reverse(self)
+    cpdef double sum(self)
+
 cdef class VectorF(Vector):
     cpdef int argmax(self) except -1
     cpdef int argmin(self) except -1

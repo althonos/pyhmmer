@@ -4,7 +4,7 @@ import pickle
 import struct
 import sys
 
-from pyhmmer.easel import Vector, VectorF, VectorU8
+from pyhmmer.easel import Vector, VectorD, VectorF, VectorU8
 
 
 class _TestVectorBase(object):
@@ -373,6 +373,92 @@ class TestVectorF(_TestVectorBase, unittest.TestCase):
 
     def test_from_raw_bytes_bigendian(self):
         vec = self.Vector._from_raw_bytes(b'>\x80\x00\x00', 1, byteorder="big")
+        self.assertEqual(len(vec), 1)
+        self.assertEqual(vec[0], 0.25)
+
+
+class TestVectorD(_TestVectorBase, unittest.TestCase):
+
+    Vector = VectorD
+
+    def test_strides(self):
+        vec = self.Vector([1, 2, 3])
+        sizeof_double = len(struct.pack('d', 1.0))
+        self.assertEqual(vec.strides, (sizeof_double,))
+
+    def test_normalize(self):
+        vec = self.Vector([1, 3])
+        vec.normalize()
+        self.assertEqual(vec[0], 1/4)
+        self.assertEqual(vec[1], 3/4)
+
+        vec2 = self.Vector([])
+        vec2.normalize()
+
+    def test_memoryview_tolist(self):
+        vec = self.Vector([1, 2, 3])
+        mem = memoryview(vec)
+        self.assertEqual(mem.tolist(), [1.0, 2.0, 3.0])
+
+    def test_neg(self):
+        vec = self.Vector([1, 2, 3])
+        v2 = -vec
+        self.assertEqual(v2[0], -1)
+        self.assertEqual(v2[1], -2)
+        self.assertEqual(v2[2], -3)
+
+    def test_div_scalar(self):
+        vec = self.Vector([1, 2, 3])
+        v2 = vec / 2
+        self.assertEqual(v2[0], 0.5)
+        self.assertEqual(v2[1], 1.0)
+        self.assertEqual(v2[2], 1.5)
+
+        v2 = self.Vector([])
+        v3 = v2 / 3
+        self.assertEqual(v3, self.Vector([]))
+
+    def test_div_vector(self):
+        vec = self.Vector([1, 2, 3])
+        v2 = self.Vector([2, 4, 6])
+        v3 = vec / v2
+        self.assertEqual(v3[0], 0.5)
+        self.assertEqual(v3[1], 0.5)
+        self.assertEqual(v3[2], 0.5)
+
+        v2 = self.Vector([])
+        v3 = v2 / self.Vector([])
+        self.assertEqual(v3, self.Vector([]))
+
+    def test_idiv_scalar(self):
+        vec = self.Vector([1, 2, 3])
+        vec /= 2
+        self.assertEqual(vec[0], 0.5)
+        self.assertEqual(vec[1], 1.0)
+        self.assertEqual(vec[2], 1.5)
+
+        vec = self.Vector([])
+        vec /= 3
+        self.assertEqual(vec, self.Vector([]))
+
+    def test_idiv_vector(self):
+        vec = self.Vector([1, 2, 3])
+        vec /= self.Vector([2, 4, 6])
+        self.assertEqual(vec[0], 0.5)
+        self.assertEqual(vec[1], 0.5)
+        self.assertEqual(vec[2], 0.5)
+
+        vec = self.Vector([])
+        vec /= self.Vector([])
+        self.assertEqual(vec, self.Vector([]))
+
+    def test_from_raw_bytes_littleendian(self):
+        vec = self.Vector._from_raw_bytes(b'\x00\x00\x00\x00\x00\x00\xd0\x3f', 1, byteorder="little")
+        self.assertEqual(len(vec), 1)
+        self.assertEqual(vec[0], 0.25)
+
+    def test_from_raw_bytes_bigendian(self):
+        vec = self.Vector._from_raw_bytes(b'\x3f\xd0\x00\x00\x00\x00\x00\x00', 1, byteorder="big")
         self.assertEqual(len(vec), 1)
         self.assertEqual(vec[0], 0.25)
 
