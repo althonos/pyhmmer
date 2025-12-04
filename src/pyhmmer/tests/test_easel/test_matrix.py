@@ -2,7 +2,16 @@ import pickle
 import unittest
 import sys
 
-from pyhmmer.easel import Matrix, MatrixF, MatrixU8, Vector, VectorF, VectorU8
+from pyhmmer.easel import (
+    Matrix, 
+    MatrixD, 
+    MatrixF, 
+    MatrixU8, 
+    Vector, 
+    VectorD, 
+    VectorF, 
+    VectorU8
+)
 
 
 class _TestMatrixBase(object):
@@ -273,6 +282,57 @@ class TestMatrixF(_TestMatrixBase, unittest.TestCase):
 
     def test_from_raw_bytes_bigendian(self):
         mat = self.Matrix._from_raw_bytes(b'>\x80\x00\x00', 1, 1, byteorder="big")
+        self.assertEqual(len(mat), 1)
+        self.assertEqual(mat[0][0], 0.25)
+
+
+class TestMatrixD(_TestMatrixBase, unittest.TestCase):
+
+    Matrix = MatrixD
+
+    def test_memoryview_tolist(self):
+        mat = MatrixD([ [1, 2], [3, 4] ])
+        mem = memoryview(mat)
+        self.assertEqual(mem.tolist(), [ [1.0, 2.0], [3.0, 4.0] ])
+
+    def test_getitem_row(self):
+        mat = MatrixD([ [1, 2], [3, 4] ])
+
+        self.assertIsInstance(mat[0], VectorD)
+        self.assertEqual(list(mat[0]), [1.0, 2.0])
+        self.assertEqual(list(mat[-1]), [3.0, 4.0])
+
+        with self.assertRaises(IndexError):
+            row = mat[-10]
+
+    def test_getitem_element(self):
+        mat = MatrixD([ [1, 2], [3, 4] ])
+
+        self.assertEqual(mat[0, 0], 1.0)
+        self.assertEqual(mat[0, 1], 2.0)
+        self.assertEqual(mat[1, 0], 3.0)
+        self.assertEqual(mat[1, 1], 4.0)
+
+        self.assertEqual(mat[0, -1], 2.0)
+        self.assertEqual(mat[-1, 0], 3.0)
+        self.assertEqual(mat[-1, -1], 4.0)
+
+        with self.assertRaises(IndexError):
+            x = mat[-10, 0]
+        with self.assertRaises(IndexError):
+            x = mat[0, -10]
+        with self.assertRaises(IndexError):
+            x = mat[0, 10]
+        with self.assertRaises(IndexError):
+            x = mat[10, 0]
+
+    def test_from_raw_bytes_littleendian(self):
+        mat = self.Matrix._from_raw_bytes(b'\x00\x00\x00\x00\x00\x00\xd0\x3f', 1, 1, byteorder="little")
+        self.assertEqual(len(mat), 1)
+        self.assertEqual(mat[0][0], 0.25)
+
+    def test_from_raw_bytes_bigendian(self):
+        mat = self.Matrix._from_raw_bytes(b'\x3f\xd0\x00\x00\x00\x00\x00\x00', 1, 1, byteorder="big")
         self.assertEqual(len(mat), 1)
         self.assertEqual(mat[0][0], 0.25)
 

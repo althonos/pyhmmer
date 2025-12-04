@@ -130,6 +130,14 @@ cdef class Matrix:
     cdef const char* _format(self) noexcept
     cdef int _allocate(self, size_t m, size_t n) except -1
 
+cdef class MatrixD(Matrix):
+    cpdef tuple argmax(self)
+    cpdef tuple argmin(self)
+    cpdef MatrixD copy(self)
+    cpdef double max(self)
+    cpdef double min(self)
+    cpdef double sum(self)
+
 cdef class MatrixF(Matrix):
     cpdef tuple argmax(self)
     cpdef tuple argmin(self)

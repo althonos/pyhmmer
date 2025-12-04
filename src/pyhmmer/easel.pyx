@@ -1394,7 +1394,7 @@ cdef class Vector:
         """
         cdef const char* f = self._format()
         if f == NULL:
-            raise NotImplementedError("Vector.property")
+            raise NotImplementedError()
         return chr(f[0])
 
     # --- Utility ------------------------------------------------------------
@@ -2930,6 +2930,7 @@ cdef class Matrix:
         .. versionadded:: 0.4.7
 
         """
+        return struct.calcsize(self.format)
 
     @property
     def format(self):
@@ -2942,6 +2943,10 @@ cdef class Matrix:
         .. versionadded:: 0.4.7
 
         """
+        cdef const char* f = self._format()
+        if f == NULL:
+            raise NotImplementedError()
+        return chr(f[0])
 
     # --- Utility ------------------------------------------------------------
 
@@ -3023,6 +3028,288 @@ cdef class Matrix:
     def sum(self):
         """Return the sum of all elements in the matrix.
         """
+
+
+cdef class MatrixD(Matrix):
+    """A matrix storing double-precision floating point numbers.
+
+    Use indexing notation to access and edit individual elements of the
+    matrix::
+
+        >>> m = MatrixD.zeros(2, 2)
+        >>> m[0, 0] = 3.0
+        >>> m
+        MatrixD([[3.0, 0.0], [0.0, 0.0]])
+
+    Indexing can also be performed at the row-level to get a `VectorD`
+    without copying the underlying data::
+
+        >>> m = MatrixD([ [1.0, 2.0], [3.0, 4.0] ])
+        >>> m[0]
+        VectorD([1.0, 2.0])
+
+    Objects of this type support the buffer protocol, and can be viewed
+    as a `numpy.ndarray` with two dimensions using the `numpy.asarray`
+    function, and can be passed without copy to most `numpy` functions::
+
+        >>> m = MatrixD([ [1.0, 2.0], [3.0, 4.0] ])
+        >>> numpy.asarray(m)
+        array([[1., 2.],
+               [3., 4.]], dtype=float64)
+        >>> numpy.log2(m)
+        array([[0.       , 1.       ],
+               [1.5849625, 2.       ]], dtype=float64)
+
+    .. versionadded:: 0.11.2
+
+    """
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __init__(self, object iterable = ()):
+        """__init__(self, iterable=())\n--\n
+
+        Create a new matrix from an iterable of rows.
+
+        """
+        cdef int      i
+        cdef int      j
+        cdef size_t   m
+        cdef size_t   n
+        cdef object   row
+        cdef double   val
+        cdef object   peeking
+        cdef double** data    = NULL
+
+        # collect iterable if it's not a `Sized` object
+        if not isinstance(iterable, collections.abc.Sized):
+            iterable = [array.array("d", row) for row in iterable]
+
+        # make sure __init__ is only called once
+        if self._data != NULL:
+            raise RuntimeError("Matrix.__init__ must not be called more than once")
+
+        # allow peeking the data
+        peeking = peekable(iterable)
+        # get the number of columns from the iterable
+        m = len(iterable)
+        # get the number of rows from the first element of the iterable
+        n = 0 if m == 0 else len(peeking.peek())
+
+        # allocate the buffer
+        self._allocate(m, n)
+
+        # assign the items
+        data = <double**> self._data
+        for i, row in enumerate(peeking):
+            if len(row) != self._n:
+                raise ValueError("Inconsistent number of rows in input")
+            for j, val in enumerate(row):
+                data[i][j] = val
+
+    def __eq__(self, object other):
+        assert self._data != NULL
+        cdef MatrixD other_
+        cdef int     i
+        cdef int     j
+        # check matrix type
+        if not isinstance(other, MatrixD):
+            return NotImplemented
+        # check dimensions
+        other_ = other
+        assert other_._data != NULL
+        if self._m != other_._m or self._n != other_._n:
+            return False
+        # check values
+        for i in range(self._m):
+            for j in range(self._n):
+                if (<double**> self._data)[i][j] != (<double**> other_._data)[i][j]:
+                    return False
+        return True
+
+    def __iadd__(self, object other):
+        assert self._data != NULL
+
+        cdef MatrixD other_mat
+        cdef double  other_f
+
+        if isinstance(other, MatrixD):
+            other_mat = other
+            assert other_mat._data != NULL
+            if other_mat._m != self._m or other_mat._n != self._n:
+                raise ValueError(f"cannot pairwise add {other_mat.shape} matrix to {self.shape} matrix")
+            with nogil:
+                libeasel.vec.esl_vec_DAdd(<double*> self._data[0], <double*> other_mat._data[0], self._m * self._n)
+        else:
+            other_f = other
+            with nogil:
+                libeasel.vec.esl_vec_DIncrement(<double*> self._data[0], self._m*self._n, other_f)
+        return self
+
+    def __imul__(self, object other):
+        assert self._data != NULL
+
+        cdef MatrixD other_mat
+        cdef double  other_f
+        cdef int     i
+
+        if isinstance(other, MatrixD):
+            other_mat = other
+            assert other_mat._data != NULL
+            if other_mat._m != self._m or other_mat._n != self._n:
+                raise ValueError(f"cannot pairwise multiply {other_mat.shape} matrix with {self.shape} matrix")
+            # NB(@althonos): There is no function in `vectorops.h` to do this
+            # for now...
+            for i in range(self._n * self._m):
+                (<double**> self._data)[0][i] *= (<double**> other_mat._data)[0][i]
+        else:
+            other_f = other
+            with nogil:
+                libeasel.matrixops.esl_mat_DScale(<double**> self._data, self._m, self._n, other_f)
+        return self
+
+    def __getitem__(self, object index):
+        assert self._data != NULL
+
+        cdef int      x
+        cdef int      y
+        cdef str      ty
+        cdef VectorD  row
+        cdef MatrixD  new
+        cdef double** data = <double**> self._data
+
+        if isinstance(index, int):
+            x = index
+            if x < 0:
+                x += self._m
+            if x < 0 or x >= self._m:
+                raise IndexError("vector index out of range")
+
+            row = VectorD.__new__(VectorD)
+            row._owner = self
+            row._n = row._shape[0] = self._n
+            row._data = <void*> &(data[x][0])
+            return row
+
+        elif isinstance(index, slice):
+            start, stop, step = index.indices(self._m)
+            if stop < 0 or stop > self._m or start < 0 or start >= self._m:
+                raise IndexError("matrix row index out of range")
+
+            new = MatrixD.__new__(MatrixD)
+            new._owner = self
+            new._m = new._shape[0] = stop - start
+            new._n = new._shape[1] = self._n
+            new._data = <void**> &data[start]
+            return new
+
+        elif isinstance(index, tuple):
+            x, y = index
+            if x < 0:
+                x += self._m
+            if y < 0:
+                y += self._n
+            if x < 0 or x >= self._m:
+                raise IndexError("matrix row index out of range")
+            if y < 0 or y >= self._n:
+                raise IndexError("matrix column index out of range")
+            return data[x][y]
+
+        else:
+            ty = type(index).__name__
+            raise TypeError(f"expected integer, tuple or slice, found {ty}")
+
+    def __setitem__(self, object index, double value):
+        assert self._data != NULL
+
+        cdef int x
+        cdef int y
+        cdef double** data = <double**> self._data
+
+        if isinstance(index, tuple):
+            x, y = index
+            if x < 0:
+                x += self._m
+            if y < 0:
+                y += self._n
+            if x < 0 or x >= self._m:
+                raise IndexError("matrix row index out of range")
+            if y < 0 or y >= self._n:
+                raise IndexError("matrix column index out of range")
+            data[x][y] = value
+
+        else:
+            raise TypeError("Matrix.__setitem__ can only be used with a 2D index")
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def itemsize(self):
+        return sizeof(double)
+
+    @property
+    def format(self):
+        return "d"
+
+    # --- Utility ------------------------------------------------------------
+
+    cdef const char* _format(self) noexcept:
+        return b"d"
+
+    # --- Methods ------------------------------------------------------------
+
+    cpdef tuple argmax(self):
+        assert self._data != NULL
+
+        cdef int n
+        cdef int x
+        cdef int y
+
+        with nogil:
+            n = libeasel.vec.esl_vec_DArgMax(<double*> self._data[0], self._m*self._n)
+            x = n // self._m
+            y = n % self._n
+
+        return x, y
+
+    cpdef tuple argmin(self):
+        assert self._data != NULL
+
+        cdef int n
+        cdef int x
+        cdef int y
+
+        with nogil:
+            n = libeasel.vec.esl_vec_DArgMin(<double*> self._data[0], self._m*self._n)
+            x = n // self._m
+            y = n % self._n
+
+        return x, y
+
+    cpdef MatrixD copy(self):
+        cdef MatrixD mat = MatrixD.__new__(MatrixD)
+        mat._m = mat._shape[0] = self._m
+        mat._n = mat._shape[1] = self._n
+        with nogil:
+            mat._data = <void**> libeasel.matrixops.esl_mat_DClone(<double**> self._data, self._m, self._n)
+        if mat._data == NULL:
+            raise AllocationError("double**", sizeof(double), self._m * self._n)
+        return mat
+
+    cpdef double max(self):
+        assert self._data != NULL
+        with nogil:
+            return libeasel.matrixops.esl_mat_DMax(<double**> self._data, self._m, self._n)
+
+    cpdef double min(self):
+        assert self._data != NULL
+        with nogil:
+            return libeasel.vec.esl_vec_DMin(<double*> self._data[0], self._m*self._n)
+
+    cpdef double sum(self):
+        assert self._data != NULL
+        with nogil:
+            return libeasel.vec.esl_vec_DSum(<double*> self._data[0], self._m*self._n)
 
 
 cdef class MatrixF(Matrix):
