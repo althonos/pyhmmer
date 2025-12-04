@@ -109,6 +109,7 @@ import os
 import operator
 import collections
 import pickle
+import struct
 import sys
 import warnings
 
@@ -1378,6 +1379,7 @@ cdef class Vector:
         .. versionadded:: 0.4.6
 
         """
+        return struct.calcsize(self.format)
 
     @property
     def format(self):
@@ -1390,6 +1392,10 @@ cdef class Vector:
         .. versionadded:: 0.4.6
 
         """
+        cdef const char* f = self._format()
+        if f == NULL:
+            raise NotImplementedError("Vector.property")
+        return chr(f[0])
 
     # --- Utility ------------------------------------------------------------
 
@@ -1772,16 +1778,6 @@ cdef class VectorF(Vector):
             res = libeasel.vec.esl_vec_FDot(data, other_data, self._n)
         return res
 
-    # --- Properties ---------------------------------------------------------
-
-    @property
-    def itemsize(self):
-        return sizeof(float)
-
-    @property
-    def format(self):
-        return "f"
-
     # --- Utility ------------------------------------------------------------
 
     cdef const char* _format(self) noexcept:
@@ -1810,11 +1806,7 @@ cdef class VectorF(Vector):
         cdef int     n_alloc = 1 if self._n == 0 else self._n
 
         new = VectorF.__new__(VectorF)
-        new._n = new._shape[0] = self._n
-
-        new._data = calloc(n_alloc, sizeof(float))
-        if new._data == NULL:
-            raise AllocationError("float", sizeof(float), n_alloc)
+        new._allocate(self._n)
         with nogil:
             memcpy(new._data, self._data, self._n * sizeof(float))
 
@@ -2001,7 +1993,7 @@ cdef class VectorD(Vector):
         >>> numpy.log2(v)
         array([0.       , 1.       , 1.5849625], dtype=float32)
 
-    .. versionadded:: 0.4.0
+    .. versionadded:: 0.11.3
 
     """
 
@@ -2253,16 +2245,6 @@ cdef class VectorD(Vector):
             res = libeasel.vec.esl_vec_DDot(data, other_data, self._n)
         return res
 
-    # --- Properties ---------------------------------------------------------
-
-    @property
-    def itemsize(self):
-        return sizeof(double)
-
-    @property
-    def format(self):
-        return "d"
-
     # --- Utility ------------------------------------------------------------
 
     cdef const char* _format(self) noexcept:
@@ -2291,11 +2273,7 @@ cdef class VectorD(Vector):
         cdef int     n_alloc = 1 if self._n == 0 else self._n
 
         new = VectorD.__new__(VectorD)
-        new._n = new._shape[0] = self._n
-
-        new._data = calloc(n_alloc, sizeof(double))
-        if new._data == NULL:
-            raise AllocationError("double", sizeof(double), n_alloc)
+        new._allocate(self._n)
         with nogil:
             memcpy(new._data, self._data, self._n * sizeof(double))
 
@@ -2665,16 +2643,6 @@ cdef class VectorU8(Vector):
                 res += data[i] * other_data[i]
         return res
 
-    # --- Properties ---------------------------------------------------------
-
-    @property
-    def itemsize(self):
-        return sizeof(uint8_t)
-
-    @property
-    def format(self):
-        return "B"
-
     # --- Utility ------------------------------------------------------------
 
     cdef const char* _format(self) noexcept:
@@ -2719,12 +2687,7 @@ cdef class VectorU8(Vector):
         cdef int      n_alloc
 
         new = VectorU8.__new__(VectorU8)
-        new._n = new._shape[0] = self._n
-        n_alloc = 1 if self._n == 0 else self._n
-
-        new._data = calloc(n_alloc, sizeof(uint8_t))
-        if new._data == NULL:
-            raise AllocationError("uint8_t", sizeof(uint8_t), n_alloc)
+        new._allocate(self._n)
         with nogil:
             memcpy(new._data, self._data, self._n * sizeof(uint8_t))
 
