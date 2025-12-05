@@ -4313,20 +4313,64 @@ cdef class MSA:
     def sequence_weights(self):
         """`~pyhmmer.easel.VectorD`: The alignment sequence weights.
 
+        Sequence weights must sum to `len(self.sequences)`.
+
+        Caution:
+            Easel keeps an internal flag to mark whether a `MSA` has
+            non-default sequence weights defined. To ensure this flag
+            is properly set in the case of user-defined sequence weights,
+            use the property setter rather than modifying the weights
+            inplace::
+
+                >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
+                >>> s2 = TextSequence(name=b"seq2", sequence="ATCC")
+                >>> msa = TextMSA(name=b"msa", sequences=[s1, s2])
+                >>> msa.sequence_weights  # default weights, flag unset
+                VectorD([1.0, 1.0])
+                >>> msa.sequence_weights = VectorD([0.5, 1.5])
+                >>> msa.sequence_weights  # non-default weights, flag set
+                VectorD([0.5, 1.5])
+
+            And use the `del` keyword to reset the sequence weights
+            to their default values and unset the flag:
+
+                >>> del msa.sequence_weights
+                >>> msa.sequence_weights  # default weights, flag unset again
+                VectorD([1.0, 1.0])
+
         .. versionadded:: 0.11.3
 
         """
         assert self._msa != NULL
         cdef VectorD w = VectorD.__new__(VectorD)
         w._data = <void*> self._msa.wgt
-        w._n = w._shape[0] = self._msa.alen
+        w._n = w._shape[0] = self._msa.nseq
         w._owner = self
         return w
 
-    # TODO: Implement `weights` property exposing the sequence weights as
-    #       a `Vector` object, needs implementation of a new `VectorD` class
-    #       given that MSA.wgt is an array of `double`
+    @sequence_weights.setter
+    def sequence_weights(self, double[::1] weights not None):
+        assert self._msa != NULL
 
+        cdef double s
+        cdef int    n = self._msa.nseq
+
+        with nogil:
+            if weights.shape[0] != n:
+                raise ValueError(f"dimension mismatch: expected {n}, found {weights.shape[0]}")
+            s = libeasel.vec.esl_vec_DSum(&weights[0], n)
+            if libeasel.esl_DCompare(s, n, 0.001, 0.001) != libeasel.eslOK:
+                raise ValueError(f"weights must sum to {n}, got {s} instead")
+            libeasel.vec.esl_vec_DCopy(&weights[0], weights.shape[0], self._msa.wgt)
+            self._msa.flags |= libeasel.msa.eslMSA_HASWGTS
+
+    @sequence_weights.deleter
+    def sequence_weights(self):
+        assert self._msa != NULL
+        cdef int status
+        status = libeasel.msa.esl_msa_SetDefaultWeights(self._msa)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_msa_SetDefaultWeights")
     @property
     def indexed(self):
         """`~collections.abc.Mapping`: A mapping of names to sequences.
