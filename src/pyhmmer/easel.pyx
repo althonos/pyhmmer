@@ -4922,6 +4922,8 @@ cdef class TextMSA(MSA):
             self.author = author
         for i, seq in enumerate(seqs):
             self._set_sequence(i, seq._sq)
+        with nogil:
+            libeasel.msa.esl_msa_SetDefaultWeights(self._msa)
 
     # --- Properties ---------------------------------------------------------
 
@@ -5350,7 +5352,8 @@ cdef class DigitalMSA(MSA):
             self.author = author
         for i, seq in enumerate(seqs):
             self._set_sequence(i, seq._sq)
-
+        with nogil:
+            libeasel.msa.esl_msa_SetDefaultWeights(self._msa)
 
     # --- Properties ---------------------------------------------------------
 
