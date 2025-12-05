@@ -1468,487 +1468,6 @@ cdef class Vector:
         """Returns the scalar sum of all elements in the vector.
         """
 
-
-cdef class VectorF(Vector):
-    """A vector storing single-precision floating point numbers.
-
-    Individual elements of a vector can be accessed and modified with
-    the usual indexing notation::
-
-        >>> v = VectorF([1.0, 2.0, 3.0])
-        >>> v[0]
-        1.0
-        >>> v[-1]
-        3.0
-        >>> v[0] = v[-1] = 4.0
-        >>> v
-        VectorF([4.0, 2.0, 4.0])
-
-    Slices are also supported, and they do not copy data (use the
-    `~pyhmmer.easel.VectorF.copy` method to allocate a new vector)::
-
-        >>> v = VectorF(range(6))
-        >>> v[2:5]
-        VectorF([2.0, 3.0, 4.0])
-        >>> v[2:-1] = 10.0
-        >>> v
-        VectorF([0.0, 1.0, 10.0, 10.0, 10.0, 5.0])
-
-    Addition and multiplication is supported for scalars, in place or not::
-
-        >>> v = VectorF([1.0, 2.0, 3.0])
-        >>> v += 1
-        >>> v
-        VectorF([2.0, 3.0, 4.0])
-        >>> v * 3
-        VectorF([6.0, 9.0, 12.0])
-
-    Pairwise operations can also be performed, but only on vectors of
-    the same dimension and precision::
-
-        >>> v = VectorF([1.0, 2.0, 3.0])
-        >>> v * v
-        VectorF([1.0, 4.0, 9.0])
-        >>> v += VectorF([3.0, 4.0, 5.0])
-        >>> v
-        VectorF([4.0, 6.0, 8.0])
-        >>> v *= VectorF([1.0])
-        Traceback (most recent call last):
-          ...
-        ValueError: cannot pairwise multiply vectors of different sizes
-
-    Objects of this type support the buffer protocol, and can be viewed
-    as a `numpy.ndarray` of one dimension using the `numpy.asarray`
-    function, and can be passed without copy to most `numpy` functions:
-
-        >>> v = VectorF([1.0, 2.0, 3.0])
-        >>> numpy.asarray(v)
-        array([1., 2., 3.], dtype=float32)
-        >>> numpy.log2(v)
-        array([0.       , 1.       , 1.5849625], dtype=float32)
-
-    .. versionadded:: 0.4.0
-
-    """
-
-    # --- Magic methods ------------------------------------------------------
-
-    def __init__(self, object iterable = ()):
-        """__init__(self, iterable=())\n--\n
-
-        Create a new float vector from the given data.
-
-        """
-        cdef int        n
-        cdef size_t     i
-        cdef float      item
-        cdef float[::1] view
-        cdef int        n_alloc
-        cdef float*     data
-
-        # collect iterable if it's not a `Sized` object
-        if not isinstance(iterable, collections.abc.Sized):
-            iterable = array.array("f", iterable)
-        n = len(iterable)
-
-        # make sure __init__ is only called once
-        if self._data != NULL:
-            raise RuntimeError("Vector.__init__ must not be called more than once")
-        # make sure the vector has a positive size
-        if n < 0:
-            raise ValueError("Cannot create a vector with negative size")
-
-        # allocate vector storage
-        self._allocate(n)
-
-        # try to copy the memory quickly if *iterable* implements the buffer
-        # protocol, otherwise fall back to cop
-        data = <float*> self._data
-        try:
-            view = iterable
-        except (TypeError, ValueError):
-            for i, item in enumerate(iterable):
-                data[i] = item
-        else:
-            with nogil:
-                memcpy(data, &view[0], n * sizeof(float))
-
-    def __eq__(self, object other):
-        assert self._data != NULL
-
-        cdef const float[:] buffer
-        cdef int            i
-        cdef int            status
-        cdef const float*   data   = <const float*> self._data
-
-        # check matrix type and dimensions
-        try:
-            buffer = other
-        except ValueError:
-            return NotImplemented
-        if buffer.ndim != 1:
-            return NotImplemented
-        if buffer.shape[0] != self._n:
-            return False
-        elif self._n == 0:
-            return True
-
-        # check values
-        with nogil:
-            status = libeasel.vec.esl_vec_FCompare(&data[0], &buffer[0], self._n, 0)
-
-        return status == libeasel.eslOK
-
-    def __getitem__(self, object index):
-        assert self._data != NULL
-
-        cdef VectorF new
-        cdef int     idx
-        cdef ssize_t start
-        cdef ssize_t stop
-        cdef ssize_t step
-        cdef float*  data  = <float*> self._data
-
-        if isinstance(index, slice):
-            start, stop, step = index.indices(self._n)
-            if step != 1:
-                raise ValueError(f"cannot slice a Vector with step other than 1")
-            new = VectorF.__new__(VectorF)
-            new._owner = self
-            new._n = new._shape[0] = stop - start
-            new._data = NULL if new._n == 0 else <void*> &(data[start])
-            return new
-        else:
-            idx = index
-            if idx < 0:
-                idx += self._n
-            if idx < 0 or idx >= self._n:
-                raise IndexError("vector index out of range")
-            return data[idx]
-
-    def __setitem__(self, object index, float value):
-        assert self._data != NULL
-
-        cdef ssize_t x
-        cdef float*  data = <float*> self._data
-
-        if isinstance(index, slice):
-            for x in range(*index.indices(self._n)):
-                data[x] = value
-        else:
-            x = index
-            if x < 0:
-                x += self._n
-            if x < 0  or x >= self._n:
-                raise IndexError("vector index out of range")
-            data[x] = value
-
-    def __neg__(self):
-        assert self._data != NULL
-
-        cdef int     i
-        cdef VectorF new  = self.copy()
-        cdef float*  data = <float*> new._data
-
-        with nogil:
-            for i in range(self._n):
-                data[i] = -data[i]
-
-        return new
-
-    def __abs__(self):
-        assert self._data != NULL
-
-        cdef int     i
-        cdef VectorF new  = self.copy()
-        cdef float*  data = <float*> new._data
-
-        with nogil:
-            for i in range(self._n):
-                data[i] = fabsf(data[i])
-
-        return new
-
-    def __iadd__(self, object other):
-        assert self._data != NULL
-
-        cdef VectorF      other_vec
-        cdef const float* other_data
-        cdef float        other_f
-        cdef float*       data       = <float*> self._data
-
-        if isinstance(other, VectorF):
-            other_vec = other
-            other_data = <float*> other_vec._data
-            assert other_vec._data != NULL or other_vec._n == 0
-            if self._n != other_vec._n:
-                raise ValueError("cannot pairwise add vectors of different sizes")
-            with nogil:
-                libeasel.vec.esl_vec_FAdd(data, other_data, self._n)
-        else:
-            other_f = other
-            with nogil:
-                libeasel.vec.esl_vec_FIncrement(data, self._n, other_f)
-        return self
-
-    def __isub__(self, object other):
-        assert self._data != NULL
-
-        cdef int          i
-        cdef VectorF      other_vec
-        cdef const float* other_data
-        cdef float        other_f
-        cdef float*       data       = <float*> self._data
-
-        if isinstance(other, VectorF):
-            other_vec = other
-            other_data = <float*> other_vec._data
-            assert other_vec._data != NULL or other_vec._n == 0
-            if self._n != other_vec._n:
-                raise ValueError("cannot pairwise subtract vectors of different sizes")
-            with nogil:
-                for i in range(self._n):
-                    data[i] -= other_data[i]
-        else:
-            other_f = other
-            with nogil:
-                for i in range(self._n):
-                    data[i] -= other_f
-        return self
-
-    def __imul__(self, object other):
-        assert self._data != NULL
-
-        cdef int          i
-        cdef VectorF      other_vec
-        cdef const float* other_data
-        cdef float        other_f
-        cdef float*       data       = <float*> self._data
-
-        if isinstance(other, VectorF):
-            other_vec = other
-            other_data = <float*> other_vec._data
-            assert other_vec._data != NULL or other_vec._n == 0
-            if self._n != other_vec._n:
-                raise ValueError("cannot pairwise multiply vectors of different sizes")
-            # NB(@althonos): There is no function in `vectorops.h` to do this
-            # for now...
-            with nogil:
-                for i in range(self._n):
-                    data[i] *= other_data[i]
-        else:
-            other_f = other
-            with nogil:
-                libeasel.vec.esl_vec_FScale(data, self._n, other_f)
-        return self
-
-    def __truediv__(VectorF self, object other):
-        assert self._data != NULL
-        cdef VectorF new = self.copy()
-        return new.__itruediv__(other)
-
-    def __itruediv__(self, object other):
-        assert self._data != NULL
-
-        cdef int          i
-        cdef VectorF      other_vec
-        cdef const float* other_data
-        cdef float        other_f
-        cdef float*       data       = <float*> self._data
-
-        if isinstance(other, VectorF):
-            other_vec = other
-            other_data = <float*> other_vec._data
-            assert other_vec._data != NULL or other_vec._n == 0
-            if self._n != other_vec._n:
-                raise ValueError("cannot pairwise divide vectors of different sizes")
-            with nogil:
-                for i in range(self._n):
-                    data[i] /= other_data[i]
-        else:
-            other_f = other
-            with nogil:
-                for i in range(self._n):
-                    data[i] /= other_f
-        return self
-
-    def __matmul__(VectorF self, object other):
-        assert self._data != NULL
-
-        cdef VectorF      other_vec
-        cdef const float* other_data
-        cdef const float* data       = <float*> self._data
-        cdef float        res
-
-        if not isinstance(other, VectorF):
-            return NotImplemented
-
-        other_vec = other
-        other_data = <float*> other_vec._data
-        assert other_data != NULL
-        if self._n != other_vec._n:
-            raise ValueError("cannot multiply vectors of different sizes")
-        with nogil:
-            res = libeasel.vec.esl_vec_FDot(data, other_data, self._n)
-        return res
-
-    # --- Utility ------------------------------------------------------------
-
-    cdef const char* _format(self) noexcept:
-        return b"f"
-
-    # --- Methods ------------------------------------------------------------
-
-    cpdef int argmax(self) except -1:
-        assert self._data != NULL
-        if self._n == 0:
-            raise ValueError("argmax() called on an empty vector")
-        with nogil:
-            return libeasel.vec.esl_vec_FArgMax(<float*> self._data, self._n)
-
-    cpdef int argmin(self) except -1:
-        assert self._data != NULL
-        if self._n == 0:
-            raise ValueError("argmin() called on an empty vector")
-        with nogil:
-            return libeasel.vec.esl_vec_FArgMin(<float*> self._data, self._n)
-
-    cpdef VectorF copy(self):
-        assert self._data != NULL
-
-        cdef VectorF new
-        cdef int     n_alloc = 1 if self._n == 0 else self._n
-
-        new = VectorF.__new__(VectorF)
-        new._allocate(self._n)
-        with nogil:
-            memcpy(new._data, self._data, self._n * sizeof(float))
-
-        return new
-
-    cpdef float entropy(self) except *:
-        """Compute the Shannon entropy of the vector.
-
-        The Shannon entropy of a probability vector is defined as:
-
-        .. math::
-
-            H = \\sum_{i=0}^{N}{\\log_2 p_i}
-
-        Example:
-            >>> easel.VectorF([0.1, 0.1, 0.3, 0.5]).entropy()
-            1.6854...
-            >>> easel.VectorF([0.25, 0.25, 0.25, 0.25]).entropy()
-            2.0
-
-        References:
-            - Cover, Thomas M., and Thomas, Joy A.
-              *Entropy, Relative Entropy, and Mutual Information*. In
-              Elements of Information Theory, 13–55. Wiley (2005): 2.
-              :doi:`10.1002/047174882X.ch2` :isbn:`9780471241959`.
-
-        .. versionadded:: 0.4.10
-
-        """
-        assert self._data != NULL
-        with nogil:
-            return libeasel.vec.esl_vec_FEntropy(<float*> self._data, self._n)
-
-    cpdef float max(self) except *:
-        assert self._data != NULL
-        if self._n == 0:
-            raise ValueError("max() called on an empty vector")
-        with nogil:
-            return libeasel.vec.esl_vec_FMax(<float*> self._data, self._n)
-
-    cpdef float min(self) except *:
-        assert self._data != NULL
-        if self._n == 0:
-            raise ValueError("argmin() called on an empty vector")
-        with nogil:
-            return libeasel.vec.esl_vec_FMin(<float*> self._data, self._n)
-
-    cpdef object normalize(self):
-        """Normalize a vector so that all elements sum to 1.
-
-        Caution:
-            If sum is zero, sets all elements to :math:`\\frac{1}{n}`,
-            where :math:`n` is the size of the vector.
-
-        """
-        assert self._data != NULL
-        with nogil:
-            libeasel.vec.esl_vec_FNorm(<float*> self._data, self._n)
-        return None
-
-    cpdef float relative_entropy(self, VectorF other) except *:
-        """Compute the relative entropy between two probability vectors.
-
-        The Shannon relative entropy of two probability vectors :math:`p`
-        and :math:`q`, also known as the Kullback-Leibler divergence, is
-        defined as:
-
-        .. math::
-
-            D(p \\parallel q) = \\sum_i  p_i \\log_2 \\frac{p_i}{q_i}.
-
-        with :math:`D(p \\parallel q) = \\infty` per definition if
-        :math:`q_i = 0` and :math:`p_i > 0` for any :math:`i`.
-
-        Example:
-            >>> v1 = easel.VectorF([0.1, 0.1, 0.3, 0.5])
-            >>> v2 = easel.VectorF([0.25, 0.25, 0.25, 0.25])
-            >>> v1.relative_entropy(v2)
-            0.3145...
-            >>> v2.relative_entropy(v1)   # this is no symmetric relation
-            0.3452...
-
-        References:
-            - Cover, Thomas M., and Thomas, Joy A.
-              *Entropy, Relative Entropy, and Mutual Information*. In
-              Elements of Information Theory, 13–55. Wiley (2005): 2.
-              :doi:`10.1002/047174882X.ch2` :isbn:`9780471241959`.
-
-        .. versionadded:: 0.4.10
-
-        """
-        assert self._data != NULL
-        assert other._data != NULL
-        if self._n != other._n:
-            raise ValueError("cannot compute relative entropy of vectors of different sizes")
-        with nogil:
-            return libeasel.vec.esl_vec_FRelEntropy(
-                <float*> self._data,
-                <float*> other._data,
-                self._n
-            )
-
-    cpdef object reverse(self):
-        assert self._data != NULL
-        with nogil:
-            libeasel.vec.esl_vec_FReverse(<float*> self._data, <float*> self._data, self._n)
-        return None
-
-    cpdef float sum(self):
-        """Returns the scalar sum of all elements in the vector.
-
-        Float summations use `Kahan's algorithm <https://w.wiki/4Wa5>`_, in
-        order to minimize roundoff error accumulation. Additionally, they
-        are most accurate if the vector is sorted in increasing order, from
-        small to large, so you may consider sorting the vector before
-        summing it.
-
-        References:
-            - Kahan, W.
-              *Pracniques: Further Remarks on Reducing Truncation Errors*.
-              Communications of the ACM 8, no. 1 (1 January 1965): 40.
-              :doi:`10.1145/363707.363723`.
-
-        """
-        assert self._data != NULL
-        with nogil:
-            return libeasel.vec.esl_vec_FSum(<float*> self._data, self._n)
-
 cdef class VectorD(Vector):
     """A vector storing double-precision floating point numbers.
 
@@ -2429,6 +1948,487 @@ cdef class VectorD(Vector):
         with nogil:
             return libeasel.vec.esl_vec_DSum(<double*> self._data, self._n)
 
+
+
+cdef class VectorF(Vector):
+    """A vector storing single-precision floating point numbers.
+
+    Individual elements of a vector can be accessed and modified with
+    the usual indexing notation::
+
+        >>> v = VectorF([1.0, 2.0, 3.0])
+        >>> v[0]
+        1.0
+        >>> v[-1]
+        3.0
+        >>> v[0] = v[-1] = 4.0
+        >>> v
+        VectorF([4.0, 2.0, 4.0])
+
+    Slices are also supported, and they do not copy data (use the
+    `~pyhmmer.easel.VectorF.copy` method to allocate a new vector)::
+
+        >>> v = VectorF(range(6))
+        >>> v[2:5]
+        VectorF([2.0, 3.0, 4.0])
+        >>> v[2:-1] = 10.0
+        >>> v
+        VectorF([0.0, 1.0, 10.0, 10.0, 10.0, 5.0])
+
+    Addition and multiplication is supported for scalars, in place or not::
+
+        >>> v = VectorF([1.0, 2.0, 3.0])
+        >>> v += 1
+        >>> v
+        VectorF([2.0, 3.0, 4.0])
+        >>> v * 3
+        VectorF([6.0, 9.0, 12.0])
+
+    Pairwise operations can also be performed, but only on vectors of
+    the same dimension and precision::
+
+        >>> v = VectorF([1.0, 2.0, 3.0])
+        >>> v * v
+        VectorF([1.0, 4.0, 9.0])
+        >>> v += VectorF([3.0, 4.0, 5.0])
+        >>> v
+        VectorF([4.0, 6.0, 8.0])
+        >>> v *= VectorF([1.0])
+        Traceback (most recent call last):
+          ...
+        ValueError: cannot pairwise multiply vectors of different sizes
+
+    Objects of this type support the buffer protocol, and can be viewed
+    as a `numpy.ndarray` of one dimension using the `numpy.asarray`
+    function, and can be passed without copy to most `numpy` functions:
+
+        >>> v = VectorF([1.0, 2.0, 3.0])
+        >>> numpy.asarray(v)
+        array([1., 2., 3.], dtype=float32)
+        >>> numpy.log2(v)
+        array([0.       , 1.       , 1.5849625], dtype=float32)
+
+    .. versionadded:: 0.4.0
+
+    """
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __init__(self, object iterable = ()):
+        """__init__(self, iterable=())\n--\n
+
+        Create a new float vector from the given data.
+
+        """
+        cdef int        n
+        cdef size_t     i
+        cdef float      item
+        cdef float[::1] view
+        cdef int        n_alloc
+        cdef float*     data
+
+        # collect iterable if it's not a `Sized` object
+        if not isinstance(iterable, collections.abc.Sized):
+            iterable = array.array("f", iterable)
+        n = len(iterable)
+
+        # make sure __init__ is only called once
+        if self._data != NULL:
+            raise RuntimeError("Vector.__init__ must not be called more than once")
+        # make sure the vector has a positive size
+        if n < 0:
+            raise ValueError("Cannot create a vector with negative size")
+
+        # allocate vector storage
+        self._allocate(n)
+
+        # try to copy the memory quickly if *iterable* implements the buffer
+        # protocol, otherwise fall back to cop
+        data = <float*> self._data
+        try:
+            view = iterable
+        except (TypeError, ValueError):
+            for i, item in enumerate(iterable):
+                data[i] = item
+        else:
+            with nogil:
+                memcpy(data, &view[0], n * sizeof(float))
+
+    def __eq__(self, object other):
+        assert self._data != NULL
+
+        cdef const float[:] buffer
+        cdef int            i
+        cdef int            status
+        cdef const float*   data   = <const float*> self._data
+
+        # check matrix type and dimensions
+        try:
+            buffer = other
+        except ValueError:
+            return NotImplemented
+        if buffer.ndim != 1:
+            return NotImplemented
+        if buffer.shape[0] != self._n:
+            return False
+        elif self._n == 0:
+            return True
+
+        # check values
+        with nogil:
+            status = libeasel.vec.esl_vec_FCompare(&data[0], &buffer[0], self._n, 0)
+
+        return status == libeasel.eslOK
+
+    def __getitem__(self, object index):
+        assert self._data != NULL
+
+        cdef VectorF new
+        cdef int     idx
+        cdef ssize_t start
+        cdef ssize_t stop
+        cdef ssize_t step
+        cdef float*  data  = <float*> self._data
+
+        if isinstance(index, slice):
+            start, stop, step = index.indices(self._n)
+            if step != 1:
+                raise ValueError(f"cannot slice a Vector with step other than 1")
+            new = VectorF.__new__(VectorF)
+            new._owner = self
+            new._n = new._shape[0] = stop - start
+            new._data = NULL if new._n == 0 else <void*> &(data[start])
+            return new
+        else:
+            idx = index
+            if idx < 0:
+                idx += self._n
+            if idx < 0 or idx >= self._n:
+                raise IndexError("vector index out of range")
+            return data[idx]
+
+    def __setitem__(self, object index, float value):
+        assert self._data != NULL
+
+        cdef ssize_t x
+        cdef float*  data = <float*> self._data
+
+        if isinstance(index, slice):
+            for x in range(*index.indices(self._n)):
+                data[x] = value
+        else:
+            x = index
+            if x < 0:
+                x += self._n
+            if x < 0  or x >= self._n:
+                raise IndexError("vector index out of range")
+            data[x] = value
+
+    def __neg__(self):
+        assert self._data != NULL
+
+        cdef int     i
+        cdef VectorF new  = self.copy()
+        cdef float*  data = <float*> new._data
+
+        with nogil:
+            for i in range(self._n):
+                data[i] = -data[i]
+
+        return new
+
+    def __abs__(self):
+        assert self._data != NULL
+
+        cdef int     i
+        cdef VectorF new  = self.copy()
+        cdef float*  data = <float*> new._data
+
+        with nogil:
+            for i in range(self._n):
+                data[i] = fabsf(data[i])
+
+        return new
+
+    def __iadd__(self, object other):
+        assert self._data != NULL
+
+        cdef VectorF      other_vec
+        cdef const float* other_data
+        cdef float        other_f
+        cdef float*       data       = <float*> self._data
+
+        if isinstance(other, VectorF):
+            other_vec = other
+            other_data = <float*> other_vec._data
+            assert other_vec._data != NULL or other_vec._n == 0
+            if self._n != other_vec._n:
+                raise ValueError("cannot pairwise add vectors of different sizes")
+            with nogil:
+                libeasel.vec.esl_vec_FAdd(data, other_data, self._n)
+        else:
+            other_f = other
+            with nogil:
+                libeasel.vec.esl_vec_FIncrement(data, self._n, other_f)
+        return self
+
+    def __isub__(self, object other):
+        assert self._data != NULL
+
+        cdef int          i
+        cdef VectorF      other_vec
+        cdef const float* other_data
+        cdef float        other_f
+        cdef float*       data       = <float*> self._data
+
+        if isinstance(other, VectorF):
+            other_vec = other
+            other_data = <float*> other_vec._data
+            assert other_vec._data != NULL or other_vec._n == 0
+            if self._n != other_vec._n:
+                raise ValueError("cannot pairwise subtract vectors of different sizes")
+            with nogil:
+                for i in range(self._n):
+                    data[i] -= other_data[i]
+        else:
+            other_f = other
+            with nogil:
+                for i in range(self._n):
+                    data[i] -= other_f
+        return self
+
+    def __imul__(self, object other):
+        assert self._data != NULL
+
+        cdef int          i
+        cdef VectorF      other_vec
+        cdef const float* other_data
+        cdef float        other_f
+        cdef float*       data       = <float*> self._data
+
+        if isinstance(other, VectorF):
+            other_vec = other
+            other_data = <float*> other_vec._data
+            assert other_vec._data != NULL or other_vec._n == 0
+            if self._n != other_vec._n:
+                raise ValueError("cannot pairwise multiply vectors of different sizes")
+            # NB(@althonos): There is no function in `vectorops.h` to do this
+            # for now...
+            with nogil:
+                for i in range(self._n):
+                    data[i] *= other_data[i]
+        else:
+            other_f = other
+            with nogil:
+                libeasel.vec.esl_vec_FScale(data, self._n, other_f)
+        return self
+
+    def __truediv__(VectorF self, object other):
+        assert self._data != NULL
+        cdef VectorF new = self.copy()
+        return new.__itruediv__(other)
+
+    def __itruediv__(self, object other):
+        assert self._data != NULL
+
+        cdef int          i
+        cdef VectorF      other_vec
+        cdef const float* other_data
+        cdef float        other_f
+        cdef float*       data       = <float*> self._data
+
+        if isinstance(other, VectorF):
+            other_vec = other
+            other_data = <float*> other_vec._data
+            assert other_vec._data != NULL or other_vec._n == 0
+            if self._n != other_vec._n:
+                raise ValueError("cannot pairwise divide vectors of different sizes")
+            with nogil:
+                for i in range(self._n):
+                    data[i] /= other_data[i]
+        else:
+            other_f = other
+            with nogil:
+                for i in range(self._n):
+                    data[i] /= other_f
+        return self
+
+    def __matmul__(VectorF self, object other):
+        assert self._data != NULL
+
+        cdef VectorF      other_vec
+        cdef const float* other_data
+        cdef const float* data       = <float*> self._data
+        cdef float        res
+
+        if not isinstance(other, VectorF):
+            return NotImplemented
+
+        other_vec = other
+        other_data = <float*> other_vec._data
+        assert other_data != NULL
+        if self._n != other_vec._n:
+            raise ValueError("cannot multiply vectors of different sizes")
+        with nogil:
+            res = libeasel.vec.esl_vec_FDot(data, other_data, self._n)
+        return res
+
+    # --- Utility ------------------------------------------------------------
+
+    cdef const char* _format(self) noexcept:
+        return b"f"
+
+    # --- Methods ------------------------------------------------------------
+
+    cpdef int argmax(self) except -1:
+        assert self._data != NULL
+        if self._n == 0:
+            raise ValueError("argmax() called on an empty vector")
+        with nogil:
+            return libeasel.vec.esl_vec_FArgMax(<float*> self._data, self._n)
+
+    cpdef int argmin(self) except -1:
+        assert self._data != NULL
+        if self._n == 0:
+            raise ValueError("argmin() called on an empty vector")
+        with nogil:
+            return libeasel.vec.esl_vec_FArgMin(<float*> self._data, self._n)
+
+    cpdef VectorF copy(self):
+        assert self._data != NULL
+
+        cdef VectorF new
+        cdef int     n_alloc = 1 if self._n == 0 else self._n
+
+        new = VectorF.__new__(VectorF)
+        new._allocate(self._n)
+        with nogil:
+            memcpy(new._data, self._data, self._n * sizeof(float))
+
+        return new
+
+    cpdef float entropy(self) except *:
+        """Compute the Shannon entropy of the vector.
+
+        The Shannon entropy of a probability vector is defined as:
+
+        .. math::
+
+            H = \\sum_{i=0}^{N}{\\log_2 p_i}
+
+        Example:
+            >>> easel.VectorF([0.1, 0.1, 0.3, 0.5]).entropy()
+            1.6854...
+            >>> easel.VectorF([0.25, 0.25, 0.25, 0.25]).entropy()
+            2.0
+
+        References:
+            - Cover, Thomas M., and Thomas, Joy A.
+              *Entropy, Relative Entropy, and Mutual Information*. In
+              Elements of Information Theory, 13–55. Wiley (2005): 2.
+              :doi:`10.1002/047174882X.ch2` :isbn:`9780471241959`.
+
+        .. versionadded:: 0.4.10
+
+        """
+        assert self._data != NULL
+        with nogil:
+            return libeasel.vec.esl_vec_FEntropy(<float*> self._data, self._n)
+
+    cpdef float max(self) except *:
+        assert self._data != NULL
+        if self._n == 0:
+            raise ValueError("max() called on an empty vector")
+        with nogil:
+            return libeasel.vec.esl_vec_FMax(<float*> self._data, self._n)
+
+    cpdef float min(self) except *:
+        assert self._data != NULL
+        if self._n == 0:
+            raise ValueError("argmin() called on an empty vector")
+        with nogil:
+            return libeasel.vec.esl_vec_FMin(<float*> self._data, self._n)
+
+    cpdef object normalize(self):
+        """Normalize a vector so that all elements sum to 1.
+
+        Caution:
+            If sum is zero, sets all elements to :math:`\\frac{1}{n}`,
+            where :math:`n` is the size of the vector.
+
+        """
+        assert self._data != NULL
+        with nogil:
+            libeasel.vec.esl_vec_FNorm(<float*> self._data, self._n)
+        return None
+
+    cpdef float relative_entropy(self, VectorF other) except *:
+        """Compute the relative entropy between two probability vectors.
+
+        The Shannon relative entropy of two probability vectors :math:`p`
+        and :math:`q`, also known as the Kullback-Leibler divergence, is
+        defined as:
+
+        .. math::
+
+            D(p \\parallel q) = \\sum_i  p_i \\log_2 \\frac{p_i}{q_i}.
+
+        with :math:`D(p \\parallel q) = \\infty` per definition if
+        :math:`q_i = 0` and :math:`p_i > 0` for any :math:`i`.
+
+        Example:
+            >>> v1 = easel.VectorF([0.1, 0.1, 0.3, 0.5])
+            >>> v2 = easel.VectorF([0.25, 0.25, 0.25, 0.25])
+            >>> v1.relative_entropy(v2)
+            0.3145...
+            >>> v2.relative_entropy(v1)   # this is no symmetric relation
+            0.3452...
+
+        References:
+            - Cover, Thomas M., and Thomas, Joy A.
+              *Entropy, Relative Entropy, and Mutual Information*. In
+              Elements of Information Theory, 13–55. Wiley (2005): 2.
+              :doi:`10.1002/047174882X.ch2` :isbn:`9780471241959`.
+
+        .. versionadded:: 0.4.10
+
+        """
+        assert self._data != NULL
+        assert other._data != NULL
+        if self._n != other._n:
+            raise ValueError("cannot compute relative entropy of vectors of different sizes")
+        with nogil:
+            return libeasel.vec.esl_vec_FRelEntropy(
+                <float*> self._data,
+                <float*> other._data,
+                self._n
+            )
+
+    cpdef object reverse(self):
+        assert self._data != NULL
+        with nogil:
+            libeasel.vec.esl_vec_FReverse(<float*> self._data, <float*> self._data, self._n)
+        return None
+
+    cpdef float sum(self):
+        """Returns the scalar sum of all elements in the vector.
+
+        Float summations use `Kahan's algorithm <https://w.wiki/4Wa5>`_, in
+        order to minimize roundoff error accumulation. Additionally, they
+        are most accurate if the vector is sorted in increasing order, from
+        small to large, so you may consider sorting the vector before
+        summing it.
+
+        References:
+            - Kahan, W.
+              *Pracniques: Further Remarks on Reducing Truncation Errors*.
+              Communications of the ACM 8, no. 1 (1 January 1965): 40.
+              :doi:`10.1145/363707.363723`.
+
+        """
+        assert self._data != NULL
+        with nogil:
+            return libeasel.vec.esl_vec_FSum(<float*> self._data, self._n)
 
 cdef class VectorU8(Vector):
     """A vector storing byte-sized unsigned integers.
