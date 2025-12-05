@@ -4404,6 +4404,56 @@ cdef class MSA:
         else:
             raise UnexpectedError(status, "esl_msa_Checksum")
 
+    cpdef Bitfield mark_fragments(self, float threshold):
+        """Mark fragmented sequences in the alignment.
+
+        This method calculates the fractional "span" of each aligned
+        sequence (the aligned length from its first to last residue)
+        divided by the total number aligned columns.
+
+        Arguments:
+            threshold (`float`): The span threshold for the fragmented
+                sequences. Sequences with a span under this will be marked
+                as fragments.
+
+        Returns:
+            `~pyhmmer.easel.Bitfield`: A bitfield object of size
+            ``len(self.sequences)`` indicating which sequences of the
+            alignment are fragments.
+
+        Note:
+            In a `TextMSA`, any alphanumeric character is considered to be a
+            residue, and any non-alphanumeric char is considered to be a gap.
+
+        Example:
+            >>> s1 = TextSequence(name=b"seq1", sequence="--ATGC---")
+            >>> s2 = TextSequence(name=b"seq2", sequence="TTATCCG-T")
+            >>> s3 = TextSequence(name=b"seq3", sequence="TT-TCCGAT")
+            >>> msa = TextMSA(name=b"msa", sequences=[s1, s2, s3])
+            >>> msa.mark_fragments(0.5)
+            Bitfield([True, False, False])
+
+        .. versionadded:: 0.11.3
+
+        """
+        assert self._msa != NULL
+
+        if threshold < 0.0 or threshold > 1.0:
+            raise ValueError(f"invalid threshold: {threshold!r}")
+
+        cdef int      status
+        cdef Bitfield fragments = Bitfield.__new__(Bitfield)
+        fragments._shape[0] = (self._msa.nseq + 63) // 64
+
+        with nogil:
+            status = libeasel.msa.esl_msa_MarkFragments(self._msa, threshold, &fragments._b)
+        if status == libeasel.eslOK:
+            return fragments
+        elif status == libeasel.eslEMEM:
+            raise AllocationError("ESL_BITFIELD", sizeof(ESL_BITFIELD))
+        else:
+            raise UnexpectedError(status, "esl_msa_MarkFragments")
+
     cpdef MSA select(self, sequences = None, columns = None):
         """Select and copy a subset of the multiple sequence alignment.
 
@@ -4485,7 +4535,6 @@ cdef class MSA:
 
         return msa
 
-
     cpdef void write(self, object fh, str format) except *:
         """Write the multiple sequence alignement to a file handle.
 
@@ -4524,7 +4573,6 @@ cdef class MSA:
         if status != libeasel.eslOK:
             _reraise_error()
             raise UnexpectedError(status, "esl_sqascii_WriteFasta")
-
 
 class _TextMSASequences(_MSASequences):
     """A read-only view over the sequences of an MSA in text mode.
@@ -5356,7 +5404,7 @@ cdef class DigitalMSA(MSA):
         """Build the reverse complement of the MSA.
 
         In addition to reverse-complementing the sequence data, per-column
-        and per-residue annotation also gets reversed or reverse 
+        and per-residue annotation also gets reversed or reverse
         complemented.
 
         Arguments:

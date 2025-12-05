@@ -80,14 +80,44 @@ class _TestMSA(object):
         with self.assertRaises(TypeError):
             msa.indexed[1]
 
+    def test_mark_fragments(self):
+        dna = easel.Alphabet.dna()
+        buffer = io.BytesIO(
+            b"# STOCKHOLM 1.0\n\n"
+            b"seq1  ..AAAAAA..\n"
+            b"seq2  .....AAAA.\n"
+            b"seq3  .CCC.CCCCC\n"
+            b"seq4  GGGGGGGGGG\n"
+            b"//\n"
+        )
+        msa = self.read_msa(buffer, alphabet=dna)
+
+        f1 = msa.mark_fragments(0.5)    
+        self.assertEqual(len(f1), 4)
+        self.assertFalse(f1[0])
+        self.assertTrue(f1[1])
+        self.assertFalse(f1[2])
+        self.assertFalse(f1[3])
+
+        f2 = msa.mark_fragments(0.95)    
+        self.assertEqual(len(f2), 4)
+        self.assertTrue(f2[0])
+        self.assertTrue(f2[1])
+        self.assertTrue(f2[2])
+        self.assertFalse(f2[3])
+
+    def test_mark_fragments_error(self):
+        msa = self.MSA()
+        with self.assertRaises(ValueError):
+            _ = msa.mark_fragments(200.0)
 
 class TestTextMSA(_TestMSA, unittest.TestCase):
 
     MSA = easel.TextMSA
 
     @staticmethod
-    def read_msa(sto):
-        with easel.MSAFile(sto, "stockholm") as msa_file:
+    def read_msa(sto, alphabet=None):
+        with easel.MSAFile(sto, "stockholm", alphabet=alphabet) as msa_file:
             return msa_file.read()
 
     def test_indexed(self):
@@ -216,8 +246,8 @@ class TestDigitalMSA(_TestMSA, unittest.TestCase):
     MSA = staticmethod(functools.partial(easel.DigitalMSA, alphabet))
 
     @staticmethod
-    def read_msa(sto):
-        with easel.MSAFile(sto, "stockholm", digital=True) as msa_file:
+    def read_msa(sto, alphabet=None):
+        with easel.MSAFile(sto, "stockholm", digital=True, alphabet=alphabet) as msa_file:
             return msa_file.read()
 
     def test_sample(self):
