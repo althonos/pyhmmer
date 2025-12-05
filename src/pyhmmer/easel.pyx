@@ -1989,9 +1989,9 @@ cdef class VectorD(Vector):
 
         >>> v = VectorD([1.0, 2.0, 3.0])
         >>> numpy.asarray(v)
-        array([1., 2., 3.], dtype=float32)
+        array([1., 2., 3.])
         >>> numpy.log2(v)
-        array([0.       , 1.       , 1.5849625], dtype=float32)
+        array([0.       , 1.       , 1.5849625])
 
     .. versionadded:: 0.11.3
 
@@ -3055,10 +3055,10 @@ cdef class MatrixD(Matrix):
         >>> m = MatrixD([ [1.0, 2.0], [3.0, 4.0] ])
         >>> numpy.asarray(m)
         array([[1., 2.],
-               [3., 4.]], dtype=float64)
+               [3., 4.]])
         >>> numpy.log2(m)
         array([[0.       , 1.       ],
-               [1.5849625, 2.       ]], dtype=float64)
+               [1.5849625, 2.       ]])
 
     .. versionadded:: 0.11.2
 
@@ -4313,7 +4313,8 @@ cdef class MSA:
     def sequence_weights(self):
         """`~pyhmmer.easel.VectorD`: The alignment sequence weights.
 
-        Sequence weights must sum to `len(self.sequences)`.
+        Sequence weights must sum to `len(self.sequences)`. By default,
+        every sequence receives a weight of 1.
 
         Caution:
             Easel keeps an internal flag to mark whether a `MSA` has
