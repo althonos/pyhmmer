@@ -5352,6 +5352,51 @@ cdef class DigitalMSA(MSA):
 
         return msa
 
+    cpdef DigitalMSA reverse_complement(self, bint inplace=False):
+        """Build the reverse complement of the MSA.
+
+        In addition to reverse-complementing the sequence data, per-column
+        and per-residue annotation also gets reversed or reverse 
+        complemented.
+
+        Arguments:
+            inplace (`bool`): Whether or not to copy the sequence before
+                computing its reverse complement. With `False` (the default),
+                the method will return a copy of the sequence that has been
+                reverse-complemented. With `True`, it will reverse-complement
+                inplace and return `None`.
+
+        Raises:
+            `ValueError`: When the alphabet of the `DigitalMSA` does
+                not have a complement mapping set (e.g., `Alphabet.amino`).
+
+        Caution:
+            The copy made when ``inplace`` is `False` is an exact copy, so
+            the `name`, `description` and `accession` of the copy will be
+            the same. This could lead to duplicates if you're not careful!
+
+        .. versionadded:: 0.11.3
+
+        """
+        assert self._msa != NULL
+        assert self.alphabet is not None
+
+        cdef DigitalMSA rc
+        cdef int        status
+
+        if self.alphabet._abc.complement == NULL:
+            raise ValueError(f"{self.alphabet} has no defined complement")
+
+        if inplace:
+            status = libeasel.msa.esl_msa_ReverseComplement(self._msa)
+        else:
+            rc = self.copy()
+            status = libeasel.msa.esl_msa_ReverseComplement(rc._msa)
+
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_msa_ReverseComplement")
+
+        return None if inplace else rc
 
 
 # --- MSA File ---------------------------------------------------------------

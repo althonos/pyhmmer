@@ -194,6 +194,8 @@ cdef class DigitalMSA(MSA):
         uint64_t seed=?,
         str preference=*,
     )
+    cpdef DigitalMSA reverse_complement(self, bint inplace=*)
+
 
 # --- MSA File ---------------------------------------------------------------
 

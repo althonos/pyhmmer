@@ -330,7 +330,6 @@ class TestDigitalMSA(_TestMSA, unittest.TestCase):
         self.assertEqual(msa_t.sequences[0].name, b"seq1")
         self.assertEqual(msa_t.sequences[0].sequence, "ACGT")
 
-
     def test_identity_filter(self):
         # adapted from `utest_idfilter` in `esl_msaweight.c`
         dna = easel.Alphabet.dna()
@@ -373,3 +372,30 @@ class TestDigitalMSA(_TestMSA, unittest.TestCase):
         self.assertEqual(len(filtered.names), len(expected.names))
         for s1, s2 in zip(filtered.sequences, expected.sequences):
             self.assertEqual(s1, s2)
+
+    def test_reverse_complement(self):
+        dna = easel.Alphabet.dna()
+
+        buffer = io.BytesIO(
+            b"# STOCKHOLM 1.0\n\n"
+            b"seq1  ..TTAAAACC\n"
+            b"seq2  AAAAGGAATT\n"
+            b"seq3  CCCCGGGG..\n"
+            b"seq4  GGGGGGGGGG\n"
+            b"//\n"
+        )
+
+        with easel.MSAFile(buffer, format="stockholm", digital=True, alphabet=dna) as msa_file:
+            msa = msa_file.read()
+
+        rc = msa.reverse_complement()
+        self.assertEqual(dna.decode(rc.alignment[0]), "GGTTTTAA--")
+        self.assertEqual(dna.decode(rc.alignment[1]), "AATTCCTTTT")
+        self.assertEqual(dna.decode(rc.alignment[2]), "--CCCCGGGG")
+        self.assertEqual(dna.decode(rc.alignment[3]), "CCCCCCCCCC")
+        
+        msa.reverse_complement(inplace=True)
+        self.assertEqual(dna.decode(msa.alignment[0]), "GGTTTTAA--")
+        self.assertEqual(dna.decode(msa.alignment[1]), "AATTCCTTTT")
+        self.assertEqual(dna.decode(msa.alignment[2]), "--CCCCGGGG")
+        self.assertEqual(dna.decode(msa.alignment[3]), "CCCCCCCCCC")

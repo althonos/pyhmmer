@@ -555,6 +555,11 @@ class DigitalMSA(MSA):
         seed: int = 42,
         preference: IDENTITY_FILTER_PREFERENCE = "conscover",
     ) -> DigitalMSA: ...
+    @typing.overload
+    def reverse_complement(self, inplace: Literal[True]) -> None: ...
+    @typing.overload
+    def reverse_complement(self, inplace: Literal[False] = False) -> DigitalMSA: ...
+
 
 # --- MSA File ---------------------------------------------------------------
 
