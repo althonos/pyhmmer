@@ -17,6 +17,13 @@ class _TestMSA(object):
     def setUpClass(cls):
         cls.formats_folder = os.path.join(EASEL_FOLDER, "formats")
 
+    def assertAlmostEqual(self, x, y, places=None):
+        if isinstance(x, easel.Vector) and isinstance(y, easel.Vector):
+            diff = abs(y - x).sum()
+            super().assertAlmostEqual(diff, 0, msg=f'{x} != {y} within {places} places ({diff} difference)', places=places)
+        else:
+            super().assertAlmostEqual(x, y, places=places)
+
     @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_write_roundtrip_stockholm(self):
         sto = os.path.join(self.formats_folder, "stockholm.1")
@@ -127,26 +134,26 @@ class _TestMSA(object):
         for method in ["gsc", "pb", "blosum"]:
             self.assertEqual(msa.compute_weights(method), uniform)
 
-#     def test_compute_weights_henikoff_contrived(self):
-#         aa = easel.Alphabet.amino()
-#         buffer = io.BytesIO(b"# STOCKHOLM 1.0\n\nseq1 AAAAA\nseq2 AAAAA\nseq3 CCCCC\nseq4 CCCCC\nseq5 TTTTT\n//\n")
-#         msa = self.read_msa(buffer, alphabet=aa)
-#         expected = easel.VectorD([0.833333, 0.833333, 0.833333, 0.833333, 1.66667])
-#         for method in ["gsc", "pb", "blosum"]:
-#             self.assertAlmostEqual(msa.compute_weights(method), expected, places=3)
+    def test_compute_weights_henikoff_contrived(self):
+        aa = easel.Alphabet.amino()
+        buffer = io.BytesIO(b"# STOCKHOLM 1.0\n\nseq1 AAAAA\nseq2 AAAAA\nseq3 CCCCC\nseq4 CCCCC\nseq5 TTTTT\n//\n")
+        msa = self.read_msa(buffer, alphabet=aa)
+        expected = easel.VectorD([0.833333, 0.833333, 0.833333, 0.833333, 1.66667])
+        for method in ["gsc", "pb", "blosum"]:
+            self.assertAlmostEqual(msa.compute_weights(method), expected, places=3)
 
-#     def test_compute_weights_nitrogenase(self):
-#         aa = easel.Alphabet.amino()
-#         buffer = io.BytesIO(b"# STOCKHOLM 1.0\n\nNIFE_CLOPA GYVGS\nNIFD_AZOVI GFDGF\nNIFD_BRAJA GYDGF\nNIFK_ANASP GYQGG\n//\n")
-#         msa = self.read_msa(buffer, alphabet=aa)
+    def test_compute_weights_nitrogenase(self):
+        aa = easel.Alphabet.amino()
+        buffer = io.BytesIO(b"# STOCKHOLM 1.0\n\nNIFE_CLOPA GYVGS\nNIFD_AZOVI GFDGF\nNIFD_BRAJA GYDGF\nNIFK_ANASP GYQGG\n//\n")
+        msa = self.read_msa(buffer, alphabet=aa)
 
-#         exp_gsc = easel.VectorD([1.125000, 0.875000, 0.875000, 1.125000])
-#         exp_pb  = easel.VectorD([1.066667, 1.066667, 0.800000, 1.066667])
-#         exp_blo = easel.VectorD([1.333333, 0.666667, 0.666667, 1.333333])
-# ``
-#         self.assertAlmostEqual(msa.compute_weights("gsc"), exp_gsc, places=1)
-#         self.assertAlmostEqual(msa.compute_weights("pb"), exp_pb, places=1)
-#         self.assertAlmostEqual(msa.compute_weights("blosum"), exp_blo, places=1)
+        exp_gsc = easel.VectorD([1.125000, 0.875000, 0.875000, 1.125000])
+        exp_pb  = easel.VectorD([1.066667, 1.066667, 0.800000, 1.066667])
+        exp_blo = easel.VectorD([1.333333, 0.666667, 0.666667, 1.333333])
+
+        self.assertAlmostEqual(msa.compute_weights("gsc"), exp_gsc, places=3)
+        self.assertAlmostEqual(msa.compute_weights("pb"), exp_pb, places=3)
+        self.assertAlmostEqual(msa.compute_weights("blosum"), exp_blo, places=3)
 
 
 class TestTextMSA(_TestMSA, unittest.TestCase):

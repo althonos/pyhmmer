@@ -22,6 +22,7 @@ from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t
 from libc.stdio cimport fclose, FILE
 from libc.stdlib cimport calloc, malloc, realloc, free
 from libc.string cimport memcmp, memcpy, memmove, memset, strdup, strlen, strncpy
+from libc.math cimport fabs, fabsf
 from posix.types cimport off_t
 from cpython.unicode cimport (
     PyUnicode_New,
@@ -1655,6 +1656,19 @@ cdef class VectorF(Vector):
 
         return new
 
+    def __abs__(self):
+        assert self._data != NULL
+
+        cdef int     i
+        cdef VectorF new  = self.copy()
+        cdef float*  data = <float*> new._data
+
+        with nogil:
+            for i in range(self._n):
+                data[i] = fabsf(data[i])
+
+        return new
+
     def __iadd__(self, object other):
         assert self._data != NULL
 
@@ -2119,6 +2133,19 @@ cdef class VectorD(Vector):
         with nogil:
             for i in range(self._n):
                 data[i] = -data[i]
+
+        return new
+
+    def __abs__(self):
+        assert self._data != NULL
+
+        cdef int     i
+        cdef VectorD new  = self.copy()
+        cdef double* data = <double*> new._data
+
+        with nogil:
+            for i in range(self._n):
+                data[i] = fabs(data[i])
 
         return new
 
@@ -3127,6 +3154,19 @@ cdef class MatrixD(Matrix):
                     return False
         return True
 
+    def __abs__(self):
+        assert self._data != NULL
+
+        cdef int     i
+        cdef MatrixD new  = self.copy()
+        cdef double* data = <double*> new._data[0]
+
+        with nogil:
+            for i in range(self._m * self._n):
+                data[i] = fabs(data[i])
+
+        return new
+
     def __iadd__(self, object other):
         assert self._data != NULL
 
@@ -3408,6 +3448,19 @@ cdef class MatrixF(Matrix):
                 if (<float**> self._data)[i][j] != (<float**> other_._data)[i][j]:
                     return False
         return True
+
+    def __abs__(self):
+        assert self._data != NULL
+
+        cdef int     i
+        cdef MatrixF new  = self.copy()
+        cdef float*  data = <float*> new._data[0]
+
+        with nogil:
+            for i in range(self._m * self._n):
+                data[i] = fabsf(data[i])
+
+        return new
 
     def __iadd__(self, object other):
         assert self._data != NULL
