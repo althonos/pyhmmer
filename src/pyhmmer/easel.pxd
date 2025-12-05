@@ -166,6 +166,7 @@ cdef class MSA:
     cpdef uint32_t checksum(self)
     cpdef Bitfield mark_fragments(self, float threshold)
     cpdef MSA select(self, sequences = ?, columns = ?)
+    cpdef VectorD compute_weights(self, str method = *, float identity_threshold = *)
     cpdef void write(self, object fh, str format) except *
 
 

@@ -4535,6 +4535,107 @@ cdef class MSA:
 
         return msa
 
+    cpdef VectorD compute_weights(
+        self,
+        str method = "pb",
+        float identity_threshold = 0.62
+    ):
+        r"""Compute sequence weights from the alignment data.
+
+        This method provides the same functionality as the ``esl-weight``
+        mini-app. 
+
+        Different algorithms are supported in Easel:
+
+            Position-based:
+                The position-based weighting algorithm described in Henikoff
+                & Henikoff (1994). It is defined for ungapped alignments,
+                It does not give rules for dealing with gaps, nor for
+                degenerate residue symbols. The rule here is to ignore these,
+                and moreover (in digital mode alignments, in order to deal
+                with deep gappy alignments) to only consider alignment columns
+                that are "consensus" (defined below).  This means that longer
+                sequences initially get more weight; hence we do a "double
+                normalization" in which the weights are first divided by
+                sequence length in canonical residues (to get the average
+                weight per residue, to compensate for that effect), then
+                normalized to sum to $N$.
+
+                The algorithm requires $O(NL)$ time and $O(LK)$ memory, for an
+                alignment of $L$ columns, $N$ sequences, and alphabet size $K$.
+
+            Gerstein/Sonnhammer/Chothia:
+                An implementation of Gerstein *et al.* (1994).
+
+                The algorithm if $O(N^2)$ memory (it requires a pairwise
+                distance matrix) and $O(N^3 + LN^2)$ time ($N^3$ for a UPGMA
+                tree building step, $LN^2$ for distance matrix construction)
+                for an alignment of $N$ sequences and $L$ columns. In the
+                Easel implementation, the actual memory requirement is
+                dominated by two full $N \times N$ distances matrices. To keep
+                the calculation under memory limits, avoid processing large
+                alignments with this algorithm.
+
+            BLOSUM:
+                The BLOSUM algorithm described in Henikoff & Henikoff (1992).
+                It performs a single-linkage clustering by fractional id,
+                defines clusters such that no two clusters have a pairwise
+                link $\geq$ ``identity_threshold``, and assigns weights
+                of $\frac{1}{M_i}$ to each of the $M_i$ sequences in each
+                cluster $i$. The ``identity_threshold`` is a fractional
+                pairwise identity in the range $0..1$.
+
+        Arguments:
+            method (`str`): The method to use for computing seuqence weights.
+                One of ``pb``, ``gsc`` or ``blosum``.
+            identity_threshold (`float`): The identity threshold for 
+                clustering with the BLOSUM method.
+
+        Note:
+            The MSA may be in either digital or text mode. Digital mode
+            is preferred so that the pairwise identity calculations deal 
+            with degenerate residue symbols properly.
+
+        Raises:
+            `ValueError`: When a pairwise identity calculation fails 
+                because of corrupted sequence data.
+
+        Returns:
+            `~pyhmmer.easel.VectorD`: The newly computed weights. Note that
+            this is a reference to the `~MSA.sequence_weights` property, and
+            the data may be mutated by subsequent calls to 
+            `~MSA.compute_weights`. Use `VectorD.copy` to keep a hard copy 
+            if needed, e.g. for comparing between methods.
+
+        .. versionadded:: 0.11.3
+
+        """
+        assert self._msa != NULL
+
+        cdef int status
+        cdef str fname
+
+        method = method.lower()
+        if method == "pb":
+            fname = "esl_msaweight_PB"
+            status = libeasel.msaweight.esl_msaweight_PB(self._msa)
+        elif method == "gsc":
+            fname = "esl_msaweight_GSC"
+            status = libeasel.msaweight.esl_msaweight_GSC(self._msa)
+        elif method == "blosum":
+            fname = "esl_msaweight_BLOSUM"
+            status = libeasel.msaweight.esl_msaweight_BLOSUM(self._msa, identity_threshold)
+        else:
+            raise ValueError(f"invalid method: {method!r}")
+
+        if status == libeasel.eslOK:
+            return self.sequence_weights
+        elif status == libeasel.eslEINVAL:
+            raise ValueError("invalid alignment data")
+        else:
+            raise UnexpectedError(status, fname)
+
+
     cpdef void write(self, object fh, str format) except *:
         """Write the multiple sequence alignement to a file handle.
 
@@ -5307,6 +5408,9 @@ cdef class DigitalMSA(MSA):
         str preference="conscover",
     ):
         r"""Filter the alignment sequences by percent identity.
+
+        This method provides the same functionality as the ``esl-weight``
+        mini-app with the ``-f`` flag enabled.
 
         Arguments:
             max_identity (`float`): The maximum fractional identity

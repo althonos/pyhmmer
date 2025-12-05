@@ -111,6 +111,44 @@ class _TestMSA(object):
         with self.assertRaises(ValueError):
             _ = msa.mark_fragments(200.0)
 
+    def test_compute_weights_identical_seqs_nt(self):
+        nt = easel.Alphabet.dna()
+        buffer = io.BytesIO(b"# STOCKHOLM 1.0\n\nseq1 AAAAA\nseq2 AAAAA\nseq3 AAAAA\nseq4 AAAAA\nseq5 AAAAA\n//\n")
+        msa = self.read_msa(buffer, alphabet=nt)
+        uniform = easel.VectorD([1.0, 1.0, 1.0, 1.0, 1.0])
+        for method in ["gsc", "pb", "blosum"]:
+            self.assertEqual(msa.compute_weights(method), uniform)
+
+    def test_compute_weights_identical_seqs_aa(self):
+        aa = easel.Alphabet.amino()
+        buffer = io.BytesIO(b"# STOCKHOLM 1.0\n\nseq1 AAAAA\nseq2 AAAAA\nseq3 AAAAA\nseq4 AAAAA\nseq5 AAAAA\n//\n")
+        msa = self.read_msa(buffer, alphabet=aa)
+        uniform = easel.VectorD([1.0, 1.0, 1.0, 1.0, 1.0])
+        for method in ["gsc", "pb", "blosum"]:
+            self.assertEqual(msa.compute_weights(method), uniform)
+
+#     def test_compute_weights_henikoff_contrived(self):
+#         aa = easel.Alphabet.amino()
+#         buffer = io.BytesIO(b"# STOCKHOLM 1.0\n\nseq1 AAAAA\nseq2 AAAAA\nseq3 CCCCC\nseq4 CCCCC\nseq5 TTTTT\n//\n")
+#         msa = self.read_msa(buffer, alphabet=aa)
+#         expected = easel.VectorD([0.833333, 0.833333, 0.833333, 0.833333, 1.66667])
+#         for method in ["gsc", "pb", "blosum"]:
+#             self.assertAlmostEqual(msa.compute_weights(method), expected, places=3)
+
+#     def test_compute_weights_nitrogenase(self):
+#         aa = easel.Alphabet.amino()
+#         buffer = io.BytesIO(b"# STOCKHOLM 1.0\n\nNIFE_CLOPA GYVGS\nNIFD_AZOVI GFDGF\nNIFD_BRAJA GYDGF\nNIFK_ANASP GYQGG\n//\n")
+#         msa = self.read_msa(buffer, alphabet=aa)
+
+#         exp_gsc = easel.VectorD([1.125000, 0.875000, 0.875000, 1.125000])
+#         exp_pb  = easel.VectorD([1.066667, 1.066667, 0.800000, 1.066667])
+#         exp_blo = easel.VectorD([1.333333, 0.666667, 0.666667, 1.333333])
+# ``
+#         self.assertAlmostEqual(msa.compute_weights("gsc"), exp_gsc, places=1)
+#         self.assertAlmostEqual(msa.compute_weights("pb"), exp_pb, places=1)
+#         self.assertAlmostEqual(msa.compute_weights("blosum"), exp_blo, places=1)
+
+
 class TestTextMSA(_TestMSA, unittest.TestCase):
 
     MSA = easel.TextMSA
