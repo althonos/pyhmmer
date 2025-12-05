@@ -166,7 +166,7 @@ cdef class MSA:
     cpdef uint32_t checksum(self)
     cpdef Bitfield mark_fragments(self, float threshold)
     cpdef MSA select(self, sequences = ?, columns = ?)
-    cpdef VectorD compute_weights(self, str method = *, float identity_threshold = *)
+    cpdef VectorD compute_weights(self, str method = *, float max_identity = *)
     cpdef void write(self, object fh, str format) except *
 
 
@@ -183,6 +183,7 @@ cdef class DigitalMSA(MSA):
     cpdef DigitalMSA copy(self)
     cpdef TextMSA textize(self)
 
+    cpdef DigitalMSA reverse_complement(self, bint inplace=*)
     cpdef DigitalMSA identity_filter(
         self,
         float max_identity=*,
@@ -196,7 +197,20 @@ cdef class DigitalMSA(MSA):
         uint64_t seed=?,
         str preference=*,
     )
-    cpdef DigitalMSA reverse_complement(self, bint inplace=*)
+    cpdef VectorD compute_weights(
+        self,
+        str method = *,
+        float max_identity=*,
+        float fragment_threshold=*,
+        float consensus_fraction=*,
+        bint ignore_rf=*,
+        bint sample=*,
+        int sample_threshold=*,
+        int sample_count=*,
+        int max_fragments=*,
+        uint64_t seed=?,
+        str preference=*,
+    )
 
 
 # --- MSA File ---------------------------------------------------------------

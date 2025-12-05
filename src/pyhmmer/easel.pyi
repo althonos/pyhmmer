@@ -14,6 +14,7 @@ except ImportError:
 
 BUFFER = typing.Union[bytes, bytearray, memoryview]
 IDENTITY_FILTER_PREFERENCE = Literal["conscover", "origorder", "random"]
+COMPUTE_WEIGHTS_METHOD = Literal["pb", "gsc", "blosum"]
 MSA_FORMAT = Literal[
     "stockholm", "pfam", "a2m", "psiblast", "selex", "afa", "clustal", 
     "clustallike", "phylip", "phylips"
@@ -491,8 +492,8 @@ class MSA(abc.ABC, typing.Sized):
     def checksum(self) -> int: ...
     def compute_weights(
         self, 
-        method: Literal["pb", "gsc", "blosum"] = "pb", 
-        identity_threshold: float = 0.62,
+        method: COMPUTE_WEIGHTS_METHOD = "pb", 
+        max_identity: float = 0.62,
     ) -> VectorD: ...
     def mark_fragments(self, threshold: float) -> Bitfield: ...
     def select(self: _M, sequences: typing.Optional[typing.Iterable[int]] = None, columns: typing.Optional[typing.Iterable[int]] = None) -> _M: ...
@@ -547,6 +548,21 @@ class DigitalMSA(MSA):
     def sequences(self) -> typing.Sequence[DigitalSequence]: ...
     @property
     def indexed(self) -> typing.Mapping[bytes, DigitalSequence]: ...
+    def compute_weights(
+        self, 
+        method: COMPUTE_WEIGHTS_METHOD = "pb", 
+        max_identity: float = 0.62,
+        *,
+        fragment_threshold: float = 0.5,
+        consensus_fraction: float = 0.5,
+        ignore_rf: bool = False,
+        sample: bool = True,
+        sample_threshold: int = 50000,
+        sample_count: int = 10000,
+        max_fragments: int = 5000,
+        seed: int = 42,
+        preference: IDENTITY_FILTER_PREFERENCE = "conscover",
+    ) -> VectorD: ...
     def identity_filter(
         self,
         max_identity: float = 0.8,

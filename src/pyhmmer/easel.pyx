@@ -4538,12 +4538,12 @@ cdef class MSA:
     cpdef VectorD compute_weights(
         self,
         str method = "pb",
-        float identity_threshold = 0.62
+        float max_identity = 0.62
     ):
         r"""Compute sequence weights from the alignment data.
 
         This method provides the same functionality as the ``esl-weight``
-        mini-app. 
+        mini-app.
 
         Different algorithms are supported in Easel:
 
@@ -4580,32 +4580,49 @@ cdef class MSA:
                 The BLOSUM algorithm described in Henikoff & Henikoff (1992).
                 It performs a single-linkage clustering by fractional id,
                 defines clusters such that no two clusters have a pairwise
-                link $\geq$ ``identity_threshold``, and assigns weights
+                link $\geq$ ``max_identity``, and assigns weights
                 of $\frac{1}{M_i}$ to each of the $M_i$ sequences in each
-                cluster $i$. The ``identity_threshold`` is a fractional
+                cluster $i$. The ``max_identity`` is a fractional
                 pairwise identity in the range $0..1$.
 
         Arguments:
-            method (`str`): The method to use for computing seuqence weights.
+            method (`str`): The method to use for computing sequence weights.
                 One of ``pb``, ``gsc`` or ``blosum``.
-            identity_threshold (`float`): The identity threshold for 
+            max_identity (`float`): The identity threshold for
                 clustering with the BLOSUM method.
 
         Note:
             The MSA may be in either digital or text mode. Digital mode
-            is preferred so that the pairwise identity calculations deal 
-            with degenerate residue symbols properly.
+            is preferred so that the pairwise identity calculations deal
+            with degenerate residue symbols properly. See also
+            `DigitalMSA.compute_weights` which provides additional options
+            controling how to determine the consensus columns in ``pb`` mode.
 
         Raises:
-            `ValueError`: When a pairwise identity calculation fails 
+            `ValueError`: When a pairwise identity calculation fails
                 because of corrupted sequence data.
 
         Returns:
             `~pyhmmer.easel.VectorD`: The newly computed weights. Note that
             this is a reference to the `~MSA.sequence_weights` property, and
-            the data may be mutated by subsequent calls to 
-            `~MSA.compute_weights`. Use `VectorD.copy` to keep a hard copy 
+            the data may be mutated by subsequent calls to
+            `~MSA.compute_weights`. Use `VectorD.copy` to keep a hard copy
             if needed, e.g. for comparing between methods.
+
+        References:
+            - Henikoff, Steven, and Joria G. Henikoff.
+              “Amino acid substitution matrices from protein blocks.”
+              *Proceedings of the National Academy of Sciences of the United
+              States of America* vol. 89,22 (1992): 10915-9.
+              :doi:`10.1073/pnas.89.22.10915` :pmid:`1438297`.
+            - Henikoff, SSteven, and Joria G. Henikoff.
+              “Position-based sequence weights.”
+              *Journal of molecular biology* vol. 243,4 (1994): 574-8.
+              :doi:`10.1016/0022-2836(94)90032-9`.
+            - Gerstein, Mark, Erik L.L. Sonnhammer and Cyrus Chothia.
+              “Volume changes in protein evolution.”
+              *Journal of molecular biology* vol. 236,4 (1994): 1067-78.
+              :doi:`10.1016/0022-2836(94)90012-4`. :pmid:`8120887`.
 
         .. versionadded:: 0.11.3
 
@@ -4624,7 +4641,7 @@ cdef class MSA:
             status = libeasel.msaweight.esl_msaweight_GSC(self._msa)
         elif method == "blosum":
             fname = "esl_msaweight_BLOSUM"
-            status = libeasel.msaweight.esl_msaweight_BLOSUM(self._msa, identity_threshold)
+            status = libeasel.msaweight.esl_msaweight_BLOSUM(self._msa, max_identity)
         else:
             raise ValueError(f"invalid method: {method!r}")
 
@@ -5393,6 +5410,128 @@ cdef class DigitalMSA(MSA):
             return new
         else:
             raise UnexpectedError(status, "esl_msa_Textize")
+
+    cpdef VectorD compute_weights(
+        self,
+        str method = "pb",
+        float max_identity = 0.62,
+        float fragment_threshold=libeasel.msaweight.eslMSAWEIGHT_FRAGTHRESH,
+        float consensus_fraction=libeasel.msaweight.eslMSAWEIGHT_SYMFRAC,
+        bint ignore_rf=libeasel.msaweight.eslMSAWEIGHT_IGNORE_RF,
+        bint sample=libeasel.msaweight.eslMSAWEIGHT_ALLOW_SAMP,
+        int sample_threshold=libeasel.msaweight.eslMSAWEIGHT_SAMPTHRESH,
+        int sample_count=libeasel.msaweight.eslMSAWEIGHT_NSAMP,
+        int max_fragments=libeasel.msaweight.eslMSAWEIGHT_MAXFRAG,
+        uint64_t seed=libeasel.msaweight.eslMSAWEIGHT_RNGSEED,
+        str preference="conscover",
+    ):
+        r"""Compute sequence weights from the alignment data.
+
+        This method provides the same functionality as the ``esl-weight``
+        mini-app. It supports additional configuration parameters for
+        consensus creation in position-based weighting. See
+        `MSA.compute_weights` documentation for more details.
+
+        Arguments:
+            method (`str`): The method to use for computing sequence weights.
+                One of ``pb``, ``gsc`` or ``blosum``.
+            max_identity (`float`): The identity threshold for
+                clustering with the BLOSUM method.
+
+        Keyword Arguments:
+            fragment_threshold (`float`): The threshold for determining
+                which sequences of the alignment are fragments. An
+                sequence spanning columns :math:`i` to :math:`j` of an
+                alignment of width :math:`W` will be flagged as a fragment
+                if :math:`\frac{j - i}{ W } < \text{fragment_threshold}`,
+            consensus_fraction (`float`): The parameter for determining
+                with columns of the alignment are consensus columns.
+                A column containing :math:`n` symbols and :math:`m` gaps
+                will be marked a consensus column if
+                :math:`\frac{n}{n + m} \ge \text{consensus_fraction}`.
+            ignore_rf (`bool`): Set to `True` to ignore the *RF* line
+                of the alignment (if present) and to force building the
+                consensus.
+            sample (`bool`): Whether or not to enable consensus determination
+                by subsampling for large alignments. Set to `False` to force
+                using all sequences.
+            sample_threshold (`int`): The minimum number of sequences the
+                alignment must contain to use subsampling for consensus
+                determination (when ``sample`` is `True`).
+            sample_count (`int`): The number of sequences to use when
+                determining consensus by random subsampling.
+            max_fragments (`int`): The maximum number of allowed fragments
+                in the sample used for determining consensus. If the sample
+                contains more than ``max_fragments`` fragments, the
+                consensus determination is done with all sequences instead.
+            seed (`int`): The seed to use for initializing the random
+                number generator (used when ``preference`` is ``random``
+                or when ``sample`` is `True`). If ``0`` or `None` is given,
+                an arbitrary seed will be chosen using the system clock.
+            preference (`str`): The strategy to use for selecting the
+                representative sequence in case of duplicates. Supported
+                strategies are ``conscover`` (the default), which prefers
+                the sequence with an alignment span that covers more
+                consensus columns; ``origorder`` to use the first sequence
+                in the original alignment order; and ``random`` to select
+                the sequence at random.
+
+        Raises:
+            `ValueError`: When a pairwise identity calculation fails
+                because of corrupted sequence data.
+
+        Returns:
+            `~pyhmmer.easel.VectorD`: The newly computed weights. Note that
+            this is a reference to the `~MSA.sequence_weights` property, and
+            the data may be mutated by subsequent calls to
+            `~MSA.compute_weights`. Use `VectorD.copy` to keep a hard copy
+            if needed, e.g. for comparing between methods.
+
+        .. versionadded:: 0.11.3
+
+        """
+        assert self._msa != NULL
+
+        cdef ESL_MSAWEIGHT_CFG cfg
+        cdef int               status
+
+        method = method.lower()
+        if method != "pb":
+            return MSA.compute_weights(self, method, max_identity)
+
+        # validate arguments
+        if fragment_threshold < 0 or fragment_threshold > 1:
+            raise InvalidParameter("fragment_threshold", fragment_threshold, hint="real number between 0 and 1")
+        if consensus_fraction < 0 or consensus_fraction > 1:
+            raise InvalidParameter("consensus_fraction", consensus_fraction, hint="real number between 0 and 1")
+        if sample_threshold < 0:
+            raise InvalidParameter("sample_threshold", sample_threshold, hint="positive integer")
+        if sample_count < 0:
+            raise InvalidParameter("sample_count", sample_count, hint="positive integer")
+        if max_fragments < 0:
+            raise InvalidParameter("max_fragments", max_fragments, hint="positive integer")
+        if preference not in MSA_WEIGHT_PREFERENCES:
+            raise InvalidParameter("preference", preference, choices=list(MSA_WEIGHT_PREFERENCES))
+
+        # prepare configuration
+        cfg.fragthresh = fragment_threshold
+        cfg.symfrac = consensus_fraction
+        cfg.sampthresh = sample_threshold
+        cfg.ignore_rf = ignore_rf
+        cfg.allow_samp = sample
+        cfg.sampthresh = sample_threshold
+        cfg.nsamp = sample_count
+        cfg.maxfrag = max_fragments
+        cfg.seed = seed
+        cfg.filterpref = MSA_WEIGHT_PREFERENCES[preference]
+
+        # perform sequence weighting
+        with nogil:
+            status = libeasel.msaweight.esl_msaweight_PB_adv(&cfg, self._msa, NULL)
+        if status == libeasel.eslOK:
+            return self.sequence_weights
+        else:
+            raise UnexpectedError(status, "esl_msaweight_PB_adv")
 
     cpdef DigitalMSA identity_filter(
         self,
