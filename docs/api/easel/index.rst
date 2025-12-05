@@ -96,9 +96,11 @@ Linear Algebra
 .. autosummary::
 
    Vector
+   VectorD
    VectorF
    VectorU8
    Matrix
+   MatrixD
    MatrixF
    MatrixU8
 

@@ -8,12 +8,20 @@ Linear Algebra
    :special-members: __init__
    :members:
 
+.. autoclass:: pyhmmer.easel.VectorD(Vector)
+   :special-members: __init__
+   :members:
+
 .. autoclass:: pyhmmer.easel.VectorU8(Vector)
    :special-members: __init__
    :members:
 
 
 .. autoclass:: pyhmmer.easel.Matrix
+   :members:
+
+.. autoclass:: pyhmmer.easel.MatrixD
+   :special-members: __init__
    :members:
 
 .. autoclass:: pyhmmer.easel.MatrixF
