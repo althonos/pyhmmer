@@ -4543,11 +4543,9 @@ cdef class MSA:
         r"""Compute sequence weights from the alignment data.
 
         This method provides the same functionality as the ``esl-weight``
-        mini-app.
+        mini-app. Three different algorithms are supported in Easel:
 
-        Different algorithms are supported in Easel:
-
-            Position-based:
+            Position-based
                 The position-based weighting algorithm described in Henikoff
                 & Henikoff (1994). It is defined for ungapped alignments,
                 It does not give rules for dealing with gaps, nor for
@@ -4564,7 +4562,7 @@ cdef class MSA:
                 The algorithm requires $O(NL)$ time and $O(LK)$ memory, for an
                 alignment of $L$ columns, $N$ sequences, and alphabet size $K$.
 
-            Gerstein/Sonnhammer/Chothia:
+            Gerstein/Sonnhammer/Chothia
                 An implementation of Gerstein *et al.* (1994).
 
                 The algorithm if $O(N^2)$ memory (it requires a pairwise
@@ -4576,7 +4574,7 @@ cdef class MSA:
                 the calculation under memory limits, avoid processing large
                 alignments with this algorithm.
 
-            BLOSUM:
+            BLOSUM
                 The BLOSUM algorithm described in Henikoff & Henikoff (1992).
                 It performs a single-linkage clustering by fractional id,
                 defines clusters such that no two clusters have a pairwise
@@ -4591,13 +4589,6 @@ cdef class MSA:
             max_identity (`float`): The identity threshold for
                 clustering with the BLOSUM method.
 
-        Note:
-            The MSA may be in either digital or text mode. Digital mode
-            is preferred so that the pairwise identity calculations deal
-            with degenerate residue symbols properly. See also
-            `DigitalMSA.compute_weights` which provides additional options
-            controling how to determine the consensus columns in ``pb`` mode.
-
         Raises:
             `ValueError`: When a pairwise identity calculation fails
                 because of corrupted sequence data.
@@ -4608,6 +4599,13 @@ cdef class MSA:
             the data may be mutated by subsequent calls to
             `~MSA.compute_weights`. Use `VectorD.copy` to keep a hard copy
             if needed, e.g. for comparing between methods.
+
+        Note:
+            The MSA may be in either digital or text mode. Digital mode
+            is preferred so that the pairwise identity calculations deal
+            with degenerate residue symbols properly. See also
+            `DigitalMSA.compute_weights` which provides additional options
+            controling how to determine the consensus columns in ``pb`` mode.
 
         References:
             - Henikoff, Steven, and Joria G. Henikoff.
