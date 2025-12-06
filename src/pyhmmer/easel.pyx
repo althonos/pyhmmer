@@ -4537,7 +4537,7 @@ cdef class MSA:
         assert self._msa != NULL
 
         if threshold < 0.0 or threshold > 1.0:
-            raise ValueError(f"invalid threshold: {threshold!r}")
+            raise InvalidParameter("threshold", threshold, hint="real number between 0 and 1")
 
         cdef int      status
         cdef Bitfield fragments = Bitfield.__new__(Bitfield)
@@ -4739,7 +4739,7 @@ cdef class MSA:
             fname = "esl_msaweight_BLOSUM"
             status = libeasel.msaweight.esl_msaweight_BLOSUM(self._msa, max_identity)
         else:
-            raise ValueError(f"invalid method: {method!r}")
+            raise InvalidParameter("method", method, choices=["pb", "gsc", "blosum"])
 
         if status == libeasel.eslOK:
             return self.sequence_weights
@@ -5911,7 +5911,7 @@ cdef class MSAFile:
         if format is not None:
             format_ = format.lower()
             if format_ not in MSA_FILE_FORMATS:
-                raise ValueError("Invalid MSA format: {!r}".format(format))
+                raise InvalidParameter("format", format, choices=list(MSA_FILE_FORMATS))
             fmt = MSA_FILE_FORMATS[format_]
 
         # open from either a file-like object or a path
