@@ -6,7 +6,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.11.2...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.11.3...HEAD
+
+
+## [v0.11.3] - 2025-12-06
+[v0.11.3]: https://github.com/althonos/pyhmmer/compare/v0.11.2...v0.11.3
+
+### Added
+- `VectorD` and `MatrixD` classes for double-precision data.
+- `__abs__` implementations for floating-point `Vector` and `Matrix` types.
+- `MSA.sequence_weights` to access the sequence weights of an alignment.
+- `MSA.compute_weights` to compute the sequence weights of an alignment like `esl-weight` ([#94](https://github.com/althonos/pyhmmer/issue/94))
+- `MSA.mark_fragments` method to identify fragmented sequences in an alignment.
+- `DigitalMSA.reverse_complement` method to reverse-complement a nucleotide alignment.
+### Fixed
+- Erroneous categories in documentation ([#95](https://github.com/althonos/pyhmmer/pull/95), by [@mtrsl](https://github.com/mtrsl)).
+- `TextMSA` and `DigitalMSA` constructors now default-initialize the sequence weights of the Easel alignment.
+### Changed
+- Relax `psutil` dependencies to allow versions past `5.0`.
+- Replace some cases of `ValueError` exceptions in `pyhmmer.easel` with more specific `InvalidParameter` errors.
 
 
 ## [v0.11.2] - 2025-10-27
