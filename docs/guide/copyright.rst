@@ -197,4 +197,11 @@ number R01HG009116. The content is solely the responsibility of the
 authors and does not necessarily represent the official views of the
 National Institutes of Health.
 
+Assets
+------
+
+The PyHMMER logo and figures are available under the [Creative Commons Attribution 4.0 (CC-BY 4.0)](https://creativecommons.org/licenses/by/4.0/)
+license. The PyHMMER logo was derived from [Twemoji](https://github.com/twitter/twemoji)
+assets under the [Creative Commons Attribution 4.0 (CC-BY 4.0)](https://creativecommons.org/licenses/by/4.0/)
+license as well.
 
