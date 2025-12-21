@@ -205,8 +205,13 @@ The HMMER3 and Easel code is available under the
 [BSD 3-clause](https://choosealicense.com/licenses/bsd-3-clause/) license.
 See `vendor/hmmer/LICENSE` and `vendor/easel/LICENSE` for more information.
 
+The PyHMMER logo and figures are available under the `Creative Commons Attribution 4.0 (CC-BY 4.0) <https://creativecommons.org/licenses/by/4.0/>`_
+license. The PyHMMER logo was derived from `Twemoji <https://github.com/twitter/twemoji>`_
+assets under the `Creative Commons Attribution 4.0 (CC-BY 4.0) <https://creativecommons.org/licenses/by/4.0/>`_
+license as well.
+
 *This project is in no way affiliated, sponsored, or otherwise endorsed by
 the [original HMMER authors](http://hmmer.org/). It was developed by
 [Martin Larralde](https://github.com/althonos/pyhmmer) during his PhD project
 at the [European Molecular Biology Laboratory](https://www.embl.de/) in
-the [Zeller team](https://github.com/zellerlab).*
+the [Zeller team](https://zellerlab.org/).*
