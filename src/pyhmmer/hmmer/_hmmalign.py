@@ -79,7 +79,7 @@ def hmmalign(
     if not isinstance(sequences, DigitalSequenceBlock):
         sequences = DigitalSequenceBlock(hmm.alphabet, sequences)
 
-    if len(sequences) > cpus:
+    if len(sequences) < cpus and cpus > 1:
         cpus = len(sequences)
 
     if cpus == 1:
