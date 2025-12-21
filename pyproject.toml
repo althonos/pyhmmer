@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "pyhmmer"
-version = "0.11.3"
+version = "0.11.4"
 description = "Cython bindings and Python interface to HMMER3."
 readme = "README.md"
 requires-python = ">=3.7"

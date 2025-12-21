@@ -6,7 +6,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.11.3...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.11.4...HEAD
+
+
+## [v0.11.4] - 2025-12-21
+[v0.11.4]: https://github.com/althonos/pyhmmer/compare/v0.11.3...v0.11.4
+
+### Added
+- Support for multithreading in `hmmalign`.
+### Fixed
+- Formatting issues in `TestMSA.compute_weights` documentation ([#96](https://github.com/althonos/pyhmmer/issues/96)).
+- `Trace.__eq__` exiting the interpreter on inequality ([EddyRivasLab/hmmer#344](https://github.com/EddyRivasLab/hmmer/pull/344)).
+### Changed
+- Make `Traces` more similar to `SequenceBlock` and implement list-like interface (`append`, `extend`, `clear`, ...).
 
 
 ## [v0.11.3] - 2025-12-06
