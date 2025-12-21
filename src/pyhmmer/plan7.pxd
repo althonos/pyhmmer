@@ -439,6 +439,9 @@ cdef class TopHits:
 cdef class Trace:
     cdef P7_TRACE* _tr
 
+    @staticmethod
+    cdef bint _eq(P7_TRACE* tr1, P7_TRACE* tr2) noexcept nogil
+
     cpdef float expected_accuracy(self)
     cpdef float score(self, DigitalSequence sequence, Profile profile) except *
 

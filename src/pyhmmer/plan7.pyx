@@ -8725,15 +8725,15 @@ cdef class Trace:
         if not isinstance(other, Trace):
             return NotImplemented
 
-        cdef Trace t      = <Trace> other
-        cdef int   status = libhmmer.p7_trace.p7_trace_Compare(self._tr, t._tr, 0.0)
+        cdef bint      res
+        cdef Trace     t   = <Trace> other
+        cdef P7_TRACE* tr1 = self._tr
+        cdef P7_TRACE* tr2 = t._tr
 
-        if status == libeasel.eslOK:
-            return True
-        elif status == libeasel.eslFAIL:
-            return False
-        else:
-            raise UnexpectedError(status, "p7_trace_Compare")
+        with nogil:
+            res = Trace._eq(tr1, tr2)
+
+        return res
 
     def __repr__(self):
         cdef str ty = type(self).__name__
@@ -8767,6 +8767,58 @@ cdef class Trace:
         pp._n = pp._shape[0] = self._tr.N
         pp._data = NULL if self._tr.N == 0 else <void*> self._tr.pp
         return pp
+
+    # --- C Methods ----------------------------------------------------------
+
+    # TODO(@althonos): Replace with `p7_trace_Compare` once
+    #                  EddyRivasLab/hmmer#344 has been merged.
+
+    @staticmethod
+    cdef bint _eq(P7_TRACE* tr1, P7_TRACE* tr2) noexcept nogil:
+        cdef int z
+        cdef int d
+
+        if tr1.N != tr2.N or tr1.M != tr2.M or tr1.L != tr2.L:
+            return False
+
+        # Main data in the trace */
+        for z in range(tr1.N):
+            if tr1.st[z] != tr2.st[z]:
+                return False
+            if tr1.k[z]  != tr2.k[z]:
+                return False
+            if tr1.i[z]  != tr2.i[z]:
+                return False
+
+        # Optional posterior probability annotation
+        if tr1.pp != NULL and tr2.pp != NULL:
+            for z in range(tr1.N):
+                if tr1.i[z] != 0: # an emission: has a nonzero posterior prob
+                    if libeasel.esl_FCompare_old(tr1.pp[z], tr2.pp[z], 0.0) != libeasel.eslOK:
+                        return False
+                else:
+                    if tr1.pp[z] != tr2.pp[z]:
+                        return False
+
+        # Optional domain index
+        if tr1.ndom > 0 and tr2.ndom > 0:
+            if tr1.ndom != tr2.ndom:
+                return False
+            for d in range(tr1.ndom):
+                if tr1.tfrom[d] != tr2.tfrom[d]:
+                    return False
+                if tr1.tto[d] != tr2.tto[d]:
+                    return False
+                if tr1.sqfrom[d] != tr2.sqfrom[d]:
+                    return False
+                if tr1.sqto[d] != tr2.sqto[d]:
+                    return False
+                if tr1.hmmfrom[d] != tr2.hmmfrom[d]:
+                    return False
+                if tr1.hmmto[d] != tr2.hmmto[d]:
+                    return False
+
+        return True
 
     # --- Methods ------------------------------------------------------------
 
@@ -8857,12 +8909,20 @@ cdef class Traces:
             self._refs[index] = trace._tr
 
     def __contains__(self, object trace):
+
+        cdef P7_TRACE* tr
+        cdef size_t    i
+        cdef bint      res = False
+
         if isinstance(trace, Trace):
-            try:
-                return self._index(trace) >= 0
-            except ValueError:
-                return False
-        return False
+            tr = (<Trace> trace)._tr
+            with nogil:
+                for i in range(self._length):
+                    if Trace._eq(self._refs[i], tr):
+                        res = True
+                        break
+
+        return res
 
     def __eq__(self, object other):
         assert self._refs != NULL
@@ -8870,6 +8930,7 @@ cdef class Traces:
         cdef size_t i
         cdef int    status
         cdef Traces other_tr
+        cdef bint   res      = True
 
         if not isinstance(other, Traces):
             return NotImplemented
@@ -8877,14 +8938,14 @@ cdef class Traces:
 
         if self._length != other_tr._length:
             return False
-        for i in range(self._length):
-            status = libhmmer.p7_trace.p7_trace_Compare(self._refs[i], other_tr._refs[i], 0.0)
-            if status == libeasel.eslFAIL:
-                return False
-            elif status != libeasel.eslOK:
-                raise UnexpectedError(status, "p7_trace_Compare")
 
-        return True
+        with nogil:
+            for i in range(self._length):
+                if not Trace._eq(self._refs[i], other_tr._refs[i]):
+                    res = False
+                    break
+
+        return res
 
     # --- C methods ----------------------------------------------------------
 
@@ -9033,11 +9094,8 @@ cdef class Traces:
         # scan to locate the trace
         with nogil:
             for i in range(start_, stop_):
-                status = libhmmer.p7_trace.p7_trace_Compare(self._refs[i], trace._tr, 0.0)
-                if status == libeasel.eslOK:
+                if Trace._eq(self._refs[i], trace._tr):
                     break
-                elif status != libeasel.eslFAIL:
-                    raise UnexpectedError(status, "esl_sq_Compare")
             else:
                 raise ValueError(f"trace {trace!r} not in block")
 
@@ -9046,10 +9104,13 @@ cdef class Traces:
     cpdef void remove(self, Trace trace) except *:
         """Remove the first occurence of the given trace.
 
+        Raises:
+            `ValueError`: When the block does not contain ``trace``.
+
         .. versionadded:: 0.11.4
 
         """
-        self.pop(self._index(trace))
+        self.pop(self.index(trace))
 
 
 cdef class TraceAligner:
