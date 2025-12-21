@@ -437,7 +437,6 @@ cdef class TopHits:
 
 
 cdef class Trace:
-    cdef readonly Traces traces
     cdef P7_TRACE* _tr
 
     cpdef float expected_accuracy(self)
@@ -445,8 +444,21 @@ cdef class Trace:
 
 
 cdef class Traces:
-    cdef P7_TRACE** _traces
-    cdef size_t     _ntraces
+    cdef          size_t     _length   # the number of traces in the block
+    cdef          size_t     _capacity # the total number of traces that can be stored
+    cdef          P7_TRACE** _refs     # the array to pass the sequence references
+    cdef          list       _storage  # the actual Python list where `Sequence` objects are stored
+
+    cdef void _allocate(self, size_t n) except *
+    cdef void _on_modification(self) noexcept
+
+    cpdef void append(self, Trace trace) except *
+    cpdef void clear(self) except *
+    cpdef void extend(self, object iterable) except *
+    cpdef Trace pop(self, ssize_t index=*)
+    cpdef void insert(self, ssize_t index, Trace trace) except *
+    cpdef size_t index(self, Trace trace, ssize_t start=*, ssize_t stop=*) except? -1
+    cpdef void remove(self, Trace trace) except *
 
 
 cdef class TraceAligner:

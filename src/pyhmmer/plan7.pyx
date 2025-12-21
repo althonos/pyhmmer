@@ -8656,7 +8656,6 @@ cdef class TopHits:
 
 
 @cython.freelist(8)
-@cython.no_gc_clear
 cdef class Trace:
     """A traceback for the alignment of a model to a sequence.
 
@@ -8695,7 +8694,6 @@ cdef class Trace:
 
     def __cinit__(self):
         self._tr = NULL
-        self.traces = None
 
     def __init__(self, posteriors=False):
         """__init__(self, posteriors=False)\n--\n
@@ -8709,10 +8707,8 @@ cdef class Trace:
         """
         # make `__init__` calllable more than once to avoid bugs
         if self._tr != NULL:
-            if self.traces is None:
-                libhmmer.p7_trace.p7_trace_Destroy(self._tr)
+            libhmmer.p7_trace.p7_trace_Destroy(self._tr)
             self._tr = NULL
-            self.traces = None
         if posteriors:
             self._tr = libhmmer.p7_trace.p7_trace_CreateWithPP()
         else:
@@ -8721,8 +8717,7 @@ cdef class Trace:
             raise AllocationError("P7_TRACE", sizeof(P7_TRACE))
 
     def __dealloc__(self):
-        if self.traces is None:
-            libhmmer.p7_trace.p7_trace_Destroy(self._tr)
+        libhmmer.p7_trace.p7_trace_Destroy(self._tr)
 
     def __eq__(self, object other):
         assert self._tr != NULL
@@ -8816,41 +8811,61 @@ cdef class Traces:
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
-        self._traces = NULL
-        self._ntraces = 0
+        self._length = 0
+        self._capacity = 0
+        self._refs = NULL
+        self._storage = []
 
     def __dealloc__(self):
-        libhmmer.p7_trace.p7_trace_DestroyArray(self._traces, self._ntraces)
+        free(self._refs)
 
-    def __init__(self):
+    def __init__(self, object iterable = ()):
         """__init__(self)\n--\n
 
-        Create an empty list of traces.
+        Create a new trace block from an iterable of `Trace` objects.
 
         """
-        pass
+        self.clear()
+        self.extend(iterable)
+
+    def __repr__(self):
+        cdef str ty = type(self).__name__
+        return f"{ty}({self._storage!r})"
 
     def __len__(self):
-        return self._ntraces
+        return self._length
 
-    def __getitem__(self, ssize_t idx):
-        assert self._traces != NULL
+    def __getitem__(self, object index):
+        if isinstance(index, slice):
+            return type(self)(self._storage[index])
+        else:
+            return self._storage[index]
 
-        cdef Trace trace
+    def __setitem__(self, object index, object traces):
+        cdef size_t i
+        cdef Trace  trace
 
-        if idx < 0:
-            idx += self._ntraces
-        if idx >= <ssize_t> self._ntraces or idx < 0:
-            raise IndexError("list index out of range")
+        if isinstance(index, slice):
+            self._storage[index] = traces
+            self._length = len(self._storage)
+            self._allocate(self._length)
+            for i, trace in enumerate(self._storage):
+                self._refs[i] = trace._tr
+        else:
+            trace = traces
+            self._storage[index] = trace
+            self._refs[index] = trace._tr
 
-        trace = Trace.__new__(Trace)
-        trace.traces = self
-        trace._tr = self._traces[idx]
-
-        return trace
+    def __contains__(self, object trace):
+        if isinstance(trace, Trace):
+            try:
+                return self._index(trace) >= 0
+            except ValueError:
+                return False
+        return False
 
     def __eq__(self, object other):
-        assert self._traces != NULL
+        assert self._refs != NULL
 
         cdef size_t i
         cdef int    status
@@ -8860,16 +8875,143 @@ cdef class Traces:
             return NotImplemented
         other_tr = <Traces> other
 
-        if self._ntraces != other_tr._ntraces:
+        if self._length != other_tr._length:
             return False
-        for i in range(self._ntraces):
-            status = libhmmer.p7_trace.p7_trace_Compare(self._traces[i], other_tr._traces[i], 0.0)
+        for i in range(self._length):
+            status = libhmmer.p7_trace.p7_trace_Compare(self._refs[i], other_tr._refs[i], 0.0)
             if status == libeasel.eslFAIL:
                 return False
             elif status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_trace_Compare")
 
         return True
+
+    # --- C methods ----------------------------------------------------------
+
+    cdef void _allocate(self, size_t n) except *:
+        """Allocate enough storage for at least ``n`` items.
+        """
+        cdef size_t i
+        cdef size_t capacity = new_capacity(n, self._length)
+        with nogil:
+            self._refs = <P7_TRACE**> realloc(self._refs, capacity * sizeof(P7_TRACE*))
+        if self._refs == NULL:
+            self._capacity = 0
+            raise AllocationError("P7_TRACE*", sizeof(P7_TRACE*), capacity)
+        else:
+            self._capacity = capacity
+
+    cdef void _on_modification(self) noexcept:
+        pass
+
+    # --- Python methods -----------------------------------------------------
+
+    cpdef void append(self, Trace trace) except *:
+        if self._length == self._capacity:
+            self._allocate(self._length + 1)
+        self._storage.append(trace)
+        self._refs[self._length] = trace._tr
+        self._length += 1
+        self._on_modification()
+
+    cpdef void clear(self) except *:
+        """Remove all traces from the block.
+        """
+        cdef size_t i
+        self._storage.clear()
+        self._length = 0
+        self._on_modification()
+
+    cpdef void extend(self, object iterable) except *:
+        """Extend block by appending sequences from the iterable.
+        """
+        cdef Trace trace
+        cdef Traces other_tr
+        cdef size_t hint = operator.length_hint(iterable)
+        if self._length + hint > self._capacity:
+            self._allocate(self._length + hint)
+        self._on_modification()
+
+        if isinstance(iterable, Traces):
+            other_tr = iterable
+            self._storage.extend(other_tr._storage)
+            with nogil:
+                memcpy(&self._refs[self._length], &other_tr._refs[0], other_tr._length * sizeof(P7_TRACE*))
+                self._length += other_tr._length
+        else:
+            for trace in iterable:
+                self.append(trace)
+
+    cpdef Trace pop(self, ssize_t index=-1):
+        cdef ssize_t index_ = index
+        if self._length == 0:
+            raise IndexError("pop from empty block")
+        if index_ < 0:
+            index_ += self._length
+        if index_ < 0 or <size_t> index_ >= self._length:
+            raise IndexError(index)
+
+        # remove item from storage
+        item = self._storage.pop(index_)
+
+        # update pointers in the reference array
+        self._length -= 1
+        if <size_t> index_ < self._length:
+            memmove(&self._refs[index_], &self._refs[index_ + 1], (self._length - index_)*sizeof(P7_TRACE*))
+
+        self._on_modification()
+        return item
+
+    cpdef void insert(self, ssize_t index, Trace trace) except *:
+        """Insert a new trace in the block before ``index``.
+        """
+        if index < 0:
+            index = 0
+        elif <size_t> index > self._length:
+            index = self._length
+
+        if self._length == self._capacity - 1:
+            self._allocate(self._capacity + 1)
+
+        if <size_t> index != self._length:
+            memmove(&self._refs[index + 1], &self._refs[index], (self._length - index)*sizeof(ESL_SQ*))
+
+        self._storage.insert(index, trace)
+        self._refs[index] = trace._tr
+        self._length += 1
+        self._on_modification()
+
+    cpdef size_t index(self, Trace trace, ssize_t start=0, ssize_t stop=sys.maxsize) except? -1:
+        cdef size_t i
+        cdef size_t start_
+        cdef size_t stop_
+        cdef int    status
+
+        # wrap once is negative indices are used
+        if start < 0:
+            start += <ssize_t> self._length
+        if stop < 0:
+            stop += <ssize_t> self._length
+
+        # wrap a second time if indices are still negative or out of bounds
+        stop_ = min(stop, <ssize_t> self._length)
+        start_ = max(start, 0)
+
+        # scan to locate the trace
+        with nogil:
+            for i in range(start_, stop_):
+                status = libhmmer.p7_trace.p7_trace_Compare(self._refs[i], trace._tr, 0.0)
+                if status == libeasel.eslOK:
+                    break
+                elif status != libeasel.eslFAIL:
+                    raise UnexpectedError(status, "esl_sq_Compare")
+            else:
+                raise ValueError(f"trace {trace!r} not in block")
+
+        return i
+
+    cpdef void remove(self, Trace trace) except *:
+        self.pop(self._index(trace))
 
 
 cdef class TraceAligner:
@@ -8933,14 +9075,10 @@ cdef class TraceAligner:
         hmm.validate(tolerance=1e-3)
 
         # allocate the return array of traces and create empty traces
-        traces._ntraces = nseq
-        traces._traces = <P7_TRACE**> calloc(nseq, sizeof(P7_TRACE*))
-        if traces._traces == NULL:
-            raise AllocationError("P7_TRACE**", sizeof(P7_TRACE*), nseq)
+        traces._allocate(nseq)
         for i in range(nseq):
-            traces._traces[i] = libhmmer.p7_trace.p7_trace_CreateWithPP()
-            if traces._traces[i] == NULL:
-                raise AllocationError("P7_TRACE", sizeof(P7_TRACE))
+            trace = Trace(posteriors=True)
+            traces.append(trace)
 
         # compute the traces
         with nogil:
@@ -8949,7 +9087,7 @@ cdef class TraceAligner:
                 sequences._refs,
                 0,
                 nseq,
-                traces._traces
+                traces._refs
             )
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_tracealign_computeTraces")
@@ -9037,7 +9175,7 @@ cdef class TraceAligner:
         with nogil:
             status = libhmmer.tracealign.p7_tracealign_Seqs(
                 sequences._refs,
-                traces._traces,
+                traces._refs,
                 nseq,
                 hmm._hmm.M,
                 flags,
