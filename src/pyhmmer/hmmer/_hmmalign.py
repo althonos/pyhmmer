@@ -69,6 +69,9 @@ def hmmalign(
 
     .. versionadded:: 0.4.7
 
+    .. versionadded:: 0.11.4
+        The ``cpus`` argument for parallel processing with multithreading.
+
     """
     cpus = cpus if cpus > 0 else psutil.cpu_count(logical=False) or os.cpu_count() or 1
 

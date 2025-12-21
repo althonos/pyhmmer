@@ -8907,6 +8907,11 @@ cdef class Traces:
     # --- Python methods -----------------------------------------------------
 
     cpdef void append(self, Trace trace) except *:
+        """Append a trace at the end of the block.
+
+        .. versionadded:: 0.11.4
+
+        """
         if self._length == self._capacity:
             self._allocate(self._length + 1)
         self._storage.append(trace)
@@ -8916,6 +8921,9 @@ cdef class Traces:
 
     cpdef void clear(self) except *:
         """Remove all traces from the block.
+
+        .. versionadded:: 0.11.4
+
         """
         cdef size_t i
         self._storage.clear()
@@ -8923,7 +8931,10 @@ cdef class Traces:
         self._on_modification()
 
     cpdef void extend(self, object iterable) except *:
-        """Extend block by appending sequences from the iterable.
+        """Extend block by appending traces from the iterable.
+
+        .. versionadded:: 0.11.4
+
         """
         cdef Trace trace
         cdef Traces other_tr
@@ -8943,6 +8954,14 @@ cdef class Traces:
                 self.append(trace)
 
     cpdef Trace pop(self, ssize_t index=-1):
+        """Remove and return a trace from the block (the last one by default).
+
+        Returns:
+            `~pyhmmer.plan7.Trace`: The trace freshly removed from the block.
+
+        .. versionadded:: 0.11.4
+
+        """
         cdef ssize_t index_ = index
         if self._length == 0:
             raise IndexError("pop from empty block")
@@ -8964,6 +8983,9 @@ cdef class Traces:
 
     cpdef void insert(self, ssize_t index, Trace trace) except *:
         """Insert a new trace in the block before ``index``.
+
+        .. versionadded:: 0.11.4
+
         """
         if index < 0:
             index = 0
@@ -8982,6 +9004,17 @@ cdef class Traces:
         self._on_modification()
 
     cpdef size_t index(self, Trace trace, ssize_t start=0, ssize_t stop=sys.maxsize) except? -1:
+        """Return the index of the first occurence of ``trace``.
+
+        Returns:
+            `int`: The index of the trace inside the block.
+
+        Raises:
+            `ValueError`: When the block does not contain ``trace``.
+
+        .. versionadded:: 0.11.4
+
+        """
         cdef size_t i
         cdef size_t start_
         cdef size_t stop_
@@ -9011,6 +9044,11 @@ cdef class Traces:
         return i
 
     cpdef void remove(self, Trace trace) except *:
+        """Remove the first occurence of the given trace.
+
+        .. versionadded:: 0.11.4
+
+        """
         self.pop(self._index(trace))
 
 
@@ -9022,11 +9060,19 @@ cdef class TraceAligner:
         >>> traces = aligner.compute_traces(thioesterase, proteins[:100])
         >>> msa = aligner.align_traces(thioesterase, proteins[:100], traces)
 
+    Hint:
+        The `~pyhmmer.hmmer.hmmalign` function is a higher-level function
+        for performing trace alignment and supports parallelization with
+        multithreading. Consider using it for better performance.
+
     .. versionadded:: 0.4.7
 
     """
 
     # --- Magic methods ------------------------------------------------------
+
+    def __reduce__(self):
+        return type(self), ()
 
     def __repr__(self):
         cdef str ty = type(self).__name__
@@ -9112,8 +9158,9 @@ cdef class TraceAligner:
             traces (`~pyhmmer.plan7.Traces`): The traces corresponding to the
                 alignment of ``sequences`` to ``hmm``, obtained by a previous
                 call to `~pyhmmer.plan7.TraceAligner.compute_traces`.
-            digitize (`bool`): If set to `True`, returns a `DigitalMSA`
-                instead of a `TextMSA`.
+            digitize (`bool`): If set to `True`, returns a
+                `~pyhmmer.easel.DigitalMSA` instead of a
+                `~pyhmmer.easel.TextMSA`.
             trim (`bool`): Trim off any residues that get assigned to
                 flanking :math:`N` and :math:`C` states (in profile traces)
                 or :math:`I_0` and :math:`I_m` (in core traces).
