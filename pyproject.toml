@@ -77,6 +77,10 @@ location = 'source'
 if.state = "editable"
 cmake.build-type = "Debug"
 
+[[tool.scikit-build.overrides]]
+if.env.READTHEDOCS = "True"
+cmake.build-type = "Debug"
+
 [[tool.scikit-build-overrides]]
 if.env.SCCACHE = true
 cmake.define.CMAKE_C_COMPILER_LAUNCHER = "sccache"
