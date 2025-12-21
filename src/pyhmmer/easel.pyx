@@ -4655,31 +4655,32 @@ cdef class MSA:
                 normalization" in which the weights are first divided by
                 sequence length in canonical residues (to get the average
                 weight per residue, to compensate for that effect), then
-                normalized to sum to $N$.
+                normalized to sum to :math:`N`.
 
-                The algorithm requires $O(NL)$ time and $O(LK)$ memory, for an
-                alignment of $L$ columns, $N$ sequences, and alphabet size $K$.
+                The algorithm requires :math:`O(NL)` time and :math:`O(LK)`
+                memory, for an alignment of :math:`L` columns, :math:`N`
+                sequences, and alphabet size :math:`K`.
 
             Gerstein/Sonnhammer/Chothia
                 An implementation of Gerstein *et al.* (1994).
 
-                The algorithm if $O(N^2)$ memory (it requires a pairwise
-                distance matrix) and $O(N^3 + LN^2)$ time ($N^3$ for a UPGMA
-                tree building step, $LN^2$ for distance matrix construction)
-                for an alignment of $N$ sequences and $L$ columns. In the
-                Easel implementation, the actual memory requirement is
-                dominated by two full $N \times N$ distances matrices. To keep
-                the calculation under memory limits, avoid processing large
-                alignments with this algorithm.
+                The algorithm if :math:`O(N^2)` memory (it requires a pairwise
+                distance matrix) and :math:`O(N^3 + LN^2)` time (:math:`N^3`
+                for a UPGMA tree building step, :math:`LN^2` for distance
+                matrix construction) for an alignment of :math:`N` sequences
+                and :math:`L` columns. In the Easel implementation, the actual
+                memory requirement is dominated by two full :math:`N \times N`
+                distances matrices. To keep the calculation under memory
+                limits, avoid processing large alignments with this algorithm.
 
             BLOSUM
                 The BLOSUM algorithm described in Henikoff & Henikoff (1992).
                 It performs a single-linkage clustering by fractional id,
                 defines clusters such that no two clusters have a pairwise
-                link $\geq$ ``max_identity``, and assigns weights
-                of $\frac{1}{M_i}$ to each of the $M_i$ sequences in each
-                cluster $i$. The ``max_identity`` is a fractional
-                pairwise identity in the range $0..1$.
+                link :math:`\geq` ``max_identity``, and assigns weights
+                of :math:`\frac{1}{M_i}` to each of the :math:`M_i` sequences
+                in each cluster $i$. The ``max_identity`` is a fractional
+                pairwise identity in the range :math:`0..1`.
 
         Arguments:
             method (`str`): The method to use for computing sequence weights.
