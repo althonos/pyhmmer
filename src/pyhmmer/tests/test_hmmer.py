@@ -794,7 +794,7 @@ class TestHmmalign(unittest.TestCase):
         with MSAFile(ref_path) as ref_file:
             ref = ref_file.read()
 
-        msa = pyhmmer.hmmalign(hmm, seqs, trim=True)
+        msa = pyhmmer.hmmalign(hmm, seqs, trim=True, cpus=1)
         self.assertEqual(msa, ref)
 
 
