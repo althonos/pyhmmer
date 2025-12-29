@@ -68,6 +68,9 @@ sdist.exclude = [
     "vendor/**/*.pl",
 ]
 
+[tool.scikit-build.cmake.define]
+PYHMMER_INSTALL_LIBS = { env = "PYHMMER_INSTALL_LIBS", default = true }
+
 [[tool.scikit-build.generate]]
 path = "src/pyhmmer/_version.py"
 template = '__version__ = "${version}"'
@@ -99,6 +102,7 @@ build-frontend = { name = "pip", args = ["--no-build-isolation"] }
 build-verbosity = 1
 test-command = "python -m unittest pyhmmer.tests -v"
 test-extras = ["test"]
+config-settings = { cmake.define.PYHMMER_INSTALL_LIBS = false }
 
 [tool.coverage.report]
 include = ["src/pyhmmer/*"]

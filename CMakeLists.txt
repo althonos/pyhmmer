@@ -1,19 +1,19 @@
 cmake_minimum_required(VERSION 3.20)
 project(${SKBUILD_PROJECT_NAME} VERSION ${SKBUILD_PROJECT_VERSION} LANGUAGES C)
 
-set(BUILD_SHARED_LIBS OFF)
+set(BUILD_SHARED_LIBS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set_property(GLOBAL PROPERTY PYTHON_EXTENSIONS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # --- Detect SIMD --------------------------------------------------------------
 
-include("src/scripts/cmake/FindNEON.cmake")
-include("src/scripts/cmake/FindSSE2.cmake")
-include("src/scripts/cmake/FindSSE4.cmake")
-include("src/scripts/cmake/FindVMX.cmake")
-include("src/scripts/cmake/Destatic.cmake")
-include("src/scripts/cmake/CythonExtension.cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/scripts/cmake")
+
+include(FindNEON)
+include(FindSSE2)
+include(FindSSE4)
+include(FindVMX)
 
 if(HAVE_SSE4)
     set(eslENABLE_SSE true)
@@ -43,6 +43,12 @@ endif()
 # --- Setup include folders ----------------------------------------------------
 
 set(CYTHON_HEADERS_DIR ${CMAKE_CURRENT_LIST_DIR}/include)
+
+# Install shared library objects to `pyhmmer.libs` (like auditwheel repair)
+if(PYHMMER_INSTALL_LIBS)
+    set(PYHMMER_INSTALL_LIBS_DIR "${CMAKE_PROJECT_NAME}.libs")
+    message(STATUS "Installing shared libraries to ${PYHMMER_INSTALL_LIBS_DIR}")
+endif()
 
 # --- Compile source code ------------------------------------------------------
 

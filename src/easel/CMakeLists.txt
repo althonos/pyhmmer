@@ -140,3 +140,9 @@ set(EASEL_SOURCES
 add_library(libeasel ${EASEL_SOURCES})
 target_include_directories(libeasel PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(libeasel PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+if(DEFINED PYHMMER_INSTALL_LIBS_DIR)
+  install(TARGETS libeasel DESTINATION ${SKBUILD_PLATLIB_DIR}/${PYHMMER_INSTALL_LIBS_DIR})
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/esl_config.h DESTINATION ${SKBUILD_PLATLIB_DIR}/${PYHMMER_INSTALL_LIBS_DIR})
+  set_target_properties(libeasel PROPERTIES INSTALL_RPATH "\$ORIGIN/.")
+endif()
