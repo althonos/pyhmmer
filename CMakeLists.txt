@@ -48,6 +48,7 @@ set(CYTHON_HEADERS_DIR ${CMAKE_CURRENT_LIST_DIR}/include)
 if(PYHMMER_INSTALL_LIBS)
     set(PYHMMER_INSTALL_LIBS_DIR "${CMAKE_PROJECT_NAME}.libs")
     message(STATUS "Installing shared libraries to ${PYHMMER_INSTALL_LIBS_DIR}")
+    install(DIRECTORY ${CYTHON_HEADERS_DIR} DESTINATION ${PYHMMER_INSTALL_LIBS_DIR})
 endif()
 
 # --- Compile source code ------------------------------------------------------
