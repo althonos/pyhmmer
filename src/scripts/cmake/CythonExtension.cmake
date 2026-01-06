@@ -108,6 +108,7 @@ macro(cython_extension _name)
     target_compile_definitions(${_target} PUBLIC HAVE_PYINTERPRETERSTATE_GETID)
   endif()
 
+  # Setup debug or release options
   if(CMAKE_BUILD_TYPE STREQUAL Debug)
     if(NOT Python_INTERPRETER_ID STREQUAL PyPy)
       target_compile_definitions(${_target} PUBLIC CYTHON_TRACE_NOGIL=1)
@@ -137,9 +138,4 @@ macro(cython_extension _name)
     set_target_properties(${_target} PROPERTIES INSTALL_RPATH ${_rpath})
     message(DEBUG "RPATH for extension ${_name}: ${_rpath}")
   endif()
-
-  # Add the targets to the list of Cython extensions
-  get_property(_ext GLOBAL PROPERTY PYRODIGAL_CYTHON_EXTENSIONS)
-  list(APPEND _ext ${_target})
-  set_property(GLOBAL PROPERTY PYRODIGAL_CYTHON_EXTENSIONS ${_ext})
 endmacro()
