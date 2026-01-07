@@ -53,6 +53,8 @@ else()
     set(SSE4_C_FLAG_CANDIDATES
       #Empty, if compiler automatically accepts SSE4
       " "
+      #emscripten
+      "-msse4.1 -msimd128"
       #clang
       "-msse4.1"
       "-msse4"
