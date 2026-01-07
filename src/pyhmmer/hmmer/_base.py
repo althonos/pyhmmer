@@ -3,9 +3,7 @@ import ctypes
 import collections
 import contextlib
 import itertools
-import multiprocessing.synchronize
-import multiprocessing.connection
-import multiprocessing.resource_sharer
+import multiprocessing
 import operator
 import queue
 import sys
@@ -15,6 +13,9 @@ import threading
 from ..easel import DigitalSequenceBlock, SequenceFile, DigitalSequence, DigitalMSA
 from ..plan7 import Pipeline, Builder, HMMPressedFile, HMM, Profile, OptimizedProfile, IterationResult, OptimizedProfileBlock
 from ..utils import singledispatchmethod
+
+if typing.TYPE_CHECKING:
+    import multiprocessing.connection
 
 # --- Type annotations ---------------------------------------------------------
 
@@ -169,8 +170,8 @@ class _ProcessChore(typing.Generic[_Q, _R], _BaseChore[_Q, _R]):
 
     """
 
-    connr: multiprocessing.connection.Connection
-    conns: multiprocessing.connection.Connection
+    connr: "multiprocessing.connection.Connection"
+    conns: "multiprocessing.connection.Connection"
 
     def __init__(self, query: _Q) -> None:
         """Create a new chore from the given query."""
@@ -249,7 +250,7 @@ class _BaseWorker(typing.Generic[_Q, _T, _R]):
         self,
         targets: _T,
         query_queue: "queue.Queue[typing.Optional[_BaseChore[_Q, _R]]]",
-        query_count: multiprocessing.Value,  # type: ignore
+        query_count: "multiprocessing.Value",  # type: ignore
         kill_switch: threading.Event,
         callback: typing.Optional[typing.Callable[[_Q, int], None]],
         options: "PipelineOptions",
@@ -335,6 +336,11 @@ class _BaseWorker(typing.Generic[_Q, _T, _R]):
 
 # --- Dispatcher ---------------------------------------------------------------
 
+# dummy multiprocessing.Value to use in single-threaded mode
+class _Value:
+    def __init__(self):
+        self.value = 0
+
 class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
     def __init__(
         self,
@@ -390,7 +396,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
         # create the queues to pass the HMM objects around, as well as atomic
         # values that we use to synchronize the threads
         query_queue = queue.Queue()  # type: ignore
-        query_count = multiprocessing.Value(ctypes.c_ulong)
+        query_count = _Value()
         kill_switch = threading.Event()
 
         # create the thread (to recycle code)
