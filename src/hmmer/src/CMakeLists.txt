@@ -34,7 +34,6 @@ set(HMMER_SOURCES
     generic_vtrace.c 
     h2_io.c 
     heatmap.c 
-    hmmlogo.c 
     hmmdmstr.c 
     hmmdmstr_shard.c 
     hmmd_search_status.c 
