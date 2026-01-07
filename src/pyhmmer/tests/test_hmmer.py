@@ -255,7 +255,7 @@ class TestHmmsearch(_TestSearch, unittest.TestCase):
     def get_hits_multi(self, hmms, seqs):
         return list(pyhmmer.hmmsearch(hmms, seqs, parallel=self.parallel))
 
-    def test_callback_error(self):
+    def test_callback_error_single_threaded(self):
 
         class MyException(Exception):
             pass
@@ -271,6 +271,19 @@ class TestHmmsearch(_TestSearch, unittest.TestCase):
         hits = pyhmmer.hmmsearch(hmm, seqs, cpus=1, callback=callback, parallel=self.parallel)
         with self.assertRaises(MyException):
             hit = next(hits)
+
+    def test_callback_error_multi_threaded(self):
+
+        class MyException(Exception):
+            pass
+
+        def callback(hmm, total):
+            raise MyException("oopsie")
+
+        rng = pyhmmer.easel.Randomness(42)
+        alphabet = Alphabet.amino()
+        hmm = HMM.sample(alphabet, 100, rng)
+        seqs = self._random_sequences()
 
         hits = pyhmmer.hmmsearch(hmm, seqs, cpus=2, callback=callback, parallel=self.parallel)
         with self.assertRaises(MyException):
@@ -304,6 +317,7 @@ class TestHmmsearchSingle(TestHmmsearch, unittest.TestCase):
         self.assertIs(None, next(hits, None))
 
 @unittest.skipIf(platform.system() == "Darwin", "may deadlock on MacOS")
+@unittest.skipIf(platform.system() == "Emscripten", "no process support on Emscripten")
 class TestHmmsearchProcess(TestHmmsearch, unittest.TestCase):
     def get_hits(self, hmm, seqs):
         return list(pyhmmer.hmmsearch(hmm, seqs, cpus=2, backend="multiprocessing", parallel=self.parallel))[0]
@@ -334,6 +348,7 @@ class TestHmmsearchReverseSingle(TestHmmsearchSingle):
 
 
 @unittest.skipIf(platform.system() == "Darwin", "may deadlock on MacOS")
+@unittest.skipIf(platform.system() == "Emscripten", "no process support on Emscripten")
 class TestHmmsearchReverseProcess(TestHmmsearchProcess):
     parallel = "targets"
 
