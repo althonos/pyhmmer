@@ -70,6 +70,7 @@ sdist.exclude = [
 
 [tool.scikit-build.cmake.define]
 PYHMMER_INSTALL_LIBS = { env = "PYHMMER_INSTALL_LIBS", default = true }
+BUILD_SHARED_LIBS = { env = "BUILD_SHARED_LIBS", default = true }
 
 [[tool.scikit-build.generate]]
 path = "src/pyhmmer/_version.py"
