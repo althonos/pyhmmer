@@ -3399,7 +3399,7 @@ cdef class HMMFile:
     loading them into `~pyhmmer.plan7.HMM` objects.
 
     Example:
-        Load the first HMM from an HMM file located on the
+        Load the first HMM from a text HMM file located on the
         local filesystem::
 
             >>> with HMMFile("tests/data/hmms/txt/PF02826.hmm") as hmm_file:
@@ -3409,14 +3409,14 @@ cdef class HMMFile:
             >>> hmm.accession
             b'PF02826.20'
 
-        Load all the HMMs from an HMM file into a `list`::
+        Load all the HMMs from a binary HMM file into a `list`::
 
             >>> with HMMFile("tests/data/hmms/bin/RREFam.h3m") as hmm_file:
             ...     hmms = list(hmm_file)
             >>> len(hmms)
-            28
+            10
             >>> hmms[0].accession
-            b'RREFam008.1'
+            b'RREFam002.1'
 
     """
 
@@ -3687,7 +3687,7 @@ cdef class HMMFile:
         This method has no effect if the file is already closed. It is called
         automatically if the `HMMFile` was used in a context::
 
-            >>> with HMMFile("tests/data/hmms/bin/PKSI-AT.h3m") as hmm_file:
+            >>> with HMMFile("tests/data/hmms/bin/Thioesterase.h3m") as hmm_file:
             ...     hmm = hmm_file.read()
 
         """
@@ -3704,9 +3704,9 @@ cdef class HMMFile:
         convert from an `HMM` to an `OptimizedProfile`.
 
         Example:
-            >>> HMMFile("tests/data/hmms/bin/PKSI-AT.h3m").is_pressed()
+            >>> HMMFile("tests/data/hmms/bin/Thioesterase.h3m").is_pressed()
             False
-            >>> HMMFile("tests/data/hmms/db/PKSI-AT.hmm").is_pressed()
+            >>> HMMFile("tests/data/hmms/db/Thioesterase.hmm").is_pressed()
             True
 
         .. versionadded:: 0.4.11
@@ -3904,7 +3904,7 @@ cdef class HMMPressedFile:
         This method has no effect if the file is already closed. It is called
         automatically if the `HMMFile` was used in a context::
 
-            >>> with HMMPressedFile("tests/data/hmms/db/PKSI-AT.hmm") as hmm_db:
+            >>> with HMMPressedFile("tests/data/hmms/db/Thioesterase.hmm") as hmm_db:
             ...     optimized_profile = hmm_db.read()
 
         """

@@ -174,34 +174,16 @@ class _TestThioesterase(_TestHMMFile):
 class _TestRREFam(_TestHMMFile):
     ID = "RREFam"
     NAMES = [
-        b"Bottromycin_Methyltransferase_RRE",
-        b"Cyanobactin_D_RRE",
-        b"Cytolysin_C_RRE",
         b"Stand_Alone_Lasso_RRE",
-        b"Lasso_Fused_RRE",
-        b"Goadsporin_CD_RRE",
-        b"Heterocycloanthracin_C_RRE",
-        b"Lanthipeptide_LanB_RRE",
-        b"Mycofactocin_RRE",
-        b"NHLP_CD_RRE",
-        b"Other_Sactipeptide_rSAM_RRE",
-        b"Pantocin_Microcin_RRE",
-        b"Plantazolicin_C_RRE",
-        b"PlpY_RRE",
-        b"PqqD_RRE",
-        b"Proteusin_Methyltransferase_RRE",
-        b"Proteusin_Epimerase_RRE",
-        b"Quinohemoprotein_rSAM_RRE",
-        b"Ranthipeptide_rSAM_RRE",
-        b"Streptide_RRE",
-        b"Subtilosin_rSAM_RRE",
-        b"Thiaglutamate_B_RRE",
-        b"Thiaglutamate_G_RRE",
-        b"Thiaglutamate_I_RRE",
         b"Thiopeptide_F_RRE",
-        b"Thuricin_rSAM_RRE",
+        b"PqqD_RRE",
+        b"Proteusin_Epimerase_RRE",
         b"Thurincin_rSAM_RRE",
-        b"Trifolitoxin_RRE"
+        b"Thuricin_rSAM_RRE",
+        b"Other_Sactipeptide_rSAM_RRE",
+        b"Ranthipeptide_rSAM_RRE",
+        b"Trifolitoxin_RRE",
+        b"Thiaglutamate_B_RRE",        
     ]
 
 
