@@ -6532,7 +6532,7 @@ cdef class Sequence:
             raise UnexpectedError(status, "esl_sq_Reuse")
 
     cpdef void write(self, object fh) except *:
-        """Write the sequence alignement to a file handle, in FASTA format.
+        """Write the sequence to a file handle, in FASTA format.
 
         Arguments:
             fh (`io.IOBase`): A Python file handle, opened in binary mode.
@@ -7515,7 +7515,7 @@ cdef class SequenceBlock:
         self._length += 1
         self._on_modification()
 
-    cdef size_t _index(self, Sequence sequence, ssize_t start=0, ssize_t stop=sys.maxsize) except *:
+    cdef size_t _index(self, Sequence sequence, ssize_t start=0, ssize_t stop=sys.maxsize) except *:        
         cdef size_t i
         cdef size_t start_
         cdef size_t stop_
@@ -7573,6 +7573,29 @@ cdef class SequenceBlock:
         """
         return self[:]
 
+    cpdef void write(self, object fh) except *:
+        """Write all sequences to a file handle, in FASTA format.
+
+        Arguments:
+            fh (`io.IOBase`): A Python file handle, opened in binary mode.
+
+        .. versionadded:: 0.12.0
+
+        """
+        cdef size_t i
+        cdef int    status
+        cdef FILE*  file   = NULL
+
+        try:
+            file = fopen_obj(fh, "w")
+            for i in range(self._length):
+                status = libeasel.sqio.ascii.esl_sqascii_WriteFasta(file, self._refs[i], False)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "esl_sqascii_WriteFasta")
+        finally:
+            if file is not NULL:
+                fclose(file)
+        
 
 cdef class TextSequenceBlock(SequenceBlock):
     """A container for storing `TextSequence` objects.

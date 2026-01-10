@@ -296,6 +296,7 @@ cdef class SequenceBlock:
     cpdef SequenceBlock copy(self)
     cpdef void clear(self) except *
     cpdef Sequence largest(self)
+    cpdef void write(self, object fh) except *
 
 
 cdef class TextSequenceBlock(SequenceBlock):

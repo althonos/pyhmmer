@@ -1,5 +1,7 @@
 import abc
+import io
 import pickle
+import textwrap
 import unittest
 
 from pyhmmer.errors import AlphabetMismatch
@@ -286,6 +288,30 @@ class _TestSequenceBlock(abc.ABC):
         block = self._new_block([])
         with self.assertRaises(TypeError):
             block.indexed[1]    
+
+    def test_write(self):
+        seq1 = self._new_sequence(b"seq1", "ATGC")
+        seq2 = self._new_sequence(b"seq2", "ATGCA")
+        seq3 = self._new_sequence(b"seq3", "TTGA")
+
+        block = self._new_block([seq1, seq2, seq3])
+        buffer = io.BytesIO()
+        block.write(buffer)
+
+        lines = buffer.getvalue().decode()
+        self.assertMultiLineEqual(
+            lines.strip(),
+            textwrap.dedent(
+                """
+                >seq1
+                ATGC
+                >seq2
+                ATGCA
+                >seq3
+                TTGA
+                """
+            ).strip()
+        )
 
 
 class TestTextSequenceBlock(_TestSequenceBlock, unittest.TestCase):
