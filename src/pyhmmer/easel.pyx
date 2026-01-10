@@ -2844,7 +2844,7 @@ cdef class Matrix:
 
     def __dealloc__(self):
         if self._owner is None and self._data != NULL:
-            if self._m > 0:
+            if self._data[0] != NULL:
                 free(self._data[0])
             free(self._data)
         self._data = NULL
@@ -2990,6 +2990,8 @@ cdef class Matrix:
         cdef int itemsize = self.itemsize
 
         if self._data != NULL:
+            if self._data[0] != NULL:
+                free(self._data[0])
             free(self._data)
 
         self._m = self._shape[0] = m
