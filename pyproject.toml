@@ -85,14 +85,34 @@ cmake.build-type = "Debug"
 if.env.READTHEDOCS = "True"
 cmake.build-type = "Debug"
 
-[[tool.scikit-build-overrides]]
+[[tool.scikit-build.overrides]]
 if.env.SCCACHE = true
 cmake.define.CMAKE_C_COMPILER_LAUNCHER = "sccache"
 cmake.define.CMAKE_CXX_COMPILER_LAUNCHER = "sccache"
 
-[[tool.scikit-build-overrides]]
+[[tool.scikit-build.overrides]]
 if.env.MOLD = true
 cmake.define.CMAKE_LINKER_TYPE = "mold"
+
+[[tool.scikit-build.overrides]]
+if.env.CIBUILDWHEEL = true
+sdist.exclude = [
+    "build",
+    "benches",
+    "vendor/easel/documentation",
+    "vendor/easel/demotic",
+    "vendor/easel/miniapps",
+    "vendor/hmmer/documentation",
+    "vendor/**/*.ai",
+    "vendor/**/*.pl",
+    # Remove extra test files to trim the wheels that go on PyPI
+    "src/pyhmmer/tests/data/hmms/txt2/RREFam.*",
+    "src/pyhmmer/tests/data/hmms/txt/RREFam.*",
+    "src/pyhmmer/tests/data/hmms/db/RREFam.*",
+    "src/pyhmmer/tests/data/hmms/*/bmyD.*",
+    "src/pyhmmer/tests/data/seqs/BGC0001090.gbk",
+    "src/pyhmmer/tests/data/seqs/1390.SAMEA104415756.*",
+]
 
 [tool.coverage.run]
 plugins = ["Cython.Coverage"]
