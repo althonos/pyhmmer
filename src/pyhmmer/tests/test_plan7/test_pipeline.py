@@ -205,10 +205,6 @@ class TestScanPipeline(unittest.TestCase):
         with SequenceFile(seq_path, digital=True, alphabet=cls.alphabet) as f:
             cls.references = f.read_block()
 
-        hmm_file = resource_files(__package__).joinpath("data", "hmms", "txt", "RREFam.hmm")
-        with HMMFile(hmm_file) as f:
-            cls.hmms = list(f)
-
     def test_scan_seq_alphabet_mismatch(self):
         pipeline = Pipeline(alphabet=Alphabet.dna())
 
@@ -225,9 +221,15 @@ class TestScanPipeline(unittest.TestCase):
     def test_scan_seq_block(self):
         seq = next(x for x in self.references if x.name == b"938293.PRJEB85.HG003691_78")
 
+        hmm_file = resource_files(__package__).joinpath("data", "hmms", "txt", "RREFam.hmm")
+        if not hmm_file.exists():
+            self.skipTest("data files not available")
+        with HMMFile(hmm_file) as f:
+            hmms = list(f)
+
         oprofiles = OptimizedProfileBlock(seq.alphabet)
         background = Background(seq.alphabet)
-        for hmm in self.hmms:
+        for hmm in hmms:
             profile = Profile(hmm.M, hmm.alphabet)
             profile.configure(hmm, background)
             oprofiles.append(profile.to_optimized())
@@ -240,6 +242,8 @@ class TestScanPipeline(unittest.TestCase):
         seq = next(x for x in self.references if x.name == b"938293.PRJEB85.HG003691_78")
 
         hmm_file = resource_files(__package__).joinpath("data", "hmms", "db", "RREFam.hmm")
+        if not hmm_file.exists():
+            self.skipTest("data files not available")
         with HMMFile(hmm_file) as f:
             pipeline = Pipeline(alphabet=self.alphabet)
             hits = pipeline.scan_seq(seq, f.optimized_profiles())

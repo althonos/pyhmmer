@@ -1,3 +1,4 @@
+include(Destatic)
 
 file(COPY ../vendor/easel DESTINATION .)
 file(COPY ./easel DESTINATION .)

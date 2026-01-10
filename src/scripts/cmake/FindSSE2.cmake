@@ -54,6 +54,8 @@ else()
       " "
       #clang
       "-msse2"
+      #emscripten
+      "-msse2 -msimd128"
       #GNU, Intel
       "-march=core2"
     )

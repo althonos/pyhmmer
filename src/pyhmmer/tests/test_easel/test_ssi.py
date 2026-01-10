@@ -15,7 +15,13 @@ from .utils import resource_files
 class TestSSIReader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.h3i = resource_files(__package__).joinpath("data", "hmms", "db", "Thioesterase.hmm.h3i")
+        cls._h3i = resource_files(__package__).joinpath("data", "hmms", "db", "Thioesterase.hmm.h3i")
+
+    @property
+    def h3i(self):
+        if not self._h3i.exists():
+            self.skipTest("data files not available")
+        return self._h3i
 
     def test_init_error_filenotfound(self):
         self.assertRaises(

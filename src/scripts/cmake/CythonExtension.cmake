@@ -16,6 +16,12 @@ string(TOLOWER "${Python_INTERPRETER_ID}" SYS_IMPLEMENTATION_NAME)
 
 # --- Prepare Cython directives and constants ----------------------------------
 
+if(DEFINED CMAKE_C_COMPILER_TARGET)
+    set(TARGET_CPU ${CMAKE_C_COMPILER_TARGET})
+else()
+    set(TARGET_CPU ${CMAKE_SYSTEM_PROCESSOR})
+endif()
+
 set(CYTHON_DIRECTIVES
     -X cdivision=True
     -X nonecheck=False
@@ -27,7 +33,7 @@ set(CYTHON_DIRECTIVES
     -E SYS_IMPLEMENTATION_NAME=${SYS_IMPLEMENTATION_NAME}
     -E SYS_VERSION_INFO_MAJOR=${Python_VERSION_MAJOR}
     -E SYS_VERSION_INFO_MINOR=${Python_VERSION_MINOR}
-    -E TARGET_CPU=${CMAKE_SYSTEM_PROCESSOR}
+    -E TARGET_CPU=${TARGET_CPU}
     -E TARGET_SYSTEM=${CMAKE_SYSTEM_NAME}
     -E SYS_BYTEORDER=$<IF:$<STREQUAL:${CMAKE_C_BYTE_ORDER},BIG_ENDIAN>,big,little>
     -E PYPY=$<IF:$<STREQUAL:${Python_INTERPRETER_ID},PyPy>,True,False>
@@ -108,6 +114,7 @@ macro(cython_extension _name)
     target_compile_definitions(${_target} PUBLIC HAVE_PYINTERPRETERSTATE_GETID)
   endif()
 
+  # Setup debug or release options
   if(CMAKE_BUILD_TYPE STREQUAL Debug)
     if(NOT Python_INTERPRETER_ID STREQUAL PyPy)
       target_compile_definitions(${_target} PUBLIC CYTHON_TRACE_NOGIL=1)
@@ -121,8 +128,20 @@ macro(cython_extension _name)
   install(TARGETS ${_target} DESTINATION ${_dest_folder} )
   message(DEBUG "Install folder for extension ${_name}: ${_dest_folder}")
 
-  # Add the targets to the list of Cython extensions
-  get_property(_ext GLOBAL PROPERTY PYRODIGAL_CYTHON_EXTENSIONS)
-  list(APPEND _ext ${_target})
-  set_property(GLOBAL PROPERTY PYRODIGAL_CYTHON_EXTENSIONS ${_ext})
+  # Patch the RPATH to the installed libs (only if libs are installed locally)
+  if(DEFINED PYHMMER_INSTALL_LIBS_DIR)
+    cmake_path(SET _path NORMALIZE ${_dest_folder})
+    string(REPLACE "/" ";" _components ${_path})
+    if(APPLE)
+      set(_rpath "@loader_path/")
+    else()
+      set(_rpath "\$ORIGIN/")
+    endif()
+    foreach(_x IN LISTS _components)
+      string(APPEND _rpath "../")
+    endforeach()
+    string(APPEND _rpath "${PYHMMER_INSTALL_LIBS_DIR}")
+    set_target_properties(${_target} PROPERTIES INSTALL_RPATH ${_rpath})
+    message(DEBUG "RPATH for extension ${_name}: ${_rpath}")
+  endif()
 endmacro()
