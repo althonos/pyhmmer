@@ -3411,7 +3411,7 @@ cdef class HMMFile:
 
         Load all the HMMs from an HMM file into a `list`::
 
-            >>> with HMMFile("tests/data/hmms/txt/RREFam.hmm") as hmm_file:
+            >>> with HMMFile("tests/data/hmms/bin/RREFam.h3m") as hmm_file:
             ...     hmms = list(hmm_file)
             >>> len(hmms)
             28
@@ -3704,8 +3704,6 @@ cdef class HMMFile:
         convert from an `HMM` to an `OptimizedProfile`.
 
         Example:
-            >>> HMMFile("tests/data/hmms/txt/PKSI-AT.hmm").is_pressed()
-            False
             >>> HMMFile("tests/data/hmms/bin/PKSI-AT.h3m").is_pressed()
             False
             >>> HMMFile("tests/data/hmms/db/PKSI-AT.hmm").is_pressed()

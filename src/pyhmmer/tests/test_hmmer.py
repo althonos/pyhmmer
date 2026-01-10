@@ -29,20 +29,23 @@ class _TestSearch(metaclass=abc.ABCMeta):
     def get_hits_multi(self, hmms, sequences):
         return [self.get_hits(hmm, sequences) for hmm in hmms]
 
-    @staticmethod
-    def table(name):
+    def table(self, name):
         path = resource_files(__package__).joinpath("data", "tables", name)
+        if not path.exists():
+            self.skipTest("data files not available")
         return path.open()
 
-    @staticmethod
-    def hmm_file(name):
+    def hmm_file(self, name):
         path = resource_files(__package__).joinpath("data", "hmms", "txt", "{}.hmm".format(name))
+        if not path.exists():
+            self.skipTest("data files not available")
         return HMMFile(path)
 
-    @staticmethod
-    def seqs_file(name, digital=False):
-        seqs_path = resource_files(__package__).joinpath("data", "seqs", "{}.faa".format(name))
-        return SequenceFile(seqs_path, digital=digital)
+    def seqs_file(self, name, digital=False):
+        path = resource_files(__package__).joinpath("data", "seqs", "{}.faa".format(name))
+        if not path.exists():
+            self.skipTest("data files not available")
+        return SequenceFile(path, digital=digital)
 
     @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_thioestherase(self):
@@ -374,6 +377,7 @@ class TestHmmpress(unittest.TestCase):
                 os.remove(self.tmp + ext)
 
     @unittest.skipUnless(resource_files, "importlib.resources not available")
+    @unittest.skipUnless(resource_files(__package__).joinpath("data", "hmms", "db").exists(), "data files not available")
     def test_roundtrip(self):
         db_folder = resource_files(__package__).joinpath("data", "hmms", "db")
         self.hmm = db_folder.joinpath("Thioesterase.hmm")
@@ -830,6 +834,8 @@ class TestHMMScan(unittest.TestCase):
         table_path = resource_files(__package__).joinpath("data", "tables", "RREFam.scan.tbl")
         db_path = resource_files(__package__).joinpath("data", "hmms", "db", "RREFam.hmm")
         seqs_path = resource_files(__package__).joinpath("data", "seqs", "PKSI.faa")
+        if not db_path.exists() or not seqs_path.exists():
+            self.skipTest("data files not available")
 
         # load expected results from the hmmscan table
         expected = {}
@@ -863,11 +869,14 @@ class TestHMMScan(unittest.TestCase):
                     self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
 
     @unittest.skipUnless(resource_files, "importlib.resources not available")
+    @unittest.skipUnless(resource_files(__package__).joinpath("data", "hmms", "db").exists(), "data files not available")
     def test_rrefam_file(self):
         # get paths to resources
         table_path = resource_files(__package__).joinpath("data", "tables", "RREFam.scan.tbl")
         db_path = resource_files(__package__).joinpath("data", "hmms", "db", "RREFam.hmm")
         seqs_path = resource_files(__package__).joinpath("data", "seqs", "PKSI.faa")
+        if not db_path.exists() or not seqs_path.exists():
+            self.skipTest("data files not available")
 
         # load expected results from the hmmscan table
         expected = {}
