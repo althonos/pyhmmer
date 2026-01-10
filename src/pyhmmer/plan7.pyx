@@ -3445,7 +3445,7 @@ cdef class HMMFile:
 
         # store options
         hfp.f            = fopen_obj(fh_, "r")
-        hfp.do_gzip      = False
+        hfp.do_gzip      = True
         hfp.do_stdin     = False
         hfp.newly_opened = True
         hfp.is_pressed   = False
@@ -3464,6 +3464,8 @@ cdef class HMMFile:
             filename = fh.name.encode()
             hfp.fname = strdup(filename)
             if hfp.fname == NULL:
+                fclose(hfp.f)
+                libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
                 raise AllocationError("char", sizeof(char), strlen(filename))
 
         # check if the parser is in binary format,
@@ -3480,22 +3482,28 @@ cdef class HMMFile:
         # create and configure the file parser
         hfp.efp = libeasel.fileparser.esl_fileparser_Create(hfp.f)
         if hfp.efp == NULL:
+            fclose(hfp.f)
             libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
             raise AllocationError("ESL_FILEPARSER", sizeof(ESL_FILEPARSER))
         status = libeasel.fileparser.esl_fileparser_SetCommentChar(hfp.efp, b"#")
         if status != libeasel.eslOK:
+            fclose(hfp.f)
             libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
             raise UnexpectedError(status, "esl_fileparser_SetCommentChar")
 
         # get the magic string at the beginning
         status = libeasel.fileparser.esl_fileparser_NextLine(hfp.efp)
         if status == libeasel.eslEOF:
+            fclose(hfp.f)
+            libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
             raise EOFError("HMM file is empty")
         elif status != libeasel.eslOK:
+            fclose(hfp.f)
             libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
             raise UnexpectedError(status, "esl_fileparser_NextLine");
         status = libeasel.fileparser.esl_fileparser_GetToken(hfp.efp, &token, &token_len)
         if status != libeasel.eslOK:
+            fclose(hfp.f)
             libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
             raise UnexpectedError(status, "esl_fileparser_GetToken");
 
@@ -3514,6 +3522,7 @@ cdef class HMMFile:
         # check the format tag was recognized
         if hfp.parser == NULL:
             text = token.decode("utf-8", "replace")
+            fclose(hfp.f)
             libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
             raise ValueError("Unrecognized format tag in HMM file: {!r}".format(text))
 
@@ -3692,6 +3701,10 @@ cdef class HMMFile:
 
         """
         if self._hfp:
+            # if we read from a file-like object, `p7_hmmfile_Close` won't
+            # close self._hfp.f but we actually still need to free it.
+            if self._hfp.do_gzip: 
+                fclose(self._hfp.f)
             libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
             self._hfp = NULL
 
