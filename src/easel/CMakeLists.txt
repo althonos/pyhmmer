@@ -46,8 +46,8 @@ message(DEBUG "-- Dumping esl_config.h --")
 message(DEBUG "${ESL_CONFIG_H}")
 message(DEBUG "-- End esl_config.h --")
 
-set(EASEL_SOURCES
-    ${CMAKE_CURRENT_BINARY_DIR}/esl_config.h
+set(
+    EASEL_SOURCES
     easel.c
     esl_alloc.c
     esl_alphabet.c
@@ -137,12 +137,104 @@ set(EASEL_SOURCES
     interface_lapack.c
 )
 
-add_library(libeasel ${EASEL_SOURCES})
+set(
+    EASEL_HEADERS
+    ${CMAKE_CURRENT_BINARY_DIR}/esl_config.h
+    easel.h
+    esl_alloc.h
+    esl_alphabet.h
+    esl_arr2.h
+    esl_arr3.h
+    esl_avx512.h
+    esl_avx.h
+    esl_bitfield.h
+    esl_buffer.h
+    esl_cluster.h
+    esl_composition.h
+    esl_cpu.h
+    esl_dirichlet.h
+    esl_distance.h
+    esl_dmatrix.h
+    esl_dsqdata.h
+    esl_exponential.h
+    esl_fileparser.h
+    esl_gamma.h
+    esl_gencode.h
+    esl_getopts.h
+    esl_gev.h
+    esl_graph.h
+    esl_gumbel.h
+    esl_heap.h
+    esl_histogram.h
+    esl_hmm.h
+    esl_huffman.h
+    esl_hyperexp.h
+    esl_iset.h
+    esl_json.h
+    esl_keyhash.h
+    esl_lognormal.h
+    esl_matrixops.h
+    esl_mem.h
+    esl_minimizer.h
+    esl_mixdchlet.h
+    esl_mixgev.h
+    esl_mpi.h
+    esl_msacluster.h
+    esl_msafile2.h
+    esl_msafile_a2m.h
+    esl_msafile_afa.h
+    esl_msafile_clustal.h
+    esl_msafile.h
+    esl_msafile_phylip.h
+    esl_msafile_psiblast.h
+    esl_msafile_selex.h
+    esl_msafile_stockholm.h
+    esl_msa.h
+    esl_msashuffle.h
+    esl_msaweight.h
+    esl_neon.h
+    esl_normal.h
+    esl_paml.h
+    esl_quicksort.h
+    esl_rand64.h
+    esl_random.h
+    esl_randomseq.h
+    esl_ratematrix.h
+    esl_recorder.h
+    esl_red_black.h
+    esl_regexp.h
+    esl_rootfinder.h
+    esl_scorematrix.h
+    esl_sq.h
+    esl_sqio_ascii.h
+    esl_sqio.h
+    esl_sqio_ncbi.h
+    esl_sse.h
+    esl_ssi.h
+    esl_stack.h
+    esl_stats.h
+    esl_stopwatch.h
+    esl_stretchexp.h
+    esl_subcmd.h
+    esl_threads.h
+    esl_tree.h
+    esl_varint.h
+    esl_vectorops.h
+    esl_vmx.h
+    esl_weibull.h
+    esl_workqueue.h
+    esl_wuss.h
+    interface_gsl.h
+    interface_lapack.h
+)
+
+add_library(libeasel ${EASEL_SOURCES} ${EASEL_HEADERS})
 target_include_directories(libeasel PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(libeasel PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(DEFINED PYHMMER_INSTALL_LIBS_DIR)
-  install(TARGETS libeasel DESTINATION ${SKBUILD_PLATLIB_DIR}/${PYHMMER_INSTALL_LIBS_DIR})
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/esl_config.h DESTINATION ${SKBUILD_PLATLIB_DIR}/${PYHMMER_INSTALL_LIBS_DIR})
+  install(TARGETS libeasel DESTINATION "${SKBUILD_PLATLIB_DIR}/${PYHMMER_INSTALL_LIBS_DIR}")
+  cmake_path(APPEND SKBUILD_PLATLIB_DIR "${PYHMMER_INSTALL_LIBS_DIR}" "include" "libeasel" OUTPUT_VARIABLE INCLUDE_DEST_FOLDER)
+  install(FILES ${EASEL_HEADERS} DESTINATION "${INCLUDE_DEST_FOLDER}")
   set_target_properties(libeasel PROPERTIES INSTALL_RPATH "\$ORIGIN/.")
 endif()

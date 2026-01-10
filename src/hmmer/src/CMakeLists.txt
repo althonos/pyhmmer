@@ -14,7 +14,6 @@ set(HMMER_URL "http://hmmer.org/")
 configure_file(p7_config.h.cmake p7_config.h)
 
 set(HMMER_SOURCES
-    ${CMAKE_CURRENT_BINARY_DIR}/p7_config.h
     build.c 
     cachedb.c 
     cachedb_shard.c 
@@ -76,7 +75,22 @@ set(HMMER_SOURCES
     fm_ssv.c
 )
 
+set(HMMER_HEADERS
+    ${CMAKE_CURRENT_BINARY_DIR}/p7_config.h
+    cachedb.h
+    cachedb_shard.h
+    hmmer.h
+    hmmpgmd.h
+    hmmpgmd_shard.h
+    p7_gbands.h
+    p7_gmxb.h
+    p7_gmxchk.h
+    p7_hmmcache.h
+)
+
+
 if(HMMER_IMPL STREQUAL "SSE")
+    set(IMPL_SLUG "impl_sse")
     set(HMMER_SOURCES
         ${HMMER_SOURCES}
         impl_sse/decoding.c
@@ -93,6 +107,7 @@ if(HMMER_IMPL STREQUAL "SSE")
         impl_sse/vitfilter.c
     )
 elseif(HMMER_IMPL STREQUAL "NEON")
+    set(IMPL_SLUG "impl_neon")
     set(HMMER_SOURCES
         ${HMMER_SOURCES}
         impl_neon/decoding.c
@@ -109,6 +124,7 @@ elseif(HMMER_IMPL STREQUAL "NEON")
         impl_neon/vitfilter.c
     )
 elseif(HMMER_IMPL STREQUAL "VMX")
+    set(IMPL_SLUG "impl_vmx")
     set(HMMER_SOURCES
         ${HMMER_SOURCES}
         impl_vmx/decoding.c
@@ -127,13 +143,15 @@ else()
     message(FATAL_ERROR "No HMMER implementation defined")
 endif()
 
-add_library(libhmmer ${HMMER_SOURCES})
+add_library(libhmmer ${HMMER_SOURCES} ${HMMER_HEADERS})
 target_link_libraries(libhmmer PUBLIC libeasel)
 target_include_directories(libhmmer PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(libhmmer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(DEFINED PYHMMER_INSTALL_LIBS_DIR)
-  install(TARGETS libhmmer DESTINATION ${SKBUILD_PLATLIB_DIR}/${PYHMMER_INSTALL_LIBS_DIR})
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/p7_config.h DESTINATION ${SKBUILD_PLATLIB_DIR}/${PYHMMER_INSTALL_LIBS_DIR})
-  set_target_properties(libhmmer PROPERTIES INSTALL_RPATH "\$ORIGIN/.")
+    install(TARGETS libhmmer DESTINATION "${SKBUILD_PLATLIB_DIR}/${PYHMMER_INSTALL_LIBS_DIR}")
+    cmake_path(APPEND SKBUILD_PLATLIB_DIR "${PYHMMER_INSTALL_LIBS_DIR}" "include" "libhmmer" OUTPUT_VARIABLE INCLUDE_DEST_FOLDER)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/p7_config.h" ${HMMER_HEADERS} DESTINATION "${INCLUDE_DEST_FOLDER}")
+    install(FILES "${IMPL_SLUG}/${IMPL_SLUG}.h" DESTINATION "${INCLUDE_DEST_FOLDER}/${IMPL_SLUG}")
+    set_target_properties(libhmmer PROPERTIES INSTALL_RPATH "\$ORIGIN/.")
 endif()
