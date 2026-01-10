@@ -40,22 +40,30 @@ class _TestHMMFile:
             self.assertRaises(EOFError, self.open_hmm, empty.name)
 
     def test_read_hmmpressed(self):
-        path = os.path.join(self.hmms_folder, "db", "{}.hmm".format(self.ID))
+        path = self.hmms_folder.joinpath("db", "{}.hmm".format(self.ID))
+        if not path.exists():
+            self.skipTest("data files not available")
         with self.open_hmm(path) as f:
             self.check_hmmfile(f)
 
     def test_read_h3m(self):
-        path = os.path.join(self.hmms_folder, "bin", "{}.h3m".format(self.ID))
+        path = self.hmms_folder.joinpath("bin", "{}.h3m".format(self.ID))
+        if not path.exists():
+            self.skipTest("data files not available")
         with self.open_hmm(path) as f:
             self.check_hmmfile(f)
 
     def test_read_hmm3(self):
-        path = os.path.join(self.hmms_folder, "txt", "{}.hmm".format(self.ID))
+        path = self.hmms_folder.joinpath("txt", "{}.hmm".format(self.ID))
+        if not path.exists():
+            self.skipTest("data files not available")
         with self.open_hmm(path) as f:
             self.check_hmmfile(f)
 
     def test_read_hmm2(self):
-        path = os.path.join(self.hmms_folder, "txt2", "{}.hmm2".format(self.ID))
+        path = self.hmms_folder.joinpath("txt2", "{}.hmm2".format(self.ID))
+        if not path.exists():
+            self.skipTest("data files not available")
         with self.open_hmm(path) as f:
             self.check_hmmfile(f)
 
@@ -68,7 +76,9 @@ class _TestHMMFileobj:
         return HMMFile(buffer)
 
     def test_name(self):
-        path = os.path.join(self.hmms_folder, "db", "{}.hmm".format(self.ID))
+        path = self.hmms_folder.joinpath("bin", "{}.h3m".format(self.ID))
+        if not path.exists():
+            self.skipTest("data files not available")
         with self.open_hmm(path) as f:
             self.assertIs(f.name, None)
 
@@ -89,12 +99,16 @@ class _TestHMMPath:
         self.assertRaises(IsADirectoryError, HMMFile, folder)
 
     def test_read_optimized_profiles(self):
-        path = os.path.join(self.hmms_folder, "db", "{}.hmm".format(self.ID))
+        path = self.hmms_folder.joinpath("db", "{}.hmm".format(self.ID))
+        if not path.exists():
+            self.skipTest("data files not available")
         with self.open_hmm(path) as f:
             self.check_hmmfile(f.optimized_profiles())
 
     def test_optimized_profiles_length(self):
-        path = os.path.join(self.hmms_folder, "db", "{}.hmm".format(self.ID))
+        path = self.hmms_folder.joinpath("db", "{}.hmm".format(self.ID))
+        if not path.exists():
+            self.skipTest("data files not available")
         with self.open_hmm(path) as f:
             profiles = f.optimized_profiles()
             self.assertEqual(len(profiles), len(self.NAMES))
@@ -103,8 +117,21 @@ class _TestHMMPath:
             profiles.rewind()
             self.assertEqual(len(profiles), len(self.NAMES))
 
-    def test_rewind(self):
-        path = os.path.join(self.hmms_folder, "txt", "{}.hmm".format(self.ID))
+    def test_rewind_hmm(self):
+        path = self.hmms_folder.joinpath("txt", "{}.hmm".format(self.ID))
+        if not path.exists():
+            self.skipTest("data files not available")
+        with self.open_hmm(path) as f:
+            hmm1 = f.read()
+            f.rewind()
+            hmm2 = f.read()
+            self.assertIsNot(hmm1, hmm2)
+            self.assertEqual(hmm1.name, hmm2.name)
+
+    def test_rewind_h3m(self):
+        path = self.hmms_folder.joinpath("bin", "{}.h3m".format(self.ID))
+        if not path.exists():
+            self.skipTest("data files not available")
         with self.open_hmm(path) as f:
             hmm1 = f.read()
             f.rewind()
@@ -113,7 +140,9 @@ class _TestHMMPath:
             self.assertEqual(hmm1.name, hmm2.name)
 
     def test_rewind_optimized_profiles(self):
-        path = os.path.join(self.hmms_folder, "db", "{}.hmm".format(self.ID))
+        path = self.hmms_folder.joinpath("db", "{}.hmm".format(self.ID))
+        if not path.exists():
+            self.skipTest("data files not available")
         with self.open_pressed(path) as f:
             om1 = f.read()
             f.rewind()
@@ -121,11 +150,20 @@ class _TestHMMPath:
             self.assertIsNot(om1, om2)
             self.assertEqual(om1.name, om2.name)
 
-    def test_name(self):
-        path = os.path.join(self.hmms_folder, "db", "{}.hmm".format(self.ID))
+    def test_name_h3m(self):
+        path = self.hmms_folder.joinpath("bin", "{}.h3m".format(self.ID))
+        if not path.exists():
+            self.skipTest("data files not available")
         with self.open_hmm(path) as f:
-            self.assertEqual(f.name, path)
-            self.assertEqual(f.optimized_profiles().name, path)
+            self.assertEqual(f.name, str(path))
+
+    def test_name_hmmpressed(self):
+        path = self.hmms_folder.joinpath("db", "{}.hmm".format(self.ID))
+        if not path.exists():
+            self.skipTest("data files not available")
+        with self.open_hmm(path) as f:
+            self.assertEqual(f.name, str(path))
+            self.assertEqual(f.optimized_profiles().name, str(path))
 
 
 class _TestThioesterase(_TestHMMFile):
