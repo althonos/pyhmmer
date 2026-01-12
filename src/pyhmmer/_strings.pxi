@@ -46,16 +46,45 @@ class _strwrapper(str):
         )
         return self
 
-ctypedef int (*setter_t)(void*, const char*) noexcept nogil 
-ctypedef int (*setter_pos_t)(void*, const char*, libeasel.esl_pos_t) noexcept nogil 
 
 cdef object _get_str(const char* ptr):
     return _strwrapper(PyUnicode_FromString(ptr))
 
+cdef object _get_str_sized(const char* ptr, ssize_t size):
+    return _strwrapper(PyUnicode_FromStringAndSize(ptr, size))
+
+ctypedef int (*setter_t)(void*, const char*) noexcept nogil 
 cdef int _set_str(
     void* dat, 
     object obj, 
     setter_t setter,
+) except -1:
+    # FIXME: check for internal NULL bytes
+    cdef       int                status
+    cdef const unsigned char[::1] view
+    cdef       ssize_t            size   = -1
+    cdef const char*              text   = NULL
+
+    if obj is None:
+        text = NULL
+        size = -1
+    elif isinstance(obj, str):
+        text = PyUnicode_AsUTF8AndSize(obj, &size)
+    else:
+        view = obj
+        size = view.shape[0]
+        if size > 0:
+            text = <const char*> &view[0]
+
+    with nogil:
+        status = setter(dat, text)
+    return status
+
+ctypedef int (*setter_pos_t)(void*, const char*, libeasel.esl_pos_t) noexcept nogil 
+cdef int _set_str_sized(
+    void* dat, 
+    object obj, 
+    setter_pos_t setter,
 ) except -1:
     # FIXME: check for internal NULL bytes
     cdef       int                status
@@ -72,5 +101,5 @@ cdef int _set_str(
             text = <const char*> &view[0]
 
     with nogil:
-        status = setter(dat, text)
+        status = setter(dat, text, size)
     return status

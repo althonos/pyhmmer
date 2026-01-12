@@ -4097,6 +4097,10 @@ cdef class MSA:
     @property
     def accession(self):
         """`str` or `None`: The accession of the alignment, if any.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
         if self._msa.acc == NULL:
@@ -4104,133 +4108,93 @@ cdef class MSA:
         return _get_str(self._msa.acc)
 
     @accession.setter
-    def accession(self, bytes accession):
+    def accession(self, object accession):
         assert self._msa != NULL
-
-        cdef       int       status
-        cdef       esl_pos_t length
-        cdef const char*     acc
-
-        if accession is None:
-            length = -1
-            acc = NULL
-        else:
-            length = len(accession)
-            acc = accession
-
-        with nogil:
-            status = libeasel.msa.esl_msa_SetAccession(self._msa, acc, length)
+        status = _set_str_sized(self._msa, accession, <setter_pos_t> libeasel.msa.esl_msa_SetAccession)
         if status == libeasel.eslEMEM:
-            raise AllocationError("char", sizeof(char), length)
+            raise AllocationError("char", sizeof(char), len(accession))
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_msa_SetAccession")
 
     @property
     def author(self):
-        """`bytes` or `None`: The author of the alignment, if any.
+        """`str` or `None`: The author of the alignment, if any.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
         if self._msa.au == NULL:
             return None
-        return <bytes> self._msa.au
+        return _get_str(self._msa.au)
 
     @author.setter
-    def author(self, bytes author):
+    def author(self, object author):
         assert self._msa != NULL
-
-        cdef       int       status
-        cdef       esl_pos_t length
-        cdef const char*     au
-
-        if author is None:
-            length = -1
-            au = NULL
-        else:
-            length = len(author)
-            au = author
-
-        with nogil:
-            status = libeasel.msa.esl_msa_SetAuthor(self._msa, au, length)
+        status = _set_str_sized(self._msa, author, <setter_pos_t> libeasel.msa.esl_msa_SetAuthor)
         if status == libeasel.eslEMEM:
-            raise AllocationError("char", sizeof(char), length)
+            raise AllocationError("char", sizeof(char), len(author))
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_msa_SetAuthor")
 
     @property
     def name(self):
-        """`bytes` or `None`: The name of the alignment, if any.
+        """`str` or `None`: The name of the alignment, if any.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
         if self._msa.name == NULL:
             return None
-        return <bytes> self._msa.name
+        return _get_str(self._msa.name)
 
     @name.setter
-    def name(self, bytes name):
+    def name(self, object name):
         assert self._msa != NULL
-
-        cdef       int       status
-        cdef       esl_pos_t length
-        cdef const char*     nm
-
-        if name is None:
-            length = -1
-            nm = NULL
-        else:
-            length = len(name)
-            nm = name
-
-        with nogil:
-            status = libeasel.msa.esl_msa_SetName(self._msa, nm, length)
+        status = _set_str_sized(self._msa, name, <setter_pos_t> libeasel.msa.esl_msa_SetName)
         if status == libeasel.eslEMEM:
-            raise AllocationError("char", sizeof(char), length)
+            raise AllocationError("char", sizeof(char), len(name))
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_msa_SetName")
 
     @property
     def description(self):
-        """`bytes` or `None`: The description of the alignment, if any.
+        """`str` or `None`: The description of the alignment, if any.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
         if self._msa.desc == NULL:
             return None
-        return <bytes> self._msa.desc
+        return _get_str(self._msa.desc)
 
     @description.setter
-    def description(self, bytes description):
+    def description(self, object description):
         assert self._msa != NULL
-
-        cdef       int       status
-        cdef       esl_pos_t length
-        cdef const char*     desc
-
-        if description is None:
-            length = -1
-            desc = NULL
-        else:
-            length = len(description)
-            desc = description
-
-        with nogil:
-            status = libeasel.msa.esl_msa_SetDesc(self._msa, desc, length)
+        status = _set_str_sized(self._msa, description, <setter_pos_t> libeasel.msa.esl_msa_SetDesc)
         if status == libeasel.eslEMEM:
-            raise AllocationError("char", sizeof(char), length)
+            raise AllocationError("char", sizeof(char), len(description))
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_msa_SetDesc")
 
     @property
     def names(self):
-        """`tuple` of `bytes`: The name of each sequence in the alignment.
+        """`tuple` of `str`: The name of each sequence in the alignment.
 
         Every sequence in the alignment is required to have a name, so
         no member of the `tuple` will ever be `None`.
 
         Example:
-            >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
-            >>> s2 = TextSequence(name=b"seq2", sequence="ATGC")
-            >>> msa = TextMSA(name=b"msa", sequences=[s1, s2])
+            >>> s1 = TextSequence(name="seq1", sequence="ATGC")
+            >>> s2 = TextSequence(name="seq2", sequence="ATGC")
+            >>> msa = TextMSA(name="msa", sequences=[s1, s2])
             >>> msa.names
-            (b'seq1', b'seq2')
+            ('seq1', 'seq2')
 
         .. versionadded:: 0.4.8
 
@@ -4239,7 +4203,7 @@ cdef class MSA:
         assert self._msa.sqname != NULL
 
         cdef int64_t i
-        cdef bytes   name
+        cdef str     name
         cdef tuple   names
 
         if self._msa.alen == 0 or self._msa.nseq == 0:
@@ -4249,7 +4213,7 @@ cdef class MSA:
         for i in range(self._msa.nseq):
             # sequences must have a name
             assert self._msa.sqname[i] != NULL
-            name = PyBytes_FromString(self._msa.sqname[i])
+            name = PyUnicode_FromString(self._msa.sqname[i])
             Py_INCREF(name)
             PyTuple_SET_ITEM(names, i, name)
 
@@ -4257,24 +4221,26 @@ cdef class MSA:
 
     @property
     def reference(self):
-        """`bytes` or `None`: The reference annotation (`#=GC RF`), if any.
+        """`str` or `None`: The reference annotation (`#=GC RF`), if any.
 
         .. versionadded:: 0.11.1
 
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
-
         if self._msa.rf == NULL:
             return None
-        return PyBytes_FromStringAndSize(self._msa.rf, self._msa.alen)
+        return _get_str_sized(self._msa.rf, self._msa.alen)
 
     @reference.setter
-    def reference(self, bytes reference):
+    def reference(self, str reference):
         assert self._msa != NULL
         if reference is None:
             self._set_annotation(&self._msa.rf, NULL)
         else:
-            self._set_annotation(&self._msa.rf, <char*> reference)
+            self._set_annotation(&self._msa.rf, PyUnicode_AsUTF8(reference))
 
     @property
     def model_mask(self):
@@ -4282,83 +4248,92 @@ cdef class MSA:
 
         .. versionadded:: 0.11.1
 
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
 
         if self._msa.mm == NULL:
             return None
-        return PyBytes_FromStringAndSize(self._msa.mm, self._msa.alen)
+        return _get_str_sized(self._msa.mm, self._msa.alen)
 
     @model_mask.setter
-    def model_mask(self, bytes model_mask):
+    def model_mask(self, str model_mask):
         assert self._msa != NULL
         if model_mask is None:
             self._set_annotation(&self._msa.mm, NULL)
         else:
-            self._set_annotation(&self._msa.mm, <char*> model_mask)
+            self._set_annotation(&self._msa.mm, PyUnicode_AsUTF8(model_mask))
 
     @property
     def secondary_structure(self):
-        """`bytes` or `None`: The consensus secondary structure, if any.
+        """`str` or `None`: The consensus secondary structure, if any.
 
         .. versionadded:: 0.11.1
 
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
-
         if self._msa.ss_cons == NULL:
             return None
-        return PyBytes_FromStringAndSize(self._msa.ss_cons, self._msa.alen)
+        return _get_str_sized(self._msa.ss_cons, self._msa.alen)
 
     @secondary_structure.setter
-    def secondary_structure(self, bytes secondary_structure):
+    def secondary_structure(self, str secondary_structure):
         assert self._msa != NULL
         if secondary_structure is None:
             self._set_annotation(&self._msa.ss_cons, NULL)
         else:
-            self._set_annotation(&self._msa.ss_cons, <char*> secondary_structure)
+            self._set_annotation(&self._msa.ss_cons, PyUnicode_AsUTF8(secondary_structure))
 
     @property
     def surface_accessibility(self):
-        """`bytes` or `None`: The consensus surface accessibility, if any.
+        """`str` or `None`: The consensus surface accessibility, if any.
 
         .. versionadded:: 0.11.1
 
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
-
         if self._msa.sa_cons == NULL:
             return None
-        return PyBytes_FromStringAndSize(self._msa.sa_cons, self._msa.alen)
+        return _get_str_sized(self._msa.sa_cons, self._msa.alen)
 
     @surface_accessibility.setter
-    def surface_accessibility(self, bytes surface_accessibility):
+    def surface_accessibility(self, str surface_accessibility):
         assert self._msa != NULL
         if surface_accessibility is None:
             self._set_annotation(&self._msa.sa_cons, NULL)
         else:
-            self._set_annotation(&self._msa.sa_cons, <char*> surface_accessibility)
+            self._set_annotation(&self._msa.sa_cons, PyUnicode_AsUTF8(surface_accessibility))
 
     @property
     def posterior_probabilities(self):
-        """`bytes` or `None`: The consensus posterior probabilities, if any.
+        """`str` or `None`: The consensus posterior probabilities, if any.
 
         .. versionadded:: 0.11.1
 
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
-
         if self._msa.pp_cons == NULL:
             return None
-        return PyBytes_FromStringAndSize(self._msa.pp_cons, self._msa.alen)
+        return _get_str_sized(self._msa.pp_cons, self._msa.alen)
 
     @posterior_probabilities.setter
-    def posterior_probabilities(self, bytes posterior_probabilities):
+    def posterior_probabilities(self, str posterior_probabilities):
         assert self._msa != NULL
         if posterior_probabilities is None:
             self._set_annotation(&self._msa.pp_cons, NULL)
         else:
-            self._set_annotation(&self._msa.pp_cons, <char*> posterior_probabilities)
+            self._set_annotation(&self._msa.pp_cons, PyUnicode_AsUTF8(posterior_probabilities))
 
     @property
     def sequence_weights(self):
@@ -4887,27 +4862,28 @@ cdef class TextMSA(MSA):
     def __init__(
         self,
         *,
-        bytes name=None,
-        bytes description=None,
-        bytes accession=None,
+        object name=None,
+        object description=None,
+        object accession=None,
         object sequences=None,
-        bytes author=None,
+        object author=None,
     ):
         """__init__(self, *, name=None, description=None, accession=None, sequences=None, author=None)\n--\n
 
         Create a new text-mode alignment with the given ``sequences``.
 
         Keyword Arguments:
-            name (`bytes`, optional): The name of the alignment, if any.
-            description (`bytes`, optional): The description of the
-                alignment, if any.
-            accession (`bytes`, optional): The accession of the alignment,
+            name (`str` or `bytes`, optional): The name of the alignment, 
                 if any.
+            description (`str` or `bytes`, optional): The description of the
+                alignment, if any.
+            accession (`str` or `bytes`, optional): The accession of the 
+                alignment, if any.
             sequences (collection of `TextSequence`): The sequences to store
                 in the multiple sequence alignment. All sequences must have
                 the same length. They also need to have distinct names.
-            author (`bytes`, optional): The author of the alignment, often
-                used to record the aligner it was created with.
+            author (`str` or `bytes`, optional): The author of the alignment, 
+                often used to record the aligner it was created with.
 
         Raises:
             `ValueError`: When the alignment cannot be created from the
@@ -4916,9 +4892,9 @@ cdef class TextMSA(MSA):
                 `TextSequence` objects.
 
         Example:
-            >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
-            >>> s2 = TextSequence(name=b"seq2", sequence="ATGC")
-            >>> msa = TextMSA(name=b"msa", sequences=[s1, s2])
+            >>> s1 = TextSequence(name="seq1", sequence="ATGC")
+            >>> s2 = TextSequence(name="seq2", sequence="ATGC")
+            >>> msa = TextMSA(name="msa", sequences=[s1, s2])
             >>> len(msa)
             4
 
@@ -5303,11 +5279,11 @@ cdef class DigitalMSA(MSA):
         self,
         Alphabet alphabet,
         *,
-        bytes name=None,
-        bytes description=None,
-        bytes accession=None,
+        object name=None,
+        object description=None,
+        object accession=None,
         object sequences=None,
-        bytes author=None,
+        object author=None,
     ):
         """__init__(self, alphabet, *, name=None, description=None, accession=None, sequences=None, author=None)\n--\n
 
