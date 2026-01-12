@@ -36,6 +36,7 @@ from cpython.unicode cimport (
     PyUnicode_FromStringAndSize,
     PyUnicode_AsUTF8,
     PyUnicode_AsUTF8AndSize,
+    PyUnicode_AsASCIIString,
     PyUnicode_DATA,
     PyUnicode_KIND,
     PyUnicode_WRITE,
@@ -4349,9 +4350,9 @@ cdef class MSA:
             use the property setter rather than modifying the weights
             inplace::
 
-                >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
-                >>> s2 = TextSequence(name=b"seq2", sequence="ATCC")
-                >>> msa = TextMSA(name=b"msa", sequences=[s1, s2])
+                >>> s1 = TextSequence(name="seq1", sequence="ATGC")
+                >>> s2 = TextSequence(name="seq2", sequence="ATCC")
+                >>> msa = TextMSA(name="msa", sequences=[s1, s2])
                 >>> msa.sequence_weights  # default weights, flag unset
                 VectorD([1.0, 1.0])
                 >>> msa.sequence_weights = VectorD([0.5, 1.5])
@@ -4411,9 +4412,9 @@ cdef class MSA:
                 containing duplicate sequence names.
 
         Example:
-            >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
-            >>> s2 = TextSequence(name=b"seq2", sequence="ATTA")
-            >>> msa = TextMSA(name=b"msa", sequences=[s1, s2])
+            >>> s1 = TextSequence(name="seq1", sequence="ATGC")
+            >>> s2 = TextSequence(name="seq2", sequence="ATTA")
+            >>> msa = TextMSA(name="msa", sequences=[s1, s2])
             >>> msa.indexed[b'seq1'].sequence
             'ATGC'
             >>> msa.indexed[b'seq3']
@@ -4497,10 +4498,10 @@ cdef class MSA:
             residue, and any non-alphanumeric char is considered to be a gap.
 
         Example:
-            >>> s1 = TextSequence(name=b"seq1", sequence="--ATGC---")
-            >>> s2 = TextSequence(name=b"seq2", sequence="TTATCCG-T")
-            >>> s3 = TextSequence(name=b"seq3", sequence="TT-TCCGAT")
-            >>> msa = TextMSA(name=b"msa", sequences=[s1, s2, s3])
+            >>> s1 = TextSequence(name="seq1", sequence="--ATGC---")
+            >>> s2 = TextSequence(name="seq2", sequence="TTATCCG-T")
+            >>> s3 = TextSequence(name="seq3", sequence="TT-TCCGAT")
+            >>> msa = TextMSA(name="msa", sequences=[s1, s2, s3])
             >>> msa.mark_fragments(0.5)
             Bitfield([True, False, False])
 
@@ -4541,10 +4542,10 @@ cdef class MSA:
                 sequences or columns.
 
         Example:
-            >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
-            >>> s2 = TextSequence(name=b"seq2", sequence="ATCC")
-            >>> s3 = TextSequence(name=b"seq3", sequence="ATGA")
-            >>> msa = TextMSA(name=b"msa", sequences=[s1, s2, s3])
+            >>> s1 = TextSequence(name="seq1", sequence="ATGC")
+            >>> s2 = TextSequence(name="seq2", sequence="ATCC")
+            >>> s3 = TextSequence(name="seq3", sequence="ATGA")
+            >>> msa = TextMSA(name="msa", sequences=[s1, s2, s3])
             >>> msa.select(sequences=[0, 2]).names
             (b'seq1', b'seq3')
             >>> tuple(msa.select(columns=range(1,4)).alignment)
@@ -4989,9 +4990,9 @@ cdef class TextMSA(MSA):
             Query the number of sequences in the alignment with `len`, or
             access individual members via indexing notation::
 
-                >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
-                >>> s2 = TextSequence(name=b"seq2", sequence="ATGC")
-                >>> msa = TextMSA(name=b"msa", sequences=[s1, s2])
+                >>> s1 = TextSequence(name="seq1", sequence="ATGC")
+                >>> s2 = TextSequence(name="seq2", sequence="ATGC")
+                >>> msa = TextMSA(name="msa", sequences=[s1, s2])
                 >>> len(msa.sequences)
                 2
                 >>> msa.sequences[0].name
@@ -5002,20 +5003,20 @@ cdef class TextMSA(MSA):
             will have no effect on the alignment::
 
                 >>> msa.sequences[0].name
-                b'seq1'
-                >>> msa.sequences[0].name = b"seq1bis"
+                'seq1'
+                >>> msa.sequences[0].name = "seq1bis"
                 >>> msa.sequences[0].name
-                b'seq1'
+                'seq1'
 
             Support for this feature may be added in a future version, but
             can be circumvented for now by forcingly setting the updated
             version of the object::
 
                 >>> seq = msa.sequences[0]
-                >>> seq.name = b"seq1bis"
+                >>> seq.name = "seq1bis"
                 >>> msa.sequences[0] = seq
                 >>> msa.sequences[0].name
-                b'seq1bis'
+                'seq1bis'
 
         .. versionadded:: 0.3.0
 
@@ -6372,7 +6373,7 @@ cdef class Sequence:
             raise a `ValueError`::
 
                 >>> seq = TextSequence(sequence="TTAATTGGT")
-                >>> seq.residue_markups = {b"quality": b"efcfffffcfee"}
+                >>> seq.residue_markups = {"quality": "efcfffffcfee"}
                 Traceback (most recent call last):
                   ...
                 ValueError: Residue markup annotation has an invalid length (expected 9, got 12)
@@ -6579,7 +6580,7 @@ cdef class TextSequence(Sequence):
         cdef bytes sq
 
         if sequence is not None:
-            sq = sequence.encode("ascii")
+            sq = PyUnicode_AsASCIIString(sequence)
             self._sq = libeasel.sq.esl_sq_CreateFrom(NULL, sq, NULL, NULL, NULL)
         else:
             self._sq = libeasel.sq.esl_sq_Create()
@@ -7286,15 +7287,15 @@ cdef class SequenceBlock:
                 containing duplicate sequence names.
 
         Example:
-            >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
-            >>> s2 = TextSequence(name=b"seq2", sequence="ATTA")
+            >>> s1 = TextSequence(name="seq1", sequence="ATGC")
+            >>> s2 = TextSequence(name="seq2", sequence="ATTA")
             >>> block = TextSequenceBlock([s1, s2])
-            >>> block.indexed[b'seq1'].sequence
+            >>> block.indexed['seq1'].sequence
             'ATGC'
-            >>> block.indexed[b'seq3']
+            >>> block.indexed['seq3']
             Traceback (most recent call last):
             ...
-            KeyError: b'seq3'
+            KeyError: 'seq3'
 
         .. versionadded:: 0.11.1
 
