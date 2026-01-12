@@ -444,36 +444,18 @@ cdef class Alphabet:
         cdef char*            data
         cdef size_t           length  = sequence.shape[0]
 
-        # NB(@althonos): Compatibility code for PyPy 3.6, which does
-        #                not support directly writing to a string. Remove
-        #                when Python 3.6 support is dropped.
-        if SYS_VERSION_INFO_MAJOR <= 3 and SYS_VERSION_INFO_MINOR <= 7 and SYS_IMPLEMENTATION_NAME == "pypy":
-            decoded = PyBytes_FromStringAndSize(NULL, length)
-            data    = PyBytes_AsString(decoded)
+        decoded = PyUnicode_New(length, 0x7F)
+        kind    = PyUnicode_KIND(decoded)
+        data    = <char*> PyUnicode_DATA(decoded)
 
-            with nogil:
-                for i in range(length):
-                    x = sequence[i]
-                    if libeasel.alphabet.esl_abc_XIsValid(self._abc, x):
-                        data[i] = self._abc.sym[x]
-                    else:
-                        raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
+        for i in range(length):
+            x = sequence[i]
+            if libeasel.alphabet.esl_abc_XIsValid(self._abc, x):
+                PyUnicode_WRITE(kind, data, i, self._abc.sym[x])
+            else:
+                raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
 
-            return decoded.decode('ascii')
-
-        else:
-            decoded = PyUnicode_New(length, 0x7F)
-            kind    = PyUnicode_KIND(decoded)
-            data    = <char*> PyUnicode_DATA(decoded)
-
-            for i in range(length):
-                x = sequence[i]
-                if libeasel.alphabet.esl_abc_XIsValid(self._abc, x):
-                    PyUnicode_WRITE(kind, data, i, self._abc.sym[x])
-                else:
-                    raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
-
-            return decoded
+        return decoded
 
 
 # --- GeneticCode ------------------------------------------------------------
@@ -682,23 +664,25 @@ cdef class Bitfield:
     def _from_raw_bytes(cls, object buffer, int n, str byteorder):
         f"""Create a new bitfield using the given bytes to fill its contents.
         """
-        cdef const uint8_t[::1] bytes
+        cdef const uint8_t[::1] data
         cdef Bitfield           bitfield = cls.zeros(n)
         cdef object             view     = memoryview(buffer)
 
-        # fix endianness if needed
+        # fix endianness if needed by copying bytes into a temporary array
         if byteorder != SYS_BYTEORDER:
             newbuffer = array.array("Q")
             newbuffer.frombytes(view)
             newbuffer.byteswap()
             view = memoryview(newbuffer)
 
-        # assign the items
-        bytes = view.cast("B")
-        assert bytes.shape[0] == bitfield._shape[0] * sizeof(uint64_t)
+        # copy the data quickly using `memcpy` (which is fine because we
+        # require data to be a C-contiguous typed memoryview)
+        data = view.cast("B")
+        if data.shape[0] != bitfield._shape[0] * sizeof(uint64_t):
+            raise ValueError(f"invalid buffer size: {data.shape[0]}")
         if n > 0:
             with nogil:
-                memcpy(bitfield._b.b, &bytes[0], bitfield._shape[0]*sizeof(uint64_t))
+                memcpy(bitfield._b.b, &data[0], bitfield._shape[0]*sizeof(uint64_t))
         return bitfield
 
     @classmethod
