@@ -173,6 +173,8 @@ cdef class HMMFile:
 
     @staticmethod
     cdef P7_HMMFILE* _open_fileobj(object fh) except *
+    @staticmethod
+    cdef void _close_hmmfile(P7_HMMFILE* hfp) noexcept nogil
 
 
 cdef class HMMPressedFile:
