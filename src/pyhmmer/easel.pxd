@@ -71,7 +71,7 @@ cdef class Bitfield:
 cdef class KeyHash:
     cdef ESL_KEYHASH* _kh
 
-    cpdef int add(self, bytes key) except -1
+    cpdef int add(self, str key) except -1
     cpdef void clear(self) except *
     cpdef KeyHash copy(self)
 

@@ -965,12 +965,12 @@ cdef class KeyHash:
 
         Get the index associated with a key using the indexing notation::
 
-            >>> kh[b"key"]
+            >>> kh["key"]
             0
-            >>> kh[b"missing"]
+            >>> kh["missing"]
             Traceback (most recent call last):
               ...
-            KeyError: b'missing'
+            KeyError: 'missing'
 
         Iterate over the keys of the key hash, in the order of insertion::
 
@@ -978,8 +978,8 @@ cdef class KeyHash:
             1
             >>> for k in kh:
             ...     print(k)
-            b'key'
-            b'key2'
+            key
+            key2
 
     See Also:
         The Wikipedia article for Bob Jenkins' hash functions:
@@ -1022,13 +1022,14 @@ cdef class KeyHash:
     def __contains__(self, object value):
         assert self._kh != NULL
 
-        if not isinstance(value, bytes):
+        if not isinstance(value, str):
             return False
 
-        cdef       int    status
-        cdef const char*  key    = value
-        cdef       size_t length = len(value)
+        cdef       int     status
+        cdef       ssize_t length 
+        cdef const char*   key
 
+        key = PyUnicode_AsUTF8AndSize(value, &length)
         with nogil:
             status = libeasel.keyhash.esl_keyhash_Lookup(self._kh, key, length, NULL)
         if status == libeasel.eslOK:
@@ -1038,14 +1039,15 @@ cdef class KeyHash:
         else:
             raise UnexpectedError(status, "esl_keyhash_Lookup")
 
-    def __getitem__(self, bytes item):
+    def __getitem__(self, str item):
         assert self._kh != NULL
 
-        cdef       int    status
-        cdef       int    index
-        cdef const char*  key    = item
-        cdef       size_t length = len(item)
+        cdef       int     status
+        cdef       int     index
+        cdef       ssize_t length
+        cdef const char*   key    
 
+        key = PyUnicode_AsUTF8AndSize(item, &length)
         with nogil:
             status = libeasel.keyhash.esl_keyhash_Lookup(self._kh, key, length, &index)
         if status == libeasel.eslOK:
@@ -1065,7 +1067,7 @@ cdef class KeyHash:
         for i in range(libeasel.keyhash.esl_keyhash_GetNumber(self._kh)):
             offset = self._kh.key_offset[i]
             key = &self._kh.smem[offset]
-            yield <bytes> key
+            yield _get_str(key)
 
     def __getstate__(self):
         assert self._kh != NULL
@@ -1145,7 +1147,7 @@ cdef class KeyHash:
 
     # --- Methods ------------------------------------------------------------
 
-    cpdef int add(self, bytes key) except -1:
+    cpdef int add(self, str key) except -1:
         """Add a new key to the hash table, and return its index.
 
         If ``key`` was already in the hash table, the previous index is
@@ -1170,11 +1172,12 @@ cdef class KeyHash:
         """
         assert self._kh != NULL
 
-        cdef       int    status
-        cdef       int    index
-        cdef const char*  k      = key
-        cdef       size_t length = len(key)
+        cdef       int     status
+        cdef       int     index
+        cdef const char*   k 
+        cdef       ssize_t length
 
+        k = PyUnicode_AsUTF8AndSize(key, &length)
         with nogil:
             status = libeasel.keyhash.esl_keyhash_Store(self._kh, k, length, &index)
         if status == libeasel.eslOK or status == libeasel.eslEDUP:
@@ -4005,13 +4008,14 @@ class _MSAIndex(collections.abc.Mapping):
         self.msa = msa
 
     def __getitem__(self, object item):
-        cdef int                      status
-        cdef int                      index  = -1
-        cdef const unsigned char[::1] key    = item
-        cdef esl_pos_t                length = key.shape[0]
-        cdef MSA                      msa    = self.msa
-        cdef ESL_KEYHASH*             kh     = msa._msa.index
+        cdef int          status
+        cdef const char*  key
+        cdef int          index  = -1
+        cdef ssize_t      length = -1
+        cdef MSA          msa    = self.msa
+        cdef ESL_KEYHASH* kh     = msa._msa.index
 
+        key = PyUnicode_AsUTF8AndSize(item, &length)
         with nogil:
             status = libeasel.keyhash.esl_keyhash_Lookup(kh, <const char*> &key[0], length, &index)
         if status == libeasel.eslOK:
@@ -4040,7 +4044,7 @@ class _MSAIndex(collections.abc.Mapping):
 
         kh = msa._msa.index
         for i in range(libeasel.keyhash.esl_keyhash_GetNumber(kh)):
-            yield <bytes> libeasel.keyhash.esl_keyhash_Get(kh, i)   # FIXME
+            yield _get_str(libeasel.keyhash.esl_keyhash_Get(kh, i))
 
 
 @cython.freelist(8)
@@ -4415,12 +4419,12 @@ cdef class MSA:
             >>> s1 = TextSequence(name="seq1", sequence="ATGC")
             >>> s2 = TextSequence(name="seq2", sequence="ATTA")
             >>> msa = TextMSA(name="msa", sequences=[s1, s2])
-            >>> msa.indexed[b'seq1'].sequence
+            >>> msa.indexed['seq1'].sequence
             'ATGC'
-            >>> msa.indexed[b'seq3']
+            >>> msa.indexed['seq3']
             Traceback (most recent call last):
             ...
-            KeyError: b'seq3'
+            KeyError: 'seq3'
 
         .. versionadded:: 0.11.1
 
@@ -4547,7 +4551,7 @@ cdef class MSA:
             >>> s3 = TextSequence(name="seq3", sequence="ATGA")
             >>> msa = TextMSA(name="msa", sequences=[s1, s2, s3])
             >>> msa.select(sequences=[0, 2]).names
-            (b'seq1', b'seq3')
+            ('seq1', 'seq3')
             >>> tuple(msa.select(columns=range(1,4)).alignment)
             ('TGC', 'TCC', 'TGA')
 
@@ -4953,11 +4957,11 @@ cdef class TextMSA(MSA):
 
                 >>> for name, aligned in zip(luxc.names, luxc.alignment):
                 ...     print(name, " ", aligned[:40], "...")
-                b'Q9KV99.1'   LANQPLEAILGLINEARKSWSST------------PELDP ...
-                b'Q2WLE3.1'   IYSYPSEAMIEIINEYSKILCSD------------RKFLS ...
-                b'Q97GS8.1'   VHDIKTEETIDLLDRCAKLWLDDNYSKK--HIETLAQITN ...
-                b'Q3WCI9.1'   LLNVPLKEIIDFLVETGERIRDPRNTFMQDCIDRMAGTHV ...
-                b'P08639.1'   LNDLNINNIINFLYTTGQRWKSEEYSRRRAYIRSLITYLG ...
+                Q9KV99.1   LANQPLEAILGLINEARKSWSST------------PELDP ...
+                Q2WLE3.1   IYSYPSEAMIEIINEYSKILCSD------------RKFLS ...
+                Q97GS8.1   VHDIKTEETIDLLDRCAKLWLDDNYSKK--HIETLAQITN ...
+                Q3WCI9.1   LLNVPLKEIIDFLVETGERIRDPRNTFMQDCIDRMAGTHV ...
+                P08639.1   LNDLNINNIINFLYTTGQRWKSEEYSRRRAYIRSLITYLG ...
                 ...
 
             Use the splat operator (*) in combination with the `zip`
@@ -4996,7 +5000,7 @@ cdef class TextMSA(MSA):
                 >>> len(msa.sequences)
                 2
                 >>> msa.sequences[0].name
-                b'seq1'
+                'seq1'
 
         Caution:
             Sequences in the list are copies, so editing their attributes
@@ -6410,7 +6414,7 @@ cdef class Sequence:
         # check the values have the right length before doing anything
         for tag, val in xr.items():
             if len(val) != self._sq.n:
-                raise ValueError(f"Residue markup annotation has an invalid length (expected {self._sq.n}, got {val.shape[0]})")
+                raise ValueError(f"Residue markup annotation has an invalid length (expected {self._sq.n}, got {len(val)})")
         # clear old values
         for i in range(self._sq.nxr):
             free(self._sq.xr_tag[i])
@@ -7133,16 +7137,17 @@ class _SequenceBlockIndex(collections.abc.Mapping):
         cdef SequenceBlock block = self.block
         return libeasel.keyhash.esl_keyhash_GetNumber(block._indexed._kh)
 
-    def __getitem__(self, object item):
-        cdef int                      status
-        cdef int                      index  = -1
-        cdef const unsigned char[::1] key    = item
-        cdef esl_pos_t                length = key.shape[0]
-        cdef SequenceBlock            block  = self.block
+    def __getitem__(self, str item):
+        cdef int           status
+        cdef const char*   key    
+        cdef ssize_t       length = 1
+        cdef int           index  = -1
+        cdef SequenceBlock block  = self.block
 
         assert block._indexed is not None
         assert block._indexed._kh != NULL
 
+        key = PyUnicode_AsUTF8AndSize(item, &length)
         with nogil:
             status = libeasel.keyhash.esl_keyhash_Lookup(
                 block._indexed._kh,
@@ -7167,7 +7172,7 @@ class _SequenceBlockIndex(collections.abc.Mapping):
 
         length = libeasel.keyhash.esl_keyhash_GetNumber(block._indexed._kh)
         for i in range(length):
-            yield <bytes> libeasel.keyhash.esl_keyhash_Get(block._indexed._kh, i)
+            yield _get_str(libeasel.keyhash.esl_keyhash_Get(block._indexed._kh, i))
 
 
 cdef class SequenceBlock:
@@ -7886,9 +7891,9 @@ cdef class SequenceFile:
             >>> with SequenceFile("tests/data/msa/LuxC.sto") as sf:
             ...     sequences = sf.read_block()
             >>> print(sequences[0].name[:6], sequences[0].sequence[:30])
-            b'Q9KV99' LANQPLEAILGLINEARKSWSSTPELDPYR
+            Q9KV99 LANQPLEAILGLINEARKSWSSTPELDPYR
             >>> print(sequences[1].name[:6], sequences[1].sequence[:30])
-            b'Q2WLE3' IYSYPSEAMIEIINEYSKILCSDRKFLSYE
+            Q2WLE3 IYSYPSEAMIEIINEYSKILCSDRKFLSYE
 
     .. versionadded:: 0.2.0
        The ``alphabet`` attribute.
