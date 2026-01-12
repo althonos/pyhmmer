@@ -1225,7 +1225,7 @@ cdef class Vector:
     def _from_raw_bytes(cls, object buffer, int n, str byteorder):
         f"""Create a new vector using the given bytes to fill its contents.
         """
-        cdef const uint8_t[::1] bytes
+        cdef const uint8_t[::1] data
         cdef Vector             vec      = cls.zeros(n)
         cdef size_t             itemsize = vec.itemsize
         cdef object             view     = memoryview(buffer)
@@ -1238,11 +1238,12 @@ cdef class Vector:
             view = memoryview(newbuffer)
 
         # assign the items
-        bytes = view.cast("B")
-        assert bytes.shape[0] == n * vec.itemsize
+        data = view.cast("B")
+        if data.shape[0] != n * vec.itemsize:
+            raise ValueError(f"invalid buffer size: {data.shape[0]}")
         if n > 0:
             with nogil:
-                memcpy(vec._data, &bytes[0], n * itemsize)
+                memcpy(vec._data, &data[0], n * itemsize)
         return vec
 
     # --- Magic methods ------------------------------------------------------
@@ -2798,7 +2799,7 @@ cdef class Matrix:
     def _from_raw_bytes(cls, buffer, int m, int n, str byteorder):
         """Create a new matrix using the given bytes to fill its contents.
         """
-        cdef const uint8_t[::1] bytes
+        cdef const uint8_t[::1] data
         cdef Matrix             mat      = cls.zeros(m, n)
         cdef size_t             itemsize = mat.itemsize
         cdef object             view     = memoryview(buffer)
@@ -2811,11 +2812,12 @@ cdef class Matrix:
             view = memoryview(newbuffer)
 
         # assign the items
-        bytes = view.cast("B")
-        assert bytes.shape[0] == m * n * itemsize
+        data = view.cast("B")
+        if data.shape[0] != m * n * itemsize:
+            raise ValueError(f"invalid buffer size: {data.shape[0]}")
         if n > 0 and m > 0:
             with nogil:
-                memcpy(mat._data[0], &bytes[0], m * n * itemsize)
+                memcpy(mat._data[0], &data[0], m * n * itemsize)
         return mat
 
     # --- Magic methods ------------------------------------------------------
@@ -4027,7 +4029,7 @@ class _MSAIndex(collections.abc.Mapping):
 
         kh = msa._msa.index
         for i in range(libeasel.keyhash.esl_keyhash_GetNumber(kh)):
-            yield <bytes> libeasel.keyhash.esl_keyhash_Get(kh, i)
+            yield <bytes> libeasel.keyhash.esl_keyhash_Get(kh, i)   # FIXME
 
 
 @cython.freelist(8)
@@ -4089,7 +4091,7 @@ cdef class MSA:
         assert self._msa != NULL
         if self._msa.acc == NULL:
             return None
-        return <bytes> self._msa.acc
+        return <bytes> self._msa.acc # FIXME
 
     @accession.setter
     def accession(self, bytes accession):
