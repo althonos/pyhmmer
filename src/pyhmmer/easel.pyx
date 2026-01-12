@@ -13,10 +13,10 @@ to facilitate the development of biological software in C. It is used by
 cimport cython
 from cpython cimport Py_buffer
 from cpython.buffer cimport PyBUF_FORMAT, PyBUF_READ, PyBuffer_FillInfo
-from cpython.bytes cimport PyBytes_FromString, PyBytes_FromStringAndSize, PyBytes_AsString
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.memoryview cimport PyMemoryView_FromMemory
 from cpython.ref cimport Py_INCREF
+from cpython.exc cimport PyErr_WarnEx
 from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t, SIZE_MAX
 from libc.stdio cimport fclose, FILE
@@ -24,9 +24,18 @@ from libc.stdlib cimport calloc, malloc, realloc, free
 from libc.string cimport memcmp, memcpy, memmove, memset, strdup, strlen, strncpy
 from libc.math cimport fabs, fabsf
 from posix.types cimport off_t
+from cpython.bytes cimport (
+    PyBytes_FromString,
+    PyBytes_FromStringAndSize,
+    PyBytes_AsString,
+)
 from cpython.unicode cimport (
     PyUnicode_New,
     PyUnicode_DecodeASCII,
+    PyUnicode_FromString,
+    PyUnicode_FromStringAndSize,
+    PyUnicode_AsUTF8,
+    PyUnicode_AsUTF8AndSize,
     PyUnicode_DATA,
     PyUnicode_KIND,
     PyUnicode_WRITE,
@@ -96,6 +105,7 @@ elif TARGET_SYSTEM == "Darwin" or TARGET_SYSTEM.endswith("BSD"):
     from .fileobj.bsd cimport fileobj_bsd_open as fopen_obj
 
 include "exceptions.pxi"
+include "_strings.pxi"
 include "_getid.pxi"
 
 # --- Python imports ---------------------------------------------------------
@@ -307,7 +317,7 @@ cdef class Alphabet:
 
         """
         assert self._abc != NULL
-        return PyUnicode_DecodeASCII(self._abc.sym, self._abc.Kp, NULL)
+        return PyUnicode_FromStringAndSize(self._abc.sym, self._abc.Kp)
 
     @property
     def type(self):
@@ -4086,12 +4096,12 @@ cdef class MSA:
 
     @property
     def accession(self):
-        """`bytes` or `None`: The accession of the alignment, if any.
+        """`str` or `None`: The accession of the alignment, if any.
         """
         assert self._msa != NULL
         if self._msa.acc == NULL:
             return None
-        return <bytes> self._msa.acc # FIXME
+        return _get_str(self._msa.acc)
 
     @accession.setter
     def accession(self, bytes accession):
@@ -4865,7 +4875,7 @@ class _TextMSAAlignment(_MSAAlignment):
         if idx >= msa._msa.nseq or idx < 0:
             raise IndexError("list index out of range")
 
-        return PyUnicode_DecodeASCII(msa._msa.aseq[idx], msa._msa.alen, NULL)
+        return PyUnicode_FromStringAndSize(msa._msa.aseq[idx], msa._msa.alen)
 
 
 cdef class TextMSA(MSA):
@@ -5326,7 +5336,7 @@ cdef class DigitalMSA(MSA):
             Passing positional arguments other than ``alphabet``.
 
         """
- 
+
         cdef DigitalSequence seq
         cdef list            seqs  = [] if sequences is None else list(sequences)
         cdef set             names = { seq.name for seq in seqs }
@@ -6295,20 +6305,19 @@ cdef class Sequence:
 
     @property
     def accession(self):
-        """`bytes`: The accession of the sequence.
+        """`str`: The accession of the sequence.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._sq != NULL
-        return <bytes> self._sq.acc
+        return _get_str(self._sq.acc)
 
     @accession.setter
-    def accession(self, bytes accession):
+    def accession(self, object accession not None):
         assert self._sq != NULL
-
-        cdef       int   status
-        cdef const char* acc    = accession
-
-        with nogil:
-            status = libeasel.sq.esl_sq_SetAccession(self._sq, acc)
+        status = _set_str(self._sq, accession, <setter_t> libeasel.sq.esl_sq_SetAccession)
         if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), len(accession))
         elif status != libeasel.eslOK:
@@ -6316,20 +6325,19 @@ cdef class Sequence:
 
     @property
     def name(self):
-        """`bytes`: The name of the sequence.
+        """`str`: The name of the sequence.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+            
         """
         assert self._sq != NULL
-        return <bytes> self._sq.name
+        return _get_str(self._sq.name)
 
     @name.setter
-    def name(self, bytes name not None):
+    def name(self, object name not None):
         assert self._sq != NULL
-
-        cdef       int   status
-        cdef const char* nm     = name
-
-        with nogil:
-            status = libeasel.sq.esl_sq_SetName(self._sq, nm)
+        status = _set_str(self._sq, name, <setter_t> libeasel.sq.esl_sq_SetName)
         if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), len(name))
         elif status != libeasel.eslOK:
@@ -6337,20 +6345,19 @@ cdef class Sequence:
 
     @property
     def description(self):
-        """`bytes`: The description of the sequence.
+        """`str`: The description of the sequence.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+            
         """
         assert self._sq != NULL
-        return <bytes> self._sq.desc
+        return _get_str(self._sq.desc)
 
     @description.setter
-    def description(self, bytes description):
+    def description(self, object description not None):
         assert self._sq != NULL
-
-        cdef       int   status
-        cdef const char* desc   = description
-
-        with nogil:
-            status = libeasel.sq.esl_sq_SetDesc(self._sq, desc)
+        status = _set_str(self._sq, description, <setter_t> libeasel.sq.esl_sq_SetDesc)
         if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), len(description))
         elif status != libeasel.eslOK:
@@ -6358,20 +6365,19 @@ cdef class Sequence:
 
     @property
     def source(self):
-        """`bytes`: The source of the sequence, if any.
+        """`str`: The source of the sequence, if any.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+            
         """
         assert self._sq != NULL
-        return <bytes> self._sq.source
+        return _get_str(self._sq.source)
 
     @source.setter
-    def source(self, bytes source):
+    def source(self, object source not None):
         assert self._sq != NULL
-
-        cdef       int   status
-        cdef const char* src    = source
-
-        with nogil:
-            status = libeasel.sq.esl_sq_SetSource(self._sq, src)
+        status = _set_str(self._sq, source, <setter_t> libeasel.sq.esl_sq_SetSource)
         if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), len(source))
         elif status != libeasel.eslOK:
@@ -6401,14 +6407,14 @@ cdef class Sequence:
         assert self._sq != NULL
 
         cdef int    i
-        cdef bytes  tag
-        cdef bytes  val
-        cdef dict   xr  = {}
+        cdef str    tag
+        cdef str    val
         cdef size_t off = 0 if libeasel.sq.esl_sq_IsText(self._sq) else 1
+        cdef dict   xr  = {}
 
         for i in range(self._sq.nxr):
-            tag = PyBytes_FromString(self._sq.xr_tag[i])
-            val = PyBytes_FromStringAndSize(&self._sq.xr[i][off], self._sq.n)
+            tag = PyUnicode_FromString(self._sq.xr_tag[i])
+            val = PyUnicode_DecodeASCII(&self._sq.xr[i][off], self._sq.n, NULL)
             xr[tag] = val
 
         return xr
@@ -6417,9 +6423,8 @@ cdef class Sequence:
     def residue_markups(self, dict xr):
         assert self._sq != NULL
 
-        cdef const unsigned char[::1] tag
-        cdef const unsigned char[::1] val
-
+        cdef str     tag
+        cdef str     val
         cdef int     i
         cdef ssize_t xrlen = len(xr)
         cdef size_t  off   = 0 if libeasel.sq.esl_sq_IsText(self._sq) else 1
@@ -6427,7 +6432,7 @@ cdef class Sequence:
 
         # check the values have the right length before doing anything
         for tag, val in xr.items():
-            if val.shape[0] != self._sq.n:
+            if len(val) != self._sq.n:
                 raise ValueError(f"Residue markup annotation has an invalid length (expected {self._sq.n}, got {val.shape[0]})")
         # clear old values
         for i in range(self._sq.nxr):
@@ -6444,11 +6449,11 @@ cdef class Sequence:
                 raise AllocationError("char*", sizeof(char*), xrlen)
         # assign the new values
         for i, (tag, val) in enumerate(xr.items()):
-            self._sq.xr_tag[i] = strdup(<const char*> &tag[0])
+            self._sq.xr_tag[i] = strdup(PyUnicode_AsUTF8(tag))
             self._sq.xr[i] = <char*> calloc(xrdim, sizeof(char))
             if self._sq.xr_tag[i] == NULL or self._sq.xr[i] == NULL:
                 raise AllocationError("char", sizeof(char), xrdim)
-            memcpy(&self._sq.xr[i][off], &val[0], val.shape[0] * sizeof(unsigned char))
+            memcpy(&self._sq.xr[i][off], PyUnicode_AsUTF8(val), self._sq.n * sizeof(unsigned char))
 
     # --- Abstract methods ---------------------------------------------------
 
@@ -6577,12 +6582,12 @@ cdef class TextSequence(Sequence):
     def __init__(
         self,
         *,
-        bytes name=None,
-        bytes description=None,
-        bytes accession=None,
-        str   sequence=None,
-        bytes source=None,
-        dict  residue_markups=None,
+        object name=None,
+        object description=None,
+        object accession=None,
+        object sequence=None,
+        object source=None,
+        dict   residue_markups=None,
     ):
         """__init__(self, *, name=None, description=None, accession=None, sequence=None, source=None, residue_markups=None)\n--\n
 
@@ -6841,11 +6846,11 @@ cdef class DigitalSequence(Sequence):
     def __init__(self,
               Alphabet              alphabet      not None,
               *,
-              bytes                 name            = None,
-              bytes                 description     = None,
-              bytes                 accession       = None,
+              object                name            = None,
+              object                description     = None,
+              object                accession       = None,
         const libeasel.ESL_DSQ[::1] sequence        = None,
-              bytes                 source          = None,
+              object                source          = None,
               dict                  residue_markups = None,
     ):
         """__init__(self, alphabet, *, name=None, description=None, accession=None, sequence=None, source=None, residue_markups=None)\n--\n
@@ -6953,7 +6958,7 @@ cdef class DigitalSequence(Sequence):
             values, only the :math:`n` elements of the buffer in between.
 
         .. versionchanged:: 0.4.0
-           Property is now a `VectorU8` instead of a memoryview.
+           Property is now a `VectorU8` instead of `memoryview`.
 
         """
         assert self._sq != NULL
@@ -7432,7 +7437,7 @@ cdef class SequenceBlock:
         self._length += 1
         self._on_modification()
 
-    cdef size_t _index(self, Sequence sequence, ssize_t start=0, ssize_t stop=sys.maxsize) except *:        
+    cdef size_t _index(self, Sequence sequence, ssize_t start=0, ssize_t stop=sys.maxsize) except *:
         cdef size_t i
         cdef size_t start_
         cdef size_t stop_
@@ -7512,7 +7517,7 @@ cdef class SequenceBlock:
         finally:
             if file is not NULL:
                 fclose(file)
-        
+
 
 cdef class TextSequenceBlock(SequenceBlock):
     """A container for storing `TextSequence` objects.
