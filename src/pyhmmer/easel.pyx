@@ -4259,7 +4259,7 @@ cdef class MSA:
         return PyBytes_FromStringAndSize(self._msa.rf, self._msa.alen)
 
     @reference.setter
-    def reference(self, reference: bytes):
+    def reference(self, bytes reference):
         assert self._msa != NULL
         if reference is None:
             self._set_annotation(&self._msa.rf, NULL)
@@ -4280,7 +4280,7 @@ cdef class MSA:
         return PyBytes_FromStringAndSize(self._msa.mm, self._msa.alen)
 
     @model_mask.setter
-    def model_mask(self, model_mask: bytes):
+    def model_mask(self, bytes model_mask):
         assert self._msa != NULL
         if model_mask is None:
             self._set_annotation(&self._msa.mm, NULL)
@@ -4301,7 +4301,7 @@ cdef class MSA:
         return PyBytes_FromStringAndSize(self._msa.ss_cons, self._msa.alen)
 
     @secondary_structure.setter
-    def secondary_structure(self, secondary_structure: bytes):
+    def secondary_structure(self, bytes secondary_structure):
         assert self._msa != NULL
         if secondary_structure is None:
             self._set_annotation(&self._msa.ss_cons, NULL)
@@ -4322,7 +4322,7 @@ cdef class MSA:
         return PyBytes_FromStringAndSize(self._msa.sa_cons, self._msa.alen)
 
     @surface_accessibility.setter
-    def surface_accessibility(self, surface_accessibility: bytes):
+    def surface_accessibility(self, bytes surface_accessibility):
         assert self._msa != NULL
         if surface_accessibility is None:
             self._set_annotation(&self._msa.sa_cons, NULL)
@@ -4343,7 +4343,7 @@ cdef class MSA:
         return PyBytes_FromStringAndSize(self._msa.pp_cons, self._msa.alen)
 
     @posterior_probabilities.setter
-    def posterior_probabilities(self, posterior_probabilities: bytes):
+    def posterior_probabilities(self, bytes posterior_probabilities):
         assert self._msa != NULL
         if posterior_probabilities is None:
             self._set_annotation(&self._msa.pp_cons, NULL)
