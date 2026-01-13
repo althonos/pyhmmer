@@ -37,8 +37,8 @@ class TestAlignment(unittest.TestCase):
         rendered = str(self.ali)
         lines = rendered.splitlines()
         self.assertEqual(len(lines), 5)
-        self.assertTrue(lines[1].strip().startswith(self.hits.query.name.decode()))
-        self.assertTrue(lines[3].strip().startswith(self.hits[0].name.decode()))
+        self.assertTrue(lines[1].strip().startswith(self.hits.query.name))
+        self.assertTrue(lines[3].strip().startswith(self.hits[0].name))
 
     @unittest.skipIf(sys.implementation.name == "pypy", "`getsizeof` not supported on PyPY")
     def test_sizeof(self):

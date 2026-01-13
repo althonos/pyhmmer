@@ -33,18 +33,18 @@ class TestSSIReader(unittest.TestCase):
 
     def test_find_name(self):
         with easel.SSIReader(self.h3i) as reader:
-            entry = reader.find_name(b"Thioesterase")
+            entry = reader.find_name("Thioesterase")
             self.assertEqual(entry.fd, 0)
             self.assertEqual(entry.record_offset, 0)
 
     def test_find_name_closed(self):
         with easel.SSIReader(self.h3i) as reader:
             reader.close()
-            self.assertRaises(ValueError, reader.find_name, b"Thioesterase")
+            self.assertRaises(ValueError, reader.find_name, "Thioesterase")
 
     def test_find_name_error(self):
         with easel.SSIReader(self.h3i) as reader:
-            self.assertRaises(KeyError, reader.find_name, b"Ketosynthase")
+            self.assertRaises(KeyError, reader.find_name, "Ketosynthase")
 
     def test_file_info(self):
         with easel.SSIReader(self.h3i) as reader:

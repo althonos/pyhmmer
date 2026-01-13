@@ -78,19 +78,26 @@ class _PHMMERDispatcher(
             )
         else:
             targets = self.targets  # type: ignore
-        params = [
-            targets,
-            query_queue,
-            query_count,
-            kill_switch,
-            self.callback,
-            self.options,
-            copy.copy(self.builder),
-        ]
         if self.backend == "threading":
-            return _PHMMERThread(*params)
+            return _PHMMERThread(
+                targets=targets,
+                query_queue=query_queue,
+                query_count=query_count,
+                kill_switch=kill_switch,
+                callback=self.callback,
+                options=self.options,
+                builder=copy.copy(self.builder)
+            )
         elif self.backend == "multiprocessing":
-            return _PHMMERProcess(*params)
+            return _PHMMERProcess(
+                targets=targets,
+                query_queue=query_queue,
+                query_count=query_count,
+                kill_switch=kill_switch,
+                callback=self.callback,
+                options=self.options,
+                builder=copy.copy(self.builder)
+            )
         else:
             raise ValueError(f"Invalid backend for `phmmer`: {self.backend!r}")
 

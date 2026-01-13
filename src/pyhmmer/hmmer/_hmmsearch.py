@@ -7,6 +7,7 @@ import multiprocessing
 import typing
 import os
 import threading
+from typing import Optional, Union, Callable, Iterable
 
 import psutil
 
@@ -19,7 +20,17 @@ _SEARCHQueryType = typing.Union[_AnyProfile]
 _P = typing.TypeVar("_P", HMM, Profile, OptimizedProfile)
 
 if typing.TYPE_CHECKING:
-    from ._base import Unpack, PipelineOptions, BACKEND
+    from ._base import Unpack, PipelineOptions, BACKEND, PARALLEL
+
+
+# --- Type annotations ---------------------------------------------------------
+
+# the query type for the pipeline
+_Q = typing.TypeVar("_Q")
+# the target type for the pipeline
+_T = typing.TypeVar("_T")
+# the result type for the pipeline
+_R = typing.TypeVar("_R")
 
 # --- Worker -------------------------------------------------------------------
 
@@ -63,7 +74,7 @@ class _SEARCHDispatcher(
 ):
     def _new_worker(
         self,
-        query_queue: "queue.Queue[typing.Optional[_BaseChore[_SEARCHQueryType, TopHits[_SEARCHQueryType]]]]",
+        query_queue: "queue.Queue[Optional[_BaseChore[_SEARCHQueryType, TopHits[_SEARCHQueryType]]]]",
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _SEARCHWorker:
@@ -77,26 +88,33 @@ class _SEARCHDispatcher(
             )
         else:
             targets = self.targets  # type: ignore
-        params = [
-            targets,
-            query_queue,
-            query_count,
-            kill_switch,
-            self.callback,
-            self.options,
-            self.builder,
-        ]
         if self.backend == "threading":
-            return _SEARCHThread(*params)
+            return _SEARCHThread(
+                targets=targets,
+                query_queue=query_queue,
+                query_count=query_count,
+                kill_switch=kill_switch,
+                callback=self.callback,
+                options=self.options,
+                builder=self.builder,
+            )
         elif self.backend == "multiprocessing":
-            return _SEARCHProcess(*params)
+            return _SEARCHProcess(
+                targets=targets,
+                query_queue=query_queue,
+                query_count=query_count,
+                kill_switch=kill_switch,
+                callback=self.callback,
+                options=self.options,
+                builder=self.builder,
+            )
         else:
             raise ValueError(f"Invalid backend for `hmmsearch`: {self.backend!r}")
 
 
 class _ReverseSEARCHDispatcher(
     _BaseDispatcher[
-        "_SEARCHQueryType",
+        _SEARCHQueryType,
         DigitalSequenceBlock,
         "TopHits[_SEARCHQueryType]",
     ]
@@ -106,11 +124,11 @@ class _ReverseSEARCHDispatcher(
 
     def __init__(
         self,
-        queries: typing.Iterable["_SEARCHQueryType"],
+        queries: Iterable["_SEARCHQueryType"],
         targets: DigitalSequenceBlock,
         cpus: int = 0,
-        callback: typing.Optional[typing.Callable[["_SEARCHQueryType", int], None]] = None,
-        builder: typing.Optional[Builder] = None,
+        callback: Optional[Callable[["_SEARCHQueryType", int], None]] = None,
+        builder: Optional[Builder] = None,
         timeout: int = 1,
         backend: "BACKEND" = "threading",
         **options,  # type: Unpack[PipelineOptions]
@@ -154,26 +172,33 @@ class _ReverseSEARCHDispatcher(
 
     def _new_worker(
         self,
-        query_queue,
-        query_count,
+        query_queue: "queue.Queue[Optional[_BaseChore[_SEARCHQueryType, TopHits[_SEARCHQueryType]]]]",
+        query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
-        targets: DigitalSequenceBlock = None,
-    ):
+        targets: Optional[DigitalSequenceBlock] = None,
+    ) -> _SEARCHWorker:
         if targets is None:
             targets = self.targets
-        params = [
-            targets,
-            query_queue,
-            query_count,
-            kill_switch,
-            None,
-            self.options,
-            self.builder,
-        ]
         if self.backend == "threading":
-            return _SEARCHThread(*params)
+            return _SEARCHThread(
+                targets=targets,
+                query_queue=query_queue,
+                query_count=query_count,
+                kill_switch=kill_switch,
+                callback=None,
+                options=self.options,
+                builder=self.builder,
+            )
         elif self.backend == "multiprocessing":
-            return _SEARCHProcess(*params)
+            return _SEARCHProcess(
+                targets=targets,
+                query_queue=query_queue,
+                query_count=query_count,
+                kill_switch=kill_switch,
+                callback=None,
+                options=self.options,
+                builder=self.builder,
+            )
         else:
             raise ValueError(f"Invalid backend for `hmmsearch`: {self.backend!r}")
 
@@ -201,7 +226,7 @@ class _ReverseSEARCHDispatcher(
             for i in range(self.cpus):
                 # create the queues to pass the query objects around, only
                 # one item at a time since we synchronize query-by-query
-                results: typing.Deque[_BaseChore[_Q, _R]] = collections.deque()
+                results: typing.Deque[_BaseChore["_SEARCHQueryType", "TopHits[_SEARCHQueryType]"]] = collections.deque()
                 if self.backend == "multiprocessing":
                     query_queue = ctx.enter_context(contextlib.closing(multiprocessing.Queue()))
                 elif self.backend == "threading":
@@ -243,7 +268,7 @@ class _ReverseSEARCHDispatcher(
                 # threads so they stop on their own gracefully
                 for worker in workers:
                     worker.query_queue.put(None)
-                    worker.join()
+                    worker.join() # type: ignore
                     if self.backend == "multiprocessing":
                         worker.query_queue.close()
                 # yield the final hits
@@ -257,7 +282,7 @@ class _ReverseSEARCHDispatcher(
                 except queue.Full:
                     pass
                 for worker in workers:
-                    worker.join()
+                    worker.join() # type: ignore
                     if self.backend == "multiprocessing":
                         worker.query_queue.close()
                         worker.query_queue.join_thread()
@@ -267,13 +292,13 @@ class _ReverseSEARCHDispatcher(
 # --- hmmsearch --------------------------------------------------------------
 
 def hmmsearch(
-    queries: typing.Union[_P, typing.Iterable[_P]],
-    sequences: typing.Iterable[DigitalSequence],
+    queries: typing.Union[_P, Iterable[_P]],
+    sequences: Iterable[DigitalSequence],
     *,
     cpus: int = 0,
-    callback: typing.Optional[typing.Callable[[_P, int], None]] = None,
+    callback: Optional[Callable[[_P, int], None]] = None,
     backend: "BACKEND" = "threading",
-    parallel: "PARALLEL" = None,
+    parallel: Optional["PARALLEL"] = None,
     **options,  # type: Unpack[PipelineOptions]
 ) -> typing.Iterator["TopHits[_P]"]:
     """Search HMM profiles against a sequence database.
@@ -401,7 +426,7 @@ def hmmsearch(
     dclass = _SEARCHDispatcher if parallel == "queries" else _ReverseSEARCHDispatcher
     dispatcher = dclass(
         queries=queries,
-        targets=targets,
+        targets=targets,  # type: ignore
         cpus=cpus,
         backend=backend,
         callback=callback,  # type: ignore

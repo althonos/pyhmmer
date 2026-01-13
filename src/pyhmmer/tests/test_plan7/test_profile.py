@@ -19,9 +19,9 @@ class TestProfile(unittest.TestCase):
         rng = Randomness(seed=0)
         cls.alphabet = Alphabet.amino()
         cls.hmm = HMM.sample(cls.alphabet, 100, rng)
-        cls.hmm.name = b"hmm_one"
-        cls.hmm.accession = b"HMM1"
-        cls.hmm.description = b"first HMM"
+        cls.hmm.name = "hmm_one"
+        cls.hmm.accession = "HMM1"
+        cls.hmm.description = "first HMM"
         cls.background = Background(cls.alphabet)
         cls.profile = cls.hmm.to_profile(background=cls.background, L=200)
 
@@ -30,7 +30,7 @@ class TestProfile(unittest.TestCase):
         bg = Background(profile.alphabet)
         self.assertNotEqual(profile.alphabet, self.hmm.alphabet)
         self.assertRaises(AlphabetMismatch, profile.configure, self.hmm, bg, 200)
-        hmm = HMM(profile.alphabet, 100, b"test")
+        hmm = HMM(profile.alphabet, 100, "test")
         self.assertNotEqual(profile.alphabet, self.background.alphabet)
         self.assertRaises(AlphabetMismatch, profile.configure, hmm, self.background, 200)
 

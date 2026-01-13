@@ -44,10 +44,10 @@ class _TestMSA(object):
         sto = os.path.join(self.formats_folder, "stockholm.1")
         msa = self.read_msa(sto)
         self.assertEqual(len(msa.sequences), 2)
-        self.assertEqual(msa.sequences[0].name, b"seq1")
-        self.assertEqual(msa.sequences[1].name, b"seq2")
-        self.assertEqual(msa.sequences[-2].name, b"seq1")
-        self.assertEqual(msa.sequences[-1].name, b"seq2")
+        self.assertEqual(msa.sequences[0].name, "seq1")
+        self.assertEqual(msa.sequences[1].name, "seq2")
+        self.assertEqual(msa.sequences[-2].name, "seq1")
+        self.assertEqual(msa.sequences[-1].name, "seq2")
 
         with self.assertRaises(IndexError):
             msa.sequences[-3]
@@ -59,28 +59,28 @@ class _TestMSA(object):
         self.assertFalse(msa)
 
     def test_init_name(self):
-        msa = self.MSA(name=b"ali")
-        self.assertEqual(msa.name, b"ali")
+        msa = self.MSA(name="ali")
+        self.assertEqual(msa.name, "ali")
 
     def test_init_description(self):
-        d = b"an alignment made from Python"
+        d = "an alignment made from Python"
         msa = self.MSA(description=d)
         self.assertEqual(msa.description, d)
 
     def test_init_author(self):
-        author = b"Martin Larralde"
+        author = "Martin Larralde"
         msa = self.MSA(author=author)
         self.assertEqual(msa.author, author)
 
     def test_init_accession(self):
-        acc = b"TST001"
+        acc = "TST001"
         msa = self.MSA(accession=acc)
         self.assertEqual(msa.accession, acc)
 
     def test_indexed_key_error(self):
         msa = self.MSA()
         with self.assertRaises(KeyError):
-            msa.indexed[b"xxx"]
+            msa.indexed["xxx"]
 
     def test_indexed_type_error(self):
         msa = self.MSA()
@@ -166,39 +166,39 @@ class TestTextMSA(_TestMSA, unittest.TestCase):
             return msa_file.read()
 
     def test_indexed(self):
-        s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")
-        s2 = easel.TextSequence(name=b"seq2", sequence="ATGG")
+        s1 = easel.TextSequence(name="seq1", sequence="ATGC")
+        s2 = easel.TextSequence(name="seq2", sequence="ATGG")
         msa = easel.TextMSA(sequences=[s1, s2])
         self.assertEqual(len(msa.indexed), 2)
-        self.assertEqual(msa.indexed[b"seq1"], s1)
-        self.assertEqual(msa.indexed[b"seq2"], s2)
+        self.assertEqual(msa.indexed["seq1"], s1)
+        self.assertEqual(msa.indexed["seq2"], s2)
 
     def test_rf(self):
-        s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")
-        s2 = easel.TextSequence(name=b"seq2", sequence="ATGG")
+        s1 = easel.TextSequence(name="seq1", sequence="ATGC")
+        s2 = easel.TextSequence(name="seq2", sequence="ATGG")
         msa = easel.TextMSA(sequences=[s1, s2])
         self.assertIsNone(msa.reference)
-        msa.reference = b"xxxx"
-        self.assertEqual(msa.reference, b"xxxx")
+        msa.reference = "xxxx"
+        self.assertEqual(msa.reference, "xxxx")
         with self.assertRaises(ValueError):
-            msa.reference = b"x"
+            msa.reference = "x"
 
     def test_eq(self):
-        s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")
-        s2 = easel.TextSequence(name=b"seq2", sequence="ATGG")
+        s1 = easel.TextSequence(name="seq1", sequence="ATGC")
+        s2 = easel.TextSequence(name="seq2", sequence="ATGG")
         msa = easel.TextMSA(sequences=[s1, s2])
         msa2 = easel.TextMSA(sequences=[s1, s2])
         self.assertEqual(msa, msa2)
 
-        msa2.name = b"other"
+        msa2.name = "other"
         self.assertNotEqual(msa, msa2)
 
         self.assertNotEqual(msa, 1)
         self.assertNotEqual(msa, [s1, s2])
 
     def test_eq_copy(self):
-        s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")
-        s2 = easel.TextSequence(name=b"seq2", sequence="ATGG")
+        s1 = easel.TextSequence(name="seq1", sequence="ATGC")
+        s2 = easel.TextSequence(name="seq2", sequence="ATGG")
         msa = easel.TextMSA(sequences=[s1, s2])
         self.assertEqual(msa, msa.copy())
         self.assertEqual(msa, copy.copy(msa))
@@ -207,67 +207,67 @@ class TestTextMSA(_TestMSA, unittest.TestCase):
         self.assertRaises(TypeError, easel.TextMSA, sequences=[1, 2, 3])
 
     def test_init_sequences(self):
-        s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")
+        s1 = easel.TextSequence(name="seq1", sequence="ATGC")
         msa = easel.TextMSA(sequences=[s1])
         self.assertEqual(len(msa), 4)
         self.assertEqual(len(msa.sequences), 1)
         self.assertTrue(msa)
 
     def test_init_length_mismatch(self):
-        s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")
-        s2 = easel.TextSequence(name=b"seq2", sequence="AT")
+        s1 = easel.TextSequence(name="seq1", sequence="ATGC")
+        s2 = easel.TextSequence(name="seq2", sequence="AT")
         self.assertRaises(ValueError, easel.TextMSA, sequences=[s1, s2])
 
     def test_init_duplicate_names(self):
-        s1 = easel.TextSequence(name=b"seq1", sequence="ATGC")
-        s2 = easel.TextSequence(name=b"seq1", sequence="ATTC")
+        s1 = easel.TextSequence(name="seq1", sequence="ATGC")
+        s2 = easel.TextSequence(name="seq1", sequence="ATTC")
         self.assertRaises(ValueError, easel.TextMSA, sequences=[s1, s2])
 
     def test_insert_sequences(self):
-        s1 = easel.TextSequence(name=b"seq1", sequence="ATGC", description=b"first", accession=b"SQ.1")
-        s2 = easel.TextSequence(name=b"seq2", sequence="ATTC", description=b"second", accession=b"SQ.2")
+        s1 = easel.TextSequence(name="seq1", sequence="ATGC", description="first", accession="SQ.1")
+        s2 = easel.TextSequence(name="seq2", sequence="ATTC", description="second", accession="SQ.2")
         msa = easel.TextMSA(sequences=[s1, s2])
         self.assertEqual(len(msa), 4)
         self.assertEqual(len(msa.sequences), 2)
-        self.assertEqual(msa.sequences[0].name, b"seq1")
-        self.assertEqual(msa.sequences[1].name, b"seq2")
+        self.assertEqual(msa.sequences[0].name, "seq1")
+        self.assertEqual(msa.sequences[1].name, "seq2")
 
-        s3 = easel.TextSequence(name=b"seq3", sequence="AGGC")
+        s3 = easel.TextSequence(name="seq3", sequence="AGGC")
         msa.sequences[0] = s3
         self.assertEqual(len(msa), 4)
         self.assertEqual(len(msa.sequences), 2)
-        self.assertEqual(msa.sequences[0].name, b"seq3")
-        self.assertEqual(msa.sequences[1].name, b"seq2")
+        self.assertEqual(msa.sequences[0].name, "seq3")
+        self.assertEqual(msa.sequences[1].name, "seq2")
 
-        s4 = easel.TextSequence(name=b"seq4", sequence="TTTT")
+        s4 = easel.TextSequence(name="seq4", sequence="TTTT")
         msa.sequences[-1] = s4
         self.assertEqual(len(msa), 4)
         self.assertEqual(len(msa.sequences), 2)
-        self.assertEqual(msa.sequences[0].name, b"seq3")
-        self.assertEqual(msa.sequences[1].name, b"seq4")
+        self.assertEqual(msa.sequences[0].name, "seq3")
+        self.assertEqual(msa.sequences[1].name, "seq4")
 
-        s5 = easel.TextSequence(name=b"seq5", sequence="AAAA")
+        s5 = easel.TextSequence(name="seq5", sequence="AAAA")
         with self.assertRaises(IndexError):
             msa.sequences[2] = s5
         with self.assertRaises(IndexError):
             msa.sequences[-10] = s5
 
-        s4bis = easel.TextSequence(name=b"seq4", sequence="TTTT")
+        s4bis = easel.TextSequence(name="seq4", sequence="TTTT")
         with self.assertRaises(ValueError):
             msa.sequences[0] = s4bis
 
-        s6 = easel.TextSequence(name=b"seq4", sequence="TT")
+        s6 = easel.TextSequence(name="seq4", sequence="TT")
         with self.assertRaises(ValueError):
             msa.sequences[0] = s6
 
         dna = easel.Alphabet.dna()
-        s7 = easel.DigitalSequence(dna, name=b"seq4", sequence=bytearray([2, 2]))
+        s7 = easel.DigitalSequence(dna, name="seq4", sequence=bytearray([2, 2]))
         with self.assertRaises(TypeError):
             msa.sequences[0] = s7
 
     def test_digitize(self):
         dna = easel.Alphabet.dna()
-        s1 = easel.TextSequence(name=b"seq1", sequence="ACGT")
+        s1 = easel.TextSequence(name="seq1", sequence="ACGT")
         msa_t = easel.TextMSA(sequences=[s1])
         msa_d = msa_t.digitize(dna)
 
@@ -275,12 +275,12 @@ class TestTextMSA(_TestMSA, unittest.TestCase):
         self.assertEqual(len(msa_d), 4)
         self.assertEqual(len(msa_d.sequences), 1)
         self.assertTrue(msa_d)
-        self.assertEqual(msa_d.sequences[0].name, b"seq1")
+        self.assertEqual(msa_d.sequences[0].name, "seq1")
         self.assertEqual(msa_d.sequences[0].sequence, easel.VectorU8([0, 1, 2, 3]))
 
     def test_digitize_invalid(self):
         dna = easel.Alphabet.dna()
-        s1 = easel.TextSequence(name=b"seq1", sequence=">v3ry 1nv4l1d")
+        s1 = easel.TextSequence(name="seq1", sequence=">v3ry 1nv4l1d")
         msa_t = easel.TextMSA(sequences=[s1])
         self.assertRaises(ValueError, msa_t.digitize, dna)
 
@@ -312,21 +312,21 @@ class TestDigitalMSA(_TestMSA, unittest.TestCase):
             msa4 = easel.DigitalMSA.sample(self.alphabet, 10, 50, randomness="xxx")
 
     def test_eq(self):
-        s1 = easel.DigitalSequence(self.alphabet, name=b"seq1", sequence=bytearray([1, 2, 3, 4]))
-        s2 = easel.DigitalSequence(self.alphabet, name=b"seq2", sequence=bytearray([1, 2, 3, 3]))
+        s1 = easel.DigitalSequence(self.alphabet, name="seq1", sequence=bytearray([1, 2, 3, 4]))
+        s2 = easel.DigitalSequence(self.alphabet, name="seq2", sequence=bytearray([1, 2, 3, 3]))
         msa = easel.DigitalMSA(self.alphabet, sequences=[s1, s2])
         msa2 = easel.DigitalMSA(self.alphabet, sequences=[s1, s2])
         self.assertEqual(msa, msa2)
 
-        msa2.name = b"other"
+        msa2.name = "other"
         self.assertNotEqual(msa, msa2)
 
         self.assertNotEqual(msa, 1)
         self.assertNotEqual(msa, [s1, s2])
 
     def test_eq_copy(self):
-        s1 = easel.DigitalSequence(self.alphabet, name=b"seq1", sequence=bytearray([1, 2, 3, 4]))
-        s2 = easel.DigitalSequence(self.alphabet, name=b"seq2", sequence=bytearray([1, 2, 3, 3]))
+        s1 = easel.DigitalSequence(self.alphabet, name="seq1", sequence=bytearray([1, 2, 3, 4]))
+        s2 = easel.DigitalSequence(self.alphabet, name="seq2", sequence=bytearray([1, 2, 3, 3]))
         msa = easel.DigitalMSA(self.alphabet, sequences=[s1, s2])
         self.assertEqual(msa, msa.copy())
         self.assertEqual(msa, copy.copy(msa))
@@ -335,66 +335,66 @@ class TestDigitalMSA(_TestMSA, unittest.TestCase):
         self.assertRaises(TypeError, easel.TextMSA, sequences=[1, 2, 3])
 
     def test_init_sequences(self):
-        s1 = easel.DigitalSequence(self.alphabet, name=b"seq1", sequence=bytearray([1, 2, 3, 4]))
+        s1 = easel.DigitalSequence(self.alphabet, name="seq1", sequence=bytearray([1, 2, 3, 4]))
         msa = easel.DigitalMSA(self.alphabet, sequences=[s1])
         self.assertEqual(len(msa), 4)
         self.assertEqual(len(msa.sequences), 1)
         self.assertTrue(msa)
 
     def test_init_length_mismatch(self):
-        s1 = easel.DigitalSequence(self.alphabet, name=b"seq1", sequence=bytearray([1, 2, 3, 4]))
-        s2 = easel.DigitalSequence(self.alphabet, name=b"seq2", sequence=bytearray([1, 2]))
+        s1 = easel.DigitalSequence(self.alphabet, name="seq1", sequence=bytearray([1, 2, 3, 4]))
+        s2 = easel.DigitalSequence(self.alphabet, name="seq2", sequence=bytearray([1, 2]))
         self.assertRaises(ValueError, easel.DigitalMSA, self.alphabet, sequences=[s1, s2])
 
     def test_init_duplicate_names(self):
-        s1 = easel.DigitalSequence(self.alphabet, name=b"seq1", sequence=bytearray([1, 2, 3, 4]))
-        s2 = easel.DigitalSequence(self.alphabet, name=b"seq1", sequence=bytearray([1, 2, 3, 3]))
+        s1 = easel.DigitalSequence(self.alphabet, name="seq1", sequence=bytearray([1, 2, 3, 4]))
+        s2 = easel.DigitalSequence(self.alphabet, name="seq1", sequence=bytearray([1, 2, 3, 3]))
         self.assertRaises(ValueError, easel.DigitalMSA, self.alphabet, sequences=[s1, s2])
 
     def test_insert_sequences(self):
-        s1 = easel.DigitalSequence(self.alphabet, name=b"seq1", sequence=bytearray([1, 2, 3, 4]), description=b"first", accession=b"SQ.1")
-        s2 = easel.DigitalSequence(self.alphabet, name=b"seq2", sequence=bytearray([1, 3, 3, 4]), description=b"second", accession=b"SQ.2")
+        s1 = easel.DigitalSequence(self.alphabet, name="seq1", sequence=bytearray([1, 2, 3, 4]), description="first", accession="SQ.1")
+        s2 = easel.DigitalSequence(self.alphabet, name="seq2", sequence=bytearray([1, 3, 3, 4]), description="second", accession="SQ.2")
         msa = easel.DigitalMSA(self.alphabet, sequences=[s1, s2])
         self.assertEqual(len(msa), 4)
         self.assertEqual(len(msa.sequences), 2)
-        self.assertEqual(msa.sequences[0].name, b"seq1")
-        self.assertEqual(msa.sequences[1].name, b"seq2")
+        self.assertEqual(msa.sequences[0].name, "seq1")
+        self.assertEqual(msa.sequences[1].name, "seq2")
 
-        s3 = easel.DigitalSequence(self.alphabet, name=b"seq3", sequence=bytearray([4, 2, 3, 4]))
+        s3 = easel.DigitalSequence(self.alphabet, name="seq3", sequence=bytearray([4, 2, 3, 4]))
         msa.sequences[0] = s3
         self.assertEqual(len(msa), 4)
         self.assertEqual(len(msa.sequences), 2)
-        self.assertEqual(msa.sequences[0].name, b"seq3")
-        self.assertEqual(msa.sequences[1].name, b"seq2")
+        self.assertEqual(msa.sequences[0].name, "seq3")
+        self.assertEqual(msa.sequences[1].name, "seq2")
 
-        s4 = easel.DigitalSequence(self.alphabet, name=b"seq4", sequence=bytearray([2, 2, 2, 2]))
+        s4 = easel.DigitalSequence(self.alphabet, name="seq4", sequence=bytearray([2, 2, 2, 2]))
         msa.sequences[-1] = s4
         self.assertEqual(len(msa), 4)
         self.assertEqual(len(msa.sequences), 2)
-        self.assertEqual(msa.sequences[0].name, b"seq3")
-        self.assertEqual(msa.sequences[1].name, b"seq4")
+        self.assertEqual(msa.sequences[0].name, "seq3")
+        self.assertEqual(msa.sequences[1].name, "seq4")
 
-        s5 = easel.DigitalSequence(self.alphabet, name=b"seq5", sequence=bytearray([1, 1, 1, 1]))
+        s5 = easel.DigitalSequence(self.alphabet, name="seq5", sequence=bytearray([1, 1, 1, 1]))
         with self.assertRaises(IndexError):
             msa.sequences[2] = s5
         with self.assertRaises(IndexError):
             msa.sequences[-10] = s5
 
-        s4bis = easel.DigitalSequence(self.alphabet, name=b"seq4", sequence=bytearray([2, 2, 2, 2]))
+        s4bis = easel.DigitalSequence(self.alphabet, name="seq4", sequence=bytearray([2, 2, 2, 2]))
         with self.assertRaises(ValueError):
             msa.sequences[0] = s4bis
 
-        s6 = easel.DigitalSequence(self.alphabet, name=b"seq4", sequence=bytearray([2, 2]))
+        s6 = easel.DigitalSequence(self.alphabet, name="seq4", sequence=bytearray([2, 2]))
         with self.assertRaises(ValueError):
             msa.sequences[0] = s6
 
-        s7 = easel.TextSequence(name=b"seq4", sequence="ATGC")
+        s7 = easel.TextSequence(name="seq4", sequence="ATGC")
         with self.assertRaises(TypeError):
             msa.sequences[0] = s7
 
     def test_textize(self):
         dna = easel.Alphabet.dna()
-        s1 = easel.DigitalSequence(self.alphabet, name=b"seq1", sequence=bytearray([0, 1, 2, 3]))
+        s1 = easel.DigitalSequence(self.alphabet, name="seq1", sequence=bytearray([0, 1, 2, 3]))
         msa_d = easel.DigitalMSA(self.alphabet, sequences=[s1])
         msa_t = msa_d.textize()
 
@@ -402,7 +402,7 @@ class TestDigitalMSA(_TestMSA, unittest.TestCase):
         self.assertEqual(len(msa_t), 4)
         self.assertEqual(len(msa_t.sequences), 1)
         self.assertTrue(msa_t)
-        self.assertEqual(msa_t.sequences[0].name, b"seq1")
+        self.assertEqual(msa_t.sequences[0].name, "seq1")
         self.assertEqual(msa_t.sequences[0].sequence, "ACGT")
 
     def test_identity_filter(self):
@@ -424,15 +424,15 @@ class TestDigitalMSA(_TestMSA, unittest.TestCase):
 
         msa2 = msa.identity_filter(1.0)
         self.assertEqual(len(msa2.sequences), 3)
-        self.assertEqual(msa2.names[0], b"seq2")
+        self.assertEqual(msa2.names[0], "seq2")
 
         msa3 = msa.identity_filter(1.0, preference="origorder")
         self.assertEqual(len(msa3.sequences), 3)
-        self.assertEqual(msa3.names[0], b"seq1")
+        self.assertEqual(msa3.names[0], "seq1")
 
         msa3 = msa.identity_filter(1.0, preference="random")
         self.assertEqual(len(msa3.sequences), 3)
-        self.assertIn(msa3.names[0], [b"seq1", b"seq2"])
+        self.assertIn(msa3.names[0], ["seq1", "seq2"])
 
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
     def test_identity_filter_luxc(self):

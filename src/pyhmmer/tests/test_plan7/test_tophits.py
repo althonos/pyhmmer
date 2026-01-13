@@ -315,10 +315,10 @@ class TestTopHits(unittest.TestCase):
         # check sorting while a Hit instance exists does not crash, and that
         # the Hit still points to the right data
         hit = self.hits[-1]
-        self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_187")
+        self.assertEqual(hit.name, "938293.PRJEB85.HG003687_187")
         self.hits.sort(by="seqidx")
-        if self.hits[-1].name != b"938293.PRJEB85.HG003687_187":
-            self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_187")
+        if self.hits[-1].name != "938293.PRJEB85.HG003687_187":
+            self.assertEqual(hit.name, "938293.PRJEB85.HG003687_187")
 
     def test_threshold(self):
         # after thresholding, one of the hits will not be included.
@@ -328,7 +328,7 @@ class TestTopHits(unittest.TestCase):
     def test_to_msa(self):
         msa = self.hits.to_msa(self.hmm.alphabet)
         self.assertIsInstance(msa, TextMSA)
-        unique_names = { seq.name.split(b"/")[0] for seq in msa.sequences }
+        unique_names = { seq.name.split("/")[0] for seq in msa.sequences }
         self.assertEqual(len(unique_names), len(self.hits.included))
 
         msa_d = self.hits.to_msa(

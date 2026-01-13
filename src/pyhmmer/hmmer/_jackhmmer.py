@@ -126,11 +126,11 @@ class _JACKHMMERWorker(
         return iteration_checkpoints if checkpoints else iteration
 
 
-class _JACKHMMERThread(_JACKHMMERWorker, threading.Thread):
+class _JACKHMMERThread(typing.Generic[_I], _JACKHMMERWorker[_I], threading.Thread):
     pass
 
 
-class _JACKHMMERProcess(_JACKHMMERWorker, multiprocessing.Process):
+class _JACKHMMERProcess(typing.Generic[_I], _JACKHMMERWorker[_I], multiprocessing.Process):
     pass
 
 
@@ -180,22 +180,32 @@ class _JACKHMMERDispatcher(
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _JACKHMMERWorker[_I]:
-        params = [
-            self.targets,
-            query_queue,
-            query_count,
-            kill_switch,
-            self.callback,
-            self.options,
-            copy.copy(self.builder),
-            self.max_iterations,
-            self.select_hits,
-            self.checkpoints,
-        ]
         if self.backend == "threading":
-            return _JACKHMMERThread(*params)
+            return _JACKHMMERThread(
+                targets=self.targets,
+                query_queue=query_queue,
+                query_count=query_count,
+                kill_switch=kill_switch,
+                callback=self.callback,
+                options=self.options,
+                builder=copy.copy(self.builder),
+                max_iterations=self.max_iterations,
+                select_hits=self.select_hits,
+                checkpoints=self.checkpoints,
+            )
         elif self.backend == "multiprocessing":
-            return _JACKHMMERProcess(*params)
+            return _JACKHMMERProcess(
+                targets=self.targets,
+                query_queue=query_queue,
+                query_count=query_count,
+                kill_switch=kill_switch,
+                callback=self.callback,
+                options=self.options,
+                builder=copy.copy(self.builder),
+                max_iterations=self.max_iterations,
+                select_hits=self.select_hits,
+                checkpoints=self.checkpoints,
+            )
         else:
             raise ValueError(f"Invalid backend for `jackhmmer`: {self.backend!r}")
 

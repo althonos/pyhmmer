@@ -36,26 +36,26 @@ class TestOptimizedProfile(unittest.TestCase):
         return cls._random_profile(name, M=M).to_optimized()
 
     def test_eq(self):
-        profile1 = self._random_profile(b"profile1")
+        profile1 = self._random_profile("profile1")
         om1 = profile1.to_optimized()
         om2 = profile1.to_optimized()
         self.assertEqual(om1, om2)
-        profile2 = self._random_profile(b"profile2")
+        profile2 = self._random_profile("profile2")
         om3 = profile2.to_optimized()
         self.assertNotEqual(om1, om3)
 
     def test_copy(self):
-        om1 = self._random_optimized_profile(b"profile1")
+        om1 = self._random_optimized_profile("profile1")
         om2 = copy.copy(om1)
         self.assertEqual(om1, om2)
         self.assertIsNot(om1, om2)
 
     def test_M(self):
-        om = self._random_optimized_profile(b"profile1", 20)
+        om = self._random_optimized_profile("profile1", 20)
         self.assertEqual(om.M, 20)
 
     def test_L(self):
-        hmm = self._random_hmm(b"profile1")
+        hmm = self._random_hmm("profile1")
         profile = hmm.to_profile(self.background, L=40)
         om = profile.to_optimized()
         self.assertEqual(om.L, 40)
@@ -63,27 +63,27 @@ class TestOptimizedProfile(unittest.TestCase):
         self.assertEqual(om.L, 30)
 
     def test_accession(self):
-        hmm = self._random_hmm(b"profile1")
-        hmm.accession = b"TST001"
+        hmm = self._random_hmm("profile1")
+        hmm.accession = "TST001"
         profile = hmm.to_profile(self.background, L=10)
         om = profile.to_optimized()
         self.assertEqual(om.accession, hmm.accession)
 
     def test_description(self):
-        hmm = self._random_hmm(b"profile1")
-        hmm.description = b"test profile one"
+        hmm = self._random_hmm("profile1")
+        hmm.description = "test profile one"
         profile = hmm.to_profile(self.background, L=10)
         om = profile.to_optimized()
         self.assertEqual(om.description, hmm.description)
 
     def test_name(self):
-        hmm = self._random_hmm(b"profile1")
+        hmm = self._random_hmm("profile1")
         profile = hmm.to_profile(self.background, L=10)
         om = profile.to_optimized()
         self.assertEqual(om.name, hmm.name)
 
     def test_consensus(self):
-        hmm = self._random_hmm(b"profile1")
+        hmm = self._random_hmm("profile1")
         profile = hmm.to_profile(self.background, L=10)
         om1 = profile.to_optimized()
         self.assertEqual(om1.consensus, hmm.consensus)
@@ -97,7 +97,7 @@ class TestOptimizedProfile(unittest.TestCase):
         self.assertIs(om.consensus_structure, None)
 
     def test_offsets(self):
-        om = self._random_optimized_profile(b"profile1")
+        om = self._random_optimized_profile("profile1")
         self.assertIs(om.offsets.model, None)
         self.assertIs(om.offsets.profile, None)
         self.assertIs(om.offsets.filter, None)

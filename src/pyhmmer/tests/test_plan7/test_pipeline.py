@@ -62,11 +62,11 @@ class TestSearchPipeline(unittest.TestCase):
 
         # mismatch between pipeline alphabet and database alphabet
         dsq = TextSequence(sequence="ATGC").digitize(pipeline.alphabet)
-        msa = DigitalMSA(pipeline.alphabet, sequences=[dsq], name=b"test")
+        msa = DigitalMSA(pipeline.alphabet, sequences=[dsq], name="test")
         self.assertRaises(AlphabetMismatch, pipeline.search_msa, msa, self.references)
 
     def test_search_hmm_block(self):
-        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name=b"seq1")
+        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name="seq1")
         bg = Background(self.alphabet)
         hmm, _, _ = Builder(self.alphabet).build(seq.digitize(self.alphabet), bg)
         pipeline = Pipeline(alphabet=self.alphabet)
@@ -76,7 +76,7 @@ class TestSearchPipeline(unittest.TestCase):
         self.assertEqual(hits.query.accession, hmm.accession)
 
     def test_search_hmm_file(self):
-        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name=b"seq1")
+        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name="seq1")
         bg = Background(self.alphabet)
         hmm, _, _ = Builder(self.alphabet).build(seq.digitize(self.alphabet), bg)
         pipeline = Pipeline(alphabet=self.alphabet)
@@ -90,11 +90,11 @@ class TestSearchPipeline(unittest.TestCase):
         # make sure `Pipeline.search_hmm` doesn't crash when given an HMM with no name
         rng = pyhmmer.easel.Randomness()
         hmm = pyhmmer.plan7.HMM.sample(self.alphabet, 100, rng)
-        hmm.name = b"test"
+        hmm.name = "test"
         hmm.accession = None
         pipeline = Pipeline(alphabet=self.alphabet)
         hits = pipeline.search_hmm(hmm, self.references)
-        self.assertEqual(hits.query.name, b"test")
+        self.assertEqual(hits.query.name, "test")
         self.assertIs(hits.query.accession, None)
 
     def test_search_hmm_unsupported(self):
@@ -104,7 +104,7 @@ class TestSearchPipeline(unittest.TestCase):
                 hits = pipeline.search_hmm(object(), seqs_file)
 
     def test_search_seq_block(self):
-        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name=b"seq1", accession=b"SQ001")
+        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name="seq1", accession="SQ001")
         pipeline = Pipeline(alphabet=self.alphabet)
         hits = pipeline.search_seq(seq.digitize(self.alphabet), self.references)
         self.assertEqual(len(hits), 1)
@@ -112,7 +112,7 @@ class TestSearchPipeline(unittest.TestCase):
         self.assertEqual(hits.query.accession, seq.accession) # NOTE: p7_SingleBuilder doesn't copy the accession...
 
     def test_search_seq_file(self):
-        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name=b"seq1", accession=b"SQ001")
+        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name="seq1", accession="SQ001")
         pipeline = Pipeline(alphabet=self.alphabet)
         with SequenceFile(self.reference_path, digital=True, alphabet=self.alphabet) as seqs_file:
             hits = pipeline.search_seq(seq.digitize(self.alphabet), seqs_file)
@@ -148,7 +148,7 @@ class TestSearchPipeline(unittest.TestCase):
                 hits = pipeline.search_msa(object(), seqs_file)
 
     def test_Z(self):
-        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name=b"seq1")
+        seq = TextSequence(sequence="IRGIYNIIKSVAEDIEIGIIPPSKDHVTISSFKSPRIADT", name="seq1")
         bg = Background(self.alphabet)
         hmm, _, _ = Builder(self.alphabet).build(seq.digitize(self.alphabet), bg)
 
@@ -219,7 +219,7 @@ class TestScanPipeline(unittest.TestCase):
         self.assertRaises(AlphabetMismatch, pipeline.scan_seq, dsq, oprofiles)
 
     def test_scan_seq_block(self):
-        seq = next(x for x in self.references if x.name == b"938293.PRJEB85.HG003691_78")
+        seq = next(x for x in self.references if x.name == "938293.PRJEB85.HG003691_78")
 
         hmm_file = resource_files(__package__).joinpath("data", "hmms", "txt", "RREFam.hmm")
         if not hmm_file.exists():
@@ -239,7 +239,7 @@ class TestScanPipeline(unittest.TestCase):
         self.assertEqual(len(hits), 3)  # number found with `hmmscan`
 
     def test_scan_seq_file(self):
-        seq = next(x for x in self.references if x.name == b"938293.PRJEB85.HG003691_78")
+        seq = next(x for x in self.references if x.name == "938293.PRJEB85.HG003691_78")
 
         hmm_file = resource_files(__package__).joinpath("data", "hmms", "db", "RREFam.hmm")
         if not hmm_file.exists():
@@ -268,7 +268,7 @@ class TestIteratePipeline(unittest.TestCase):
 
         query_path = resource_files(__package__).joinpath("data", "seqs", "LuxC.faa")
         with SequenceFile(query_path, digital=True, alphabet=self.alphabet) as f:
-            query = next(seq for seq in f if b"P12748" in seq.name)
+            query = next(seq for seq in f if "P12748" in seq.name)
 
         pipeline = Pipeline(alphabet=self.alphabet, incE=0.001, incdomE=0.001)
         search_iterator = pipeline.iterate_seq(query, self.references)
@@ -342,13 +342,13 @@ class TestLongTargetsPipeline(unittest.TestCase):
         rng = pyhmmer.easel.Randomness(0)
 
         targets = DigitalSequenceBlock(dna, [
-            self._random_sequence(dna, b"seq1"),
-            self._random_sequence(dna, b"seq2"),
+            self._random_sequence(dna, "seq1"),
+            self._random_sequence(dna, "seq2"),
         ])
 
         hmm = pyhmmer.plan7.HMM.sample(dna, 100, rng)
-        hmm.name = b"test_one"
-        hmm.accession = b"TST001"
+        hmm.name = "test_one"
+        hmm.accession = "TST001"
 
         pipeline = LongTargetsPipeline(alphabet=dna)
         hits = pipeline.search_hmm(hmm, targets)
@@ -360,12 +360,12 @@ class TestLongTargetsPipeline(unittest.TestCase):
         rng = pyhmmer.easel.Randomness(0)
 
         hmm = pyhmmer.plan7.HMM.sample(dna, 100, rng)
-        hmm.name = b"test_one"
-        hmm.accession = b"TST001"
+        hmm.name = "test_one"
+        hmm.accession = "TST001"
 
         with tempfile.NamedTemporaryFile(mode="wb", suffix=".fna") as f:
-            self._random_sequence(dna, b"seq1").write(f)
-            self._random_sequence(dna, b"seq2").write(f)
+            self._random_sequence(dna, "seq1").write(f)
+            self._random_sequence(dna, "seq2").write(f)
             f.flush()
 
             with pyhmmer.easel.SequenceFile(f.name, digital=True, alphabet=dna) as targets:

@@ -64,18 +64,24 @@ class _SCANDispatcher(
             targets = HMMPressedFile(self.targets.name)
         else:
             targets = self.targets  # type: ignore
-        params = [
-            targets,
-            query_queue,
-            query_count,
-            kill_switch,
-            self.callback,
-            self.options,
-        ]
         if self.backend == "threading":
-            return _SCANThread(*params)
+            return _SCANThread(
+                targets=targets,
+                query_queue=query_queue,
+                query_count=query_count,
+                kill_switch=kill_switch,
+                callback=self.callback,
+                options=self.options,
+            )
         elif self.backend == "multiprocessing":
-            return _SCANProcess(*params)
+            return _SCANProcess(
+                targets=targets,
+                query_queue=query_queue,
+                query_count=query_count,
+                kill_switch=kill_switch,
+                callback=self.callback,
+                options=self.options,
+            )
         else:
             raise ValueError(f"Invalid backend for `hmmsearch`: {self.backend!r}")
 

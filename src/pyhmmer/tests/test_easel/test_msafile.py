@@ -38,7 +38,7 @@ class TestMSAFile(unittest.TestCase):
         trna_5 = os.path.join(EASEL_FOLDER, "testsuite", "trna-5.stk")
         with easel.MSAFile(trna_5) as f:
             msa = f.read()
-        self.assertEqual(msa.author, b"Infernal 0.1")
+        self.assertEqual(msa.author, "Infernal 0.1")
 
     @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_read_wrong_format(self):
@@ -66,7 +66,7 @@ class TestMSAFile(unittest.TestCase):
         selex = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "selex", "selex.good.4")
         with easel.MSAFile(selex, format="selex") as f:
             msa = f.read()
-        self.assertEqual(msa.reference, b"......xxxxxxx xxxx xxxxxx......")
+        self.assertEqual(msa.reference, "......xxxxxxx xxxx xxxxxx......")
         self.assertIsNone(msa.model_mask)
 
     @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
@@ -74,7 +74,7 @@ class TestMSAFile(unittest.TestCase):
         selex = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "selex", "selex.good.4")
         with easel.MSAFile(selex, format="selex") as f:
             msa = f.read()
-        self.assertEqual(msa.secondary_structure, b"......>>>>+>> ^^^^ <<<<<<......")
+        self.assertEqual(msa.secondary_structure, "......>>>>+>> ^^^^ <<<<<<......")
 
 
 class _TestReadFilename(object):

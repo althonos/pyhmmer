@@ -21,42 +21,42 @@ class _TestSequenceBase(abc.ABC):
 
     def test_init_empty(self):
         seq = self.Sequence()
-        self.assertEqual(seq.name, b"")
+        self.assertEqual(seq.name, "")
         self.assertEqual(len(seq), 0)
         self.assertEqual(len(seq.sequence), 0)
 
     def test_setter_name(self):
         seq = self.Sequence()
-        self.assertEqual(seq.name, b"")
-        seq.name = b"OTHER"
-        self.assertEqual(seq.name, b"OTHER")
+        self.assertEqual(seq.name, "")
+        seq.name = "OTHER"
+        self.assertEqual(seq.name, "OTHER")
 
     def test_setter_description(self):
         seq = self.Sequence()
-        self.assertIs(seq.description, b"")
-        seq.description = b"a test sequence"
-        self.assertEqual(seq.description, b"a test sequence")
+        self.assertIs(seq.description, "")
+        seq.description = "a test sequence"
+        self.assertEqual(seq.description, "a test sequence")
 
     def test_setter_residue_markup(self):
         seq = self.Sequence(sequence="ATTGC")
         self.assertEqual(seq.residue_markups, {})
-        seq.residue_markups = {b"kind": b"DADDC"}
-        self.assertEqual(seq.residue_markups[b"kind"], b"DADDC")
+        seq.residue_markups = {"kind": "DADDC"}
+        self.assertEqual(seq.residue_markups["kind"], "DADDC")
         with self.assertRaises(ValueError):
-            seq.residue_markups = {b"kind": b"D"}
+            seq.residue_markups = {"kind": "D"}
 
     def test_pickle(self):
-        s1 = self.Sequence(name=b"test1", sequence="GAATTC")
+        s1 = self.Sequence(name="test1", sequence="GAATTC")
         s1a = pickle.loads(pickle.dumps(s1))
         self.assertEqual(s1.name, s1a.name)
         self.assertEqual(s1.sequence, s1a.sequence)
-        self.assertEqual(s1.description, b"")
+        self.assertEqual(s1.description, "")
         self.assertEqual(s1.residue_markups, {})
 
         s2 = self.Sequence(
-            name=b"test2", 
+            name="test2", 
             sequence="TTCAAC", 
-            residue_markups={b"structure": b"((.))."}
+            residue_markups={"structure": "((.))."}
         )
         s2a = pickle.loads(pickle.dumps(s2))
         self.assertEqual(s2.name, s2a.name)
@@ -64,7 +64,7 @@ class _TestSequenceBase(abc.ABC):
         self.assertEqual(s2.residue_markups, s2a.residue_markups)
 
     def test_copy(self):
-        seq = self.Sequence(name=b"TEST", sequence="ATGC")
+        seq = self.Sequence(name="TEST", sequence="ATGC")
 
         # copy the sequence
         cpy = seq.copy()
@@ -78,7 +78,7 @@ class _TestSequenceBase(abc.ABC):
         # is (hopefully) deallocated, to make sure internal strings were copied
         del seq
         gc.collect()
-        self.assertEqual(cpy.name, b"TEST")
+        self.assertEqual(cpy.name, "TEST")
 
         # check `copy.copy` works too
         cpy2 = copy.copy(cpy)
@@ -86,32 +86,32 @@ class _TestSequenceBase(abc.ABC):
         self.assertEqual(cpy.name, cpy2.name)
 
     def test_eq(self):
-        seq1 = self.Sequence(name=b"TEST", sequence="ATGC")
+        seq1 = self.Sequence(name="TEST", sequence="ATGC")
         self.assertEqual(seq1, seq1)
         self.assertNotEqual(seq1, object())
 
-        seq2 = self.Sequence(name=b"TEST", sequence="ATGC")
+        seq2 = self.Sequence(name="TEST", sequence="ATGC")
         self.assertEqual(seq1, seq2)
 
-        seq3 = self.Sequence(name=b"OTHER", sequence="ATGC")
+        seq3 = self.Sequence(name="OTHER", sequence="ATGC")
         self.assertNotEqual(seq1, seq3)
 
-        seq4 = self.Sequence(name=b"TEST", sequence="ATGT")
+        seq4 = self.Sequence(name="TEST", sequence="ATGT")
         self.assertNotEqual(seq1, seq4)
 
     def test_eq_not_seq(self):
-        seq1 = self.Sequence(name=b"TEST", sequence="ATGC")
+        seq1 = self.Sequence(name="TEST", sequence="ATGC")
         self.assertNotEqual(seq1, 1)
-        self.assertNotEqual(seq1, b"hello")
+        self.assertNotEqual(seq1, "hello")
 
 
 class TestSequence(unittest.TestCase):
 
     def test_init_abstract(self):
-        self.assertRaises(TypeError, easel.Sequence, name=b"ecoRI", sequence="GAATTC")
+        self.assertRaises(TypeError, easel.Sequence, name="ecoRI", sequence="GAATTC")
 
     def test_write_roundtrip(self):
-        seq = easel.TextSequence(name=b"ecoRI", sequence="GAATTC")
+        seq = easel.TextSequence(name="ecoRI", sequence="GAATTC")
         with io.BytesIO() as buffer:
             seq.write(buffer)
             seq2 = easel.SequenceFile.parse(buffer.getvalue(), "fasta")
@@ -148,14 +148,14 @@ class TestDigitalSequence(_TestSequenceBase, unittest.TestCase):
 
     def test_init_kwargs(self):
         arr = bytearray([0, 1, 2, 3])
-        seq = easel.DigitalSequence(self.abc, name=b"TEST", sequence=arr)
-        self.assertEqual(seq.name, b"TEST")
+        seq = easel.DigitalSequence(self.abc, name="TEST", sequence=arr)
+        self.assertEqual(seq.name, "TEST")
         self.assertEqual(bytearray(seq.sequence), arr)
         self.assertEqual(len(seq), 4)
 
     def test_textize_roundtrip(self):
         arr = bytearray([0, 1, 2, 3])
-        dsq1 = easel.DigitalSequence(self.abc, name=b"TEST", sequence=arr)
+        dsq1 = easel.DigitalSequence(self.abc, name="TEST", sequence=arr)
         tsq1 = dsq1.textize()
         self.assertEqual(tsq1.name, dsq1.name)
 
@@ -181,7 +181,7 @@ class TestDigitalSequence(_TestSequenceBase, unittest.TestCase):
         self.assertRaises(ValueError, seq.reverse_complement, inplace=True)
 
     def test_invalid_characters(self):
-        self.assertRaises(ValueError, easel.DigitalSequence, self.abc, name=b"TEST", sequence=b"test")
+        self.assertRaises(ValueError, easel.DigitalSequence, self.abc, name="TEST", sequence=b"?!\xf1")
 
     def test_memoryview(self):
         seq = easel.TextSequence(sequence="ATGC").digitize(self.abc)
@@ -196,7 +196,7 @@ class TestDigitalSequence(_TestSequenceBase, unittest.TestCase):
 
     def test_translate_copy_metadata(self):
         gencode = easel.GeneticCode()
-        textseq = easel.TextSequence(sequence="ATGCTGCCCGGT", name=b"seq", source=b"source")
+        textseq = easel.TextSequence(sequence="ATGCTGCCCGGT", name="seq", source="source")
         seq = textseq.digitize(gencode.nucleotide_alphabet)
         prot = seq.translate(gencode).textize()
         self.assertEqual(prot.name, textseq.name)      
@@ -235,13 +235,13 @@ class TestTextSequence(_TestSequenceBase, unittest.TestCase):
             seq4 = easel.TextSequence.sample(10, randomness="abc")
 
     def test_init_kwargs(self):
-        seq = easel.TextSequence(name=b"TEST", sequence="ATGC")
-        self.assertEqual(seq.name, b"TEST")
+        seq = easel.TextSequence(name="TEST", sequence="ATGC")
+        self.assertEqual(seq.name, "TEST")
         self.assertEqual(seq.sequence, "ATGC")
         self.assertEqual(len(seq), 4)
 
     def test_digitize_roundtrip(self):
-        seq1 = easel.TextSequence(name=b"TEST", sequence="ATGC")
+        seq1 = easel.TextSequence(name="TEST", sequence="ATGC")
         dsq1 = seq1.digitize(easel.Alphabet.dna())
         self.assertEqual(seq1.name, dsq1.name)
 
@@ -250,7 +250,7 @@ class TestTextSequence(_TestSequenceBase, unittest.TestCase):
         self.assertEqual(seq1, seq2)
 
     def test_digitize_invalid(self):
-        seq1 = easel.TextSequence(name=b"TEST", sequence=">v3ry 1nv4l1d")
+        seq1 = easel.TextSequence(name="TEST", sequence=">v3ry 1nv4l1d")
         self.assertRaises(ValueError, seq1.digitize, easel.Alphabet.dna())
         self.assertRaises(ValueError, seq1.digitize, easel.Alphabet.amino())
 

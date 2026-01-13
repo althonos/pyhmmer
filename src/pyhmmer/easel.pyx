@@ -13,10 +13,10 @@ to facilitate the development of biological software in C. It is used by
 cimport cython
 from cpython cimport Py_buffer
 from cpython.buffer cimport PyBUF_FORMAT, PyBUF_READ, PyBuffer_FillInfo
-from cpython.bytes cimport PyBytes_FromString, PyBytes_FromStringAndSize, PyBytes_AsString
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.memoryview cimport PyMemoryView_FromMemory
 from cpython.ref cimport Py_INCREF
+from cpython.exc cimport PyErr_WarnEx
 from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t, SIZE_MAX
 from libc.stdio cimport fclose, FILE
@@ -24,9 +24,19 @@ from libc.stdlib cimport calloc, malloc, realloc, free
 from libc.string cimport memcmp, memcpy, memmove, memset, strdup, strlen, strncpy
 from libc.math cimport fabs, fabsf
 from posix.types cimport off_t
+from cpython.bytes cimport (
+    PyBytes_FromString,
+    PyBytes_FromStringAndSize,
+    PyBytes_AsString,
+)
 from cpython.unicode cimport (
     PyUnicode_New,
     PyUnicode_DecodeASCII,
+    PyUnicode_FromString,
+    PyUnicode_FromStringAndSize,
+    PyUnicode_AsUTF8,
+    PyUnicode_AsUTF8AndSize,
+    PyUnicode_AsASCIIString,
     PyUnicode_DATA,
     PyUnicode_KIND,
     PyUnicode_WRITE,
@@ -96,6 +106,7 @@ elif TARGET_SYSTEM == "Darwin" or TARGET_SYSTEM.endswith("BSD"):
     from .fileobj.bsd cimport fileobj_bsd_open as fopen_obj
 
 include "exceptions.pxi"
+include "_strings.pxi"
 include "_getid.pxi"
 
 # --- Python imports ---------------------------------------------------------
@@ -444,36 +455,18 @@ cdef class Alphabet:
         cdef char*            data
         cdef size_t           length  = sequence.shape[0]
 
-        # NB(@althonos): Compatibility code for PyPy 3.6, which does
-        #                not support directly writing to a string. Remove
-        #                when Python 3.6 support is dropped.
-        if SYS_VERSION_INFO_MAJOR <= 3 and SYS_VERSION_INFO_MINOR <= 7 and SYS_IMPLEMENTATION_NAME == "pypy":
-            decoded = PyBytes_FromStringAndSize(NULL, length)
-            data    = PyBytes_AsString(decoded)
+        decoded = PyUnicode_New(length, 0x7F)
+        kind    = PyUnicode_KIND(decoded)
+        data    = <char*> PyUnicode_DATA(decoded)
 
-            with nogil:
-                for i in range(length):
-                    x = sequence[i]
-                    if libeasel.alphabet.esl_abc_XIsValid(self._abc, x):
-                        data[i] = self._abc.sym[x]
-                    else:
-                        raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
+        for i in range(length):
+            x = sequence[i]
+            if libeasel.alphabet.esl_abc_XIsValid(self._abc, x):
+                PyUnicode_WRITE(kind, data, i, self._abc.sym[x])
+            else:
+                raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
 
-            return decoded.decode('ascii')
-
-        else:
-            decoded = PyUnicode_New(length, 0x7F)
-            kind    = PyUnicode_KIND(decoded)
-            data    = <char*> PyUnicode_DATA(decoded)
-
-            for i in range(length):
-                x = sequence[i]
-                if libeasel.alphabet.esl_abc_XIsValid(self._abc, x):
-                    PyUnicode_WRITE(kind, data, i, self._abc.sym[x])
-                else:
-                    raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
-
-            return decoded
+        return decoded
 
 
 # --- GeneticCode ------------------------------------------------------------
@@ -682,23 +675,25 @@ cdef class Bitfield:
     def _from_raw_bytes(cls, object buffer, int n, str byteorder):
         f"""Create a new bitfield using the given bytes to fill its contents.
         """
-        cdef const uint8_t[::1] bytes
+        cdef const uint8_t[::1] data
         cdef Bitfield           bitfield = cls.zeros(n)
         cdef object             view     = memoryview(buffer)
 
-        # fix endianness if needed
+        # fix endianness if needed by copying bytes into a temporary array
         if byteorder != SYS_BYTEORDER:
             newbuffer = array.array("Q")
             newbuffer.frombytes(view)
             newbuffer.byteswap()
             view = memoryview(newbuffer)
 
-        # assign the items
-        bytes = view.cast("B")
-        assert bytes.shape[0] == bitfield._shape[0] * sizeof(uint64_t)
+        # copy the data quickly using `memcpy` (which is fine because we
+        # require data to be a C-contiguous typed memoryview)
+        data = view.cast("B")
+        if data.shape[0] != bitfield._shape[0] * sizeof(uint64_t):
+            raise ValueError(f"invalid buffer size: {data.shape[0]}")
         if n > 0:
             with nogil:
-                memcpy(bitfield._b.b, &bytes[0], bitfield._shape[0]*sizeof(uint64_t))
+                memcpy(bitfield._b.b, &data[0], bitfield._shape[0]*sizeof(uint64_t))
         return bitfield
 
     @classmethod
@@ -958,33 +953,33 @@ cdef class KeyHash:
         like you would with a Python `set`::
 
             >>> kh = KeyHash()
-            >>> kh.add(b"key")
+            >>> kh.add("key")
             0
 
         Check if a key hash contains a given key::
 
-            >>> b"key" in kh
+            >>> "key" in kh
             True
-            >>> b"missing" in kh
+            >>> "missing" in kh
             False
 
         Get the index associated with a key using the indexing notation::
 
-            >>> kh[b"key"]
+            >>> kh["key"]
             0
-            >>> kh[b"missing"]
+            >>> kh["missing"]
             Traceback (most recent call last):
               ...
-            KeyError: b'missing'
+            KeyError: 'missing'
 
         Iterate over the keys of the key hash, in the order of insertion::
 
-            >>> kh.add(b"key2")
+            >>> kh.add("key2")
             1
             >>> for k in kh:
             ...     print(k)
-            b'key'
-            b'key2'
+            key
+            key2
 
     See Also:
         The Wikipedia article for Bob Jenkins' hash functions:
@@ -1027,13 +1022,14 @@ cdef class KeyHash:
     def __contains__(self, object value):
         assert self._kh != NULL
 
-        if not isinstance(value, bytes):
+        if not isinstance(value, str):
             return False
 
-        cdef       int    status
-        cdef const char*  key    = value
-        cdef       size_t length = len(value)
+        cdef       int     status
+        cdef       ssize_t length 
+        cdef const char*   key
 
+        key = PyUnicode_AsUTF8AndSize(value, &length)
         with nogil:
             status = libeasel.keyhash.esl_keyhash_Lookup(self._kh, key, length, NULL)
         if status == libeasel.eslOK:
@@ -1043,14 +1039,15 @@ cdef class KeyHash:
         else:
             raise UnexpectedError(status, "esl_keyhash_Lookup")
 
-    def __getitem__(self, bytes item):
+    def __getitem__(self, str item):
         assert self._kh != NULL
 
-        cdef       int    status
-        cdef       int    index
-        cdef const char*  key    = item
-        cdef       size_t length = len(item)
+        cdef       int     status
+        cdef       int     index
+        cdef       ssize_t length
+        cdef const char*   key    
 
+        key = PyUnicode_AsUTF8AndSize(item, &length)
         with nogil:
             status = libeasel.keyhash.esl_keyhash_Lookup(self._kh, key, length, &index)
         if status == libeasel.eslOK:
@@ -1070,7 +1067,7 @@ cdef class KeyHash:
         for i in range(libeasel.keyhash.esl_keyhash_GetNumber(self._kh)):
             offset = self._kh.key_offset[i]
             key = &self._kh.smem[offset]
-            yield <bytes> key
+            yield _get_str(key)
 
     def __getstate__(self):
         assert self._kh != NULL
@@ -1150,18 +1147,18 @@ cdef class KeyHash:
 
     # --- Methods ------------------------------------------------------------
 
-    cpdef int add(self, bytes key) except -1:
+    cpdef int add(self, str key) except -1:
         """Add a new key to the hash table, and return its index.
 
         If ``key`` was already in the hash table, the previous index is
         returned::
 
             >>> kh = KeyHash()
-            >>> kh.add(b"first")
+            >>> kh.add("first")
             0
-            >>> kh.add(b"second")
+            >>> kh.add("second")
             1
-            >>> kh.add(b"first")
+            >>> kh.add("first")
             0
 
         Arguments:
@@ -1175,11 +1172,12 @@ cdef class KeyHash:
         """
         assert self._kh != NULL
 
-        cdef       int    status
-        cdef       int    index
-        cdef const char*  k      = key
-        cdef       size_t length = len(key)
+        cdef       int     status
+        cdef       int     index
+        cdef const char*   k 
+        cdef       ssize_t length
 
+        k = PyUnicode_AsUTF8AndSize(key, &length)
         with nogil:
             status = libeasel.keyhash.esl_keyhash_Store(self._kh, k, length, &index)
         if status == libeasel.eslOK or status == libeasel.eslEDUP:
@@ -1201,10 +1199,10 @@ cdef class KeyHash:
 
         Example:
             >>> kh = KeyHash()
-            >>> kh.add(b"key")
+            >>> kh.add("key")
             0
             >>> copy = kh.copy()
-            >>> b"key" in copy
+            >>> "key" in copy
             True
 
         """
@@ -1241,7 +1239,7 @@ cdef class Vector:
     def _from_raw_bytes(cls, object buffer, int n, str byteorder):
         f"""Create a new vector using the given bytes to fill its contents.
         """
-        cdef const uint8_t[::1] bytes
+        cdef const uint8_t[::1] data
         cdef Vector             vec      = cls.zeros(n)
         cdef size_t             itemsize = vec.itemsize
         cdef object             view     = memoryview(buffer)
@@ -1254,11 +1252,12 @@ cdef class Vector:
             view = memoryview(newbuffer)
 
         # assign the items
-        bytes = view.cast("B")
-        assert bytes.shape[0] == n * vec.itemsize
+        data = view.cast("B")
+        if data.shape[0] != n * vec.itemsize:
+            raise ValueError(f"invalid buffer size: {data.shape[0]}")
         if n > 0:
             with nogil:
-                memcpy(vec._data, &bytes[0], n * itemsize)
+                memcpy(vec._data, &data[0], n * itemsize)
         return vec
 
     # --- Magic methods ------------------------------------------------------
@@ -2814,7 +2813,7 @@ cdef class Matrix:
     def _from_raw_bytes(cls, buffer, int m, int n, str byteorder):
         """Create a new matrix using the given bytes to fill its contents.
         """
-        cdef const uint8_t[::1] bytes
+        cdef const uint8_t[::1] data
         cdef Matrix             mat      = cls.zeros(m, n)
         cdef size_t             itemsize = mat.itemsize
         cdef object             view     = memoryview(buffer)
@@ -2827,11 +2826,12 @@ cdef class Matrix:
             view = memoryview(newbuffer)
 
         # assign the items
-        bytes = view.cast("B")
-        assert bytes.shape[0] == m * n * itemsize
+        data = view.cast("B")
+        if data.shape[0] != m * n * itemsize:
+            raise ValueError(f"invalid buffer size: {data.shape[0]}")
         if n > 0 and m > 0:
             with nogil:
-                memcpy(mat._data[0], &bytes[0], m * n * itemsize)
+                memcpy(mat._data[0], &data[0], m * n * itemsize)
         return mat
 
     # --- Magic methods ------------------------------------------------------
@@ -4008,13 +4008,14 @@ class _MSAIndex(collections.abc.Mapping):
         self.msa = msa
 
     def __getitem__(self, object item):
-        cdef int                      status
-        cdef int                      index  = -1
-        cdef const unsigned char[::1] key    = item
-        cdef esl_pos_t                length = key.shape[0]
-        cdef MSA                      msa    = self.msa
-        cdef ESL_KEYHASH*             kh     = msa._msa.index
+        cdef int          status
+        cdef const char*  key
+        cdef int          index  = -1
+        cdef ssize_t      length = -1
+        cdef MSA          msa    = self.msa
+        cdef ESL_KEYHASH* kh     = msa._msa.index
 
+        key = PyUnicode_AsUTF8AndSize(item, &length)
         with nogil:
             status = libeasel.keyhash.esl_keyhash_Lookup(kh, <const char*> &key[0], length, &index)
         if status == libeasel.eslOK:
@@ -4043,7 +4044,7 @@ class _MSAIndex(collections.abc.Mapping):
 
         kh = msa._msa.index
         for i in range(libeasel.keyhash.esl_keyhash_GetNumber(kh)):
-            yield <bytes> libeasel.keyhash.esl_keyhash_Get(kh, i)
+            yield _get_str(libeasel.keyhash.esl_keyhash_Get(kh, i))
 
 
 @cython.freelist(8)
@@ -4100,141 +4101,105 @@ cdef class MSA:
 
     @property
     def accession(self):
-        """`bytes` or `None`: The accession of the alignment, if any.
+        """`str` or `None`: The accession of the alignment, if any.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
         if self._msa.acc == NULL:
             return None
-        return <bytes> self._msa.acc
+        return _get_str(self._msa.acc)
 
     @accession.setter
-    def accession(self, bytes accession):
+    def accession(self, object accession):
         assert self._msa != NULL
-
-        cdef       int       status
-        cdef       esl_pos_t length
-        cdef const char*     acc
-
-        if accession is None:
-            length = -1
-            acc = NULL
-        else:
-            length = len(accession)
-            acc = accession
-
-        with nogil:
-            status = libeasel.msa.esl_msa_SetAccession(self._msa, acc, length)
+        status = _set_str_sized(self._msa, accession, <setter_pos_t> libeasel.msa.esl_msa_SetAccession)
         if status == libeasel.eslEMEM:
-            raise AllocationError("char", sizeof(char), length)
+            raise AllocationError("char", sizeof(char), len(accession))
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_msa_SetAccession")
 
     @property
     def author(self):
-        """`bytes` or `None`: The author of the alignment, if any.
+        """`str` or `None`: The author of the alignment, if any.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
         if self._msa.au == NULL:
             return None
-        return <bytes> self._msa.au
+        return _get_str(self._msa.au)
 
     @author.setter
-    def author(self, bytes author):
+    def author(self, object author):
         assert self._msa != NULL
-
-        cdef       int       status
-        cdef       esl_pos_t length
-        cdef const char*     au
-
-        if author is None:
-            length = -1
-            au = NULL
-        else:
-            length = len(author)
-            au = author
-
-        with nogil:
-            status = libeasel.msa.esl_msa_SetAuthor(self._msa, au, length)
+        status = _set_str_sized(self._msa, author, <setter_pos_t> libeasel.msa.esl_msa_SetAuthor)
         if status == libeasel.eslEMEM:
-            raise AllocationError("char", sizeof(char), length)
+            raise AllocationError("char", sizeof(char), len(author))
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_msa_SetAuthor")
 
     @property
     def name(self):
-        """`bytes` or `None`: The name of the alignment, if any.
+        """`str` or `None`: The name of the alignment, if any.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
         if self._msa.name == NULL:
             return None
-        return <bytes> self._msa.name
+        return _get_str(self._msa.name)
 
     @name.setter
-    def name(self, bytes name):
+    def name(self, object name):
         assert self._msa != NULL
-
-        cdef       int       status
-        cdef       esl_pos_t length
-        cdef const char*     nm
-
-        if name is None:
-            length = -1
-            nm = NULL
-        else:
-            length = len(name)
-            nm = name
-
-        with nogil:
-            status = libeasel.msa.esl_msa_SetName(self._msa, nm, length)
+        status = _set_str_sized(self._msa, name, <setter_pos_t> libeasel.msa.esl_msa_SetName)
         if status == libeasel.eslEMEM:
-            raise AllocationError("char", sizeof(char), length)
+            raise AllocationError("char", sizeof(char), len(name))
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_msa_SetName")
 
     @property
     def description(self):
-        """`bytes` or `None`: The description of the alignment, if any.
+        """`str` or `None`: The description of the alignment, if any.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
         if self._msa.desc == NULL:
             return None
-        return <bytes> self._msa.desc
+        return _get_str(self._msa.desc)
 
     @description.setter
-    def description(self, bytes description):
+    def description(self, object description):
         assert self._msa != NULL
-
-        cdef       int       status
-        cdef       esl_pos_t length
-        cdef const char*     desc
-
-        if description is None:
-            length = -1
-            desc = NULL
-        else:
-            length = len(description)
-            desc = description
-
-        with nogil:
-            status = libeasel.msa.esl_msa_SetDesc(self._msa, desc, length)
+        status = _set_str_sized(self._msa, description, <setter_pos_t> libeasel.msa.esl_msa_SetDesc)
         if status == libeasel.eslEMEM:
-            raise AllocationError("char", sizeof(char), length)
+            raise AllocationError("char", sizeof(char), len(description))
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "esl_msa_SetDesc")
 
     @property
     def names(self):
-        """`tuple` of `bytes`: The name of each sequence in the alignment.
+        """`tuple` of `str`: The name of each sequence in the alignment.
 
         Every sequence in the alignment is required to have a name, so
         no member of the `tuple` will ever be `None`.
 
         Example:
-            >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
-            >>> s2 = TextSequence(name=b"seq2", sequence="ATGC")
-            >>> msa = TextMSA(name=b"msa", sequences=[s1, s2])
+            >>> s1 = TextSequence(name="seq1", sequence="ATGC")
+            >>> s2 = TextSequence(name="seq2", sequence="ATGC")
+            >>> msa = TextMSA(name="msa", sequences=[s1, s2])
             >>> msa.names
-            (b'seq1', b'seq2')
+            ('seq1', 'seq2')
 
         .. versionadded:: 0.4.8
 
@@ -4243,7 +4208,7 @@ cdef class MSA:
         assert self._msa.sqname != NULL
 
         cdef int64_t i
-        cdef bytes   name
+        cdef str     name
         cdef tuple   names
 
         if self._msa.alen == 0 or self._msa.nseq == 0:
@@ -4253,7 +4218,7 @@ cdef class MSA:
         for i in range(self._msa.nseq):
             # sequences must have a name
             assert self._msa.sqname[i] != NULL
-            name = PyBytes_FromString(self._msa.sqname[i])
+            name = PyUnicode_FromString(self._msa.sqname[i])
             Py_INCREF(name)
             PyTuple_SET_ITEM(names, i, name)
 
@@ -4261,24 +4226,26 @@ cdef class MSA:
 
     @property
     def reference(self):
-        """`bytes` or `None`: The reference annotation (`#=GC RF`), if any.
+        """`str` or `None`: The reference annotation (`#=GC RF`), if any.
 
         .. versionadded:: 0.11.1
 
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
-
         if self._msa.rf == NULL:
             return None
-        return PyBytes_FromStringAndSize(self._msa.rf, self._msa.alen)
+        return _get_str_sized(self._msa.rf, self._msa.alen)
 
     @reference.setter
-    def reference(self, reference: bytes):
+    def reference(self, str reference):
         assert self._msa != NULL
         if reference is None:
             self._set_annotation(&self._msa.rf, NULL)
         else:
-            self._set_annotation(&self._msa.rf, <char*> reference)
+            self._set_annotation(&self._msa.rf, PyUnicode_AsUTF8(reference))
 
     @property
     def model_mask(self):
@@ -4286,83 +4253,92 @@ cdef class MSA:
 
         .. versionadded:: 0.11.1
 
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
 
         if self._msa.mm == NULL:
             return None
-        return PyBytes_FromStringAndSize(self._msa.mm, self._msa.alen)
+        return _get_str_sized(self._msa.mm, self._msa.alen)
 
     @model_mask.setter
-    def model_mask(self, model_mask: bytes):
+    def model_mask(self, str model_mask):
         assert self._msa != NULL
         if model_mask is None:
             self._set_annotation(&self._msa.mm, NULL)
         else:
-            self._set_annotation(&self._msa.mm, <char*> model_mask)
+            self._set_annotation(&self._msa.mm, PyUnicode_AsUTF8(model_mask))
 
     @property
     def secondary_structure(self):
-        """`bytes` or `None`: The consensus secondary structure, if any.
+        """`str` or `None`: The consensus secondary structure, if any.
 
         .. versionadded:: 0.11.1
 
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
-
         if self._msa.ss_cons == NULL:
             return None
-        return PyBytes_FromStringAndSize(self._msa.ss_cons, self._msa.alen)
+        return _get_str_sized(self._msa.ss_cons, self._msa.alen)
 
     @secondary_structure.setter
-    def secondary_structure(self, secondary_structure: bytes):
+    def secondary_structure(self, str secondary_structure):
         assert self._msa != NULL
         if secondary_structure is None:
             self._set_annotation(&self._msa.ss_cons, NULL)
         else:
-            self._set_annotation(&self._msa.ss_cons, <char*> secondary_structure)
+            self._set_annotation(&self._msa.ss_cons, PyUnicode_AsUTF8(secondary_structure))
 
     @property
     def surface_accessibility(self):
-        """`bytes` or `None`: The consensus surface accessibility, if any.
+        """`str` or `None`: The consensus surface accessibility, if any.
 
         .. versionadded:: 0.11.1
 
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
-
         if self._msa.sa_cons == NULL:
             return None
-        return PyBytes_FromStringAndSize(self._msa.sa_cons, self._msa.alen)
+        return _get_str_sized(self._msa.sa_cons, self._msa.alen)
 
     @surface_accessibility.setter
-    def surface_accessibility(self, surface_accessibility: bytes):
+    def surface_accessibility(self, str surface_accessibility):
         assert self._msa != NULL
         if surface_accessibility is None:
             self._set_annotation(&self._msa.sa_cons, NULL)
         else:
-            self._set_annotation(&self._msa.sa_cons, <char*> surface_accessibility)
+            self._set_annotation(&self._msa.sa_cons, PyUnicode_AsUTF8(surface_accessibility))
 
     @property
     def posterior_probabilities(self):
-        """`bytes` or `None`: The consensus posterior probabilities, if any.
+        """`str` or `None`: The consensus posterior probabilities, if any.
 
         .. versionadded:: 0.11.1
 
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._msa != NULL
-
         if self._msa.pp_cons == NULL:
             return None
-        return PyBytes_FromStringAndSize(self._msa.pp_cons, self._msa.alen)
+        return _get_str_sized(self._msa.pp_cons, self._msa.alen)
 
     @posterior_probabilities.setter
-    def posterior_probabilities(self, posterior_probabilities: bytes):
+    def posterior_probabilities(self, str posterior_probabilities):
         assert self._msa != NULL
         if posterior_probabilities is None:
             self._set_annotation(&self._msa.pp_cons, NULL)
         else:
-            self._set_annotation(&self._msa.pp_cons, <char*> posterior_probabilities)
+            self._set_annotation(&self._msa.pp_cons, PyUnicode_AsUTF8(posterior_probabilities))
 
     @property
     def sequence_weights(self):
@@ -4378,9 +4354,9 @@ cdef class MSA:
             use the property setter rather than modifying the weights
             inplace::
 
-                >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
-                >>> s2 = TextSequence(name=b"seq2", sequence="ATCC")
-                >>> msa = TextMSA(name=b"msa", sequences=[s1, s2])
+                >>> s1 = TextSequence(name="seq1", sequence="ATGC")
+                >>> s2 = TextSequence(name="seq2", sequence="ATCC")
+                >>> msa = TextMSA(name="msa", sequences=[s1, s2])
                 >>> msa.sequence_weights  # default weights, flag unset
                 VectorD([1.0, 1.0])
                 >>> msa.sequence_weights = VectorD([0.5, 1.5])
@@ -4440,15 +4416,15 @@ cdef class MSA:
                 containing duplicate sequence names.
 
         Example:
-            >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
-            >>> s2 = TextSequence(name=b"seq2", sequence="ATTA")
-            >>> msa = TextMSA(name=b"msa", sequences=[s1, s2])
-            >>> msa.indexed[b'seq1'].sequence
+            >>> s1 = TextSequence(name="seq1", sequence="ATGC")
+            >>> s2 = TextSequence(name="seq2", sequence="ATTA")
+            >>> msa = TextMSA(name="msa", sequences=[s1, s2])
+            >>> msa.indexed['seq1'].sequence
             'ATGC'
-            >>> msa.indexed[b'seq3']
+            >>> msa.indexed['seq3']
             Traceback (most recent call last):
             ...
-            KeyError: b'seq3'
+            KeyError: 'seq3'
 
         .. versionadded:: 0.11.1
 
@@ -4526,10 +4502,10 @@ cdef class MSA:
             residue, and any non-alphanumeric char is considered to be a gap.
 
         Example:
-            >>> s1 = TextSequence(name=b"seq1", sequence="--ATGC---")
-            >>> s2 = TextSequence(name=b"seq2", sequence="TTATCCG-T")
-            >>> s3 = TextSequence(name=b"seq3", sequence="TT-TCCGAT")
-            >>> msa = TextMSA(name=b"msa", sequences=[s1, s2, s3])
+            >>> s1 = TextSequence(name="seq1", sequence="--ATGC---")
+            >>> s2 = TextSequence(name="seq2", sequence="TTATCCG-T")
+            >>> s3 = TextSequence(name="seq3", sequence="TT-TCCGAT")
+            >>> msa = TextMSA(name="msa", sequences=[s1, s2, s3])
             >>> msa.mark_fragments(0.5)
             Bitfield([True, False, False])
 
@@ -4570,12 +4546,12 @@ cdef class MSA:
                 sequences or columns.
 
         Example:
-            >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
-            >>> s2 = TextSequence(name=b"seq2", sequence="ATCC")
-            >>> s3 = TextSequence(name=b"seq3", sequence="ATGA")
-            >>> msa = TextMSA(name=b"msa", sequences=[s1, s2, s3])
+            >>> s1 = TextSequence(name="seq1", sequence="ATGC")
+            >>> s2 = TextSequence(name="seq2", sequence="ATCC")
+            >>> s3 = TextSequence(name="seq3", sequence="ATGA")
+            >>> msa = TextMSA(name="msa", sequences=[s1, s2, s3])
             >>> msa.select(sequences=[0, 2]).names
-            (b'seq1', b'seq3')
+            ('seq1', 'seq3')
             >>> tuple(msa.select(columns=range(1,4)).alignment)
             ('TGC', 'TCC', 'TGA')
 
@@ -4890,28 +4866,29 @@ cdef class TextMSA(MSA):
 
     def __init__(
         self,
-        *args,
-        bytes name=None,
-        bytes description=None,
-        bytes accession=None,
+        *,
+        object name=None,
+        object description=None,
+        object accession=None,
         object sequences=None,
-        bytes author=None,
+        object author=None,
     ):
         """__init__(self, *, name=None, description=None, accession=None, sequences=None, author=None)\n--\n
 
         Create a new text-mode alignment with the given ``sequences``.
 
         Keyword Arguments:
-            name (`bytes`, optional): The name of the alignment, if any.
-            description (`bytes`, optional): The description of the
-                alignment, if any.
-            accession (`bytes`, optional): The accession of the alignment,
+            name (`str` or `bytes`, optional): The name of the alignment, 
                 if any.
+            description (`str` or `bytes`, optional): The description of the
+                alignment, if any.
+            accession (`str` or `bytes`, optional): The accession of the 
+                alignment, if any.
             sequences (collection of `TextSequence`): The sequences to store
                 in the multiple sequence alignment. All sequences must have
                 the same length. They also need to have distinct names.
-            author (`bytes`, optional): The author of the alignment, often
-                used to record the aligner it was created with.
+            author (`str` or `bytes`, optional): The author of the alignment, 
+                often used to record the aligner it was created with.
 
         Raises:
             `ValueError`: When the alignment cannot be created from the
@@ -4920,9 +4897,9 @@ cdef class TextMSA(MSA):
                 `TextSequence` objects.
 
         Example:
-            >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
-            >>> s2 = TextSequence(name=b"seq2", sequence="ATGC")
-            >>> msa = TextMSA(name=b"msa", sequences=[s1, s2])
+            >>> s1 = TextSequence(name="seq1", sequence="ATGC")
+            >>> s2 = TextSequence(name="seq2", sequence="ATGC")
+            >>> msa = TextMSA(name="msa", sequences=[s1, s2])
             >>> len(msa)
             4
 
@@ -4933,23 +4910,6 @@ cdef class TextMSA(MSA):
             Passing positional arguments to constructor.
 
         """
-
-        # TODO: Remove in 0.12.0 (deprecation)
-        if len(args) > 0:
-            warnings.warn(
-                "TextMSA.__init__ will not accept positional arguments after v0.12.0",
-                category=DeprecationWarning
-            )
-            if len(args) > 0:
-                name = args[0]
-            if len(args) > 1:
-                description = args[1]
-            if len(args) > 2:
-                accession = args[2]
-            if len(args) > 3:
-                sequences = args[3]
-            if len(args) > 4:
-                author = args[4]
 
         cdef TextSequence seq
         cdef int          i
@@ -4997,11 +4957,11 @@ cdef class TextMSA(MSA):
 
                 >>> for name, aligned in zip(luxc.names, luxc.alignment):
                 ...     print(name, " ", aligned[:40], "...")
-                b'Q9KV99.1'   LANQPLEAILGLINEARKSWSST------------PELDP ...
-                b'Q2WLE3.1'   IYSYPSEAMIEIINEYSKILCSD------------RKFLS ...
-                b'Q97GS8.1'   VHDIKTEETIDLLDRCAKLWLDDNYSKK--HIETLAQITN ...
-                b'Q3WCI9.1'   LLNVPLKEIIDFLVETGERIRDPRNTFMQDCIDRMAGTHV ...
-                b'P08639.1'   LNDLNINNIINFLYTTGQRWKSEEYSRRRAYIRSLITYLG ...
+                Q9KV99.1   LANQPLEAILGLINEARKSWSST------------PELDP ...
+                Q2WLE3.1   IYSYPSEAMIEIINEYSKILCSD------------RKFLS ...
+                Q97GS8.1   VHDIKTEETIDLLDRCAKLWLDDNYSKK--HIETLAQITN ...
+                Q3WCI9.1   LLNVPLKEIIDFLVETGERIRDPRNTFMQDCIDRMAGTHV ...
+                P08639.1   LNDLNINNIINFLYTTGQRWKSEEYSRRRAYIRSLITYLG ...
                 ...
 
             Use the splat operator (*) in combination with the `zip`
@@ -5034,33 +4994,33 @@ cdef class TextMSA(MSA):
             Query the number of sequences in the alignment with `len`, or
             access individual members via indexing notation::
 
-                >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
-                >>> s2 = TextSequence(name=b"seq2", sequence="ATGC")
-                >>> msa = TextMSA(name=b"msa", sequences=[s1, s2])
+                >>> s1 = TextSequence(name="seq1", sequence="ATGC")
+                >>> s2 = TextSequence(name="seq2", sequence="ATGC")
+                >>> msa = TextMSA(name="msa", sequences=[s1, s2])
                 >>> len(msa.sequences)
                 2
                 >>> msa.sequences[0].name
-                b'seq1'
+                'seq1'
 
         Caution:
             Sequences in the list are copies, so editing their attributes
             will have no effect on the alignment::
 
                 >>> msa.sequences[0].name
-                b'seq1'
-                >>> msa.sequences[0].name = b"seq1bis"
+                'seq1'
+                >>> msa.sequences[0].name = "seq1bis"
                 >>> msa.sequences[0].name
-                b'seq1'
+                'seq1'
 
             Support for this feature may be added in a future version, but
             can be circumvented for now by forcingly setting the updated
             version of the object::
 
                 >>> seq = msa.sequences[0]
-                >>> seq.name = b"seq1bis"
+                >>> seq.name = "seq1bis"
                 >>> msa.sequences[0] = seq
                 >>> msa.sequences[0].name
-                b'seq1bis'
+                'seq1bis'
 
         .. versionadded:: 0.3.0
 
@@ -5323,12 +5283,12 @@ cdef class DigitalMSA(MSA):
     def __init__(
         self,
         Alphabet alphabet,
-        *args,
-        bytes name=None,
-        bytes description=None,
-        bytes accession=None,
+        *,
+        object name=None,
+        object description=None,
+        object accession=None,
         object sequences=None,
-        bytes author=None,
+        object author=None,
     ):
         """__init__(self, alphabet, *, name=None, description=None, accession=None, sequences=None, author=None)\n--\n
 
@@ -5357,22 +5317,6 @@ cdef class DigitalMSA(MSA):
             Passing positional arguments other than ``alphabet``.
 
         """
-        # TODO: Remove in 0.12.0 (deprecation)
-        if len(args) > 0:
-            warnings.warn(
-                "DigitalMSA.__init__ will not accept positional arguments besides `alphabet` after v0.12.0",
-                category=DeprecationWarning
-            )
-            if len(args) > 0:
-                name = args[0]
-            if len(args) > 1:
-                description = args[1]
-            if len(args) > 2:
-                accession = args[2]
-            if len(args) > 3:
-                sequences = args[3]
-            if len(args) > 4:
-                author = args[4]
 
         cdef DigitalSequence seq
         cdef list            seqs  = [] if sequences is None else list(sequences)
@@ -6342,20 +6286,19 @@ cdef class Sequence:
 
     @property
     def accession(self):
-        """`bytes`: The accession of the sequence.
+        """`str`: The accession of the sequence.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._sq != NULL
-        return <bytes> self._sq.acc
+        return _get_str(self._sq.acc)
 
     @accession.setter
-    def accession(self, bytes accession):
+    def accession(self, object accession not None):
         assert self._sq != NULL
-
-        cdef       int   status
-        cdef const char* acc    = accession
-
-        with nogil:
-            status = libeasel.sq.esl_sq_SetAccession(self._sq, acc)
+        status = _set_str(self._sq, accession, <setter_t> libeasel.sq.esl_sq_SetAccession)
         if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), len(accession))
         elif status != libeasel.eslOK:
@@ -6363,20 +6306,19 @@ cdef class Sequence:
 
     @property
     def name(self):
-        """`bytes`: The name of the sequence.
+        """`str`: The name of the sequence.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+            
         """
         assert self._sq != NULL
-        return <bytes> self._sq.name
+        return _get_str(self._sq.name)
 
     @name.setter
-    def name(self, bytes name not None):
+    def name(self, object name not None):
         assert self._sq != NULL
-
-        cdef       int   status
-        cdef const char* nm     = name
-
-        with nogil:
-            status = libeasel.sq.esl_sq_SetName(self._sq, nm)
+        status = _set_str(self._sq, name, <setter_t> libeasel.sq.esl_sq_SetName)
         if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), len(name))
         elif status != libeasel.eslOK:
@@ -6384,20 +6326,19 @@ cdef class Sequence:
 
     @property
     def description(self):
-        """`bytes`: The description of the sequence.
+        """`str`: The description of the sequence.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+            
         """
         assert self._sq != NULL
-        return <bytes> self._sq.desc
+        return _get_str(self._sq.desc)
 
     @description.setter
-    def description(self, bytes description):
+    def description(self, object description not None):
         assert self._sq != NULL
-
-        cdef       int   status
-        cdef const char* desc   = description
-
-        with nogil:
-            status = libeasel.sq.esl_sq_SetDesc(self._sq, desc)
+        status = _set_str(self._sq, description, <setter_t> libeasel.sq.esl_sq_SetDesc)
         if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), len(description))
         elif status != libeasel.eslOK:
@@ -6405,20 +6346,19 @@ cdef class Sequence:
 
     @property
     def source(self):
-        """`bytes`: The source of the sequence, if any.
+        """`str`: The source of the sequence, if any.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+            
         """
         assert self._sq != NULL
-        return <bytes> self._sq.source
+        return _get_str(self._sq.source)
 
     @source.setter
-    def source(self, bytes source):
+    def source(self, object source not None):
         assert self._sq != NULL
-
-        cdef       int   status
-        cdef const char* src    = source
-
-        with nogil:
-            status = libeasel.sq.esl_sq_SetSource(self._sq, src)
+        status = _set_str(self._sq, source, <setter_t> libeasel.sq.esl_sq_SetSource)
         if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), len(source))
         elif status != libeasel.eslOK:
@@ -6437,7 +6377,7 @@ cdef class Sequence:
             raise a `ValueError`::
 
                 >>> seq = TextSequence(sequence="TTAATTGGT")
-                >>> seq.residue_markups = {b"quality": b"efcfffffcfee"}
+                >>> seq.residue_markups = {"quality": "efcfffffcfee"}
                 Traceback (most recent call last):
                   ...
                 ValueError: Residue markup annotation has an invalid length (expected 9, got 12)
@@ -6448,14 +6388,14 @@ cdef class Sequence:
         assert self._sq != NULL
 
         cdef int    i
-        cdef bytes  tag
-        cdef bytes  val
-        cdef dict   xr  = {}
+        cdef str    tag
+        cdef str    val
         cdef size_t off = 0 if libeasel.sq.esl_sq_IsText(self._sq) else 1
+        cdef dict   xr  = {}
 
         for i in range(self._sq.nxr):
-            tag = PyBytes_FromString(self._sq.xr_tag[i])
-            val = PyBytes_FromStringAndSize(&self._sq.xr[i][off], self._sq.n)
+            tag = PyUnicode_FromString(self._sq.xr_tag[i])
+            val = PyUnicode_DecodeASCII(&self._sq.xr[i][off], self._sq.n, NULL)
             xr[tag] = val
 
         return xr
@@ -6464,9 +6404,8 @@ cdef class Sequence:
     def residue_markups(self, dict xr):
         assert self._sq != NULL
 
-        cdef const unsigned char[::1] tag
-        cdef const unsigned char[::1] val
-
+        cdef str     tag
+        cdef str     val
         cdef int     i
         cdef ssize_t xrlen = len(xr)
         cdef size_t  off   = 0 if libeasel.sq.esl_sq_IsText(self._sq) else 1
@@ -6474,8 +6413,8 @@ cdef class Sequence:
 
         # check the values have the right length before doing anything
         for tag, val in xr.items():
-            if val.shape[0] != self._sq.n:
-                raise ValueError(f"Residue markup annotation has an invalid length (expected {self._sq.n}, got {val.shape[0]})")
+            if len(val) != self._sq.n:
+                raise ValueError(f"Residue markup annotation has an invalid length (expected {self._sq.n}, got {len(val)})")
         # clear old values
         for i in range(self._sq.nxr):
             free(self._sq.xr_tag[i])
@@ -6491,11 +6430,11 @@ cdef class Sequence:
                 raise AllocationError("char*", sizeof(char*), xrlen)
         # assign the new values
         for i, (tag, val) in enumerate(xr.items()):
-            self._sq.xr_tag[i] = strdup(<const char*> &tag[0])
+            self._sq.xr_tag[i] = strdup(PyUnicode_AsUTF8(tag))
             self._sq.xr[i] = <char*> calloc(xrdim, sizeof(char))
             if self._sq.xr_tag[i] == NULL or self._sq.xr[i] == NULL:
                 raise AllocationError("char", sizeof(char), xrdim)
-            memcpy(&self._sq.xr[i][off], &val[0], val.shape[0] * sizeof(unsigned char))
+            memcpy(&self._sq.xr[i][off], PyUnicode_AsUTF8(val), self._sq.n * sizeof(unsigned char))
 
     # --- Abstract methods ---------------------------------------------------
 
@@ -6623,13 +6562,13 @@ cdef class TextSequence(Sequence):
 
     def __init__(
         self,
-        *args,
-        bytes name=None,
-        bytes description=None,
-        bytes accession=None,
-        str   sequence=None,
-        bytes source=None,
-        dict  residue_markups=None,
+        *,
+        object name=None,
+        object description=None,
+        object accession=None,
+        object sequence=None,
+        object source=None,
+        dict   residue_markups=None,
     ):
         """__init__(self, *, name=None, description=None, accession=None, sequence=None, source=None, residue_markups=None)\n--\n
 
@@ -6644,27 +6583,8 @@ cdef class TextSequence(Sequence):
         """
         cdef bytes sq
 
-        # TODO: Remove in 0.12.0 (deprecation)
-        if len(args) > 0:
-            warnings.warn(
-                "TextSequence.__init__ will not accept positional arguments after v0.12.0",
-                category=DeprecationWarning
-            )
-            if len(args) > 0:
-                name = args[0]
-            if len(args) > 1:
-                description = args[1]
-            if len(args) > 2:
-                accession = args[2]
-            if len(args) > 3:
-                sequence = args[3]
-            if len(args) > 4:
-                source = args[4]
-            if len(args) > 5:
-                residue_markups = args[5]
-
         if sequence is not None:
-            sq = sequence.encode("ascii")
+            sq = PyUnicode_AsASCIIString(sequence)
             self._sq = libeasel.sq.esl_sq_CreateFrom(NULL, sq, NULL, NULL, NULL)
         else:
             self._sq = libeasel.sq.esl_sq_Create()
@@ -6906,12 +6826,12 @@ cdef class DigitalSequence(Sequence):
 
     def __init__(self,
               Alphabet              alphabet      not None,
-              *args,
-              bytes                 name            = None,
-              bytes                 description     = None,
-              bytes                 accession       = None,
+              *,
+              object                name            = None,
+              object                description     = None,
+              object                accession       = None,
         const libeasel.ESL_DSQ[::1] sequence        = None,
-              bytes                 source          = None,
+              object                source          = None,
               dict                  residue_markups = None,
     ):
         """__init__(self, alphabet, *, name=None, description=None, accession=None, sequence=None, source=None, residue_markups=None)\n--\n
@@ -6934,25 +6854,6 @@ cdef class DigitalSequence(Sequence):
         cdef int     status
         cdef int64_t i
         cdef int64_t n
-
-        # TODO: Remove in 0.12.0 (deprecation)
-        if len(args) > 0:
-            warnings.warn(
-                "DigitalSequence.__init__ will not accept positional arguments besides `alphabet` after v0.12.0",
-                category=DeprecationWarning
-            )
-            if len(args) > 0:
-                name = args[0]
-            if len(args) > 1:
-                description = args[1]
-            if len(args) > 2:
-                accession = args[2]
-            if len(args) > 3:
-                sequence = args[3]
-            if len(args) > 4:
-                source = args[4]
-            if len(args) > 5:
-                residue_markups = args[5]
 
         # create an empty digital sequence
         self._sq = libeasel.sq.esl_sq_CreateDigital(alphabet._abc)
@@ -7038,7 +6939,7 @@ cdef class DigitalSequence(Sequence):
             values, only the :math:`n` elements of the buffer in between.
 
         .. versionchanged:: 0.4.0
-           Property is now a `VectorU8` instead of a memoryview.
+           Property is now a `VectorU8` instead of `memoryview`.
 
         """
         assert self._sq != NULL
@@ -7236,16 +7137,17 @@ class _SequenceBlockIndex(collections.abc.Mapping):
         cdef SequenceBlock block = self.block
         return libeasel.keyhash.esl_keyhash_GetNumber(block._indexed._kh)
 
-    def __getitem__(self, object item):
-        cdef int                      status
-        cdef int                      index  = -1
-        cdef const unsigned char[::1] key    = item
-        cdef esl_pos_t                length = key.shape[0]
-        cdef SequenceBlock            block  = self.block
+    def __getitem__(self, str item):
+        cdef int           status
+        cdef const char*   key    
+        cdef ssize_t       length = 1
+        cdef int           index  = -1
+        cdef SequenceBlock block  = self.block
 
         assert block._indexed is not None
         assert block._indexed._kh != NULL
 
+        key = PyUnicode_AsUTF8AndSize(item, &length)
         with nogil:
             status = libeasel.keyhash.esl_keyhash_Lookup(
                 block._indexed._kh,
@@ -7270,7 +7172,7 @@ class _SequenceBlockIndex(collections.abc.Mapping):
 
         length = libeasel.keyhash.esl_keyhash_GetNumber(block._indexed._kh)
         for i in range(length):
-            yield <bytes> libeasel.keyhash.esl_keyhash_Get(block._indexed._kh, i)
+            yield _get_str(libeasel.keyhash.esl_keyhash_Get(block._indexed._kh, i))
 
 
 cdef class SequenceBlock:
@@ -7390,15 +7292,15 @@ cdef class SequenceBlock:
                 containing duplicate sequence names.
 
         Example:
-            >>> s1 = TextSequence(name=b"seq1", sequence="ATGC")
-            >>> s2 = TextSequence(name=b"seq2", sequence="ATTA")
+            >>> s1 = TextSequence(name="seq1", sequence="ATGC")
+            >>> s2 = TextSequence(name="seq2", sequence="ATTA")
             >>> block = TextSequenceBlock([s1, s2])
-            >>> block.indexed[b'seq1'].sequence
+            >>> block.indexed['seq1'].sequence
             'ATGC'
-            >>> block.indexed[b'seq3']
+            >>> block.indexed['seq3']
             Traceback (most recent call last):
             ...
-            KeyError: b'seq3'
+            KeyError: 'seq3'
 
         .. versionadded:: 0.11.1
 
@@ -7517,7 +7419,7 @@ cdef class SequenceBlock:
         self._length += 1
         self._on_modification()
 
-    cdef size_t _index(self, Sequence sequence, ssize_t start=0, ssize_t stop=sys.maxsize) except *:        
+    cdef size_t _index(self, Sequence sequence, ssize_t start=0, ssize_t stop=sys.maxsize) except *:
         cdef size_t i
         cdef size_t start_
         cdef size_t stop_
@@ -7597,7 +7499,7 @@ cdef class SequenceBlock:
         finally:
             if file is not NULL:
                 fclose(file)
-        
+
 
 cdef class TextSequenceBlock(SequenceBlock):
     """A container for storing `TextSequence` objects.
@@ -7989,9 +7891,9 @@ cdef class SequenceFile:
             >>> with SequenceFile("tests/data/msa/LuxC.sto") as sf:
             ...     sequences = sf.read_block()
             >>> print(sequences[0].name[:6], sequences[0].sequence[:30])
-            b'Q9KV99' LANQPLEAILGLINEARKSWSSTPELDPYR
+            Q9KV99 LANQPLEAILGLINEARKSWSSTPELDPYR
             >>> print(sequences[1].name[:6], sequences[1].sequence[:30])
-            b'Q2WLE3' IYSYPSEAMIEIINEYSKILCSDRKFLSYE
+            Q2WLE3 IYSYPSEAMIEIINEYSKILCSDRKFLSYE
 
     .. versionadded:: 0.2.0
        The ``alphabet`` attribute.
@@ -8782,7 +8684,7 @@ cdef class SSIReader:
         else:
             raise UnexpectedError(status, "esl_ssi_FileInfo")
 
-    def find_name(self, bytes key):
+    def find_name(self, str key):
         """Retrieve the `~pyhmmer.easel.SSIReader.Entry` for the given name.
         """
         cdef uint16_t ret_fh
@@ -8795,9 +8697,13 @@ cdef class SSIReader:
             raise ValueError("I/O operation on closed file.")
 
         status = libeasel.ssi.esl_ssi_FindName(
-            self._ssi, key, &ret_fh, &ret_roff, &opt_doff, &opt_L
+            self._ssi, 
+            PyUnicode_AsUTF8(key), 
+            &ret_fh, 
+            &ret_roff, 
+            &opt_doff, 
+            &opt_L
         )
-
         if status == libeasel.eslOK:
             return self.Entry(ret_fh, ret_roff, opt_doff or None, opt_L or None)
         elif status == libeasel.eslENOTFOUND:
@@ -8904,7 +8810,7 @@ cdef class SSIWriter:
 
     cpdef void add_key(
         self,
-        bytes key,
+        str key,
         uint16_t fd,
         off_t record_offset,
         off_t data_offset = 0,
@@ -8916,9 +8822,13 @@ cdef class SSIWriter:
 
         self._on_write()
         status = libeasel.ssi.esl_newssi_AddKey(
-            self._newssi, key, fd, record_offset, data_offset, record_length
+            self._newssi, 
+            PyUnicode_AsUTF8(key), 
+            fd, 
+            record_offset, 
+            data_offset, 
+            record_length
         )
-
         if status == libeasel.eslERANGE:
             raise ValueError("Too many primary keys registered in index.")
         elif status == libeasel.eslENOTFOUND:
@@ -8927,13 +8837,17 @@ cdef class SSIWriter:
             _reraise_error()
             raise UnexpectedError(status, "esl_newssi_AddKey")
 
-    cpdef void add_alias(self, bytes alias, bytes key) except *:
+    cpdef void add_alias(self, str alias, str key) except *:
         """Make ``alias`` an alias of ``key`` in the index.
         """
         cdef int status
 
         self._on_write()
-        status = libeasel.ssi.esl_newssi_AddAlias(self._newssi, alias, key)
+        status = libeasel.ssi.esl_newssi_AddAlias(
+            self._newssi, 
+            PyUnicode_AsUTF8(alias), 
+            PyUnicode_AsUTF8(key),
+        )
         if status == libeasel.eslOK:
             return
         elif status == libeasel.eslERANGE:

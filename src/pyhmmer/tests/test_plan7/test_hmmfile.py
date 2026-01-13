@@ -168,22 +168,22 @@ class _TestHMMPath:
 
 class _TestThioesterase(_TestHMMFile):
     ID = "Thioesterase"
-    NAMES = [b"Thioesterase"]
+    NAMES = ["Thioesterase"]
 
 
 class _TestRREFam(_TestHMMFile):
     ID = "RREFam"
     NAMES = [
-        b"Stand_Alone_Lasso_RRE",
-        b"Thiopeptide_F_RRE",
-        b"PqqD_RRE",
-        b"Proteusin_Epimerase_RRE",
-        b"Thurincin_rSAM_RRE",
-        b"Thuricin_rSAM_RRE",
-        b"Other_Sactipeptide_rSAM_RRE",
-        b"Ranthipeptide_rSAM_RRE",
-        b"Trifolitoxin_RRE",
-        b"Thiaglutamate_B_RRE",        
+        "Stand_Alone_Lasso_RRE",
+        "Thiopeptide_F_RRE",
+        "PqqD_RRE",
+        "Proteusin_Epimerase_RRE",
+        "Thurincin_rSAM_RRE",
+        "Thuricin_rSAM_RRE",
+        "Other_Sactipeptide_rSAM_RRE",
+        "Ranthipeptide_rSAM_RRE",
+        "Trifolitoxin_RRE",
+        "Thiaglutamate_B_RRE",        
     ]
 
 

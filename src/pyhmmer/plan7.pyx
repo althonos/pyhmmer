@@ -13,7 +13,6 @@ See Also:
 # --- C imports --------------------------------------------------------------
 
 cimport cython
-from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_FromString
 from cpython.list cimport PyList_New, PyList_SET_ITEM
 from cpython.ref cimport PyObject
 from cpython.exc cimport PyErr_Clear
@@ -26,12 +25,18 @@ from libc.stdint cimport uint8_t, uint32_t, uint64_t, int64_t
 from libc.stdio cimport fprintf, FILE, stdout, fclose
 from libc.string cimport memset, memcpy, memmove, strdup, strndup, strlen, strcmp, strncpy
 from libc.time cimport ctime, strftime, time, time_t, tm, localtime_r
+from cpython.bytes cimport (
+    PyBytes_FromStringAndSize, 
+    PyBytes_FromString,
+)
 from cpython.unicode cimport (
     PyUnicode_DATA,
     PyUnicode_KIND,
     PyUnicode_READ,
     PyUnicode_GET_LENGTH,
     PyUnicode_FromStringAndSize,
+    PyUnicode_AsUTF8,
+    PyUnicode_AsUTF8AndSize,
 )
 from cpython.pythread cimport (
     PyThread_type_lock,
@@ -195,6 +200,7 @@ elif TARGET_SYSTEM == "Darwin" or TARGET_SYSTEM.endswith("BSD"):
     from .fileobj.bsd cimport fileobj_bsd_open as fopen_obj
 
 include "exceptions.pxi"
+include "_strings.pxi"
 include "_getid.pxi"
 
 
@@ -372,29 +378,36 @@ cdef class Alignment:
 
     @property
     def hmm_name(self):
-        """`bytes`: The name of the query HMM.
+        """`str`: The name of the query HMM.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._ad != NULL
         assert self._ad.hmmname != NULL
-        return <bytes> self._ad.hmmname
+        return _get_str(self._ad.hmmname)
 
     @property
     def hmm_accession(self):
-        """`bytes`: The accession of the query, or its name if it has none.
+        """`str`: The accession of the query, or its name if it has none.
 
         .. versionadded:: 0.1.4
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
 
         """
         assert self._ad != NULL
         assert self._ad.hmmacc != NULL
-        return <bytes> self._ad.hmmacc
+        return _get_str(self._ad.hmmacc)
 
     @property
     def hmm_sequence(self):
         """`str`: The sequence of the query HMM in the alignment.
         """
         assert self._ad != NULL
-        return self._ad.model.decode('ascii')
+        return PyUnicode_DecodeASCII(self._ad.model, self._ad.N, NULL)
 
     @property
     def hmm_length(self):
@@ -413,7 +426,7 @@ cdef class Alignment:
 
         """
         assert self._ad != NULL
-        return self._ad.ppline.decode('ascii')
+        return PyUnicode_DecodeASCII(self._ad.ppline, self._ad.N, NULL)
 
 
     @property
@@ -425,18 +438,22 @@ cdef class Alignment:
 
     @property
     def target_name(self):
-        """`bytes`: The name of the target sequence.
+        """`str`: The name of the target sequence.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._ad != NULL
         assert self._ad.sqname != NULL
-        return <bytes> self._ad.sqname
+        return _get_str(self._ad.sqname)
 
     @property
     def target_sequence(self):
         """`str`: The sequence of the target sequence in the alignment.
         """
         assert self._ad != NULL
-        return self._ad.aseq.decode('ascii')
+        return PyUnicode_DecodeASCII(self._ad.aseq, self._ad.N, NULL)
 
     @property
     def target_to(self):
@@ -459,7 +476,7 @@ cdef class Alignment:
         """`str`: The identity sequence between the query and the target.
         """
         assert self._ad != NULL
-        return self._ad.mline.decode('ascii')
+        return PyUnicode_DecodeASCII(self._ad.mline, self._ad.N, NULL)
 
 
 cdef class Background:
@@ -1940,59 +1957,91 @@ cdef class Hit:
 
     @property
     def name(self):
-        """`bytes`: The name of the database hit.
+        """`str`: The name of the database hit.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._hit != NULL
         assert self._hit.name != NULL
-        return <bytes> self._hit.name
+        return _get_str(self._hit.name)
 
     @name.setter
-    def name(self, bytes name not None):
+    def name(self, str name not None):
         assert self._hit != NULL
-        free(self._hit.name)
-        self._hit.name = strdup(<const char*> name)
+
+        cdef const char* data   = NULL
+        cdef ssize_t     length = -1
+
+        data = PyUnicode_AsUTF8AndSize(name, &length)
+        self._hit.name = <char*> realloc(self._hit.name, max(1, sizeof(char) * length))
         if self._hit.name == NULL:
-            raise AllocationError("char", sizeof(char), strlen(name))
+            raise AllocationError("char", sizeof(char), length)
+        with nogil:
+            memcpy(self._hit.name, data, sizeof(char) * (length + 1))
 
     @property
     def accession(self):
-        """`bytes` or `None`: The accession of the database hit, if any.
+        """`str` or `None`: The accession of the database hit, if any.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._hit != NULL
         if self._hit.acc == NULL:
             return None
-        return <bytes> self._hit.acc
+        return _get_str(self._hit.acc)
 
     @accession.setter
-    def accession(self, bytes accession):
+    def accession(self, str accession):
         assert self._hit != NULL
-        free(self._hit.acc)
+
+        cdef const char* data   = NULL
+        cdef ssize_t     length = -1
+
         if accession is None:
+            free(self._hit.acc)
             self._hit.acc = NULL
         else:
-            self._hit.acc = strdup(<const char*> accession)
-            if self._hit.acc == NULL:
-                raise AllocationError("char", sizeof(char), strlen(accession))
+            data = PyUnicode_AsUTF8AndSize(accession, &length)
+            self._hit.acc = <char*> realloc(self._hit.acc, max(1, sizeof(char) * length))
+            if self._hit.name == NULL:
+                raise AllocationError("char", sizeof(char), length)
+            with nogil:
+                memcpy(self._hit.acc, data, sizeof(char) * (length + 1))
 
     @property
     def description(self):
-        """`bytes` or `None`: The description of the database hit, if any.
+        """`str` or `None`: The description of the database hit, if any.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._hit != NULL
         if self._hit.desc == NULL:
             return None
-        return <bytes> self._hit.desc
+        return _get_str(self._hit.desc)
 
     @description.setter
-    def description(self, bytes description):
+    def description(self, str description):
         assert self._hit != NULL
-        free(self._hit.desc)
+
+        cdef const char* data   = NULL
+        cdef ssize_t     length = -1
+
         if description is None:
+            free(self._hit.desc)
             self._hit.desc = NULL
         else:
-            self._hit.desc = strdup(<const char*> description)
-            if self._hit.desc == NULL:
-                raise AllocationError("char", sizeof(char), strlen(description))
+            data = PyUnicode_AsUTF8AndSize(description, &length)
+            self._hit.desc = <char*> realloc(self._hit.desc, max(1, sizeof(char) * length))
+            if self._hit.name == NULL:
+                raise AllocationError("char", sizeof(char), length)
+            with nogil:
+                memcpy(self._hit.desc, data, sizeof(char) * (length + 1))
 
     @property
     def length(self):
@@ -2324,7 +2373,12 @@ cdef class HMM:
         self.alphabet = None
         self._hmm = NULL
 
-    def __init__(self, Alphabet alphabet not None, int M, bytes name not None):
+    def __init__(
+        self, 
+        Alphabet alphabet not None, 
+        int M, 
+        str name not None
+    ):
         """__init__(self, alphabet, M, name)\n--\n
 
         Create a new HMM from scratch.
@@ -2332,7 +2386,7 @@ cdef class HMM:
         Arguments:
             alphabet (`~pyhmmer.easel.Alphabet`): The alphabet of the model.
             M (`int`): The length of the model (i.e. the number of nodes).
-            name (`bytes`): The name of the model.
+            name (`str`): The name of the model.
 
         """
         # store the alphabet so it's not deallocated
@@ -2573,44 +2627,46 @@ cdef class HMM:
 
     @property
     def name(self):
-        """`bytes`: The name of the HMM.
+        """`str`: The name of the HMM.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._hmm != NULL
         assert self._hmm.name != NULL
-        return <bytes> self._hmm.name
+        return _get_str(self._hmm.name)
 
     @name.setter
-    def name(self, bytes name not None):
+    def name(self, object name not None):
         assert self._hmm != NULL
-
-        cdef int   length = len(name)
-        cdef char* name_  = <char*> name
-        cdef int   err    = libhmmer.p7_hmm.p7_hmm_SetName(self._hmm, name_)
-
-        if err == libeasel.eslEMEM:
-            raise AllocationError("char", sizeof(char), length)
-        elif err != libeasel.eslOK:
-            raise UnexpectedError(err, "p7_hmm_SetName")
+        status = _set_str(self._hmm, name, <setter_t> libhmmer.p7_hmm.p7_hmm_SetName)
+        if status == libeasel.eslEMEM:
+            raise AllocationError("char", sizeof(char), len(name))
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_hmm_SetName")
 
     @property
     def accession(self):
-        """`bytes` or `None`: The accession of the HMM, if any.
+        """`str` or `None`: The accession of the HMM, if any.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._hmm != NULL
-        return None if self._hmm.acc == NULL else <bytes> self._hmm.acc
+        if self._hmm.acc == NULL:
+            return None
+        return _get_str(self._hmm.acc)
 
     @accession.setter
-    def accession(self, bytes accession):
+    def accession(self, object accession):
         assert self._hmm != NULL
-
-        cdef char* acc    = NULL if accession is None else <char*> accession
-        cdef int   err    = libhmmer.p7_hmm.p7_hmm_SetAccession(self._hmm, acc)
-        cdef int   length = 0 if accession is None else len(accession)
-
-        if err == libeasel.eslEMEM:
-            raise AllocationError("char", sizeof(char), length)
-        elif err != libeasel.eslOK:
-            raise UnexpectedError(err, "p7_hmm_SetAccession")
+        status = _set_str(self._hmm, accession, <setter_t> libhmmer.p7_hmm.p7_hmm_SetAccession)
+        if status == libeasel.eslEMEM:
+            raise AllocationError("char", sizeof(char), len(accession))
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_hmm_SetAccession")
 
     @property
     def checksum(self):
@@ -2648,7 +2704,7 @@ cdef class HMM:
                 >>> dna = easel.Alphabet.dna()
                 >>> dna.K
                 4
-                >>> hmm = plan7.HMM(dna, 100, b"test")
+                >>> hmm = plan7.HMM(dna, 100, "test")
                 >>> hmm.set_composition()
                 >>> len(hmm.composition)
                 4
@@ -2679,7 +2735,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CONS):
             return None
         assert self._hmm.consensus != NULL
-        return PyUnicode_FromStringAndSize(&self._hmm.consensus[1], self._hmm.M)
+        return PyUnicode_DecodeASCII(&self._hmm.consensus[1], self._hmm.M, NULL)
 
     @consensus.setter
     def consensus(self, str consensus):
@@ -2696,7 +2752,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CS):
             return None
         assert self._hmm.cs != NULL
-        return PyUnicode_FromStringAndSize(&self._hmm.cs[1], self._hmm.M)
+        return PyUnicode_DecodeASCII(&self._hmm.cs[1], self._hmm.M, NULL)
 
     @consensus_structure.setter
     def consensus_structure(self, str cs):
@@ -2713,7 +2769,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CA):
             return None
         assert self._hmm.ca != NULL
-        return PyUnicode_FromStringAndSize(&self._hmm.ca[1], self._hmm.M)
+        return PyUnicode_DecodeASCII(&self._hmm.ca[1], self._hmm.M, NULL)
 
     @consensus_accessibility.setter
     def consensus_accessibility(self, str ca):
@@ -2734,7 +2790,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_RF):
             return None
         assert self._hmm.rf != NULL
-        return PyUnicode_FromStringAndSize(&self._hmm.rf[1], self._hmm.M)
+        return PyUnicode_DecodeASCII(&self._hmm.rf[1], self._hmm.M, NULL)
 
     @reference.setter
     def reference(self, str rf):
@@ -2751,7 +2807,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_MM):
             return None
         assert self._hmm.mm != NULL
-        return PyUnicode_FromStringAndSize(&self._hmm.mm[1], self._hmm.M)
+        return PyUnicode_DecodeASCII(&self._hmm.mm[1], self._hmm.M, NULL)
 
     @model_mask.setter
     def model_mask(self, str mm):
@@ -2759,23 +2815,25 @@ cdef class HMM:
 
     @property
     def description(self):
-        """`bytes` or `None`: The description of the HMM, if any.
+        """`str` or `None`: The description of the HMM, if any.
+
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._hmm != NULL
-        return None if self._hmm.desc == NULL else <bytes> self._hmm.desc
+        if self._hmm.desc == NULL:
+            return None
+        return _get_str(self._hmm.desc)
 
     @description.setter
-    def description(self, bytes description):
+    def description(self, object description):
         assert self._hmm != NULL
-
-        cdef char* desc   = NULL if description is None else <char*> description
-        cdef int   err    = libhmmer.p7_hmm.p7_hmm_SetDescription(self._hmm, desc)
-        cdef int   length = 0 if description is None else len(description)
-
-        if err == libeasel.eslEMEM:
-            raise AllocationError("char", sizeof(char), length)
-        elif err != libeasel.eslOK:
-            raise UnexpectedError(err, "p7_hmm_SetDescription")
+        status = _set_str(self._hmm, description, <setter_t> libhmmer.p7_hmm.p7_hmm_SetDescription)
+        if status == libeasel.eslEMEM:
+            raise AllocationError("char", sizeof(char), len(description))
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_hmm_SetDescription")
 
     @property
     def transition_probabilities(self):
@@ -2843,7 +2901,7 @@ cdef class HMM:
             valid probabilities, so it will always be set as follow with
             1 probability for the first symbol, and 0 for the rest::
 
-                >>> hmm = HMM(easel.Alphabet.dna(), 100, b"test")
+                >>> hmm = HMM(easel.Alphabet.dna(), 100, "test")
                 >>> hmm.match_emissions
                 MatrixF([[1.0, 0.0, 0.0, 0.0], ...])
 
@@ -3405,9 +3463,9 @@ cdef class HMMFile:
             >>> with HMMFile("tests/data/hmms/txt/PF02826.hmm") as hmm_file:
             ...     hmm = hmm_file.read()
             >>> hmm.name
-            b'2-Hacid_dh_C'
+            '2-Hacid_dh_C'
             >>> hmm.accession
-            b'PF02826.20'
+            'PF02826.20'
 
         Load all the HMMs from a binary HMM file into a `list`::
 
@@ -3416,7 +3474,7 @@ cdef class HMMFile:
             >>> len(hmms)
             10
             >>> hmms[0].accession
-            b'RREFam002.1'
+            'RREFam002.1'
 
     """
 
@@ -4062,10 +4120,10 @@ cdef class IterativeSearch:
             all_consensus_cols=True,
             digitize=True,
         )
-        self.msa.name = self.query.name + f"-i{self.iteration+1}".encode("utf-8")
+        self.msa.name = self.query.name + f"-i{self.iteration+1}"
         self.msa.description = self.query.description or None
         self.msa.accession = self.query.accession or None
-        self.msa.author = b"jackhmmer (pyHMMER)"
+        self.msa.author = "jackhmmer (pyHMMER)"
 
         if n_new == 0 and len(self.msa.sequences) <= n_prev:
             self.converged = True
@@ -4205,29 +4263,44 @@ cdef class OptimizedProfile:
 
         .. versionadded:: 0.4.11
 
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._om != NULL
-        return None if self._om.name == NULL else <bytes> self._om.name
+        if self._om.name == NULL:
+            return None
+        return _get_str(self._om.name)
 
     @property
     def accession(self):
-        """`bytes` or `None`: The accession of the profile, if any.
+        """`str` or `None`: The accession of the profile, if any.
 
         .. versionadded:: 0.4.11
 
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._om != NULL
-        return None if self._om.acc == NULL else <bytes> self._om.acc
+        if self._om.acc == NULL:
+            return None
+        return _get_str(self._om.acc)
 
     @property
     def description(self):
-        """`bytes` or `None`: The description of the profile, if any.
+        """`str` or `None`: The description of the profile, if any.
 
         .. versionadded:: 0.4.11
 
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._om != NULL
-        return None if self._om.desc == NULL else <bytes> self._om.desc
+        if self._om.desc == NULL:
+            return None
+        return _get_str(self._om.desc)
 
     @property
     def consensus(self):
@@ -4239,7 +4312,7 @@ cdef class OptimizedProfile:
         assert self._om != NULL
         if self._om.consensus[0] == b'\0':
             return None
-        return PyUnicode_FromStringAndSize(&self._om.consensus[1], self._om.M)
+        return PyUnicode_DecodeASCII(&self._om.consensus[1], self._om.M, NULL)
 
     @property
     def consensus_structure(self):
@@ -4251,7 +4324,7 @@ cdef class OptimizedProfile:
         assert self._om != NULL
         if self._om.cs[0] == b'\0':
             return None
-        return PyUnicode_FromStringAndSize(&self._om.cs[1], self._om.M)
+        return PyUnicode_DecodeASCII(&self._om.cs[1], self._om.M, NULL)
 
     @property
     def reference(self):
@@ -4268,7 +4341,7 @@ cdef class OptimizedProfile:
         assert self._om.rf != NULL
         if self._om.rf[0] == b'\0':
             return None
-        return PyUnicode_FromStringAndSize(&self._om.rf[1], self._om.M)
+        return PyUnicode_DecodeASCII(&self._om.rf[1], self._om.M, NULL)
 
     @property
     def model_mask(self):
@@ -4281,7 +4354,7 @@ cdef class OptimizedProfile:
         assert self._om.mm != NULL
         if self._om.mm[0] == b'\0':
             return None
-        return PyUnicode_FromStringAndSize(&self._om.mm[1], self._om.M)
+        return PyUnicode_DecodeASCII(&self._om.mm[1], self._om.M, NULL)
 
     # --- MSV Filter ---
 
@@ -7471,13 +7544,18 @@ cdef class Profile:
 
     @property
     def accession(self):
-        """`bytes` or `None`: The accession of the profile, if any.
+        """`str` or `None`: The accession of the profile, if any.
 
         .. versionadded:: 0.3.0
 
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._gm != NULL
-        return None if self._gm.acc == NULL else <bytes> self._gm.acc
+        if self._gm.acc == NULL:
+            return None
+        return _get_str(self._gm.acc)
 
     @property
     def name(self):
@@ -7485,9 +7563,14 @@ cdef class Profile:
 
         .. versionadded:: 0.3.0
 
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._gm != NULL
-        return None if self._gm.name == NULL else <bytes> self._gm.name
+        if self._gm.name == NULL:
+            return None
+        return _get_str(self._gm.name)
 
     @property
     def description(self):
@@ -7495,9 +7578,14 @@ cdef class Profile:
 
         .. versionadded:: 0.3.0
 
+        .. versionchanged:: 0.12.0
+            Property is now a `str` instead of `bytes`.
+
         """
         assert self._gm != NULL
-        return None if self._gm.desc == NULL else <bytes> self._gm.desc
+        if self._gm.desc == NULL:
+            return None
+        return _get_str(self._gm.desc)
 
     @property
     def consensus(self):
@@ -7509,7 +7597,7 @@ cdef class Profile:
         assert self._gm != NULL
         if self._gm.consensus[0] == b'\0':
             return None
-        return (&self._gm.consensus[1]).decode("ascii")
+        return PyUnicode_DecodeASCII(&self._gm.consensus[1], self._gm.M, NULL)
 
     @property
     def consensus_structure(self):
@@ -7521,7 +7609,7 @@ cdef class Profile:
         assert self._gm != NULL
         if self._gm.cs[0] == b'\0':
             return None
-        return (&self._gm.cs[1]).decode("ascii")
+        return PyUnicode_DecodeASCII(&self._gm.cs[1], self._gm.M, NULL)
 
     @property
     def offsets(self):
@@ -7735,7 +7823,7 @@ cdef class TopHits:
         >>> len(hits)
         1
         >>> hits[0].name
-        b'938293.PRJEB85.HG003687_113'
+        '938293.PRJEB85.HG003687_113'
 
     .. versionadded:: 0.6.1
        `pickle` protocol support.
@@ -8507,17 +8595,36 @@ cdef class TopHits:
         .. versionadded:: 0.6.1
 
         """
-        cdef FILE* file
-        cdef str   fname
-        cdef int   status
-        cdef bytes qname  = b"-"
-        cdef bytes qacc   = b"-"
+        cdef FILE*       file
+        cdef str         fname
+        cdef int         status
+        cdef str         sname  = None
+        cdef str         sacc   = None
+        cdef const char* qname  = NULL
+        cdef const char* qacc   = NULL
 
-        if self._query is not None:
+        if isinstance(self._query, HMM):
+            qname = (<HMM> self._query)._hmm.name
+            qacc = (<HMM> self._query)._hmm.acc
+        elif isinstance(self._query, Profile):
+            qname = (<Profile> self._query)._gm.name
+            qacc = (<Profile> self._query)._gm.acc
+        elif isinstance(self._query, OptimizedProfile):
+            qname = (<OptimizedProfile> self._query)._om.name
+            qacc = (<OptimizedProfile> self._query)._om.acc
+        elif isinstance(self._query, Sequence):
+            qname = (<Sequence> self._query)._sq.name
+            qacc = (<Sequence> self._query)._sq.acc
+        elif isinstance(self._query, MSA):
+            qname = (<MSA> self._query)._msa.name
+            qacc = (<MSA> self._query)._msa.acc
+        elif self._query is not None:
             if self._query.name is not None:
-                qname = self._query.name
+                sname = self._query.name
+                qname = PyUnicode_AsUTF8(sname)
             if self._query.accession is not None:
-                qacc = self._query.accession
+                sacc = self._query.accession
+                qacc = PyUnicode_AsUTF8(sacc)
 
         file = fopen_obj(fh, "w")
         try:
@@ -8557,6 +8664,8 @@ cdef class TopHits:
                 raise UnexpectedError(status, fname)
         finally:
             fclose(file)
+            del sname
+            del sacc
 
     def merge(self, *others):
         """Concatenate the hits from this instance and ``others``.
@@ -8916,6 +9025,14 @@ cdef class Traces:
             trace = traces
             self._storage[index] = trace
             self._refs[index] = trace._tr
+
+    def __delitem__(self, object index):
+        if isinstance(index, slice):
+            indices = index.indices(self._length)
+            for i in reversed(range(*indices)):
+                self.pop(i)
+        else:
+            self.pop(index)
 
     def __contains__(self, object trace):
 

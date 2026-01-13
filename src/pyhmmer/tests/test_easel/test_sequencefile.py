@@ -50,12 +50,12 @@ class TestSequenceFile(unittest.TestCase):
         with easel.SequenceFile(fasta) as f:
             seq1, seq2 = list(f)
 
-        self.assertEqual(seq1.name, b"SNRPA_DROME")
-        self.assertEqual(seq2.name, b"SNRPA_HUMAN")
+        self.assertEqual(seq1.name, "SNRPA_DROME")
+        self.assertEqual(seq2.name, "SNRPA_HUMAN")
 
     def test_parse(self):
         seq = easel.SequenceFile.parse(b"> EcoRI\nGAATTC\n", format="fasta")
-        self.assertEqual(seq.name, b"EcoRI")
+        self.assertEqual(seq.name, "EcoRI")
 
     def test_parse_error_unknownformat(self):
         with self.assertRaises(ValueError):
@@ -67,12 +67,12 @@ class TestSequenceFile(unittest.TestCase):
 
         with easel.SequenceFile(fasta) as f:
             seq = f.read()
-            self.assertEqual(seq.name, b"SNRPA_DROME")
+            self.assertEqual(seq.name, "SNRPA_DROME")
             self.assertTrue(seq.sequence.startswith("MEMLPNQTIY"))
 
         with easel.SequenceFile(fasta) as f:
             seq = f.read(skip_info=True)
-            self.assertEqual(seq.name, b"")
+            self.assertEqual(seq.name, "")
             self.assertTrue(seq.sequence.startswith("MEMLPNQTIY"))
 
     @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
@@ -81,12 +81,12 @@ class TestSequenceFile(unittest.TestCase):
 
         with easel.SequenceFile(fasta) as f:
             seq = f.read()
-            self.assertEqual(seq.name, b"SNRPA_DROME")
+            self.assertEqual(seq.name, "SNRPA_DROME")
             self.assertTrue(seq.sequence.startswith("MEMLPNQTIY"))
 
         with easel.SequenceFile(fasta) as f:
             seq = f.read(skip_sequence=True)
-            self.assertEqual(seq.name, b"SNRPA_DROME")
+            self.assertEqual(seq.name, "SNRPA_DROME")
             self.assertEqual(seq.sequence, "")
 
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")

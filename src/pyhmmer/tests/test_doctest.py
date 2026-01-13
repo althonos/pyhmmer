@@ -68,7 +68,7 @@ def load_tests(loader, tests, ignore):
         luxc = msa_file.read()
     seq_path = os.path.join(data, "seqs", "LuxC.faa")
     with pyhmmer.easel.SequenceFile(seq_path, digital=True) as seq_file:
-        reductase = next(seq for seq in seq_file if b"P12748" in seq.name)
+        reductase = next(seq for seq in seq_file if "P12748" in seq.name)
 
     def setUp(self):
         warnings.simplefilter("ignore")
