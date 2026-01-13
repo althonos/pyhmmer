@@ -272,7 +272,7 @@ cdef class Alphabet:
 
         return "{}({!r}, K={!r}, Kp={!r})".format(
             name,
-            self._abc.sym.decode('ascii'),
+            self.symbols,
             self._abc.K,
             self._abc.Kp
         )
