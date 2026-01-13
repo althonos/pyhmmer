@@ -1,0 +1,71 @@
+diff --git a/esl_sqio_ascii.h b/esl_sqio_ascii.h
+index b998215..e96c24d 100644
+--- a/esl_sqio_ascii.h
++++ b/esl_sqio_ascii.h
+@@ -81,4 +81,66 @@ extern int  esl_sqascii_Open(char *seqfile, int format, struct esl_sqio_s *sqfp)
+ extern int  esl_sqascii_WriteFasta(FILE *fp, ESL_SQ *s, int update);
+ extern int  esl_sqascii_Parse(char *buf, int size, ESL_SQ *s, int format);
+ 
++/* format specific routines */
++int   sqascii_GuessFileFormat(struct esl_sqio_s *sqfp, int *ret_fmt);
++int   sqascii_Position       (struct esl_sqio_s *sqfp, off_t offset);
++void  sqascii_Close          (struct esl_sqio_s *sqfp);
++int   sqascii_SetDigital     (struct esl_sqio_s *sqfp, const ESL_ALPHABET *abc);
++int   sqascii_GuessAlphabet  (struct esl_sqio_s *sqfp, int *ret_type);
++int   sqascii_Read           (struct esl_sqio_s *sqfp, ESL_SQ *sq);
++int   sqascii_ReadInfo       (struct esl_sqio_s *sqfp, ESL_SQ *sq);
++int   sqascii_ReadSequence   (struct esl_sqio_s *sqfp, ESL_SQ *sq);
++int   sqascii_ReadWindow     (struct esl_sqio_s *sqfp, int C, int W, ESL_SQ *sq);
++int   sqascii_ReadBlock      (struct esl_sqio_s *sqfp, ESL_SQ_BLOCK *sqBlock, int max_residues, int max_sequences, int max_init_window, int long_target);
++int   sqascii_Echo           (struct esl_sqio_s *sqfp, const ESL_SQ *sq, FILE *ofp);
++
++int   sqascii_IsRewindable   (const struct esl_sqio_s *sqfp);
++const char *sqascii_GetError (const struct esl_sqio_s *sqfp);
++
++int   sqascii_OpenSSI         (struct esl_sqio_s *sqfp, const char *ssifile_hint);
++int   sqascii_PositionByKey   (struct esl_sqio_s *sqfp, const char *key);
++int   sqascii_PositionByNumber(struct esl_sqio_s *sqfp, int which);
++int   sqascii_Fetch           (struct esl_sqio_s *sqfp, const char *key, ESL_SQ *sq);
++int   sqascii_FetchInfo       (struct esl_sqio_s *sqfp, const char *key, ESL_SQ *sq);
++int   sqascii_FetchSubseq     (struct esl_sqio_s *sqfp, const char *source, int64_t start, int64_t end, ESL_SQ *sq);
++
++/* Internal routines shared by parsers. */
++int  loadmem  (struct esl_sqio_s *sqfp);
++int  loadbuf  (struct esl_sqio_s *sqfp);
++int  nextchar (struct esl_sqio_s *sqfp, char *ret_c);
++int  seebuf   (struct esl_sqio_s *sqfp, int64_t maxn, int64_t *opt_nres, int64_t *opt_endpos);
++void addbuf   (struct esl_sqio_s *sqfp, ESL_SQ *sq, int64_t nres);
++void skipbuf  (struct esl_sqio_s *sqfp, int64_t nskip);
++int  read_nres(struct esl_sqio_s *sqfp, ESL_SQ *sq, int64_t nskip, int64_t nres, int64_t *opt_actual_nres);
++int  skip_whitespace(struct esl_sqio_s *sqfp);
++
++/* EMBL format; also UniProt, TrEMBL */
++void config_embl(struct esl_sqio_s *sqfp);
++void inmap_embl (struct esl_sqio_s *sqfp, const ESL_DSQ *abc_inmap);
++int  header_embl(struct esl_sqio_s *sqfp, ESL_SQ *sq);
++int  skip_embl  (struct esl_sqio_s *sqfp, ESL_SQ *sq);
++int  end_embl   (struct esl_sqio_s *sqfp, ESL_SQ *sq);
++
++/* GenBank format; also DDBJ */
++void config_genbank(struct esl_sqio_s *sqfp);
++void inmap_genbank (struct esl_sqio_s *sqfp, const ESL_DSQ *abc_inmap);
++int  header_genbank(struct esl_sqio_s *sqfp, ESL_SQ *sq);
++int  skip_genbank  (struct esl_sqio_s *sqfp, ESL_SQ *sq);
++int  end_genbank   (struct esl_sqio_s *sqfp, ESL_SQ *sq);
++
++/* FASTA format */
++void config_fasta(struct esl_sqio_s *sqfp);
++void inmap_fasta (struct esl_sqio_s *sqfp, const ESL_DSQ *abc_inmap);
++int  header_fasta(struct esl_sqio_s *sqfp, ESL_SQ *sq);
++int  skip_fasta  (struct esl_sqio_s *sqfp, ESL_SQ *sq);
++int  end_fasta   (struct esl_sqio_s *sqfp, ESL_SQ *sq);
++
++/* daemon format */
++void config_daemon(struct esl_sqio_s *sqfp);
++void inmap_daemon (struct esl_sqio_s *sqfp, const ESL_DSQ *abc_inmap);
++int  end_daemon   (struct esl_sqio_s *sqfp, ESL_SQ *sq);
++
++/* HMMPGMD format */
++int  fileheader_hmmpgmd(struct esl_sqio_s *sqfp);
++
+ #endif /*eslSQIO_ASCII_INCLUDED*/

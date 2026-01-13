@@ -50,7 +50,7 @@ message(DEBUG "-- End esl_config.h --")
 
 set(EASEL_PATCHED_SOURCES
     ${EASEL_PATCHED_SOURCES}
-    ${CMAKE_CURRENT_BINARY_DIR}/config.h
+    ${CMAKE_CURRENT_BINARY_DIR}/esl_config.h
 )
 
 # --- Manually declare required sources only -----------------------------------
