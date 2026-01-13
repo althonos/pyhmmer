@@ -3587,8 +3587,14 @@ cdef class HMMFile:
         self._hfp = NULL
         self._name = None
 
-    def __init__(self, object file, bint db = True):
-        """__init__(self, file, db=True)\n--\n
+    def __init__(
+        self, 
+        object file, 
+        bint db = True,
+        *,
+        Alphabet alphabet = None,
+    ):
+        """__init__(self, file, db=True, *, alphabet=None)\n--\n
 
         Create a new HMM reader from the given file.
 
@@ -3629,9 +3635,13 @@ cdef class HMMFile:
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, function)
 
-        self._alphabet = Alphabet.__new__(Alphabet)
-        self._alphabet._abc = NULL
+
         self._file = file
+        if alphabet is None:
+            self._alphabet = Alphabet.__new__(Alphabet)
+            self._alphabet._abc = NULL
+        else:
+            self._alphabet = alphabet
 
     def __dealloc__(self):
         if self._hfp:

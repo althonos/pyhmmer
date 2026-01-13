@@ -428,10 +428,21 @@ class HMM(typing.Generic[ABC]):
 class HMMFile(typing.Generic[ABC], typing.ContextManager[HMMFile[ABC]], typing.Iterator[HMM[ABC]]):
     _FORMATS: ClassVar[Dict[str, int]]
     _MAGIC: ClassVar[Dict[int, int]]
+    @typing.overload
     def __init__(
-        self,
+        self: HMMFile[ABC],
         file: Union[typing.AnyStr, os.PathLike[typing.AnyStr], typing.BinaryIO],
         db: bool = True,
+        *,
+        alphabet: ABC,
+    ) -> None: ...
+    @typing.overload
+    def __init__(
+        self: HMMFile[Alphabet],
+        file: Union[typing.AnyStr, os.PathLike[typing.AnyStr], typing.BinaryIO],
+        db: bool = True,
+        *,
+        alphabet: Optional[Alphabet] = None,
     ) -> None: ...
     def __enter__(self) -> HMMFile[ABC]: ...
     def __exit__(
