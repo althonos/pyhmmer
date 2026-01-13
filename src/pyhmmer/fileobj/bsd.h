@@ -115,8 +115,6 @@ int fileobj_bsd_close(void* cookie) {
 FILE* fileobj_bsd_open(PyObject* obj, const char* mode) {
     Py_INCREF(obj);
 
-    PyTypeObject* ty = Py_TYPE(obj);
-
     readfn_t readfn;
     writefn_t writefn;
     seekfn_t seekfn;
@@ -135,7 +133,7 @@ FILE* fileobj_bsd_open(PyObject* obj, const char* mode) {
             break;
         default:
             Py_DECREF(readable);
-            PyErr_Format(PyExc_TypeError, "Expected `io.IOBase` instance, found %s", ty->tp_name);
+            PyErr_Format(PyExc_TypeError, "Expected `io.IOBase` instance, found %N", obj);
             return NULL;
     }
 
@@ -153,7 +151,7 @@ FILE* fileobj_bsd_open(PyObject* obj, const char* mode) {
             break;
         default:
             Py_DECREF(seekable);
-            PyErr_Format(PyExc_TypeError, "Expected `io.IOBase` instance, found %s", ty->tp_name);
+            PyErr_Format(PyExc_TypeError, "Expected `io.IOBase` instance, found %N", obj);
             return NULL;
     }
     
@@ -171,7 +169,7 @@ FILE* fileobj_bsd_open(PyObject* obj, const char* mode) {
             break;
         default:
             Py_DECREF(writable);
-            PyErr_Format(PyExc_TypeError, "Expected `io.IOBase` instance, found %s", ty->tp_name);
+            PyErr_Format(PyExc_TypeError, "Expected `io.IOBase` instance, found %N", obj);
             return NULL;
     }
 

@@ -17,7 +17,7 @@ from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.memoryview cimport PyMemoryView_FromMemory
 from cpython.ref cimport Py_INCREF
 from cpython.exc cimport PyErr_WarnEx
-from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
+from cpython.tuple cimport PyTuple_New, PyTuple_SetItem, PyTuple_SET_ITEM
 from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t, SIZE_MAX
 from libc.stdio cimport fclose, FILE
 from libc.stdlib cimport calloc, malloc, realloc, free
@@ -32,11 +32,13 @@ from cpython.bytes cimport (
 from cpython.unicode cimport (
     PyUnicode_New,
     PyUnicode_DecodeASCII,
+    PyUnicode_FromEncodedObject,
     PyUnicode_FromString,
     PyUnicode_FromStringAndSize,
     PyUnicode_AsUTF8,
     PyUnicode_AsUTF8AndSize,
     PyUnicode_AsASCIIString,
+    PyUnicode_GetLength,
     PyUnicode_DATA,
     PyUnicode_KIND,
     PyUnicode_WRITE,
@@ -432,20 +434,36 @@ cdef class Alphabet:
         """
         assert self._abc != NULL
 
-        cdef size_t   i
+        cdef ssize_t  i
         cdef Py_UCS4  c
-        cdef size_t   length  = len(sequence)
-        cdef int      kind    = PyUnicode_KIND(sequence)
-        cdef void*    data    = PyUnicode_DATA(sequence)
-        cdef VectorU8 encoded = VectorU8.zeros(length)
-        cdef uint8_t* buffer  = <uint8_t*> encoded._data
+        cdef ssize_t  length
+        cdef int      kind
+        cdef void*    data
+        cdef VectorU8 encoded 
+        cdef uint8_t* buffer
 
-        for i in range(length):
-            c = PyUnicode_READ(kind, data, i)
-            if libeasel.alphabet.esl_abc_CIsValid(self._abc, c):
-                buffer[i] = libeasel.alphabet.esl_abc_DigitizeSymbol(self._abc, c)
-            else:
-                raise ValueError(f"Invalid alphabet character in text sequence: {c}")
+        if LIMITED_API:
+            data    = PyUnicode_AsUTF8AndSize(sequence, &length)
+            encoded = VectorU8.zeros(length)
+            buffer  = <uint8_t*> encoded._data
+            for i in range(length):
+                c = <Py_UCS4> (<const char*> data)[i]
+                if libeasel.alphabet.esl_abc_CIsValid(self._abc, c):
+                    buffer[i] = libeasel.alphabet.esl_abc_DigitizeSymbol(self._abc, c)
+                else:
+                    raise ValueError(f"Invalid alphabet character in text sequence: {c}")
+        else:
+            length  = PyUnicode_GetLength(sequence)
+            kind    = PyUnicode_KIND(sequence)
+            data    = PyUnicode_DATA(sequence)
+            encoded = VectorU8.zeros(length)
+            buffer  = <uint8_t*> encoded._data
+            for i in range(length):
+                c = PyUnicode_READ(kind, data, i)
+                if libeasel.alphabet.esl_abc_CIsValid(self._abc, c):
+                    buffer[i] = libeasel.alphabet.esl_abc_DigitizeSymbol(self._abc, c)
+                else:
+                    raise ValueError(f"Invalid alphabet character in text sequence: {c}")
 
         return encoded
 
@@ -475,21 +493,31 @@ cdef class Alphabet:
         cdef size_t           i
         cdef object           decoded
         cdef int              kind
+        cdef bytes            b
         cdef char*            data
         cdef size_t           length  = sequence.shape[0]
 
-        decoded = PyUnicode_New(length, 0x7F)
-        kind    = PyUnicode_KIND(decoded)
-        data    = <char*> PyUnicode_DATA(decoded)
-
-        for i in range(length):
-            x = sequence[i]
-            if libeasel.alphabet.esl_abc_XIsValid(self._abc, x):
-                PyUnicode_WRITE(kind, data, i, self._abc.sym[x])
-            else:
-                raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
-
-        return decoded
+        if LIMITED_API:
+            b    = PyBytes_FromStringAndSize(NULL, length)
+            data = PyBytes_AsString(b)
+            for i in range(length):
+                x = sequence[i]
+                if libeasel.alphabet.esl_abc_XIsValid(self._abc, x):
+                    data[i] = self._abc.sym[x]
+                else:
+                    raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
+            return PyUnicode_FromEncodedObject(b, "ascii", NULL)
+        else:
+            decoded = PyUnicode_New(length, 0x7F)
+            kind    = PyUnicode_KIND(decoded)
+            data    = <char*> PyUnicode_DATA(decoded)
+            for i in range(length):
+                x = sequence[i]
+                if libeasel.alphabet.esl_abc_XIsValid(self._abc, x):
+                    PyUnicode_WRITE(kind, data, i, self._abc.sym[x])
+                else:
+                    raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
+            return decoded
 
 
 cdef class DNA(Alphabet):
@@ -4268,7 +4296,8 @@ cdef class MSA:
             assert self._msa.sqname[i] != NULL
             name = PyUnicode_FromString(self._msa.sqname[i])
             Py_INCREF(name)
-            PyTuple_SET_ITEM(names, i, name)
+            # PyTuple_SET_ITEM(names, i, name)
+            PyTuple_SetItem(names, i, name)
 
         return names
 
@@ -4293,7 +4322,7 @@ cdef class MSA:
         if reference is None:
             self._set_annotation(&self._msa.rf, NULL)
         else:
-            self._set_annotation(&self._msa.rf, PyUnicode_AsUTF8(reference))
+            self._set_annotation(&self._msa.rf, PyUnicode_AsUTF8AndSize(reference, NULL))
 
     @property
     def model_mask(self):
@@ -4317,7 +4346,7 @@ cdef class MSA:
         if model_mask is None:
             self._set_annotation(&self._msa.mm, NULL)
         else:
-            self._set_annotation(&self._msa.mm, PyUnicode_AsUTF8(model_mask))
+            self._set_annotation(&self._msa.mm, PyUnicode_AsUTF8AndSize(model_mask, NULL))
 
     @property
     def secondary_structure(self):
@@ -4340,7 +4369,7 @@ cdef class MSA:
         if secondary_structure is None:
             self._set_annotation(&self._msa.ss_cons, NULL)
         else:
-            self._set_annotation(&self._msa.ss_cons, PyUnicode_AsUTF8(secondary_structure))
+            self._set_annotation(&self._msa.ss_cons, PyUnicode_AsUTF8AndSize(secondary_structure, NULL))
 
     @property
     def surface_accessibility(self):
@@ -4363,7 +4392,7 @@ cdef class MSA:
         if surface_accessibility is None:
             self._set_annotation(&self._msa.sa_cons, NULL)
         else:
-            self._set_annotation(&self._msa.sa_cons, PyUnicode_AsUTF8(surface_accessibility))
+            self._set_annotation(&self._msa.sa_cons, PyUnicode_AsUTF8AndSize(surface_accessibility, NULL))
 
     @property
     def posterior_probabilities(self):
@@ -4386,7 +4415,7 @@ cdef class MSA:
         if posterior_probabilities is None:
             self._set_annotation(&self._msa.pp_cons, NULL)
         else:
-            self._set_annotation(&self._msa.pp_cons, PyUnicode_AsUTF8(posterior_probabilities))
+            self._set_annotation(&self._msa.pp_cons, PyUnicode_AsUTF8AndSize(posterior_probabilities, NULL))
 
     @property
     def sequence_weights(self):
@@ -4481,7 +4510,7 @@ cdef class MSA:
 
     # --- Utils --------------------------------------------------------------
 
-    cdef int _set_annotation(self, char** field, char* value) except 1 nogil:
+    cdef int _set_annotation(self, char** field, const char* value) except 1 nogil:
         cdef size_t alen = self._msa.alen
         cdef size_t vlen
         if value == NULL:
@@ -6475,11 +6504,15 @@ cdef class Sequence:
                 raise AllocationError("char*", sizeof(char*), xrlen)
         # assign the new values
         for i, (tag, val) in enumerate(xr.items()):
-            self._sq.xr_tag[i] = strdup(PyUnicode_AsUTF8(tag))
+            self._sq.xr_tag[i] = strdup(PyUnicode_AsUTF8AndSize(tag, NULL))
             self._sq.xr[i] = <char*> calloc(xrdim, sizeof(char))
             if self._sq.xr_tag[i] == NULL or self._sq.xr[i] == NULL:
                 raise AllocationError("char", sizeof(char), xrdim)
-            memcpy(&self._sq.xr[i][off], PyUnicode_AsUTF8(val), self._sq.n * sizeof(unsigned char))
+            memcpy(
+                &self._sq.xr[i][off], 
+                PyUnicode_AsUTF8AndSize(val, NULL), 
+                self._sq.n * sizeof(unsigned char)
+            )
 
     # --- Abstract methods ---------------------------------------------------
 
@@ -8740,7 +8773,7 @@ cdef class SSIReader:
 
         status = libeasel.ssi.esl_ssi_FindName(
             self._ssi,
-            PyUnicode_AsUTF8(key),
+            PyUnicode_AsUTF8AndSize(key, NULL),
             &ret_fh,
             &ret_roff,
             &opt_doff,
@@ -8865,7 +8898,7 @@ cdef class SSIWriter:
         self._on_write()
         status = libeasel.ssi.esl_newssi_AddKey(
             self._newssi,
-            PyUnicode_AsUTF8(key),
+            PyUnicode_AsUTF8AndSize(key, NULL),
             fd,
             record_offset,
             data_offset,
@@ -8887,8 +8920,8 @@ cdef class SSIWriter:
         self._on_write()
         status = libeasel.ssi.esl_newssi_AddAlias(
             self._newssi,
-            PyUnicode_AsUTF8(alias),
-            PyUnicode_AsUTF8(key),
+            PyUnicode_AsUTF8AndSize(alias, NULL),
+            PyUnicode_AsUTF8AndSize(key, NULL),
         )
         if status == libeasel.eslOK:
             return

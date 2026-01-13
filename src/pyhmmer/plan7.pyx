@@ -30,10 +30,6 @@ from cpython.bytes cimport (
     PyBytes_FromString,
 )
 from cpython.unicode cimport (
-    PyUnicode_DATA,
-    PyUnicode_KIND,
-    PyUnicode_READ,
-    PyUnicode_GET_LENGTH,
     PyUnicode_FromStringAndSize,
     PyUnicode_AsUTF8,
     PyUnicode_AsUTF8AndSize,
@@ -8651,10 +8647,10 @@ cdef class TopHits:
         elif self._query is not None:
             if self._query.name is not None:
                 sname = self._query.name
-                qname = PyUnicode_AsUTF8(sname)
+                qname = PyUnicode_AsUTF8AndSize(sname, NULL)
             if self._query.accession is not None:
                 sacc = self._query.accession
-                qacc = PyUnicode_AsUTF8(sacc)
+                qacc = PyUnicode_AsUTF8AndSize(sacc, NULL)
 
         file = fopen_obj(fh, "w")
         try:

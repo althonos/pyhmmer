@@ -26,7 +26,7 @@ the port on which it listens for client/server communication::
 
 # --- C imports --------------------------------------------------------------
 
-from cpython.bytearray cimport PyByteArray_AS_STRING
+from cpython.bytearray cimport PyByteArray_AsString
 
 cimport libeasel
 cimport libhmmer.hmmpgmd
@@ -231,7 +231,7 @@ cdef class Client:
             # get the search status back
             response = self._recvall(HMMD_SEARCH_STATUS_SERIAL_SIZE)
             status = libhmmer.hmmpgmd.hmmd_search_status_Deserialize(
-                <const uint8_t*> PyByteArray_AS_STRING(response),
+                <const uint8_t*> PyByteArray_AsString(response),
                 &buf_offset,
                 &search_status
             )
@@ -245,7 +245,7 @@ cdef class Client:
 
             # get the response
             response = self._recvall(search_status.msg_size)
-            response_data = PyByteArray_AS_STRING(response)
+            response_data = PyByteArray_AsString(response)
 
             with nogil:
                 # deserialize search_stats
