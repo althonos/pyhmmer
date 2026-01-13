@@ -32,15 +32,15 @@ class TestOptimizedProfileBlock(unittest.TestCase):
         return cls._random_profile(name, M=M).to_optimized()
 
     def test_alphabet_mismatch(self):
-        om1 = self._random_optimized_profile(b"profile1")
+        om1 = self._random_optimized_profile("profile1")
         dna = Alphabet.dna()
         block = OptimizedProfileBlock(dna)
         self.assertRaises(AlphabetMismatch, block.append, om1)
         self.assertRaises(AlphabetMismatch, block.insert, 0, om1)
 
     def test_truth(self):
-        om1 = self._random_optimized_profile(b"profile1")
-        om2 = self._random_optimized_profile(b"profile2")
+        om1 = self._random_optimized_profile("profile1")
+        om2 = self._random_optimized_profile("profile2")
 
         self.assertTrue(not OptimizedProfileBlock(self.alphabet))
         block = OptimizedProfileBlock(self.alphabet, [om1, om2])
@@ -50,17 +50,17 @@ class TestOptimizedProfileBlock(unittest.TestCase):
         self.assertIsNot(OptimizedProfileBlock(self.alphabet), OptimizedProfileBlock(self.alphabet))
     
     def test_len(self):
-        om1 = self._random_optimized_profile(b"profile1")
-        om2 = self._random_optimized_profile(b"profile2")
-        om3 = self._random_optimized_profile(b"profile3")
+        om1 = self._random_optimized_profile("profile1")
+        om2 = self._random_optimized_profile("profile2")
+        om3 = self._random_optimized_profile("profile3")
 
         self.assertEqual(len(OptimizedProfileBlock(self.alphabet, [])), 0)
         self.assertEqual(len(OptimizedProfileBlock(self.alphabet, [om1])), 1)
         self.assertEqual(len(OptimizedProfileBlock(self.alphabet, [om1, om2, om3])), 3)
 
     def test_append(self):
-        om1 = self._random_optimized_profile(b"profile1")
-        om2 = self._random_optimized_profile(b"profile2")
+        om1 = self._random_optimized_profile("profile1")
+        om2 = self._random_optimized_profile("profile2")
 
         block = OptimizedProfileBlock(self.alphabet)
         self.assertEqual(len(block), 0)
@@ -74,9 +74,9 @@ class TestOptimizedProfileBlock(unittest.TestCase):
         self.assertEqual(block[1], om2)
 
     def test_iter(self):
-        om1 = self._random_optimized_profile(b"profile1")
-        om2 = self._random_optimized_profile(b"profile2")
-        om3 = self._random_optimized_profile(b"profile3")
+        om1 = self._random_optimized_profile("profile1")
+        om2 = self._random_optimized_profile("profile2")
+        om3 = self._random_optimized_profile("profile3")
 
         block = OptimizedProfileBlock(self.alphabet, [om1, om2, om3])
         self.assertEqual(len(block), 3)
@@ -88,8 +88,8 @@ class TestOptimizedProfileBlock(unittest.TestCase):
         self.assertRaises(StopIteration, next, iterator)
 
     def test_clear(self):
-        om1 = self._random_optimized_profile(b"profile1")
-        om2 = self._random_optimized_profile(b"profile2")
+        om1 = self._random_optimized_profile("profile1")
+        om2 = self._random_optimized_profile("profile2")
 
         block = OptimizedProfileBlock(self.alphabet, [om1, om2])
         self.assertEqual(len(block), 2)
@@ -104,8 +104,8 @@ class TestOptimizedProfileBlock(unittest.TestCase):
         self.assertEqual(len(block), 0)
 
     def test_getitem(self):
-        om1 = self._random_optimized_profile(b"profile1")
-        om2 = self._random_optimized_profile(b"profile2")
+        om1 = self._random_optimized_profile("profile1")
+        om2 = self._random_optimized_profile("profile2")
 
         block = OptimizedProfileBlock(self.alphabet, [om1, om2])
         self.assertEqual(len(block), 2)
@@ -121,9 +121,9 @@ class TestOptimizedProfileBlock(unittest.TestCase):
             block[-5]
         
     def test_setitem(self):
-        om1 = self._random_optimized_profile(b"profile1")
-        om2 = self._random_optimized_profile(b"profile2")
-        om3 = self._random_optimized_profile(b"profile3")
+        om1 = self._random_optimized_profile("profile1")
+        om2 = self._random_optimized_profile("profile2")
+        om3 = self._random_optimized_profile("profile3")
 
         block = OptimizedProfileBlock(self.alphabet, [om1, om2])
         self.assertEqual(len(block), 2)
@@ -133,8 +133,8 @@ class TestOptimizedProfileBlock(unittest.TestCase):
         self.assertIs(block[1], om2)
 
     def test_remove(self):
-        om1 = self._random_optimized_profile(b"profile1")
-        om2 = self._random_optimized_profile(b"profile2")
+        om1 = self._random_optimized_profile("profile1")
+        om2 = self._random_optimized_profile("profile2")
 
         block = OptimizedProfileBlock(self.alphabet, [om1, om2])
         block.remove(om1)
@@ -142,9 +142,9 @@ class TestOptimizedProfileBlock(unittest.TestCase):
         self.assertIs(block[0], om2)
 
     def test_index(self):
-        om1 = self._random_optimized_profile(b"profile1")
-        om2 = self._random_optimized_profile(b"profile2")
-        om3 = self._random_optimized_profile(b"profile3")
+        om1 = self._random_optimized_profile("profile1")
+        om2 = self._random_optimized_profile("profile2")
+        om3 = self._random_optimized_profile("profile3")
 
         block = OptimizedProfileBlock(self.alphabet, [om1, om2])
         self.assertEqual(len(block), 2)
@@ -156,9 +156,9 @@ class TestOptimizedProfileBlock(unittest.TestCase):
         self.assertRaises(ValueError, block.index, om1, start=1)
 
     def test_pop(self):
-        om1 = self._random_optimized_profile(b"profile1")
-        om2 = self._random_optimized_profile(b"profile2")
-        om3 = self._random_optimized_profile(b"profile3")
+        om1 = self._random_optimized_profile("profile1")
+        om2 = self._random_optimized_profile("profile2")
+        om3 = self._random_optimized_profile("profile3")
 
         block = OptimizedProfileBlock(self.alphabet, [om1, om2, om3])
         self.assertEqual(len(block), 3)
@@ -177,9 +177,9 @@ class TestOptimizedProfileBlock(unittest.TestCase):
         self.assertRaises(IndexError, block.pop)
 
     def test_setitem_slice(self):
-        om1 = self._random_optimized_profile(b"profile1")
-        om2 = self._random_optimized_profile(b"profile2")
-        om3 = self._random_optimized_profile(b"profile3")
+        om1 = self._random_optimized_profile("profile1")
+        om2 = self._random_optimized_profile("profile2")
+        om3 = self._random_optimized_profile("profile3")
 
         block = OptimizedProfileBlock(self.alphabet, [om1, om2])
         self.assertEqual(len(block), 2)
@@ -198,9 +198,9 @@ class TestOptimizedProfileBlock(unittest.TestCase):
         self.assertIs(block[4], om3)
 
     def test_delitem_slice(self):
-        om1 = self._random_optimized_profile(b"profile1")
-        om2 = self._random_optimized_profile(b"profile2")
-        om3 = self._random_optimized_profile(b"profile3")
+        om1 = self._random_optimized_profile("profile1")
+        om2 = self._random_optimized_profile("profile2")
+        om3 = self._random_optimized_profile("profile3")
 
         block = OptimizedProfileBlock(self.alphabet, [om1, om2, om3])
         self.assertEqual(len(block), 3)
@@ -214,9 +214,9 @@ class TestOptimizedProfileBlock(unittest.TestCase):
         self.assertIs(block[0], om2)
 
     def test_contains(self):
-        om1 = self._random_optimized_profile(b"profile1")
-        om2 = self._random_optimized_profile(b"profile2")
-        om3 = self._random_optimized_profile(b"profile3")
+        om1 = self._random_optimized_profile("profile1")
+        om2 = self._random_optimized_profile("profile2")
+        om3 = self._random_optimized_profile("profile3")
 
         block = OptimizedProfileBlock(self.alphabet, [om1, om2])
         self.assertEqual(len(block), 2)
@@ -228,9 +228,9 @@ class TestOptimizedProfileBlock(unittest.TestCase):
         self.assertNotIn(object(), block)
 
     def test_copy(self):
-        om1 = self._random_optimized_profile(b"profile1")
-        om2 = self._random_optimized_profile(b"profile2")
-        om3 = self._random_optimized_profile(b"profile3")
+        om1 = self._random_optimized_profile("profile1")
+        om2 = self._random_optimized_profile("profile2")
+        om3 = self._random_optimized_profile("profile3")
 
         block = OptimizedProfileBlock(self.alphabet, [om1, om2, om3])
         block_copy = block.copy()

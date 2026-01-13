@@ -41,7 +41,7 @@ class _TestBuilderBase(object):
             cls.msa_path = os.path.join(cls.testdata, "3box.sto")
             with MSAFile(cls.msa_path, digital=True) as msa_file:
                 cls.msa = next(msa_file)
-                cls.msa.name = b"3box"
+                cls.msa.name = "3box"
 
 
 class TestBuilder(unittest.TestCase):
@@ -164,7 +164,7 @@ class TestBuilderMSA(_TestBuilderBase, unittest.TestCase):
 
         with MSAFile(os.path.join(self.testdata, "3box.sto"), digital=True) as msa_file:
             msa = next(msa_file)
-            msa.name = b"3box"
+            msa.name = "3box"
 
         with HMMFile(os.path.join(self.testdata, "3box.hmm")) as hmm_file:
             hmm_exp = next(hmm_file)
@@ -196,7 +196,7 @@ class TestBuilderMSA(_TestBuilderBase, unittest.TestCase):
         with HMMFile(os.path.join(self.testdata, "3box.hmm")) as hmm_file:
             hmm_exp = next(hmm_file)
 
-        self.assertEqual(hmm.name, b"3box")
+        self.assertEqual(hmm.name, "3box")
         self.assertEqual(hmm.M, hmm_exp.M)
 
     @unittest.skipUnless(os.path.exists(HMMER_FOLDER), "test data not available")
@@ -220,7 +220,7 @@ class TestBuilderMSA(_TestBuilderBase, unittest.TestCase):
         msa_path = resource_files(__package__).joinpath("data", "msa", "LuxC.sto")
         with MSAFile(msa_path, digital=True, alphabet=abc) as msa_file:
             msa = msa_file.read()
-            msa.name = b"LuxC"
+            msa.name = "LuxC"
         # read the expected HMM
         hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "LuxC.hmm")
         with HMMFile(hmm_path) as hmm_file:

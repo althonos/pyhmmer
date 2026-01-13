@@ -82,7 +82,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
         hits.sort()
 
         hit = hits[0]
-        self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_113")
+        self.assertEqual(hit.name, "938293.PRJEB85.HG003687_113")
         self.assertAlmostEqual(hit.score, 8.6, delta=0.1)  # printed with %6.1f
         self.assertAlmostEqual(hit.bias, 1.5, delta=0.1)  # printed with  %5.1f
         self.assertAlmostEqual(hit.evalue, 0.096, delta=0.01)  # printed with %9.2g
@@ -121,11 +121,11 @@ class _TestSearch(metaclass=abc.ABCMeta):
                 fields = list(filter(None, line.strip().split(" ")))
                 self.assertIsNot(line, None)
                 self.assertIsNot(hit, None)
-                self.assertEqual(hit.name.decode(), fields[0])
+                self.assertEqual(hit.name, fields[0])
                 if fields[1] == "-":
                     self.assertIs(hit.accession, None)
                 else:
-                    self.assertEqual(hit.accession.decode(), fields[1])
+                    self.assertEqual(hit.accession, fields[1])
                 self.assertAlmostEqual(hit.score, float(fields[5]), delta=0.1)
                 self.assertAlmostEqual(hit.bias, float(fields[6]), delta=0.1)
                 self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
@@ -148,11 +148,11 @@ class _TestSearch(metaclass=abc.ABCMeta):
                 fields = list(filter(None, line.strip().split(" ")))
                 self.assertIsNot(line, None)
                 self.assertIsNot(hit, None)
-                self.assertEqual(hit.name.decode(), fields[0])
+                self.assertEqual(hit.name, fields[0])
                 if fields[1] == "-":
                     self.assertIs(hit.accession, None)
                 else:
-                    self.assertEqual(hit.accession.decode(), fields[1])
+                    self.assertEqual(hit.accession, fields[1])
                 self.assertAlmostEqual(hit.score, float(fields[5]), delta=0.1)
                 self.assertAlmostEqual(hit.bias, float(fields[6]), delta=0.1)
                 self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
@@ -172,11 +172,11 @@ class _TestSearch(metaclass=abc.ABCMeta):
                 fields = list(filter(None, line.strip().split(" ")))
                 self.assertIsNot(line, None)
                 self.assertIsNot(hit, None)
-                self.assertEqual(hit.name.decode(), fields[0])
+                self.assertEqual(hit.name, fields[0])
                 if fields[1] == "-":
                     self.assertIs(hit.accession, None)
                 else:
-                    self.assertEqual(hit.accession.decode(), fields[1])
+                    self.assertEqual(hit.accession, fields[1])
                 self.assertAlmostEqual(hit.score, float(fields[5]), delta=0.1)
                 self.assertAlmostEqual(hit.bias, float(fields[6]), delta=0.1)
                 self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
@@ -191,7 +191,7 @@ class _TestSearch(metaclass=abc.ABCMeta):
                 self.assertIsNot(line, None)
                 self.assertIsNot(domain, None)
                 self.assertEqual(domain.hit.hits.Z, len(seqs))
-                self.assertEqual(domain.hit.name.decode(), fields[0])
+                self.assertEqual(domain.hit.name, fields[0])
                 self.assertAlmostEqual(domain.score, float(fields[13]), places=1)
                 self.assertAlmostEqual(domain.bias, float(fields[14]), places=1)
                 self.assertEqual(f"{domain.c_evalue:9.2g}", f"{float(fields[11]):9.2g}")
@@ -391,7 +391,7 @@ class TestHmmpress(unittest.TestCase):
             self.assertEqual(n, 1)
         with HMMFile(self.tmp) as hmm_file:
             hmm = next(hmm_file)
-            self.assertEqual(hmm.name, b"Thioesterase")
+            self.assertEqual(hmm.name, "Thioesterase")
 
 
 class TestPhmmer(unittest.TestCase):
@@ -457,7 +457,7 @@ class TestPhmmer(unittest.TestCase):
                 self.assertIsNot(hit, None)
                 fields = list(filter(None, line.strip().split(" ")))
 
-                self.assertEqual(hit.name.decode(), fields[0])
+                self.assertEqual(hit.name, fields[0])
                 self.assertAlmostEqual(hit.score, float(fields[7]), delta=0.1)
                 self.assertAlmostEqual(hit.bias, float(fields[8]), delta=0.1)
                 self.assertAlmostEqual(hit.evalue, float(fields[6]), delta=0.1)
@@ -535,7 +535,7 @@ class TestJackhmmer(unittest.TestCase):
                 self.assertIsNot(hit, None)
                 fields = list(filter(None, line.strip().split(" ")))
 
-                self.assertEqual(hit.name.decode(), fields[0])
+                self.assertEqual(hit.name, fields[0])
                 self.assertAlmostEqual(hit.score, float(fields[7]), delta=0.1)
                 self.assertAlmostEqual(hit.bias, float(fields[8]), delta=0.1)
                 self.assertAlmostEqual(hit.evalue, float(fields[6]), delta=0.1)
@@ -585,7 +585,7 @@ class TestJackhmmer(unittest.TestCase):
         hits.sort()
 
         hit = hits[0]
-        self.assertEqual(hit.name, b"938293.PRJEB85.HG003687_113")
+        self.assertEqual(hit.name, "938293.PRJEB85.HG003687_113")
         self.assertAlmostEqual(hit.score, 8.6, delta=0.1)  # printed with %6.1f
         self.assertAlmostEqual(hit.bias, 1.5, delta=0.1)  # printed with  %5.1f
         self.assertAlmostEqual(hit.evalue, 0.096, delta=0.01)  # printed with %9.2g
@@ -659,11 +659,11 @@ class TestNhmmer(unittest.TestCase):
             self.assertIsNot(line, None)
             self.assertIsNot(hit, None)
             fields = list(filter(None, line.strip().split(" ")))
-            self.assertEqual(hit.name.decode(), fields[0])
+            self.assertEqual(hit.name, fields[0])
             if fields[1] == "-":
                 self.assertIs(hit.accession, None)
             else:
-                self.assertEqual(hit.accession.decode(), fields[1])
+                self.assertEqual(hit.accession, fields[1])
             self.assertAlmostEqual(hit.best_domain.bias, float(fields[14]), delta=0.1)
             self.assertAlmostEqual(hit.best_domain.score, float(fields[13]), delta=0.1)
             self.assertAlmostEqual(
@@ -698,7 +698,7 @@ class TestNhmmer(unittest.TestCase):
             self.assertTableEqual(hits, table)
 
     def test_bmyd_msa_bgc_block(self):
-        query = DigitalMSA(self.dna, name=b"bmyD", sequences=[self.bmyD_fna])
+        query = DigitalMSA(self.dna, name="bmyD", sequences=[self.bmyD_fna])
         with self.gbk("BGC0001090", digital=True, alphabet=self.dna) as seqs_file:
             seqs = seqs_file.read_block()
 
@@ -706,7 +706,7 @@ class TestNhmmer(unittest.TestCase):
         self.assertEqual(len(hits), 1)
 
     def test_bmyd_msa_bgc_file(self):
-        query = DigitalMSA(self.dna, name=b"bmyD", sequences=[self.bmyD_fna])
+        query = DigitalMSA(self.dna, name="bmyD", sequences=[self.bmyD_fna])
 
         with self.gbk("BGC0001090", digital=True, alphabet=self.dna) as seqs:
             hits = list(pyhmmer.nhmmer(query, seqs, cpus=1))[0]
@@ -836,7 +836,7 @@ class TestHMMScan(unittest.TestCase):
             seqs_path, digital=True, alphabet=hmms[0].alphabet
         ) as seqs_file:
             for hits in pyhmmer.hmmer.hmmscan(seqs_file, hmms, cpus=1):
-                expected_lines = expected.get(hits.query.name.decode())
+                expected_lines = expected.get(hits.query.name)
                 if expected_lines is None:
                     self.assertEqual(len(hits), 0)
                     continue
@@ -844,7 +844,7 @@ class TestHMMScan(unittest.TestCase):
                     self.assertIsNot(line, None)
                     self.assertIsNot(hit, None)
                     fields = list(filter(None, line.strip().split(" ")))
-                    self.assertEqual(hit.name.decode(), fields[0])
+                    self.assertEqual(hit.name, fields[0])
                     self.assertAlmostEqual(hit.score, float(fields[5]), delta=0.1)
                     self.assertAlmostEqual(hit.bias, float(fields[6]), delta=0.1)
                     self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)
@@ -869,7 +869,7 @@ class TestHMMScan(unittest.TestCase):
         with SequenceFile(seqs_path, digital=True) as seqs_file:
             with self.hmm_file("RREFam.hmm").optimized_profiles() as pressed_file:
                 for hits in pyhmmer.hmmer.hmmscan(seqs_file, pressed_file, cpus=1):
-                    expected_lines = expected.get(hits.query.name.decode())
+                    expected_lines = expected.get(hits.query.name)
                     if expected_lines is None:
                         self.assertEqual(len(hits), 0)
                         continue
@@ -877,7 +877,7 @@ class TestHMMScan(unittest.TestCase):
                         self.assertIsNot(line, None)
                         self.assertIsNot(hit, None)
                         fields = list(filter(None, line.strip().split(" ")))
-                        self.assertEqual(hit.name.decode(), fields[0])
+                        self.assertEqual(hit.name, fields[0])
                         self.assertAlmostEqual(hit.score, float(fields[5]), delta=0.1)
                         self.assertAlmostEqual(hit.bias, float(fields[6]), delta=0.1)
                         self.assertAlmostEqual(hit.evalue, float(fields[4]), delta=0.1)

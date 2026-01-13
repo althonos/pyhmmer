@@ -29,7 +29,7 @@ class TestHMM(unittest.TestCase):
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
     def test_checksum(self):
         abc = Alphabet.dna()
-        hmm = HMM(abc, 100, b"test")
+        hmm = HMM(abc, 100, "test")
         self.assertIs(hmm.checksum, None)
 
         hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "LuxC.hmm")
@@ -39,7 +39,7 @@ class TestHMM(unittest.TestCase):
 
     def test_composition(self):
         abc = Alphabet.dna()
-        hmm = HMM(abc, 100, b"test")
+        hmm = HMM(abc, 100, "test")
         self.assertIs(hmm.composition, None)
         hmm.set_composition()
         self.assertEqual(len(hmm.composition), hmm.alphabet.K)
@@ -56,7 +56,7 @@ class TestHMM(unittest.TestCase):
         abc = Alphabet.amino()
         self.assertEqual(self.hmm, self.hmm)
         self.assertEqual(self.hmm, self.hmm.copy())
-        self.assertNotEqual(self.hmm, HMM(abc, 100, b"test"))
+        self.assertNotEqual(self.hmm, HMM(abc, 100, "test"))
         self.assertNotEqual(self.hmm, 1)
 
     def test_insert_emissions(self):
@@ -68,7 +68,7 @@ class TestHMM(unittest.TestCase):
 
     def test_command_line(self):
         abc = Alphabet.amino()
-        hmm = HMM(abc, 100, b"test")
+        hmm = HMM(abc, 100, "test")
         self.assertIs(hmm.command_line, None)
         hmm.command_line = "hmmbuild x"
         self.assertEqual(hmm.command_line, "hmmbuild x")
@@ -79,42 +79,42 @@ class TestHMM(unittest.TestCase):
 
     def test_name(self):
         abc = Alphabet.amino()
-        hmm = HMM(abc, 100, b"test")
+        hmm = HMM(abc, 100, "test")
 
-        self.assertEqual(hmm.name, b"test")
-        hmm.name = b"Test"
-        self.assertEqual(hmm.name, b"Test")
-        hmm.name = b""
-        self.assertEqual(hmm.name, b"")
+        self.assertEqual(hmm.name, "test")
+        hmm.name = "Test"
+        self.assertEqual(hmm.name, "Test")
+        hmm.name = ""
+        self.assertEqual(hmm.name, "")
 
     def test_accession(self):
         abc = Alphabet.amino()
-        hmm = HMM(abc, 100, b"test")
+        hmm = HMM(abc, 100, "test")
 
         self.assertIs(hmm.accession, None)
-        hmm.accession = b"TST001"
-        self.assertEqual(hmm.accession, b"TST001")
-        hmm.accession = b""
-        self.assertEqual(hmm.accession, b"")
+        hmm.accession = "TST001"
+        self.assertEqual(hmm.accession, "TST001")
+        hmm.accession = ""
+        self.assertEqual(hmm.accession, "")
         hmm.accession = None
         self.assertIs(hmm.accession, None)
 
     def test_description(self):
         abc = Alphabet.amino()
-        hmm = HMM(abc, 100, b"test")
+        hmm = HMM(abc, 100, "test")
 
         self.assertIs(hmm.description, None)
-        hmm.description = b"A very important HMM"
-        self.assertEqual(hmm.description, b"A very important HMM")
-        hmm.description = b""
-        self.assertEqual(hmm.description, b"")
+        hmm.description = "A very important HMM"
+        self.assertEqual(hmm.description, "A very important HMM")
+        hmm.description = ""
+        self.assertEqual(hmm.description, "")
         hmm.description = None
         self.assertIs(hmm.description, None)
 
     def test_consensus(self):
         # if not set, HMM is None
         abc = Alphabet.amino()
-        hmm = HMM(abc, 100, b"test")
+        hmm = HMM(abc, 100, "test")
         self.assertIs(hmm.consensus, None)
         # if the HMM is fully configured, the consensus should be as
         # long as the number of nodes
@@ -122,7 +122,7 @@ class TestHMM(unittest.TestCase):
 
     def test_set_consensus(self):
         abc = Alphabet.dna()
-        hmm = HMM(abc, 100, b"test")
+        hmm = HMM(abc, 100, "test")
         self.assertIs(hmm.consensus, None)
         hmm.set_consensus()
         self.assertIsNot(hmm.consensus, None)
@@ -135,7 +135,7 @@ class TestHMM(unittest.TestCase):
     def test_set_consensus_error(self):
         dna = Alphabet.dna()
         prot = Alphabet.amino()
-        hmm = HMM(dna, 100, b"test")
+        hmm = HMM(dna, 100, "test")
         with self.assertRaises(AlphabetMismatch):
             seq = TextSequence(sequence="Y"*hmm.M).digitize(prot)
             hmm.set_consensus(seq)
@@ -146,7 +146,7 @@ class TestHMM(unittest.TestCase):
     @unittest.skipIf(sys.implementation.name == "pypy", "`getsizeof` not supported on PyPY")
     def test_sizeof(self):
         dna = Alphabet.dna()
-        hmm = HMM(dna, 100, b"test")
+        hmm = HMM(dna, 100, "test")
         self.assertGreater(sys.getsizeof(hmm), 0)
 
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
@@ -170,7 +170,7 @@ class TestHMM(unittest.TestCase):
     def test_write_empty(self):
         buffer = io.BytesIO()
         abc = Alphabet.amino()
-        hmm = HMM(abc, 10, b"test")
+        hmm = HMM(abc, 10, "test")
         hmm.write(buffer)
         self.assertGreater(len(buffer.getvalue()), 0)
 
@@ -185,7 +185,7 @@ class TestHMM(unittest.TestCase):
 
     def test_renormalize(self):
         abc = Alphabet.dna()
-        hmm = HMM(abc, 10, b"test")
+        hmm = HMM(abc, 10, "test")
         for i in range(1, hmm.M+1):
             for j in range(abc.K):
                 hmm.match_emissions[i, j] = 25.0
@@ -196,7 +196,7 @@ class TestHMM(unittest.TestCase):
 
     def test_scale(self):
         abc = Alphabet.dna()
-        hmm = HMM(abc, 10, b"test")
+        hmm = HMM(abc, 10, "test")
         for i in range(1, hmm.M+1):
             for j in range(abc.K):
                 hmm.match_emissions[i, j] = 25.0
@@ -208,17 +208,17 @@ class TestHMM(unittest.TestCase):
 
     def test_zero(self):
         abc = Alphabet.dna()
-        hmm = HMM(abc, 10, b"custom")
+        hmm = HMM(abc, 10, "custom")
         for i in range(1, hmm.M+1):
             for j in range(abc.K):
                 hmm.match_emissions[i, j] = 25.0
-        self.assertEqual(hmm.name, b"custom")
+        self.assertEqual(hmm.name, "custom")
 
         hmm.zero()
         for i in range(hmm.M+1):
             for j in range(abc.K):
                 self.assertEqual(hmm.match_emissions[i, j], 0.0)
-        self.assertEqual(hmm.name, b"custom")
+        self.assertEqual(hmm.name, "custom")
 
     def test_pickle(self):
         h1 = self.hmm

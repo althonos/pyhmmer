@@ -953,14 +953,14 @@ cdef class KeyHash:
         like you would with a Python `set`::
 
             >>> kh = KeyHash()
-            >>> kh.add(b"key")
+            >>> kh.add("key")
             0
 
         Check if a key hash contains a given key::
 
-            >>> b"key" in kh
+            >>> "key" in kh
             True
-            >>> b"missing" in kh
+            >>> "missing" in kh
             False
 
         Get the index associated with a key using the indexing notation::
@@ -974,7 +974,7 @@ cdef class KeyHash:
 
         Iterate over the keys of the key hash, in the order of insertion::
 
-            >>> kh.add(b"key2")
+            >>> kh.add("key2")
             1
             >>> for k in kh:
             ...     print(k)
@@ -1154,11 +1154,11 @@ cdef class KeyHash:
         returned::
 
             >>> kh = KeyHash()
-            >>> kh.add(b"first")
+            >>> kh.add("first")
             0
-            >>> kh.add(b"second")
+            >>> kh.add("second")
             1
-            >>> kh.add(b"first")
+            >>> kh.add("first")
             0
 
         Arguments:
@@ -1199,10 +1199,10 @@ cdef class KeyHash:
 
         Example:
             >>> kh = KeyHash()
-            >>> kh.add(b"key")
+            >>> kh.add("key")
             0
             >>> copy = kh.copy()
-            >>> b"key" in copy
+            >>> "key" in copy
             True
 
         """
