@@ -6,8 +6,8 @@ import unittest
 import tempfile
 
 import pyhmmer
-from pyhmmer.errors import EaselError
-from pyhmmer.easel import SequenceFile
+from pyhmmer.errors import EaselError, AlphabetMismatch
+from pyhmmer.easel import Alphabet, SequenceFile
 from pyhmmer.plan7 import HMMFile, HMMPressedFile, Pipeline
 
 from .. import __name__ as __package__
@@ -70,10 +70,10 @@ class _TestHMMFile:
 
 class _TestHMMFileobj:
 
-    def open_hmm(self, path):
+    def open_hmm(self, path, alphabet=None):
         with open(path, "rb") as f:
             buffer = io.BytesIO(f.read())
-        return HMMFile(buffer)
+        return HMMFile(buffer, alphabet=alphabet)
 
     def test_name(self):
         path = self.hmms_folder.joinpath("bin", "{}.h3m".format(self.ID))
@@ -82,11 +82,35 @@ class _TestHMMFileobj:
         with self.open_hmm(path) as f:
             self.assertIs(f.name, None)
 
+    def test_implicit_alphabet(self):
+        path = self.hmms_folder.joinpath("bin", "{}.h3m".format(self.ID))
+        if not path.exists():
+            self.skipTest("data files not available")
+        with self.open_hmm(path) as f:
+            hmm = next(f)
+            self.assertEqual(hmm.alphabet, self.ALPHABET)
+
+    def test_explicit_alphabet(self):
+        path = self.hmms_folder.joinpath("bin", "{}.h3m".format(self.ID))
+        if not path.exists():
+            self.skipTest("data files not available")
+        with self.open_hmm(path, alphabet=self.ALPHABET) as f:
+            hmm = next(f)
+            self.assertEqual(hmm.alphabet, self.ALPHABET)
+
+    def test_explicit_alphabet_mismatch(self):
+        mm = Alphabet.amino() if self.ALPHABET.is_nucleotide() else Alphabet.dna()
+        path = self.hmms_folder.joinpath("bin", "{}.h3m".format(self.ID))
+        if not path.exists():
+            self.skipTest("data files not available")
+        with self.open_hmm(path, alphabet=mm) as f:
+            self.assertRaises(AlphabetMismatch, f.read)
+
 
 class _TestHMMPath:
 
-    def open_hmm(self, path):
-        return HMMFile(path)
+    def open_hmm(self, path, alphabet=None):
+        return HMMFile(path, alphabet=alphabet)
 
     def open_pressed(self, path):
         return HMMPressedFile(path)
@@ -167,11 +191,13 @@ class _TestHMMPath:
 
 
 class _TestThioesterase(_TestHMMFile):
+    ALPHABET = Alphabet.amino()
     ID = "Thioesterase"
     NAMES = ["Thioesterase"]
 
 
 class _TestRREFam(_TestHMMFile):
+    ALPHABET = Alphabet.amino()
     ID = "RREFam"
     NAMES = [
         "Stand_Alone_Lasso_RRE",

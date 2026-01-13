@@ -40,9 +40,9 @@ class TestAlphabet(unittest.TestCase):
         self.assertNotEqual(easel.Alphabet.amino(), object())
 
     def test_repr(self):
-        self.assertEqual(repr(easel.Alphabet.amino()), "Alphabet.amino()")
-        self.assertEqual(repr(easel.Alphabet.rna()), "Alphabet.rna()")
-        self.assertEqual(repr(easel.Alphabet.dna()), "Alphabet.dna()")
+        self.assertEqual(repr(easel.Alphabet.amino()), "AA()")
+        self.assertEqual(repr(easel.Alphabet.rna()), "RNA()")
+        self.assertEqual(repr(easel.Alphabet.dna()), "DNA()")
 
     def test_K(self):
         self.assertEqual(easel.Alphabet.dna().K, 4)

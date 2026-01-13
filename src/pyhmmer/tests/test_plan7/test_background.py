@@ -43,6 +43,6 @@ class TestBuilder(unittest.TestCase):
     def test_repr(self):
         abc = easel.Alphabet.amino()
         bg = plan7.Background(abc)
-        self.assertEqual(repr(bg), "Background(Alphabet.amino(), uniform=False)")
+        self.assertEqual(repr(bg), "Background(AA(), uniform=False)")
         bg2 = plan7.Background(abc, uniform=True)
-        self.assertEqual(repr(bg2), "Background(Alphabet.amino(), uniform=True)")
+        self.assertEqual(repr(bg2), "Background(AA(), uniform=True)")
