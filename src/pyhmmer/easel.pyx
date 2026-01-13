@@ -227,18 +227,30 @@ cdef class Alphabet:
     @classmethod
     def amino(cls):
         """Create a default amino-acid alphabet.
+
+        Returns:
+            `pyhmmer.easel.AA`: A new amino-acid alphabet object.
+
         """
         return AA()
 
     @classmethod
     def dna(cls):
         """Create a default DNA alphabet.
+
+        Returns:
+            `pyhmmer.easel.DNA`: A new DNA alphabet object.
+
         """
         return DNA()
 
     @classmethod
     def rna(cls):
         """Create a default RNA alphabet.
+
+        Returns:
+            `pyhmmer.easel.RNA`: A new RNA alphabet object.
+            
         """
         return RNA()
 
