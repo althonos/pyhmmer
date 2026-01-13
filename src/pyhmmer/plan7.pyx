@@ -3641,10 +3641,11 @@ cdef class HMMFile:
 
         self._file = file
         if alphabet is None:
-            self._alphabet = Alphabet.__new__(Alphabet)
-            self._alphabet._abc = NULL
+            self._alphabet = None
+            self._abc = NULL
         else:
             self._alphabet = alphabet
+            self._abc = self._alphabet._abc
 
     def __dealloc__(self):
         if self._hfp:
@@ -3742,7 +3743,11 @@ cdef class HMMFile:
             raise ValueError("I/O operation on closed file.")
 
         # don't run in *nogil* because the file may call a file-like handle
-        status = libhmmer.p7_hmmfile.p7_hmmfile_Read(self._hfp, &self._alphabet._abc, &hmm)
+        status = libhmmer.p7_hmmfile.p7_hmmfile_Read(self._hfp, &self._abc, &hmm)
+
+        # wrap the internal alphabet
+        if self._alphabet is None and self._abc != NULL:
+            self._alphabet = Alphabet.from_ptr(self._abc)
 
         if status == libeasel.eslOK:
             py_hmm = HMM.__new__(HMM)
@@ -3872,7 +3877,12 @@ cdef class HMMPressedFile:
         self._hfp = self._hmmfile._hfp
         if not self._hfp.is_pressed:
             raise ValueError("HMM file does not contain optimized profiles.")
-        self._alphabet = self._hmmfile._alphabet
+        if alphabet is None:
+            self._alphabet = None
+            self._abc = NULL
+        else:
+            self._alphabet = alphabet
+            self._abc = self._alphabet._abc
 
     def __iter__(self):
         return self
@@ -3962,9 +3972,12 @@ cdef class HMMPressedFile:
             raise ValueError("I/O operation on closed file.")
 
         with nogil:
-            status = p7_oprofile_ReadMSV(self._hfp, &self._alphabet._abc, &om._om)
+            status = p7_oprofile_ReadMSV(self._hfp, &self._abc, &om._om)
             if status == libeasel.eslOK:
                 status = p7_oprofile_ReadRest(self._hfp, om._om)
+
+        if self._alphabet is None and self._abc != NULL:
+            self._alphabet = Alphabet.from_ptr(self._abc)
 
         if status == libeasel.eslOK:
             om.alphabet = self._alphabet

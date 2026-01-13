@@ -8,6 +8,7 @@ from posix.types cimport off_t
 from cpython.pythread cimport PyThread_type_lock
 
 from libeasel import eslINFINITY
+from libeasel.alphabet cimport ESL_ALPHABET
 from libeasel.sq cimport ESL_SQ
 from libeasel.sqio cimport ESL_SQFILE
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
@@ -160,10 +161,11 @@ cdef class HMM:
 
 
 cdef class HMMFile:
-    cdef str         _name
-    cdef P7_HMMFILE* _hfp
-    cdef Alphabet    _alphabet
-    cdef object      _file
+    cdef str           _name
+    cdef P7_HMMFILE*   _hfp
+    cdef ESL_ALPHABET* _abc
+    cdef Alphabet      _alphabet
+    cdef object        _file
 
     cpdef void close(self) except *
     cpdef void rewind(self) except *
@@ -178,10 +180,11 @@ cdef class HMMFile:
 
 
 cdef class HMMPressedFile:
-    cdef P7_HMMFILE* _hfp
-    cdef Alphabet    _alphabet
-    cdef HMMFile     _hmmfile
-    cdef size_t      _position
+    cdef P7_HMMFILE*   _hfp
+    cdef ESL_ALPHABET* _abc
+    cdef Alphabet      _alphabet
+    cdef HMMFile       _hmmfile
+    cdef size_t        _position
 
     cpdef void close(self) except *
     cpdef void rewind(self) except *
