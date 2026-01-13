@@ -122,7 +122,7 @@ plugins = ["Cython.Coverage"]
 
 [tool.cibuildwheel]
 before-build = "pip install scikit-build-core cython ninja"
-build-frontend = { name = "build", args = ["--no-isolation"] }
+build-frontend = { name = "build", args = ["-w", "--no-isolation"] }
 build-verbosity = 1
 test-command = "python -m unittest pyhmmer.tests -v"
 test-extras = ["test"]

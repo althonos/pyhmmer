@@ -256,6 +256,7 @@ foreach(_file IN ITEMS ${EASEL_SOURCES} ${EASEL_HEADERS})
                         --output ${CMAKE_CURRENT_BINARY_DIR}/${_file}
                 DEPENDS
                     ${PROJECT_SOURCE_DIR}/patches/${_file}.patch
+                DEPENDS_EXPLICIT_ONLY
             )
         else()
             add_custom_command(
@@ -271,16 +272,20 @@ foreach(_file IN ITEMS ${EASEL_SOURCES} ${EASEL_HEADERS})
                 DEPENDS
                     ${EASEL_SOURCE_DIR}/${_file}
                     ${PROJECT_SOURCE_DIR}/patches/${_file}.patch
+                DEPENDS_EXPLICIT_ONLY
             )
         endif()
     else()
         add_custom_command(
             OUTPUT
                 ${_file}
+            COMMENT
+                "Copying ${_file}"
             COMMAND
                 cmake -E copy ${EASEL_SOURCE_DIR}/${_file} ${CMAKE_CURRENT_BINARY_DIR}/${_file}
             DEPENDS
                 ${EASEL_SOURCE_DIR}/${_file}
+            DEPENDS_EXPLICIT_ONLY
         )
     endif()
     set(EASEL_PATCHED_SOURCES ${EASEL_PATCHED_SOURCES} ${CMAKE_CURRENT_BINARY_DIR}/${_file})
