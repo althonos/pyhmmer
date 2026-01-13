@@ -60,6 +60,7 @@ editable.verbose = false
 sdist.exclude = [
     "build",
     "benches",
+    "docs",
     "vendor/easel/documentation",
     "vendor/easel/demotic",
     "vendor/easel/miniapps",
@@ -99,6 +100,7 @@ if.env.CIBUILDWHEEL = true
 sdist.exclude = [
     "build",
     "benches",
+    "docs",
     "vendor/easel/documentation",
     "vendor/easel/demotic",
     "vendor/easel/miniapps",
