@@ -48,11 +48,6 @@ message(DEBUG "-- Dumping esl_config.h --")
 message(DEBUG "${ESL_CONFIG_H}")
 message(DEBUG "-- End esl_config.h --")
 
-set(EASEL_PATCHED_SOURCES
-    ${EASEL_PATCHED_SOURCES}
-    ${CMAKE_CURRENT_BINARY_DIR}/esl_config.h
-)
-
 # --- Manually declare required sources only -----------------------------------
 
 set(EASEL_SOURCE_DIR
@@ -238,6 +233,10 @@ set(EASEL_HEADERS
     interface_lapack.h
 )
 
+set(EASEL_PATCHED_SOURCES
+    ${CMAKE_CURRENT_BINARY_DIR}/esl_config.h
+)
+
 # --- Copy/patch source files if needed ----------------------------------------
 
 foreach(_file IN ITEMS ${EASEL_SOURCES} ${EASEL_HEADERS})
@@ -299,7 +298,7 @@ if(DEFINED PYHMMER_INSTALL_LIBS_DIR)
     install(TARGETS libeasel DESTINATION "${SKBUILD_PLATLIB_DIR}/${PYHMMER_INSTALL_LIBS_DIR}")
     set_target_properties(libeasel PROPERTIES INSTALL_RPATH "\$ORIGIN/.")
     cmake_path(APPEND SKBUILD_PLATLIB_DIR "${PYHMMER_INSTALL_LIBS_DIR}" "include" "libeasel" OUTPUT_VARIABLE INCLUDE_DEST_FOLDER)
-    foreach(_file IN ITEMS ${INFERNAL_PATCHED_SOURCES})
+    foreach(_file IN ITEMS ${EASEL_PATCHED_SOURCES})
         cmake_path(GET _file EXTENSION LAST_ONLY _ext)
         if(_ext STREQUAL ".h")
             cmake_path(RELATIVE_PATH _file BASE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" OUTPUT_VARIABLE _local)
