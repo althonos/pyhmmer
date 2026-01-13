@@ -9026,6 +9026,14 @@ cdef class Traces:
             self._storage[index] = trace
             self._refs[index] = trace._tr
 
+    def __delitem__(self, object index):
+        if isinstance(index, slice):
+            indices = index.indices(self._length)
+            for i in reversed(range(*indices)):
+                self.pop(i)
+        else:
+            self.pop(index)
+
     def __contains__(self, object trace):
 
         cdef P7_TRACE* tr
