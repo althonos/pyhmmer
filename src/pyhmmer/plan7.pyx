@@ -104,8 +104,20 @@ from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e, p7_s
 from libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL
 from libhmmer.p7_trace cimport P7_TRACE, p7t_statetype_e
 from libhmmer.p7_prior cimport P7_PRIOR
+from libhmmer.p7_tophits cimport p7_tophits_Reuse
 from libhmmer.nhmmer cimport ID_LENGTH_LIST
 from capacity cimport new_capacity
+from libhmmer.p7_hmmfile cimport (
+    read_asc20hmm,
+    read_asc30hmm,
+    read_bin30hmm,
+    v3a_magic,
+    v3b_magic,
+    v3c_magic,
+    v3d_magic,
+    v3e_magic,
+    v3f_magic
+)
 
 if HMMER_IMPL == "VMX":
     from libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init, p7O_EXTRA_SB
@@ -180,18 +192,6 @@ from .easel cimport (
     MatrixU8,
     Randomness,
     RandomnessOrSeed,
-)
-from .reexports.p7_tophits cimport p7_tophits_Reuse
-from .reexports.p7_hmmfile cimport (
-    read_asc20hmm,
-    read_asc30hmm,
-    read_bin30hmm,
-    v3a_magic,
-    v3b_magic,
-    v3c_magic,
-    v3d_magic,
-    v3e_magic,
-    v3f_magic
 )
 
 if TARGET_SYSTEM == "Linux":
@@ -8662,8 +8662,8 @@ cdef class TopHits:
                 fname = "p7_tophits_TabularTargets"
                 status = libhmmer.p7_tophits.p7_tophits_TabularTargets(
                     file,
-                    qname,
-                    qacc,
+                    <char*> qname,
+                    <char*> qacc,
                     self._th,
                     &self._pli,
                     header
@@ -8672,8 +8672,8 @@ cdef class TopHits:
                 fname = "p7_tophits_TabularDomains"
                 status = libhmmer.p7_tophits.p7_tophits_TabularDomains(
                     file,
-                    qname,
-                    qacc,
+                    <char*> qname,
+                    <char*> qacc,
                     self._th,
                     &self._pli,
                     header
@@ -8682,8 +8682,8 @@ cdef class TopHits:
                 fname = "p7_tophits_TabularXfam"
                 status = libhmmer.p7_tophits.p7_tophits_TabularXfam(
                     file,
-                    qname,
-                    qacc,
+                    <char*> qname,
+                    <char*> qacc,
                     self._th,
                     &self._pli,
                 )
