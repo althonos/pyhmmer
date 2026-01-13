@@ -1,0 +1,533 @@
+diff --git a/esl_sqio_ascii.c b/esl_sqio_ascii.c
+index 9ab8d46..8557aeb 100644
+--- a/esl_sqio_ascii.c
++++ b/esl_sqio_ascii.c
+@@ -36,66 +36,66 @@
+ #include "esl_ssi.h"
+ 
+ /* format specific routines */
+-static int   sqascii_GuessFileFormat(ESL_SQFILE *sqfp, int *ret_fmt);
+-static int   sqascii_Position       (ESL_SQFILE *sqfp, off_t offset);
+-static void  sqascii_Close          (ESL_SQFILE *sqfp);
+-static int   sqascii_SetDigital     (ESL_SQFILE *sqfp, const ESL_ALPHABET *abc);
+-static int   sqascii_GuessAlphabet  (ESL_SQFILE *sqfp, int *ret_type);
+-static int   sqascii_Read           (ESL_SQFILE *sqfp, ESL_SQ *sq);
+-static int   sqascii_ReadInfo       (ESL_SQFILE *sqfp, ESL_SQ *sq);
+-static int   sqascii_ReadSequence   (ESL_SQFILE *sqfp, ESL_SQ *sq);
+-static int   sqascii_ReadWindow     (ESL_SQFILE *sqfp, int C, int W, ESL_SQ *sq);
+-static int   sqascii_ReadBlock      (ESL_SQFILE *sqfp, ESL_SQ_BLOCK *sqBlock, int max_residues, int max_sequences, int max_init_window, int long_target);
+-static int   sqascii_Echo           (ESL_SQFILE *sqfp, const ESL_SQ *sq, FILE *ofp);
+-
+-static int   sqascii_IsRewindable   (const ESL_SQFILE *sqfp);
+-static const char *sqascii_GetError (const ESL_SQFILE *sqfp);
+-
+-static int   sqascii_OpenSSI         (ESL_SQFILE *sqfp, const char *ssifile_hint);
+-static int   sqascii_PositionByKey   (ESL_SQFILE *sqfp, const char *key);
+-static int   sqascii_PositionByNumber(ESL_SQFILE *sqfp, int which);
+-static int   sqascii_Fetch           (ESL_SQFILE *sqfp, const char *key, ESL_SQ *sq);
+-static int   sqascii_FetchInfo       (ESL_SQFILE *sqfp, const char *key, ESL_SQ *sq);
+-static int   sqascii_FetchSubseq     (ESL_SQFILE *sqfp, const char *source, int64_t start, int64_t end, ESL_SQ *sq);
++int   sqascii_GuessFileFormat(ESL_SQFILE *sqfp, int *ret_fmt);
++int   sqascii_Position       (ESL_SQFILE *sqfp, off_t offset);
++void  sqascii_Close          (ESL_SQFILE *sqfp);
++int   sqascii_SetDigital     (ESL_SQFILE *sqfp, const ESL_ALPHABET *abc);
++int   sqascii_GuessAlphabet  (ESL_SQFILE *sqfp, int *ret_type);
++int   sqascii_Read           (ESL_SQFILE *sqfp, ESL_SQ *sq);
++int   sqascii_ReadInfo       (ESL_SQFILE *sqfp, ESL_SQ *sq);
++int   sqascii_ReadSequence   (ESL_SQFILE *sqfp, ESL_SQ *sq);
++int   sqascii_ReadWindow     (ESL_SQFILE *sqfp, int C, int W, ESL_SQ *sq);
++int   sqascii_ReadBlock      (ESL_SQFILE *sqfp, ESL_SQ_BLOCK *sqBlock, int max_residues, int max_sequences, int max_init_window, int long_target);
++int   sqascii_Echo           (ESL_SQFILE *sqfp, const ESL_SQ *sq, FILE *ofp);
++
++int   sqascii_IsRewindable   (const ESL_SQFILE *sqfp);
++const char *sqascii_GetError (const ESL_SQFILE *sqfp);
++
++int   sqascii_OpenSSI         (ESL_SQFILE *sqfp, const char *ssifile_hint);
++int   sqascii_PositionByKey   (ESL_SQFILE *sqfp, const char *key);
++int   sqascii_PositionByNumber(ESL_SQFILE *sqfp, int which);
++int   sqascii_Fetch           (ESL_SQFILE *sqfp, const char *key, ESL_SQ *sq);
++int   sqascii_FetchInfo       (ESL_SQFILE *sqfp, const char *key, ESL_SQ *sq);
++int   sqascii_FetchSubseq     (ESL_SQFILE *sqfp, const char *source, int64_t start, int64_t end, ESL_SQ *sq);
+ 
+ /* Internal routines shared by parsers. */
+-static int  loadmem  (ESL_SQFILE *sqfp);
+-static int  loadbuf  (ESL_SQFILE *sqfp);
+-static int  nextchar (ESL_SQFILE *sqfp, char *ret_c);
+-static int  seebuf   (ESL_SQFILE *sqfp, int64_t maxn, int64_t *opt_nres, int64_t *opt_endpos);
+-static void addbuf   (ESL_SQFILE *sqfp, ESL_SQ *sq, int64_t nres);
+-static void skipbuf  (ESL_SQFILE *sqfp, int64_t nskip);
+-static int  read_nres(ESL_SQFILE *sqfp, ESL_SQ *sq, int64_t nskip, int64_t nres, int64_t *opt_actual_nres);
+-static int  skip_whitespace(ESL_SQFILE *sqfp);
++int  loadmem  (ESL_SQFILE *sqfp);
++int  loadbuf  (ESL_SQFILE *sqfp);
++int  nextchar (ESL_SQFILE *sqfp, char *ret_c);
++int  seebuf   (ESL_SQFILE *sqfp, int64_t maxn, int64_t *opt_nres, int64_t *opt_endpos);
++void addbuf   (ESL_SQFILE *sqfp, ESL_SQ *sq, int64_t nres);
++void skipbuf  (ESL_SQFILE *sqfp, int64_t nskip);
++int  read_nres(ESL_SQFILE *sqfp, ESL_SQ *sq, int64_t nskip, int64_t nres, int64_t *opt_actual_nres);
++int  skip_whitespace(ESL_SQFILE *sqfp);
+ 
+ /* EMBL format; also UniProt, TrEMBL */
+-static void config_embl(ESL_SQFILE *sqfp);
+-static void inmap_embl (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap);
+-static int  header_embl(ESL_SQFILE *sqfp, ESL_SQ *sq);
+-static int  skip_embl  (ESL_SQFILE *sqfp, ESL_SQ *sq);
+-static int  end_embl   (ESL_SQFILE *sqfp, ESL_SQ *sq);
++void config_embl(ESL_SQFILE *sqfp);
++void inmap_embl (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap);
++int  header_embl(ESL_SQFILE *sqfp, ESL_SQ *sq);
++int  skip_embl  (ESL_SQFILE *sqfp, ESL_SQ *sq);
++int  end_embl   (ESL_SQFILE *sqfp, ESL_SQ *sq);
+ 
+ /* GenBank format; also DDBJ */
+-static void config_genbank(ESL_SQFILE *sqfp);
+-static void inmap_genbank (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap);
+-static int  header_genbank(ESL_SQFILE *sqfp, ESL_SQ *sq);
+-static int  skip_genbank  (ESL_SQFILE *sqfp, ESL_SQ *sq);
+-static int  end_genbank   (ESL_SQFILE *sqfp, ESL_SQ *sq);
++void config_genbank(ESL_SQFILE *sqfp);
++void inmap_genbank (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap);
++int  header_genbank(ESL_SQFILE *sqfp, ESL_SQ *sq);
++int  skip_genbank  (ESL_SQFILE *sqfp, ESL_SQ *sq);
++int  end_genbank   (ESL_SQFILE *sqfp, ESL_SQ *sq);
+ 
+ /* FASTA format */
+-static void config_fasta(ESL_SQFILE *sqfp);
+-static void inmap_fasta (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap);
+-static int  header_fasta(ESL_SQFILE *sqfp, ESL_SQ *sq);
+-static int  skip_fasta  (ESL_SQFILE *sqfp, ESL_SQ *sq);
+-static int  end_fasta   (ESL_SQFILE *sqfp, ESL_SQ *sq);
++void config_fasta(ESL_SQFILE *sqfp);
++void inmap_fasta (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap);
++int  header_fasta(ESL_SQFILE *sqfp, ESL_SQ *sq);
++int  skip_fasta  (ESL_SQFILE *sqfp, ESL_SQ *sq);
++int  end_fasta   (ESL_SQFILE *sqfp, ESL_SQ *sq);
+ 
+ /* daemon format */
+-static void config_daemon(ESL_SQFILE *sqfp);
+-static void inmap_daemon (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap);
+-static int  end_daemon   (ESL_SQFILE *sqfp, ESL_SQ *sq);
++void config_daemon(ESL_SQFILE *sqfp);
++void inmap_daemon (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap);
++int  end_daemon   (ESL_SQFILE *sqfp, ESL_SQ *sq);
+ 
+ /* HMMPGMD format */
+-static int  fileheader_hmmpgmd(ESL_SQFILE *sqfp);
++int  fileheader_hmmpgmd(ESL_SQFILE *sqfp);
+ 
+ 
+ /*****************************************************************
+@@ -369,7 +369,7 @@ esl_sqascii_Open(char *filename, int format, ESL_SQFILE *sqfp)
+  *            
+  * Throws:    <eslEMEM> on allocation failure.           
+  */
+-static int
++int
+ sqascii_GuessFileFormat(ESL_SQFILE *sqfp, int *ret_fmt)
+ {
+   int   n         = strlen(sqfp->filename);
+@@ -471,7 +471,7 @@ sqascii_GuessFileFormat(ESL_SQFILE *sqfp, int *ret_fmt)
+  *            On errors, the state of <sqfp> is indeterminate, and
+  *            it should not be used again.
+  */
+-static int
++int
+ sqascii_Position(ESL_SQFILE *sqfp, off_t offset)
+ {
+   int status;
+@@ -527,7 +527,7 @@ sqascii_Position(ESL_SQFILE *sqfp, off_t offset)
+  *
+  * Returns:   (void).
+  */
+-static void
++void
+ sqascii_Close(ESL_SQFILE *sqfp)
+ {
+   ESL_SQASCII_DATA *ascii = &sqfp->data.ascii;
+@@ -587,7 +587,7 @@ sqascii_Close(ESL_SQFILE *sqfp)
+  *
+  * Returns:   <eslOK> on success.
+  */
+-static int
++int
+ sqascii_SetDigital(ESL_SQFILE *sqfp, const ESL_ALPHABET *abc)
+ {
+   int status = eslOK;
+@@ -642,7 +642,7 @@ sqascii_SetDigital(ESL_SQFILE *sqfp, const ESL_ALPHABET *abc)
+  * Throws:    <eslEMEM> on allocation error;
+  *            <eslEINCONCEIVABLE> on unimaginable internal errors.
+  */
+-static int
++int
+ sqascii_GuessAlphabet(ESL_SQFILE *sqfp, int *ret_type)
+ {
+   ESL_SQ *sq = NULL;
+@@ -693,7 +693,7 @@ sqascii_GuessAlphabet(ESL_SQFILE *sqfp, int *ret_type)
+  *            to an offset of zero), in order to read it a second
+  *            time.
+  */
+-static int
++int
+ sqascii_IsRewindable(const ESL_SQFILE *sqfp)
+ {
+   if (sqfp->data.ascii.do_gzip  == TRUE) return FALSE;
+@@ -708,7 +708,7 @@ sqascii_IsRewindable(const ESL_SQFILE *sqfp)
+  *            to an offset of zero), in order to read it a second
+  *            time.
+  */
+-static const char *
++const char *
+ sqascii_GetError(const ESL_SQFILE *sqfp)
+ {
+   return sqfp->data.ascii.errbuf;
+@@ -739,7 +739,7 @@ sqascii_GetError(const ESL_SQFILE *sqfp)
+  * Throws:    <eslEMEM> on allocation failure;
+  *            <eslEINCONCEIVABLE> on internal error.
+  */
+-static int
++int
+ sqascii_Read(ESL_SQFILE *sqfp, ESL_SQ *sq)
+ {
+   int     status;
+@@ -834,7 +834,7 @@ sqascii_Read(ESL_SQFILE *sqfp, ESL_SQ *sq)
+  *
+  * Throws:    <eslEMEM> on allocation error.
+  */
+-static int
++int
+ sqascii_ReadInfo(ESL_SQFILE *sqfp, ESL_SQ *sq)
+ {
+   int     status;
+@@ -938,7 +938,7 @@ sqascii_ReadInfo(ESL_SQFILE *sqfp, ESL_SQ *sq)
+  * Throws:    <eslEMEM> on allocation failure;
+  *            <eslEINCONCEIVABLE> on internal error.
+  */
+-static int
++int
+ sqascii_ReadSequence(ESL_SQFILE *sqfp, ESL_SQ *sq)
+ {
+   ESL_SQASCII_DATA *ascii = &sqfp->data.ascii;
+@@ -1111,7 +1111,7 @@ sqascii_ReadSequence(ESL_SQFILE *sqfp, ESL_SQ *sq)
+  *            
+  *            <eslEMEM> on allocation error.
+  */
+-static int
++int
+ sqascii_ReadWindow(ESL_SQFILE *sqfp, int C, int W, ESL_SQ *sq)
+ {
+   int     actual_start;
+@@ -1452,7 +1452,7 @@ sqascii_ReadWindow(ESL_SQFILE *sqfp, int C, int W, ESL_SQ *sq)
+  * Throws:    <eslEMEM> on allocation failure;
+  *            <eslEINCONCEIVABLE> on internal error.
+  */
+-static int
++int
+ sqascii_ReadBlock(ESL_SQFILE *sqfp, ESL_SQ_BLOCK *sqBlock, int max_residues, int max_sequences, int max_init_window, int long_target)
+ {
+   int     i = 0;
+@@ -1635,7 +1635,7 @@ sqascii_ReadBlock(ESL_SQFILE *sqfp, ESL_SQ_BLOCK *sqBlock, int max_residues, int
+  *            
+  *            
+  */
+-static int
++int
+ sqascii_Echo(ESL_SQFILE *sqfp, const ESL_SQ *sq, FILE *ofp)
+ {
+   int     status;
+@@ -1733,7 +1733,7 @@ sqascii_Echo(ESL_SQFILE *sqfp, const ESL_SQ *sq, FILE *ofp)
+  *            
+  *            Throws <eslEMEM> on allocation error.
+  */
+-static int
++int
+ sqascii_OpenSSI(ESL_SQFILE *sqfp, const char *ssifile_hint)
+ {
+   int status;
+@@ -1790,7 +1790,7 @@ sqascii_OpenSSI(ESL_SQFILE *sqfp, const char *ssifile_hint)
+  *            In all these cases, the state of <sqfp> becomes
+  *            undefined, and the caller should not use it again.
+  */
+-static int
++int
+ sqascii_PositionByKey(ESL_SQFILE *sqfp, const char *key)
+ {
+   uint16_t fh;
+@@ -1838,7 +1838,7 @@ sqascii_PositionByKey(ESL_SQFILE *sqfp, const char *key)
+  *            In all these cases, the state of <sqfp> becomes
+  *            undefined, and the caller should not use it again.
+  */
+-static int
++int
+ sqascii_PositionByNumber(ESL_SQFILE *sqfp, int which)
+ {
+   uint16_t fh;
+@@ -1870,7 +1870,7 @@ sqascii_PositionByNumber(ESL_SQFILE *sqfp, int which)
+  *       
+  * Throws:    <eslEMEM> on allocation error.
+  */
+-static int
++int
+ sqascii_Fetch(ESL_SQFILE *sqfp, const char *key, ESL_SQ *sq)
+ {
+   int status;
+@@ -1901,7 +1901,7 @@ sqascii_Fetch(ESL_SQFILE *sqfp, const char *key, ESL_SQ *sq)
+  *       
+  * Throws:    <eslEMEM> on allocation error.
+  */
+-static int
++int
+ sqascii_FetchInfo(ESL_SQFILE *sqfp, const char *key, ESL_SQ *sq)
+ {
+   int status;
+@@ -1945,7 +1945,7 @@ sqascii_FetchInfo(ESL_SQFILE *sqfp, const char *key, ESL_SQ *sq)
+  *
+  * Throws:    <eslEMEM> on allocation errors.
+  */
+-static int
++int
+ sqascii_FetchSubseq(ESL_SQFILE *sqfp, const char *source, int64_t start, int64_t end, ESL_SQ *sq)
+ {
+   uint16_t fh;/* SSI file handle */
+@@ -2038,7 +2038,7 @@ sqascii_FetchSubseq(ESL_SQFILE *sqfp, const char *source, int64_t start, int64_t
+  * Returns <eslOK>  (and mpos < mn) if new data is read. 
+  * Throws <eslEMEM> on allocation error.
+  */
+-static int
++int
+ loadmem(ESL_SQFILE *sqfp)
+ {
+   void *tmp;
+@@ -2113,7 +2113,7 @@ loadmem(ESL_SQFILE *sqfp)
+  * (sqfp->nc == 0 is the same as eslEOF: no data in the new buffer.)
+  * Can throw an <eslEMEM> error.
+  */
+-static int
++int
+ loadbuf(ESL_SQFILE *sqfp)
+ {
+   void *tmp;
+@@ -2188,7 +2188,7 @@ ERROR:
+  * Return  <eslEOF> if we ran out of data in <sqfp>.
+  * May throw an <eslEMEM> error.
+  */
+-static int
++int
+ nextchar(ESL_SQFILE *sqfp, char *ret_c)
+ {
+   int status;
+@@ -2246,7 +2246,7 @@ nextchar(ESL_SQFILE *sqfp, char *ret_c)
+  * to make sure that <seebuf()> never counts the same byte twice (hence
+  * the need for the <maxn> limit, which ReadWindow() uses.)
+  */
+-static int
++int
+ seebuf(ESL_SQFILE *sqfp, int64_t maxn, int64_t *opt_nres, int64_t *opt_endpos)
+ {
+   int     bpos;
+@@ -2332,7 +2332,7 @@ seebuf(ESL_SQFILE *sqfp, int64_t maxn, int64_t *opt_nres, int64_t *opt_endpos)
+  *   sq->seq/dsq  now holds <nres> new residues
+  *   sq->n        is incremented by <nres>
+  */
+-static void
++void
+ addbuf(ESL_SQFILE *sqfp, ESL_SQ *sq, int64_t nres)
+ {
+   ESL_DSQ x;
+@@ -2358,7 +2358,7 @@ addbuf(ESL_SQFILE *sqfp, ESL_SQ *sq, int64_t nres)
+  * Like addbuf(), but we skip <nskip> residues instead of
+  * reading them.
+  */
+-static void
++void
+ skipbuf(ESL_SQFILE *sqfp, int64_t nskip)
+ {
+   ESL_DSQ x;
+@@ -2385,7 +2385,7 @@ skipbuf(ESL_SQFILE *sqfp, int64_t nskip)
+  * (3) end of file;  return eslEOF.
+  *
+  */
+-static int
++int
+ skip_whitespace(ESL_SQFILE *sqfp)
+ {
+   int status;
+@@ -2455,7 +2455,7 @@ skip_whitespace(ESL_SQFILE *sqfp)
+  * ReadWindow() in reverse complement acts like a subseq fetch.
+  * 
+  */
+-static int
++int
+ read_nres(ESL_SQFILE *sqfp, ESL_SQ *sq, int64_t nskip, int64_t nres, int64_t *opt_actual_nres)
+ {
+   int64_t n;
+@@ -2527,7 +2527,7 @@ read_nres(ESL_SQFILE *sqfp, ESL_SQ *sq, int64_t nskip, int64_t nres, int64_t *op
+  * careful to only parse the conserved intersection of these two
+  * very similar formats.
+  */
+-static void
++void
+ config_embl(ESL_SQFILE *sqfp)
+ {
+   ESL_SQASCII_DATA *ascii = &sqfp->data.ascii;
+@@ -2539,7 +2539,7 @@ config_embl(ESL_SQFILE *sqfp)
+   ascii->parse_end         = &end_embl;
+ }
+ 
+-static void
++void
+ inmap_embl(ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap)
+ {
+   int x;
+@@ -2586,7 +2586,7 @@ inmap_embl(ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap)
+  * 
+  * May also throw <eslEMEM> on allocation errors.
+  */
+-static int
++int
+ header_embl(ESL_SQFILE *sqfp, ESL_SQ *sq)
+ {
+   char *s;
+@@ -2710,7 +2710,7 @@ header_embl(ESL_SQFILE *sqfp, ESL_SQ *sq)
+  * 
+  * May also throw <eslEMEM> on allocation errors.
+  */
+-static int
++int
+ skip_embl(ESL_SQFILE *sqfp, ESL_SQ *sq)
+ {
+   int   status;
+@@ -2749,7 +2749,7 @@ skip_embl(ESL_SQFILE *sqfp, ESL_SQ *sq)
+   return eslOK;
+ }
+   
+-static int
++int
+ end_embl(ESL_SQFILE *sqfp, ESL_SQ *sq)
+ {
+   int status;
+@@ -2776,7 +2776,7 @@ end_embl(ESL_SQFILE *sqfp, ESL_SQ *sq)
+  * ftp://ftp.ncbi.nih.gov/genbank/gbrel.txt
+  */
+ 
+-static void
++void
+ config_genbank(ESL_SQFILE *sqfp)
+ {
+   ESL_SQASCII_DATA *ascii = &sqfp->data.ascii;
+@@ -2788,7 +2788,7 @@ config_genbank(ESL_SQFILE *sqfp)
+   ascii->parse_end         = &end_genbank;
+ }
+ 
+-static void
++void
+ inmap_genbank(ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap)
+ {
+   int x;
+@@ -2831,7 +2831,7 @@ inmap_genbank(ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap)
+  * 
+  * May also throw <eslEMEM> on allocation errors.
+  */
+-static int
++int
+ header_genbank(ESL_SQFILE *sqfp, ESL_SQ *sq)
+ {
+   char *s;
+@@ -2896,7 +2896,7 @@ header_genbank(ESL_SQFILE *sqfp, ESL_SQ *sq)
+  * 
+  * May also throw <eslEMEM> on allocation errors.
+  */
+-static int
++int
+ skip_genbank(ESL_SQFILE *sqfp, ESL_SQ *sq)
+ {
+   int   status;
+@@ -2928,7 +2928,7 @@ skip_genbank(ESL_SQFILE *sqfp, ESL_SQ *sq)
+   return eslOK;
+ }
+   
+-static int
++int
+ end_genbank(ESL_SQFILE *sqfp, ESL_SQ *sq)
+ {
+   int status;
+@@ -2950,7 +2950,7 @@ end_genbank(ESL_SQFILE *sqfp, ESL_SQ *sq)
+  *#  9. Internal routines for FASTA format
+  *****************************************************************/
+ 
+-static void
++void
+ config_fasta(ESL_SQFILE *sqfp)
+ {
+   ESL_SQASCII_DATA *ascii = &sqfp->data.ascii;
+@@ -2962,7 +2962,7 @@ config_fasta(ESL_SQFILE *sqfp)
+   ascii->parse_end    = &end_fasta;
+ }
+ 
+-static void
++void
+ inmap_fasta(ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap)
+ {
+   int x;
+@@ -3005,7 +3005,7 @@ inmap_fasta(ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap)
+  *    
+  * May also throw <eslEMEM> on allocation errors.
+  */
+-static int
++int
+ header_fasta(ESL_SQFILE *sqfp, ESL_SQ *sq)
+ {
+   char  c;
+@@ -3090,7 +3090,7 @@ header_fasta(ESL_SQFILE *sqfp, ESL_SQ *sq)
+  *    
+  * May also throw <eslEMEM> on allocation errors.
+  */
+-static int
++int
+ skip_fasta(ESL_SQFILE *sqfp, ESL_SQ *sq)
+ {
+   char  c;
+@@ -3129,7 +3129,7 @@ skip_fasta(ESL_SQFILE *sqfp, ESL_SQ *sq)
+ }
+ 
+ 
+-static int 
++int 
+ end_fasta(ESL_SQFILE *sqfp, ESL_SQ *sq)
+ {
+   ESL_SQASCII_DATA *ascii = &sqfp->data.ascii;
+@@ -3194,7 +3194,7 @@ esl_sqascii_WriteFasta(FILE *fp, ESL_SQ *sq, int save_offsets)
+  * an option, since the daemon might run continuously.
+  */
+ 
+-static void
++void
+ config_daemon(ESL_SQFILE *sqfp)
+ {
+   ESL_SQASCII_DATA *ascii = &sqfp->data.ascii;
+@@ -3206,7 +3206,7 @@ config_daemon(ESL_SQFILE *sqfp)
+   ascii->parse_end    = &end_daemon;
+ }
+ 
+-static void
++void
+ inmap_daemon(ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap)
+ {
+   int x;
+@@ -3236,7 +3236,7 @@ inmap_daemon(ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap)
+  * The use case is were the sequences are being read from a pipe and a
+  * way is needed to signal the end of the sequence so it can be processed.
+  */
+-static int 
++int 
+ end_daemon(ESL_SQFILE *sqfp, ESL_SQ *sq)
+ {
+   char  c;
+@@ -3375,7 +3375,7 @@ esl_sqascii_Parse(char *buf, int size, ESL_SQ *sq, int format)
+  *# 11. Internal routines for HMMPGMD format
+  *****************************************************************/
+ 
+-static int
++int
+ fileheader_hmmpgmd(ESL_SQFILE *sqfp)
+ {
+   ESL_SQASCII_DATA *ascii = &sqfp->data.ascii;

@@ -1,3 +1,5 @@
+# --- Handle config.h generation *a la* ./configure ----------------------------
+
 include(CheckIncludeFile)
 include(CheckFunctionExists)
 
@@ -46,8 +48,18 @@ message(DEBUG "-- Dumping esl_config.h --")
 message(DEBUG "${ESL_CONFIG_H}")
 message(DEBUG "-- End esl_config.h --")
 
-set(
-    EASEL_SOURCES
+set(EASEL_PATCHED_SOURCES
+    ${EASEL_PATCHED_SOURCES}
+    ${CMAKE_CURRENT_BINARY_DIR}/config.h
+)
+
+# --- Manually declare required sources only -----------------------------------
+
+set(EASEL_SOURCE_DIR
+    "${PROJECT_SOURCE_DIR}/vendor/easel"
+)
+
+set(EASEL_SOURCES
     easel.c
     esl_alloc.c
     esl_alphabet.c
@@ -114,7 +126,7 @@ set(
     esl_rootfinder.c
     esl_scorematrix.c
     esl_sq.c
-    esl_sqio_ascii.full.c
+    esl_sqio_ascii.c
     esl_sqio.c
     esl_sqio_ncbi.c
     esl_sse.c
@@ -137,9 +149,7 @@ set(
     interface_lapack.c
 )
 
-set(
-    EASEL_HEADERS
-    ${CMAKE_CURRENT_BINARY_DIR}/esl_config.h
+set(EASEL_HEADERS
     easel.h
     esl_alloc.h
     esl_alphabet.h
@@ -228,13 +238,73 @@ set(
     interface_lapack.h
 )
 
-add_library(libeasel ${EASEL_SOURCES} ${EASEL_HEADERS})
+# --- Copy/patch source files if needed ----------------------------------------
+
+foreach(_file IN ITEMS ${EASEL_SOURCES} ${EASEL_HEADERS})
+    if(EXISTS ${PROJECT_SOURCE_DIR}/patches/${_file}.patch)
+        if(NOT EXISTS ${EASEL_SOURCE_DIR}/${_file})
+            add_custom_command(
+                OUTPUT
+                    ${_file}
+                COMMENT
+                    "Creating ${_file}"
+                COMMAND
+                    cmake -E touch ${CMAKE_CURRENT_BINARY_DIR}/empty.txt
+                COMMAND
+                    ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/src/scripts/apply_patch.py
+                        --input ${CMAKE_CURRENT_BINARY_DIR}/empty.txt
+                        --patch ${PROJECT_SOURCE_DIR}/patches/${_file}.patch
+                        --output ${CMAKE_CURRENT_BINARY_DIR}/${_file}
+                DEPENDS
+                    ${PROJECT_SOURCE_DIR}/patches/${_file}.patch
+            )
+        else()
+            add_custom_command(
+                OUTPUT
+                    ${_file}
+                COMMENT
+                    "Patching ${_file}"
+                COMMAND
+                    ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/src/scripts/apply_patch.py
+                        --input ${EASEL_SOURCE_DIR}/${_file}
+                        --patch ${PROJECT_SOURCE_DIR}/patches/${_file}.patch
+                        --output ${CMAKE_CURRENT_BINARY_DIR}/${_file}
+                DEPENDS
+                    ${EASEL_SOURCE_DIR}/${_file}
+                    ${PROJECT_SOURCE_DIR}/patches/${_file}.patch
+            )
+        endif()
+    else()
+        add_custom_command(
+            OUTPUT
+                ${_file}
+            COMMAND
+                cmake -E copy ${EASEL_SOURCE_DIR}/${_file} ${CMAKE_CURRENT_BINARY_DIR}/${_file}
+            DEPENDS
+                ${EASEL_SOURCE_DIR}/${_file}
+        )
+    endif()
+    set(EASEL_PATCHED_SOURCES ${EASEL_PATCHED_SOURCES} ${CMAKE_CURRENT_BINARY_DIR}/${_file})
+endforeach()
+
+# --- Build libeasel with copied/patched sources -------------------------------
+
+add_library(libeasel ${EASEL_PATCHED_SOURCES})
 target_include_directories(libeasel PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(libeasel PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
+# --- Install shared libraries & headers if required ---------------------------
+
 if(DEFINED PYHMMER_INSTALL_LIBS_DIR)
-  install(TARGETS libeasel DESTINATION "${SKBUILD_PLATLIB_DIR}/${PYHMMER_INSTALL_LIBS_DIR}")
-  cmake_path(APPEND SKBUILD_PLATLIB_DIR "${PYHMMER_INSTALL_LIBS_DIR}" "include" "libeasel" OUTPUT_VARIABLE INCLUDE_DEST_FOLDER)
-  install(FILES ${EASEL_HEADERS} DESTINATION "${INCLUDE_DEST_FOLDER}")
-  set_target_properties(libeasel PROPERTIES INSTALL_RPATH "\$ORIGIN/.")
-endif()
+    install(TARGETS libeasel DESTINATION "${SKBUILD_PLATLIB_DIR}/${PYHMMER_INSTALL_LIBS_DIR}")
+    set_target_properties(libeasel PROPERTIES INSTALL_RPATH "\$ORIGIN/.")
+    cmake_path(APPEND SKBUILD_PLATLIB_DIR "${PYHMMER_INSTALL_LIBS_DIR}" "include" "libeasel" OUTPUT_VARIABLE INCLUDE_DEST_FOLDER)
+    foreach(_file IN ITEMS ${INFERNAL_PATCHED_SOURCES})
+        cmake_path(GET _file EXTENSION LAST_ONLY _ext)
+        if(_ext STREQUAL ".h")
+            cmake_path(RELATIVE_PATH _file BASE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" OUTPUT_VARIABLE _local)
+            cmake_path(GET _local PARENT_PATH _dest)
+            install(FILES "${_file}" DESTINATION "${INCLUDE_DEST_FOLDER}/${_dest}")
+        endif()
+    endforeach()
+  endif()
