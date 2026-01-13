@@ -191,6 +191,31 @@ cdef class Alphabet:
 
     # --- Default constructors -----------------------------------------------
 
+    @staticmethod
+    cdef Alphabet from_ptr(ESL_ALPHABET* _abc):
+        assert _abc != NULL
+        cdef Alphabet alphabet
+        if _abc.type == libeasel.alphabet.eslDNA:
+            alphabet = DNA.__new__(DNA)
+        elif _abc.type == libeasel.alphabet.eslRNA:
+            alphabet = RNA.__new__(RNA)
+        elif _abc.type == libeasel.alphabet.eslAMINO:
+            alphabet = AA.__new__(AA)
+        else:
+            alphabet = Alphabet.__new__(Alphabet)
+        alphabet._abc = _abc
+        return alphabet
+
+    @staticmethod
+    cdef Alphabet from_type(int ty):
+        cdef ESL_ALPHABET* abc
+        if ty < 0 or ty > 6:
+            raise ValueError("invalid ESL_ALPHABET type: {ty!r}")
+        abc = libeasel.alphabet.esl_alphabet_Create(ty)
+        if not abc:
+            raise AllocationError("ESL_ALPHABET", sizeof(ESL_ALPHABET))
+        return Alphabet.from_ptr(abc)
+
     cdef int _init_default(self, int ty) except 1 nogil:
         if self._abc != NULL:
             libeasel.alphabet.esl_alphabet_Destroy(self._abc)
@@ -234,19 +259,12 @@ cdef class Alphabet:
         cdef type   ty   = type(self)
         cdef str    name = ty.__name__
 
-        if self._abc.type == libeasel.alphabet.eslRNA:
-            return f"{name}.rna()"
-        elif self._abc.type == libeasel.alphabet.eslDNA:
-            return f"{name}.dna()"
-        elif self._abc.type == libeasel.alphabet.eslAMINO:
-            return f"{name}.amino()"
-        else:
-            return "{}({!r}, K={!r}, Kp={!r})".format(
-                name,
-                self._abc.sym.decode('ascii'),
-                self._abc.K,
-                self._abc.Kp
-            )
+        return "{}({!r}, K={!r}, Kp={!r})".format(
+            name,
+            self._abc.sym.decode('ascii'),
+            self._abc.K,
+            self._abc.Kp
+        )
 
     def __eq__(self, object other):
         assert self._abc != NULL
@@ -6001,22 +6019,19 @@ cdef class MSAFile:
         Example:
             >>> with MSAFile("tests/data/msa/LuxC.sto") as mf:
             ...     mf.guess_alphabet()
-            Alphabet.amino()
+            AA()
 
         """
-        cdef int      ty
-        cdef int      status
-        cdef Alphabet alphabet
-        cdef str      msg
+        cdef int ty
+        cdef int status
+        cdef str msg
 
         if self._msaf == NULL:
             raise ValueError("I/O operation on closed file.")
 
         status = libeasel.msafile.esl_msafile_GuessAlphabet(self._msaf, &ty)
         if status == libeasel.eslOK:
-            alphabet = Alphabet.__new__(Alphabet)
-            alphabet._init_default(ty)
-            return alphabet
+            return Alphabet.from_type(ty)
         elif status == libeasel.eslENOALPHABET or status == libeasel.eslEOD:
             return None
         elif status == libeasel.eslENODATA:
@@ -8395,17 +8410,16 @@ cdef class SequenceFile:
         Example:
             >>> with SequenceFile("tests/data/seqs/bmyD.fna") as sf:
             ...     sf.guess_alphabet()
-            Alphabet.dna()
+            DNA()
             >>> with SequenceFile("tests/data/seqs/LuxC.faa") as sf:
             ...     sf.guess_alphabet()
-            Alphabet.amino()
+            AA()
 
         .. versionadded:: 0.6.3
 
         """
         cdef int         ty
         cdef int         status
-        cdef Alphabet    alphabet
         cdef const char* errbuf
         cdef str         msg
 
@@ -8414,9 +8428,7 @@ cdef class SequenceFile:
 
         status = libeasel.sqio.esl_sqfile_GuessAlphabet(self._sqfp, &ty)
         if status == libeasel.eslOK:
-            alphabet = Alphabet.__new__(Alphabet)
-            alphabet._init_default(ty)
-            return alphabet
+            return Alphabet.from_type(ty)
         elif status == libeasel.eslENOALPHABET or status == libeasel.eslEOD:
             return None
         elif status == libeasel.eslENODATA:

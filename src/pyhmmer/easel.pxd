@@ -25,6 +25,11 @@ from libeasel cimport ESL_DSQ
 cdef class Alphabet:
     cdef ESL_ALPHABET* _abc
 
+    @staticmethod
+    cdef Alphabet from_ptr(ESL_ALPHABET* _abc)
+    @staticmethod
+    cdef Alphabet from_type(int ty)
+
     cdef int _init_default(self, int ty) except 1 nogil
     cdef inline bint _eq(self, Alphabet other) nogil
 
