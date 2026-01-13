@@ -331,14 +331,14 @@ class _BaseWorker(typing.Generic[_Q, _T, _R]):
     @abc.abstractmethod
     def query(self, query: _Q) -> _R:
         """Run a single query against the target database."""
-        return NotImplemented
+        raise NotImplementedError
 
 
 # --- Dispatcher ---------------------------------------------------------------
 
 # dummy multiprocessing.Value to use in single-threaded mode
 class _Value:
-    def __init__(self):
+    def __init__(self) -> None:
         self.value = 0
 
 class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
@@ -379,7 +379,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
         query_count: "multiprocessing.Value[int]",  # type: ignore
         kill_switch: threading.Event,
     ) -> _BaseWorker[_Q, _T, _R]:
-        return NotImplemented
+        raise NotImplementedError
 
     def _new_chore(
         self,
@@ -466,7 +466,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
                     query_queue.put(None)
                 # wait for final workers
                 for worker in workers:
-                    worker.join()
+                    worker.join()  # type: ignore
                 if self.backend == "multiprocessing":
                     worker.query_queue.close()
                     worker.query_queue.join_thread()
@@ -483,7 +483,7 @@ class _BaseDispatcher(typing.Generic[_Q, _T, _R], abc.ABC):
                 except queue.Full:
                     pass
                 for worker in workers:
-                    worker.join()
+                    worker.join()  # type: ignore
                     if self.backend == "multiprocessing":
                         worker.query_queue.close()
                 raise e
