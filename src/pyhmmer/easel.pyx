@@ -8684,7 +8684,7 @@ cdef class SSIReader:
         else:
             raise UnexpectedError(status, "esl_ssi_FileInfo")
 
-    def find_name(self, bytes key):
+    def find_name(self, str key):
         """Retrieve the `~pyhmmer.easel.SSIReader.Entry` for the given name.
         """
         cdef uint16_t ret_fh
@@ -8697,9 +8697,13 @@ cdef class SSIReader:
             raise ValueError("I/O operation on closed file.")
 
         status = libeasel.ssi.esl_ssi_FindName(
-            self._ssi, key, &ret_fh, &ret_roff, &opt_doff, &opt_L
+            self._ssi, 
+            PyUnicode_AsUTF8(key), 
+            &ret_fh, 
+            &ret_roff, 
+            &opt_doff, 
+            &opt_L
         )
-
         if status == libeasel.eslOK:
             return self.Entry(ret_fh, ret_roff, opt_doff or None, opt_L or None)
         elif status == libeasel.eslENOTFOUND:
@@ -8806,7 +8810,7 @@ cdef class SSIWriter:
 
     cpdef void add_key(
         self,
-        bytes key,
+        str key,
         uint16_t fd,
         off_t record_offset,
         off_t data_offset = 0,
@@ -8818,9 +8822,13 @@ cdef class SSIWriter:
 
         self._on_write()
         status = libeasel.ssi.esl_newssi_AddKey(
-            self._newssi, key, fd, record_offset, data_offset, record_length
+            self._newssi, 
+            PyUnicode_AsUTF8(key), 
+            fd, 
+            record_offset, 
+            data_offset, 
+            record_length
         )
-
         if status == libeasel.eslERANGE:
             raise ValueError("Too many primary keys registered in index.")
         elif status == libeasel.eslENOTFOUND:
@@ -8829,13 +8837,17 @@ cdef class SSIWriter:
             _reraise_error()
             raise UnexpectedError(status, "esl_newssi_AddKey")
 
-    cpdef void add_alias(self, bytes alias, bytes key) except *:
+    cpdef void add_alias(self, str alias, str key) except *:
         """Make ``alias`` an alias of ``key`` in the index.
         """
         cdef int status
 
         self._on_write()
-        status = libeasel.ssi.esl_newssi_AddAlias(self._newssi, alias, key)
+        status = libeasel.ssi.esl_newssi_AddAlias(
+            self._newssi, 
+            PyUnicode_AsUTF8(alias), 
+            PyUnicode_AsUTF8(key),
+        )
         if status == libeasel.eslOK:
             return
         elif status == libeasel.eslERANGE:

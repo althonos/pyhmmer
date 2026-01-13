@@ -923,11 +923,11 @@ class SSIWriter(object):
         exc_value: typing.Optional[BaseException],
         traceback: typing.Optional[types.TracebackType],
     ) -> bool: ...
-    def add_alias(self, alias: bytes, key: bytes) -> None: ...
+    def add_alias(self, alias: str, key: str) -> None: ...
     def add_file(self, filename: str, format: int = 0) -> int: ...
     def add_key(
         self,
-        key: bytes,
+        key: str,
         fd: int,
         record_offset: int,
         data_offset: int = 0,
