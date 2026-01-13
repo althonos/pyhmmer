@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "pyhmmer"
-version = "0.11.4"
+version = "0.12.0-alpha.2"
 description = "Cython bindings and Python interface to HMMER3."
 readme = "README.md"
 requires-python = ">=3.7"
@@ -118,8 +118,8 @@ sdist.exclude = [
 plugins = ["Cython.Coverage"]
 
 [tool.cibuildwheel]
-before-build = "pip install scikit-build-core cython"
-build-frontend = { name = "pip", args = ["--no-build-isolation"] }
+before-build = "pip install scikit-build-core cython ninja"
+build-frontend = { name = "build", args = ["--no-isolation"] }
 build-verbosity = 1
 test-command = "python -m unittest pyhmmer.tests -v"
 test-extras = ["test"]
