@@ -1,0 +1,58 @@
+diff --git a/src/p7_hmmfile.c b/src/p7_hmmfile.c
+index f039a18d..62ea982b 100644
+--- a/src/p7_hmmfile.c
++++ b/src/p7_hmmfile.c
+@@ -44,17 +44,17 @@ static uint32_t  v20magic = 0xe8ededb5; /* V2.0 binary: "hmm5" + 0x80808080 */
+ static uint32_t  v20swap  = 0xb5edede8; /* V2.0 binary, byteswapped         */
+ #endif
+ 
+-static uint32_t  v3a_magic = 0xe8ededb6; /* 3/a binary: "hmm6" + 0x80808080 */
+-static uint32_t  v3b_magic = 0xe8ededb7; /* 3/b binary: "hmm7" + 0x80808080 */
+-static uint32_t  v3c_magic = 0xe8ededb8; /* 3/c binary: "hmm8" + 0x80808080 */
+-static uint32_t  v3d_magic = 0xe8ededb9; /* 3/d binary: "hmm9" + 0x80808080 */
+-static uint32_t  v3e_magic = 0xe8ededb0; /* 3/e binary: "hmm0" + 0x80808080 */
+-static uint32_t  v3f_magic = 0xe8ededba; /* 3/f binary: "hmma" + 0x80808080 */
++uint32_t  v3a_magic = 0xe8ededb6; /* 3/a binary: "hmm6" + 0x80808080 */
++uint32_t  v3b_magic = 0xe8ededb7; /* 3/b binary: "hmm7" + 0x80808080 */
++uint32_t  v3c_magic = 0xe8ededb8; /* 3/c binary: "hmm8" + 0x80808080 */
++uint32_t  v3d_magic = 0xe8ededb9; /* 3/d binary: "hmm9" + 0x80808080 */
++uint32_t  v3e_magic = 0xe8ededb0; /* 3/e binary: "hmm0" + 0x80808080 */
++uint32_t  v3f_magic = 0xe8ededba; /* 3/f binary: "hmma" + 0x80808080 */
+ 
+ 
+-static int read_asc30hmm(P7_HMMFILE *hfp, ESL_ALPHABET **ret_abc, P7_HMM **opt_hmm);
+-static int read_bin30hmm(P7_HMMFILE *hfp, ESL_ALPHABET **ret_abc, P7_HMM **opt_hmm);
+-static int read_asc20hmm(P7_HMMFILE *hfp, ESL_ALPHABET **ret_abc, P7_HMM **opt_hmm);
++extern int read_asc30hmm(P7_HMMFILE *hfp, ESL_ALPHABET **ret_abc, P7_HMM **opt_hmm);
++extern int read_bin30hmm(P7_HMMFILE *hfp, ESL_ALPHABET **ret_abc, P7_HMM **opt_hmm);
++extern int read_asc20hmm(P7_HMMFILE *hfp, ESL_ALPHABET **ret_abc, P7_HMM **opt_hmm);
+ 
+ static int   write_bin_string(FILE *fp, char *s);
+ static int   read_bin_string (FILE *fp, char **ret_s);
+@@ -1241,7 +1241,7 @@ p7_hmmfile_Position(P7_HMMFILE *hfp, const off_t offset)
+  *             is left in its original state as passed by the caller, and <*ret_hmm> is
+  *             returned <NULL>.
+  */
+-static int
++int
+ read_asc30hmm(P7_HMMFILE *hfp, ESL_ALPHABET **ret_abc, P7_HMM **opt_hmm)
+ {
+   ESL_ALPHABET *abc  = NULL;
+@@ -1581,7 +1581,7 @@ read_asc30hmm(P7_HMMFILE *hfp, ESL_ALPHABET **ret_abc, P7_HMM **opt_hmm)
+ }
+ 
+ 
+-static int
++int
+ read_bin30hmm(P7_HMMFILE *hfp, ESL_ALPHABET **ret_abc, P7_HMM **opt_hmm)
+ {
+   ESL_ALPHABET *abc = NULL;
+@@ -1703,7 +1703,7 @@ read_bin30hmm(P7_HMMFILE *hfp, ESL_ALPHABET **ret_abc, P7_HMM **opt_hmm)
+  * Read a HMMER2.0 ASCII format HMM file, for backward compatibility
+  * SRE, Thu Dec 25 09:13:36 2008 [Magallon]
+  */
+-static int
++int
+ read_asc20hmm(P7_HMMFILE *hfp, ESL_ALPHABET **ret_abc, P7_HMM **opt_hmm)
+ {
+   ESL_ALPHABET *abc  = NULL;

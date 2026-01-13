@@ -1,0 +1,30 @@
+diff --git a/src/hmmer.h b/src/hmmer.h
+index 7cbd902e..54ae1c65 100644
+--- a/src/hmmer.h
++++ b/src/hmmer.h
+@@ -1609,6 +1609,17 @@ extern int  p7_hmmfile_Read(P7_HMMFILE *hfp, ESL_ALPHABET **ret_abc,  P7_HMM **o
+ extern int  p7_hmmfile_PositionByKey(P7_HMMFILE *hfp, const char *key);
+ extern int  p7_hmmfile_Position(P7_HMMFILE *hfp, const off_t offset);
+ 
++extern uint32_t v3a_magic;
++extern uint32_t v3b_magic;
++extern uint32_t v3c_magic;
++extern uint32_t v3d_magic;
++extern uint32_t v3e_magic;
++extern uint32_t v3f_magic;
++
++extern int read_asc20hmm(P7_HMMFILE* hfp, ESL_ALPHABET** ret_abc, P7_HMM** opt_hmm);
++extern int read_asc30hmm(P7_HMMFILE* hfp, ESL_ALPHABET** ret_abc, P7_HMM** opt_hmm);
++extern int read_bin30hmm(P7_HMMFILE* hfp, ESL_ALPHABET** ret_abc, P7_HMM** opt_hmm);
++
+ 
+ /* p7_hmmwindow.c */
+ int p7_hmmwindow_init (P7_HMM_WINDOWLIST *list);
+@@ -1694,6 +1705,7 @@ extern void    p7_spensemble_Destroy(P7_SPENSEMBLE *sp);
+ 
+ /* p7_tophits.c */
+ extern P7_TOPHITS *p7_tophits_Create(void);
++extern int p7_tophits_Reuse(P7_TOPHITS* h);
+ extern int         p7_tophits_Grow(P7_TOPHITS *h);
+ extern P7_TOPHITS *p7_tophits_Clone(const P7_TOPHITS *h);
+ extern int         p7_tophits_CreateNextHit(P7_TOPHITS *h, P7_HIT **ret_hit);
