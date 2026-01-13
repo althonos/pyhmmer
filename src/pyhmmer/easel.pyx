@@ -203,25 +203,19 @@ cdef class Alphabet:
     def amino(cls):
         """Create a default amino-acid alphabet.
         """
-        cdef Alphabet alphabet = Alphabet.__new__(Alphabet)
-        alphabet._init_default(libeasel.alphabet.eslAMINO)
-        return alphabet
+        return AA()
 
     @classmethod
     def dna(cls):
         """Create a default DNA alphabet.
         """
-        cdef Alphabet alphabet = Alphabet.__new__(Alphabet)
-        alphabet._init_default(libeasel.alphabet.eslDNA)
-        return alphabet
+        return DNA()
 
     @classmethod
     def rna(cls):
         """Create a default RNA alphabet.
         """
-        cdef Alphabet alphabet = Alphabet.__new__(Alphabet)
-        alphabet._init_default(libeasel.alphabet.eslRNA)
-        return alphabet
+        return RNA()
 
     def __init__(self):
         raise TypeError("Cannot instantiate an alphabet directly")
@@ -467,6 +461,31 @@ cdef class Alphabet:
                 raise ValueError(f"Invalid alphabet character in digital sequence: {x}")
 
         return decoded
+
+
+cdef class DNA(Alphabet):
+
+    def __init__(self):
+        self._init_default(libeasel.alphabet.eslDNA)
+
+    def __repr__(self):
+        return "DNA()"
+
+cdef class RNA(Alphabet):
+
+    def __init__(self):
+        self._init_default(libeasel.alphabet.eslRNA)
+
+    def __repr__(self):
+        return "RNA()"
+
+cdef class AA(Alphabet):
+
+    def __init__(self):
+        self._init_default(libeasel.alphabet.eslAMINO)
+
+    def __repr__(self):
+        return "AA()"
 
 
 # --- GeneticCode ------------------------------------------------------------
@@ -1026,7 +1045,7 @@ cdef class KeyHash:
             return False
 
         cdef       int     status
-        cdef       ssize_t length 
+        cdef       ssize_t length
         cdef const char*   key
 
         key = PyUnicode_AsUTF8AndSize(value, &length)
@@ -1045,7 +1064,7 @@ cdef class KeyHash:
         cdef       int     status
         cdef       int     index
         cdef       ssize_t length
-        cdef const char*   key    
+        cdef const char*   key
 
         key = PyUnicode_AsUTF8AndSize(item, &length)
         with nogil:
@@ -1174,7 +1193,7 @@ cdef class KeyHash:
 
         cdef       int     status
         cdef       int     index
-        cdef const char*   k 
+        cdef const char*   k
         cdef       ssize_t length
 
         k = PyUnicode_AsUTF8AndSize(key, &length)
@@ -4878,16 +4897,16 @@ cdef class TextMSA(MSA):
         Create a new text-mode alignment with the given ``sequences``.
 
         Keyword Arguments:
-            name (`str` or `bytes`, optional): The name of the alignment, 
+            name (`str` or `bytes`, optional): The name of the alignment,
                 if any.
             description (`str` or `bytes`, optional): The description of the
                 alignment, if any.
-            accession (`str` or `bytes`, optional): The accession of the 
+            accession (`str` or `bytes`, optional): The accession of the
                 alignment, if any.
             sequences (collection of `TextSequence`): The sequences to store
                 in the multiple sequence alignment. All sequences must have
                 the same length. They also need to have distinct names.
-            author (`str` or `bytes`, optional): The author of the alignment, 
+            author (`str` or `bytes`, optional): The author of the alignment,
                 often used to record the aligner it was created with.
 
         Raises:
@@ -6310,7 +6329,7 @@ cdef class Sequence:
 
         .. versionchanged:: 0.12.0
             Property is now a `str` instead of `bytes`.
-            
+
         """
         assert self._sq != NULL
         return _get_str(self._sq.name)
@@ -6330,7 +6349,7 @@ cdef class Sequence:
 
         .. versionchanged:: 0.12.0
             Property is now a `str` instead of `bytes`.
-            
+
         """
         assert self._sq != NULL
         return _get_str(self._sq.desc)
@@ -6350,7 +6369,7 @@ cdef class Sequence:
 
         .. versionchanged:: 0.12.0
             Property is now a `str` instead of `bytes`.
-            
+
         """
         assert self._sq != NULL
         return _get_str(self._sq.source)
@@ -7139,7 +7158,7 @@ class _SequenceBlockIndex(collections.abc.Mapping):
 
     def __getitem__(self, str item):
         cdef int           status
-        cdef const char*   key    
+        cdef const char*   key
         cdef ssize_t       length = 1
         cdef int           index  = -1
         cdef SequenceBlock block  = self.block
@@ -8697,11 +8716,11 @@ cdef class SSIReader:
             raise ValueError("I/O operation on closed file.")
 
         status = libeasel.ssi.esl_ssi_FindName(
-            self._ssi, 
-            PyUnicode_AsUTF8(key), 
-            &ret_fh, 
-            &ret_roff, 
-            &opt_doff, 
+            self._ssi,
+            PyUnicode_AsUTF8(key),
+            &ret_fh,
+            &ret_roff,
+            &opt_doff,
             &opt_L
         )
         if status == libeasel.eslOK:
@@ -8822,11 +8841,11 @@ cdef class SSIWriter:
 
         self._on_write()
         status = libeasel.ssi.esl_newssi_AddKey(
-            self._newssi, 
-            PyUnicode_AsUTF8(key), 
-            fd, 
-            record_offset, 
-            data_offset, 
+            self._newssi,
+            PyUnicode_AsUTF8(key),
+            fd,
+            record_offset,
+            data_offset,
             record_length
         )
         if status == libeasel.eslERANGE:
@@ -8844,8 +8863,8 @@ cdef class SSIWriter:
 
         self._on_write()
         status = libeasel.ssi.esl_newssi_AddAlias(
-            self._newssi, 
-            PyUnicode_AsUTF8(alias), 
+            self._newssi,
+            PyUnicode_AsUTF8(alias),
             PyUnicode_AsUTF8(key),
         )
         if status == libeasel.eslOK:

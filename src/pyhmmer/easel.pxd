@@ -35,6 +35,14 @@ cdef class Alphabet:
     cpdef VectorU8 encode(self, str sequence)
     cpdef str decode(self, const ESL_DSQ[::1] sequence)
 
+cdef class DNA(Alphabet):
+    pass
+
+cdef class RNA(Alphabet):
+    pass
+
+cdef class AA(Alphabet):
+    pass
 
 # --- GeneticCode ------------------------------------------------------------
 
