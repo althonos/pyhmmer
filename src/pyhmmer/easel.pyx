@@ -318,7 +318,7 @@ cdef class Alphabet:
 
         """
         assert self._abc != NULL
-        return PyUnicode_FromStringAndSize(self._abc.sym, self._abc.Kp)
+        return PyUnicode_DecodeASCII(self._abc.sym, self._abc.Kp, NULL)
 
     @property
     def type(self):
@@ -4855,7 +4855,7 @@ class _TextMSAAlignment(_MSAAlignment):
         if idx >= msa._msa.nseq or idx < 0:
             raise IndexError("list index out of range")
 
-        return PyUnicode_FromStringAndSize(msa._msa.aseq[idx], msa._msa.alen)
+        return PyUnicode_DecodeASCII(msa._msa.aseq[idx], msa._msa.alen, NULL)
 
 
 cdef class TextMSA(MSA):

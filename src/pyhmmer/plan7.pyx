@@ -407,7 +407,7 @@ cdef class Alignment:
         """`str`: The sequence of the query HMM in the alignment.
         """
         assert self._ad != NULL
-        return self._ad.model.decode('ascii')  # FIXME
+        return PyUnicode_DecodeASCII(self._ad.model, self._ad.N, NULL)
 
     @property
     def hmm_length(self):
@@ -426,7 +426,7 @@ cdef class Alignment:
 
         """
         assert self._ad != NULL
-        return self._ad.ppline.decode('ascii')  # FIXME
+        return PyUnicode_DecodeASCII(self._ad.ppline, self._ad.N, NULL)
 
 
     @property
@@ -453,7 +453,7 @@ cdef class Alignment:
         """`str`: The sequence of the target sequence in the alignment.
         """
         assert self._ad != NULL
-        return self._ad.aseq.decode('ascii')  # FIXME
+        return PyUnicode_DecodeASCII(self._ad.aseq, self._ad.N, NULL)
 
     @property
     def target_to(self):
@@ -476,7 +476,7 @@ cdef class Alignment:
         """`str`: The identity sequence between the query and the target.
         """
         assert self._ad != NULL
-        return self._ad.mline.decode('ascii')  # FIXME
+        return PyUnicode_DecodeASCII(self._ad.mline, self._ad.N, NULL)
 
 
 cdef class Background:
@@ -2735,7 +2735,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CONS):
             return None
         assert self._hmm.consensus != NULL
-        return PyUnicode_FromStringAndSize(&self._hmm.consensus[1], self._hmm.M)
+        return PyUnicode_DecodeASCII(&self._hmm.consensus[1], self._hmm.M, NULL)
 
     @consensus.setter
     def consensus(self, str consensus):
@@ -2752,7 +2752,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CS):
             return None
         assert self._hmm.cs != NULL
-        return PyUnicode_FromStringAndSize(&self._hmm.cs[1], self._hmm.M)
+        return PyUnicode_DecodeASCII(&self._hmm.cs[1], self._hmm.M, NULL)
 
     @consensus_structure.setter
     def consensus_structure(self, str cs):
@@ -2769,7 +2769,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_CA):
             return None
         assert self._hmm.ca != NULL
-        return PyUnicode_FromStringAndSize(&self._hmm.ca[1], self._hmm.M)
+        return PyUnicode_DecodeASCII(&self._hmm.ca[1], self._hmm.M, NULL)
 
     @consensus_accessibility.setter
     def consensus_accessibility(self, str ca):
@@ -2790,7 +2790,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_RF):
             return None
         assert self._hmm.rf != NULL
-        return PyUnicode_FromStringAndSize(&self._hmm.rf[1], self._hmm.M)
+        return PyUnicode_DecodeASCII(&self._hmm.rf[1], self._hmm.M, NULL)
 
     @reference.setter
     def reference(self, str rf):
@@ -2807,7 +2807,7 @@ cdef class HMM:
         if not (self._hmm.flags & libhmmer.p7_hmm.p7H_MM):
             return None
         assert self._hmm.mm != NULL
-        return PyUnicode_FromStringAndSize(&self._hmm.mm[1], self._hmm.M)
+        return PyUnicode_DecodeASCII(&self._hmm.mm[1], self._hmm.M, NULL)
 
     @model_mask.setter
     def model_mask(self, str mm):
@@ -4312,7 +4312,7 @@ cdef class OptimizedProfile:
         assert self._om != NULL
         if self._om.consensus[0] == b'\0':
             return None
-        return PyUnicode_FromStringAndSize(&self._om.consensus[1], self._om.M)
+        return PyUnicode_DecodeASCII(&self._om.consensus[1], self._om.M, NULL)
 
     @property
     def consensus_structure(self):
@@ -4324,7 +4324,7 @@ cdef class OptimizedProfile:
         assert self._om != NULL
         if self._om.cs[0] == b'\0':
             return None
-        return PyUnicode_FromStringAndSize(&self._om.cs[1], self._om.M)
+        return PyUnicode_DecodeASCII(&self._om.cs[1], self._om.M, NULL)
 
     @property
     def reference(self):
@@ -4341,7 +4341,7 @@ cdef class OptimizedProfile:
         assert self._om.rf != NULL
         if self._om.rf[0] == b'\0':
             return None
-        return PyUnicode_FromStringAndSize(&self._om.rf[1], self._om.M)
+        return PyUnicode_DecodeASCII(&self._om.rf[1], self._om.M, NULL)
 
     @property
     def model_mask(self):
@@ -4354,7 +4354,7 @@ cdef class OptimizedProfile:
         assert self._om.mm != NULL
         if self._om.mm[0] == b'\0':
             return None
-        return PyUnicode_FromStringAndSize(&self._om.mm[1], self._om.M)
+        return PyUnicode_DecodeASCII(&self._om.mm[1], self._om.M, NULL)
 
     # --- MSV Filter ---
 
@@ -7597,7 +7597,7 @@ cdef class Profile:
         assert self._gm != NULL
         if self._gm.consensus[0] == b'\0':
             return None
-        return (&self._gm.consensus[1]).decode("ascii")  # FIXME
+        return PyUnicode_DecodeASCII(&self._gm.consensus[1], self._gm.M, NULL)
 
     @property
     def consensus_structure(self):
@@ -7609,7 +7609,7 @@ cdef class Profile:
         assert self._gm != NULL
         if self._gm.cs[0] == b'\0':
             return None
-        return (&self._gm.cs[1]).decode("ascii")  # FIXME
+        return PyUnicode_DecodeASCII(&self._gm.cs[1], self._gm.M, NULL)
 
     @property
     def offsets(self):
