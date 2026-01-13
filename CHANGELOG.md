@@ -8,13 +8,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 [Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.11.4...HEAD
 
-## [v0.12.0-alpha.2] - 2026-01-13
-[v0.12.0-alpha.2]: https://github.com/althonos/pyhmmer/compare/v0.11.4...v0.12.0-alpha.2
+## [v0.12.0-alpha.3] - 2026-01-13
+[v0.12.0-alpha.3]: https://github.com/althonos/pyhmmer/compare/v0.11.4...v0.12.0-alpha.3
 
 ### Added
 - `SequenceBlock.write` method to write all sequences from a block to a file.
 - Subclasses `DNA`, `RNA` and `AA` of `pyhmmer.easel.Alphabet` to allow marking the alphabet type with type annotations.
 ### Changed
+- Setup compilation in Stable ABI mode for Python 3.12 and later.
 - **breaking**: Make most textual attributes and properties `str` rather than `bytes` ([#88](https://github.com/althonos/pyhmmer/issues/88)).
   - Turn the following properties of `Sequence` into `str` instead of `bytes`: `accession`, `description`, `name`, `source`.
   - Turn the following properties of `MSA` into `str` instead of `bytes`: `accession`, `description`, `name`, `source`, `author`, `names`, `reference`, `model_mask`, `secondary_structure`, `surface_accessibility`, `posterior_probabilities`.
