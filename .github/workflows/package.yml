@@ -153,6 +153,7 @@ jobs:
         merge-multiple: true
     - name: Download wheel distributions
       uses: actions/download-artifact@v4
+      if: "!contains(github.ref, 'rc') && !contains(github.ref, 'alpha') && !contains(github.ref, 'dev')"  # don't upload wheels for alpha/dev/rc releases
       with:
         pattern: wheels-*
         path: dist/
@@ -179,7 +180,7 @@ jobs:
   aur:
     environment: Arch Linux User Repository
     runs-on: ubuntu-latest
-    if: "!contains(github.ref, 'rc') && !contains(github.ref, 'alpha') && !contains(github.ref, 'post')"
+    if: "!contains(github.ref, 'rc') && !contains(github.ref, 'alpha') && !contains(github.ref, 'post') && !contains(github.ref, 'dev')"
     name: Update AUR package
     needs:
     - sdist
