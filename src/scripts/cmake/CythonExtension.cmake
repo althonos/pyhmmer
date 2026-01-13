@@ -1,4 +1,4 @@
-find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+find_package(Python COMPONENTS Interpreter Development.Module ${SKBUILD_SABI_COMPONENT} REQUIRED)
 get_property(PYTHON_EXTENSIONS_SOURCE_DIR GLOBAL PROPERTY PYTHON_EXTENSIONS_SOURCE_DIR)
 
 # --- Detect PyInterpreterState_GetID ------------------------------------------
@@ -43,6 +43,7 @@ set(CYTHON_DIRECTIVES
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
   set(CYTHON_DIRECTIVES
     ${CYTHON_DIRECTIVES}
+    -E LIMITED_API=False
     -X cdivision_warnings=True
     -X warn.undeclared=True
     -X warn.unreachable=True
@@ -63,6 +64,7 @@ else()
     ${CYTHON_DIRECTIVES}
     -X boundscheck=False
     -X wraparound=False
+    -E LIMITED_API=$<IF:$<STREQUAL:${SKBUILD_SABI_VERSION},"">,False,True>
   )
 endif()
 
@@ -106,7 +108,13 @@ macro(cython_extension _name)
   if(EXISTS ${_name}.pxd)
     set(EXTENSION_SOURCES ${EXTENSION_SOURCES} ${_name}.pxd)
   endif()
-  python_add_library(${_target} MODULE WITH_SOABI ${EXTENSION_SOURCES})
+    if((NOT "${SKBUILD_SABI_VERSION}" STREQUAL "") AND (NOT CMAKE_BUILD_TYPE STREQUAL Debug))
+    message(STATUS "Building in Limited API mode for Python: ${SKBUILD_SABI_VERSION}")
+    python_add_library(${_target} MODULE WITH_SOABI USE_SABI "${SKBUILD_SABI_VERSION}" ${EXTENSION_SOURCES})
+  else()
+    message(STATUS "Building in latest API mode for Python: ${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}")
+    python_add_library(${_target} MODULE WITH_SOABI ${EXTENSION_SOURCES})
+  endif()
   set_target_properties(${_target} PROPERTIES OUTPUT_NAME ${_name} )
   target_include_directories(${_target} AFTER PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})  
   target_link_libraries(${_target} PUBLIC ${CYTHON_EXTENSION_LINKS})
