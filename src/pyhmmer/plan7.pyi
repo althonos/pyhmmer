@@ -465,9 +465,19 @@ class HMMFile(typing.Generic[ABC], typing.ContextManager[HMMFile[ABC]], typing.I
     def optimized_profiles(self) -> HMMPressedFile[ABC]: ...
 
 class HMMPressedFile(typing.Generic[ABC], typing.ContextManager[HMMPressedFile[ABC]], typing.Iterator[OptimizedProfile[ABC]]):
+    @typing.overload
     def __init__(
-        self,
+        self: HMMPressedFile[ABC],
         file: Union[typing.AnyStr, os.PathLike[typing.AnyStr]],
+        *,
+        alphabet: ABC,
+    ) -> None: ...
+    @typing.overload
+    def __init__(
+        self: HMMPressedFile[Alphabet],
+        file: Union[typing.AnyStr, os.PathLike[typing.AnyStr]],
+        *,
+        alphabet: Optional[Alphabet] = None,
     ) -> None: ...
     def __enter__(self) -> HMMPressedFile[ABC]: ...
     def __exit__(

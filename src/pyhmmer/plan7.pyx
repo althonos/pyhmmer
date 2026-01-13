@@ -3604,6 +3604,9 @@ cdef class HMMFile:
                 file-like object in **binary mode**.
             db (`bool`): Set to `False` to force the parser to ignore the
                 pressed HMM database if it finds one. Defaults to `True`.
+            alphabet (`~pyhmmer.easel.Alphabet`, optional): The alphabet
+                of the HMMs in the file. Supports auto-detection, but passing
+                a non-`None` argument will facilitate MyPy type inference.
 
         """
         cdef int                 status
@@ -3851,17 +3854,21 @@ cdef class HMMPressedFile:
         self._hfp = NULL
         self._position = 0
 
-    def __init__(self, object file):
-        """__init__(self, file)\n--\n
+    def __init__(self, object file, *, alphabet=None):
+        """__init__(self, file, *, alphabet=None)\n--\n
 
         Create a new pressed file from the given filename.
 
         Arguments:
             file (`str`, `bytes` or `os.PathLike`): The path to the pressed
                 HMM file containing the optimized profiles to read.
+            alphabet (`~pyhmmer.easel.Alphabet`, optional): The alphabet
+                of the profiles in the file. Supports auto-detection, but 
+                passing a non-`None` argument will facilitate MyPy type 
+                inference.
 
         """
-        self._hmmfile = HMMFile(file, db=True)
+        self._hmmfile = HMMFile(file, db=True, alphabet=alphabet)
         self._hfp = self._hmmfile._hfp
         if not self._hfp.is_pressed:
             raise ValueError("HMM file does not contain optimized profiles.")
