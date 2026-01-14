@@ -5134,10 +5134,10 @@ cdef class Pipeline:
     a single query profile to a target sequence database) or a *scan*
     (comparing a single query sequence to a target profile database). The
     two methods are yielding equivalent results: if you have a collection
-    of :math:`M` sequences and :math:`N` HMMs to compare, doing a search
+    of :math:`m` sequences and :math:`n` HMMs to compare, doing a search
     or a scan should give the same raw scores. The E-values will however
     be different if ``Z`` and  ``domZ`` where not set manually: :math:`Z`
-    will be set to :math:`M` for a *search*, and to :math:`N` for a scan.
+    will be set to :math:`m` for a *search*, and to :math:`n` for a scan.
 
     The main reason for which you should choose *search* or *scan* is the
     relative size of the sequences and HMMs databases. In the original
@@ -6828,9 +6828,9 @@ cdef class LongTargetsPipeline(Pipeline):
 
         if SearchQuery is HMM:
             # reallocate the profile if it is too small, otherwise just clear it
-            if self.profile._gm.allocM < query.M:
+            if self.profile._gm.allocM < (<HMM> query)._hmm.M:
                 libhmmer.p7_profile.p7_profile_Destroy(self.profile._gm)
-                self.profile._gm = libhmmer.p7_profile.p7_profile_Create(query.M, self.alphabet._abc)
+                self.profile._gm = libhmmer.p7_profile.p7_profile_Create((<HMM> query)._hmm.M, self.alphabet._abc)
                 if self.profile._gm == NULL:
                     raise AllocationError("P7_PROFILE", sizeof(P7_OPROFILE))
             else:
@@ -6842,9 +6842,9 @@ cdef class LongTargetsPipeline(Pipeline):
 
         if SearchQuery is Profile:
             # reallocate the optimized profile if it is too small
-            if self.opt._om.allocM < query.M:
+            if self.opt._om.allocM < (<Profile> query)._gm.M:
                 p7_oprofile.p7_oprofile_Destroy(self.opt._om)
-                self.opt._om = p7_oprofile.p7_oprofile_Create(query.M, self.alphabet._abc)
+                self.opt._om = p7_oprofile.p7_oprofile_Create((<Profile> query)._gm.M, self.alphabet._abc)
                 if self.opt._om == NULL:
                     raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
             # convert the profile to an optimized one
