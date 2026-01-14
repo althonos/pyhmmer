@@ -5273,8 +5273,10 @@ cdef class Pipeline:
         # use the background model or create a default one
         if background is None:
             self.background = Background(alphabet)
+        elif background.alphabet != self.alphabet:
+            raise AlphabetMismatch(self.alphabet, background.alphabet)
         else:
-            self.background = background.copy()
+            self.background = background.copy() # FIXME: do we really need a copy?
 
         # allocate the pipeline
         with nogil:
