@@ -154,7 +154,7 @@ elif HMMER_IMPL == "SSE":
         p7_oprofile_Destroy
     )
 elif HMMER_IMPL == "NEON":
-    from libhmmer.impl_neon cimport p7_oprofile, p7_omx, impl_Init, p7O_EXTRA_SB
+    from libhmmer.impl_neon cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7O_EXTRA_SB
     from libhmmer.impl_neon.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
     from libhmmer.impl_neon.p7_omx cimport (
         P7_OM_BLOCK,
@@ -4764,7 +4764,7 @@ cdef class OptimizedProfile:
         cdef float score
         cdef int status
 
-        if HMMER_IMPL == "SSE":
+        if HMMER_IMPL == "SSE" or HMMER_IMPL == "NEON":
             if self.alphabet != seq.alphabet:
                 raise AlphabetMismatch(self.alphabet, seq.alphabet)
             with nogil:
