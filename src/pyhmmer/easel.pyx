@@ -211,7 +211,7 @@ cdef class Alphabet:
     cdef Alphabet from_type(int ty):
         cdef ESL_ALPHABET* abc
         if ty < 0 or ty > 6:
-            raise ValueError("invalid ESL_ALPHABET type: {ty!r}")
+            raise InvalidParameter("ty", ty, choices=[0, 1, 2, 3, 4, 5])
         abc = libeasel.alphabet.esl_alphabet_Create(ty)
         if not abc:
             raise AllocationError("ESL_ALPHABET", sizeof(ESL_ALPHABET))
