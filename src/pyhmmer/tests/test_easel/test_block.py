@@ -45,6 +45,15 @@ class _TestSequenceBlock(abc.ABC):
         self.assertEqual(len(self._new_block([seq1])), 1)
         self.assertEqual(len(self._new_block([seq1, seq2, seq3])), 3)
 
+    def test_total_length(self):
+        seq1 = self._new_sequence("seq1", "ATGC")
+        seq2 = self._new_sequence("seq2", "ATGCA")
+        seq3 = self._new_sequence("seq3", "TTGA")
+
+        self.assertEqual(self._new_block([]).total_length(), 0)
+        self.assertEqual(self._new_block([seq1]).total_length(), 4)
+        self.assertEqual(self._new_block([seq1, seq2, seq3]).total_length(), 13)
+
     def test_append(self):
         block = self._new_block()
         self.assertEqual(len(block), 0)

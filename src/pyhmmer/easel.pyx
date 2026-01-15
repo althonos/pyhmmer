@@ -7578,6 +7578,15 @@ cdef class SequenceBlock:
             if file is not NULL:
                 fclose(file)
 
+    cpdef size_t total_length(self) noexcept:
+        """Compute the total length of the sequence block.
+        """
+        cdef size_t i
+        cdef size_t total = 0
+        with nogil:
+            for i in range(self._length):
+                total += self._refs[i].L
+        return total
 
 cdef class TextSequenceBlock(SequenceBlock):
     """A container for storing `TextSequence` objects.
