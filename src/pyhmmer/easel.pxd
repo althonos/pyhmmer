@@ -123,6 +123,15 @@ cdef class VectorF(Vector):
     cpdef float relative_entropy(self, VectorF other) except *
     cpdef object reverse(self)
     cpdef float sum(self)
+    
+cdef class VectorI(Vector):
+    cpdef int argmax(self) except -1
+    cpdef int argmin(self) except -1
+    cpdef VectorI copy(self)
+    cpdef int max(self) except *
+    cpdef int min(self) except *
+    cpdef object reverse(self)
+    cpdef int sum(self)
 
 cdef class VectorU8(Vector):
     cpdef int argmax(self) except -1
@@ -158,6 +167,14 @@ cdef class MatrixF(Matrix):
     cpdef float max(self)
     cpdef float min(self)
     cpdef float sum(self)
+
+cdef class MatrixI(Matrix):
+    cpdef tuple argmax(self)
+    cpdef tuple argmin(self)
+    cpdef MatrixI copy(self)
+    cpdef int max(self)
+    cpdef int min(self)
+    cpdef int sum(self)
 
 cdef class MatrixU8(Matrix):
     cpdef tuple argmax(self)

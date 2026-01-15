@@ -6,10 +6,12 @@ from pyhmmer.easel import (
     Matrix, 
     MatrixD, 
     MatrixF, 
+    MatrixI, 
     MatrixU8, 
     Vector, 
     VectorD, 
     VectorF, 
+    VectorI,
     VectorU8
 )
 
@@ -335,6 +337,52 @@ class TestMatrixD(_TestMatrixBase, unittest.TestCase):
         mat = self.Matrix._from_raw_bytes(b'\x3f\xd0\x00\x00\x00\x00\x00\x00', 1, 1, byteorder="big")
         self.assertEqual(len(mat), 1)
         self.assertEqual(mat[0][0], 0.25)
+
+
+class TestMatrixI(_TestMatrixBase, unittest.TestCase):
+
+    Matrix = MatrixI
+
+    def test_memoryview_tolist(self):
+        mat = MatrixI([ [1, 2], [3, 4] ])
+        mem = memoryview(mat)
+        self.assertEqual(mem.tolist(), [ [1, 2], [3, 4] ])
+
+    def test_getitem_row(self):
+        mat = MatrixI([ [1, 2], [3, 4] ])
+
+        self.assertIsInstance(mat[0], VectorI)
+        self.assertEqual(list(mat[0]), [1, 2])
+        self.assertEqual(list(mat[-1]), [3, 4])
+
+        with self.assertRaises(IndexError):
+            row = mat[-10]
+
+    def test_getitem_element(self):
+        mat = MatrixI([ [1, 2], [3, 4] ])
+
+        self.assertEqual(mat[0, 0], 1)
+        self.assertEqual(mat[0, 1], 2)
+        self.assertEqual(mat[1, 0], 3)
+        self.assertEqual(mat[1, 1], 4)
+
+        self.assertEqual(mat[0, -1], 2)
+        self.assertEqual(mat[-1, 0], 3)
+        self.assertEqual(mat[-1, -1], 4)
+
+        with self.assertRaises(IndexError):
+            x = mat[-10, 0]
+        with self.assertRaises(IndexError):
+            x = mat[0, -10]
+        with self.assertRaises(IndexError):
+            x = mat[0, 10]
+        with self.assertRaises(IndexError):
+            x = mat[10, 0]
+
+    def test_neg(self):
+        mat1 = MatrixI([ [1, 2], [-3, 4] ])
+        mat2 = MatrixI([ [-1, -2], [3, -4] ])
+        self.assertEqual(-mat1, mat2)
 
 
 class TestMatrixU8(_TestMatrixBase, unittest.TestCase):

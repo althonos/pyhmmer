@@ -20,7 +20,7 @@ from cpython.exc cimport PyErr_WarnEx
 from cpython.tuple cimport PyTuple_New, PyTuple_SetItem, PyTuple_SET_ITEM
 from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t, SIZE_MAX
 from libc.stdio cimport fclose, FILE
-from libc.stdlib cimport calloc, malloc, realloc, free
+from libc.stdlib cimport abs, calloc, malloc, realloc, free
 from libc.string cimport memcmp, memcpy, memmove, memset, strdup, strlen, strncpy
 from libc.math cimport fabs, fabsf
 from posix.types cimport off_t
@@ -2023,8 +2023,6 @@ cdef class VectorD(Vector):
         with nogil:
             return libeasel.vec.esl_vec_DSum(<double*> self._data, self._n)
 
-
-
 cdef class VectorF(Vector):
     """A vector storing single-precision floating point numbers.
 
@@ -2504,6 +2502,361 @@ cdef class VectorF(Vector):
         assert self._data != NULL
         with nogil:
             return libeasel.vec.esl_vec_FSum(<float*> self._data, self._n)
+
+cdef class VectorI(Vector):
+    """A vector storing system-sized integers.
+
+    Individual elements of a vector can be accessed and modified with
+    the usual indexing notation::
+
+        >>> v = VectorI([1, 2, 3])
+        >>> v[0]
+        1
+        >>> v[-1]
+        3
+        >>> v[0] = v[-1] = 4
+        >>> v
+        VectorI([4, 2, 4])
+
+    Slices are also supported, and they do not copy data (use the
+    `~pyhmmer.easel.VectorI.copy` method to allocate a new vector)::
+
+        >>> v = VectorI(range(6))
+        >>> v[2:5]
+        VectorI([2, 3, 4])
+        >>> v[2:-1] = 10
+        >>> v
+        VectorI([0, 1, 10, 10, 10, 5])
+
+    Addition and multiplication is supported for scalars, in place or not::
+
+        >>> v = VectorI([1, 2, 3])
+        >>> v += 1
+        >>> v
+        VectorI([2, 3, 4])
+        >>> v * 3
+        VectorI([6, 9, 12])
+
+    Pairwise operations can also be performed, but only on vectors of
+    the same dimension and precision::
+
+        >>> v = VectorI([1, 2, 3])
+        >>> v * v
+        VectorI([1, 4, 9])
+        >>> v += VectorI([3, 4, 5])
+        >>> v
+        VectorI([4, 6, 8])
+        >>> v *= VectorI([1])
+        Traceback (most recent call last):
+          ...
+        ValueError: cannot pairwise multiply vectors of different sizes
+
+    Objects of this type support the buffer protocol, and can be viewed
+    as a `numpy.ndarray` of one dimension using the `numpy.asarray`
+    function, and can be passed without copy to most `numpy` functions:
+
+        >>> v = VectorI([1.0, 2.0, 3.0])
+        >>> numpy.asarray(v)
+        array([1, 2, 3])
+        >>> numpy.pow(v, 2)
+        array([1, 4, 9], dtype=int32)
+
+    .. versionadded:: 0.12.0
+
+    """
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __init__(self, object iterable = ()):
+        """__init__(self, iterable=())\n--\n
+
+        Create a new integer vector from the given data.
+
+        """
+        cdef int        n
+        cdef size_t     i
+        cdef int        item
+        cdef int[::1]   view
+        cdef int        n_alloc
+        cdef int*       data
+
+        # collect iterable if it's not a `Sized` object
+        if not isinstance(iterable, collections.abc.Sized):
+            iterable = array.array("f", iterable)
+        n = len(iterable)
+
+        # make sure __init__ is only called once
+        if self._data != NULL:
+            raise RuntimeError("Vector.__init__ must not be called more than once")
+        # make sure the vector has a positive size
+        if n < 0:
+            raise ValueError("Cannot create a vector with negative size")
+
+        # allocate vector storage
+        self._allocate(n)
+
+        # try to copy the memory quickly if *iterable* implements the buffer
+        # protocol, otherwise fall back to cop
+        data = <int*> self._data
+        try:
+            view = iterable
+        except (TypeError, ValueError):
+            for i, item in enumerate(iterable):
+                data[i] = item
+        else:
+            with nogil:
+                memcpy(data, &view[0], n * sizeof(int))
+
+    def __eq__(self, object other):
+        assert self._data != NULL
+
+        cdef const int[::1] buffer
+        cdef int            i
+        cdef int            status
+        cdef const int*     data   = <const int*> self._data
+
+        # check matrix type and dimensions
+        try:
+            buffer = other
+        except ValueError:
+            return NotImplemented
+        if buffer.ndim != 1:
+            return NotImplemented
+        if buffer.shape[0] != self._n:
+            return False
+        elif self._n == 0:
+            return True
+
+        # check values
+        with nogil:
+            status = libeasel.vec.esl_vec_ICompare(&data[0], &buffer[0], self._n)
+
+        return status == libeasel.eslOK
+
+    def __getitem__(self, object index):
+        assert self._data != NULL
+
+        cdef VectorI new
+        cdef int     idx
+        cdef ssize_t start
+        cdef ssize_t stop
+        cdef ssize_t step
+        cdef int*    data  = <int*> self._data
+
+        if isinstance(index, slice):
+            start, stop, step = index.indices(self._n)
+            if step != 1:
+                raise ValueError(f"cannot slice a Vector with step other than 1")
+            new = VectorI.__new__(VectorI)
+            new._owner = self
+            new._n = new._shape[0] = stop - start
+            new._data = NULL if new._n == 0 else <void*> &(data[start])
+            return new
+        else:
+            idx = index
+            if idx < 0:
+                idx += self._n
+            if idx < 0 or idx >= self._n:
+                raise IndexError("vector index out of range")
+            return data[idx]
+
+    def __setitem__(self, object index, int value):
+        assert self._data != NULL
+
+        cdef ssize_t x
+        cdef int*    data = <int*> self._data
+
+        if isinstance(index, slice):
+            for x in range(*index.indices(self._n)):
+                data[x] = value
+        else:
+            x = index
+            if x < 0:
+                x += self._n
+            if x < 0  or x >= self._n:
+                raise IndexError("vector index out of range")
+            data[x] = value
+
+    def __neg__(self):
+        assert self._data != NULL
+
+        cdef int     i
+        cdef VectorI new  = self.copy()
+        cdef int*    data = <int*> new._data
+
+        with nogil:
+            for i in range(self._n):
+                data[i] = -data[i]
+
+        return new
+
+    def __abs__(self):
+        assert self._data != NULL
+
+        cdef int     i
+        cdef VectorI new  = self.copy()
+        cdef int*    data = <int*> new._data
+
+        with nogil:
+            for i in range(self._n):
+                data[i] = abs(data[i])
+
+        return new
+
+    def __iadd__(self, object other):
+        assert self._data != NULL
+
+        cdef VectorI      other_vec
+        cdef const int*   other_data
+        cdef int          other_i
+        cdef int*         data       = <int*> self._data
+
+        if isinstance(other, VectorI):
+            other_vec = other
+            other_data = <int*> other_vec._data
+            assert other_vec._data != NULL or other_vec._n == 0
+            if self._n != other_vec._n:
+                raise ValueError("cannot pairwise add vectors of different sizes")
+            with nogil:
+                libeasel.vec.esl_vec_IAdd(data, other_data, self._n)
+        else:
+            other_i = other
+            with nogil:
+                libeasel.vec.esl_vec_IIncrement(data, self._n, other_i)
+        return self
+
+    def __isub__(self, object other):
+        assert self._data != NULL
+
+        cdef int          i
+        cdef VectorI      other_vec
+        cdef const int*   other_data
+        cdef int          other_i
+        cdef int*         data       = <int*> self._data
+
+        if isinstance(other, VectorI):
+            other_vec = other
+            other_data = <int*> other_vec._data
+            assert other_vec._data != NULL or other_vec._n == 0
+            if self._n != other_vec._n:
+                raise ValueError("cannot pairwise subtract vectors of different sizes")
+            with nogil:
+                for i in range(self._n):
+                    data[i] -= other_data[i]
+        else:
+            other_i = other
+            with nogil:
+                for i in range(self._n):
+                    data[i] -= other_i
+        return self
+
+    def __imul__(self, object other):
+        assert self._data != NULL
+
+        cdef int          i
+        cdef VectorI      other_vec
+        cdef const int*   other_data
+        cdef int          other_i
+        cdef int*         data       = <int*> self._data
+
+        if isinstance(other, VectorI):
+            other_vec = other
+            other_data = <int*> other_vec._data
+            assert other_vec._data != NULL or other_vec._n == 0
+            if self._n != other_vec._n:
+                raise ValueError("cannot pairwise multiply vectors of different sizes")
+            # NB(@althonos): There is no function in `vectorops.h` to do this
+            # for now...
+            with nogil:
+                for i in range(self._n):
+                    data[i] *= other_data[i]
+        else:
+            other_i = other
+            with nogil:
+                libeasel.vec.esl_vec_IScale(data, self._n, other_i)
+        return self
+
+    def __matmul__(VectorI self, object other):
+        assert self._data != NULL
+
+        cdef VectorI      other_vec
+        cdef const int*   other_data
+        cdef const int*   data       = <int*> self._data
+        cdef int          res
+
+        if not isinstance(other, VectorI):
+            return NotImplemented
+
+        other_vec = other
+        other_data = <int*> other_vec._data
+        assert other_data != NULL
+        if self._n != other_vec._n:
+            raise ValueError("cannot multiply vectors of different sizes")
+        with nogil:
+            res = libeasel.vec.esl_vec_IDot(data, other_data, self._n)
+        return res
+
+    # --- Utility ------------------------------------------------------------
+
+    cdef const char* _format(self) noexcept:
+        return b"i"
+
+    # --- Methods ------------------------------------------------------------
+
+    cpdef int argmax(self) except -1:
+        assert self._data != NULL
+        if self._n == 0:
+            raise ValueError("argmax() called on an empty vector")
+        with nogil:
+            return libeasel.vec.esl_vec_IArgMax(<int*> self._data, self._n)
+
+    cpdef int argmin(self) except -1:
+        assert self._data != NULL
+        if self._n == 0:
+            raise ValueError("argmin() called on an empty vector")
+        with nogil:
+            return libeasel.vec.esl_vec_IArgMin(<int*> self._data, self._n)
+
+    cpdef VectorI copy(self):
+        assert self._data != NULL
+
+        cdef VectorI new
+        cdef int     n_alloc = 1 if self._n == 0 else self._n
+
+        new = VectorI.__new__(VectorI)
+        new._allocate(self._n)
+        with nogil:
+            memcpy(new._data, self._data, self._n * sizeof(int))
+
+        return new
+
+    cpdef int max(self) except *:
+        assert self._data != NULL
+        if self._n == 0:
+            raise ValueError("max() called on an empty vector")
+        with nogil:
+            return libeasel.vec.esl_vec_IMax(<int*> self._data, self._n)
+
+    cpdef int min(self) except *:
+        assert self._data != NULL
+        if self._n == 0:
+            raise ValueError("argmin() called on an empty vector")
+        with nogil:
+            return libeasel.vec.esl_vec_IMin(<int*> self._data, self._n)
+
+    cpdef object reverse(self):
+        assert self._data != NULL
+        with nogil:
+            libeasel.vec.esl_vec_IReverse(<int*> self._data, <int*> self._data, self._n)
+        return None
+
+    cpdef int sum(self):
+        """Returns the scalar sum of all elements in the vector.
+        """
+        assert self._data != NULL
+        with nogil:
+            return libeasel.vec.esl_vec_ISum(<int*> self._data, self._n)
+
 
 cdef class VectorU8(Vector):
     """A vector storing byte-sized unsigned integers.
@@ -3724,6 +4077,312 @@ cdef class MatrixF(Matrix):
         with nogil:
             return libeasel.vec.esl_vec_FSum(<float*> self._data[0], self._m*self._n)
 
+cdef class MatrixI(Matrix):
+    """A matrix storing system-sized integers.
+
+    Use indexing notation to access and edit individual elements of the
+    matrix::
+
+        >>> m = MatrixI.zeros(2, 2)
+        >>> m[0, 0] = 3
+        >>> m
+        MatrixI([[3, 0], [0, 0]])
+
+    Indexing can also be performed at the row-level to get a `VectorI`
+    without copying the underlying data::
+
+        >>> m = MatrixI([ [1, 2], [3, 4] ])
+        >>> m[0]
+        VectorI([1, 2])
+
+    Objects of this type support the buffer protocol, and can be viewed
+    as a `numpy.ndarray` with two dimensions using the `numpy.asarray`
+    function, and can be passed without copy to most `numpy` functions::
+
+        >>> m = MatrixI([ [1, 2], [3, 4] ])
+        >>> numpy.asarray(m)
+        array([[1, 2],
+               [3, 4]])
+        >>> numpy.pow(m, 2)
+        array([[ 1,  4],
+               [ 9, 16]], dtype=int32)
+
+    .. versionadded:: 0.12.0
+
+    """
+
+    # --- Magic methods ------------------------------------------------------
+
+    def __init__(self, object iterable = ()):
+        """__init__(self, iterable=())\n--\n
+
+        Create a new matrix from an iterable of rows.
+
+        """
+        cdef int     i
+        cdef int     j
+        cdef size_t  m
+        cdef size_t  n
+        cdef object  row
+        cdef int     val
+        cdef object  peeking
+        cdef int**   data    = NULL
+
+        # collect iterable if it's not a `Sized` object
+        if not isinstance(iterable, collections.abc.Sized):
+            iterable = [array.array("i", row) for row in iterable]
+
+        # make sure __init__ is only called once
+        if self._data != NULL:
+            raise RuntimeError("Matrix.__init__ must not be called more than once")
+
+        # allow peeking the data
+        peeking = peekable(iterable)
+        # get the number of columns from the iterable
+        m = len(iterable)
+        # get the number of rows from the first element of the iterable
+        n = 0 if m == 0 else len(peeking.peek())
+
+        # allocate the buffer
+        self._allocate(m, n)
+
+        # assign the items
+        data = <int**> self._data
+        for i, row in enumerate(peeking):
+            if len(row) != self._n:
+                raise ValueError("Inconsistent number of rows in input")
+            for j, val in enumerate(row):
+                data[i][j] = val
+
+    def __eq__(self, object other):
+        assert self._data != NULL
+        cdef MatrixI other_
+        cdef int     i
+        cdef int     j
+        # check matrix type
+        if not isinstance(other, MatrixI):
+            return NotImplemented
+        # check dimensions
+        other_ = other
+        assert other_._data != NULL
+        if self._m != other_._m or self._n != other_._n:
+            return False
+        # check values
+        for i in range(self._m):
+            for j in range(self._n):
+                if (<int**> self._data)[i][j] != (<int**> other_._data)[i][j]:
+                    return False
+        return True
+
+    def __abs__(self):
+        assert self._data != NULL
+
+        cdef int     i
+        cdef MatrixI new  = self.copy()
+        cdef int*    data = <int*> new._data[0]
+
+        with nogil:
+            for i in range(self._m * self._n):
+                data[i] = abs(data[i])
+
+        return new
+
+    def __neg__(self):
+        assert self._data != NULL
+
+        cdef int     i
+        cdef MatrixI new  = self.copy()
+        cdef int*    data = <int*> new._data[0]
+
+        with nogil:
+            for i in range(self._m * self._n):
+                data[i] = -data[i]
+
+        return new
+
+    def __iadd__(self, object other):
+        assert self._data != NULL
+
+        cdef MatrixI other_mat
+        cdef int     other_i
+
+        if isinstance(other, MatrixI):
+            other_mat = other
+            assert other_mat._data != NULL
+            if other_mat._m != self._m or other_mat._n != self._n:
+                raise ValueError(f"cannot pairwise add {other_mat.shape} matrix to {self.shape} matrix")
+            with nogil:
+                libeasel.vec.esl_vec_IAdd(<int*> self._data[0], <int*> other_mat._data[0], self._m * self._n)
+        else:
+            other_i = other
+            with nogil:
+                libeasel.vec.esl_vec_IIncrement(<int*> self._data[0], self._m*self._n, other_i)
+        return self
+
+    def __imul__(self, object other):
+        assert self._data != NULL
+
+        cdef MatrixI other_mat
+        cdef int     other_i
+        cdef int     i
+
+        if isinstance(other, MatrixI):
+            other_mat = other
+            assert other_mat._data != NULL
+            if other_mat._m != self._m or other_mat._n != self._n:
+                raise ValueError(f"cannot pairwise multiply {other_mat.shape} matrix with {self.shape} matrix")
+            # NB(@althonos): There is no function in `vectorops.h` to do this
+            # for now...
+            for i in range(self._n * self._m):
+                (<int**> self._data)[0][i] *= (<int**> other_mat._data)[0][i]
+        else:
+            other_i = other
+            with nogil:
+                libeasel.matrixops.esl_mat_IScale(<int**> self._data, self._m, self._n, other_i)
+        return self
+
+    def __getitem__(self, object index):
+        assert self._data != NULL
+
+        cdef int     x
+        cdef int     y
+        cdef str     ty
+        cdef VectorI row
+        cdef MatrixI new
+        cdef int**   data = <int**> self._data
+
+        if isinstance(index, int):
+            x = index
+            if x < 0:
+                x += self._m
+            if x < 0 or x >= self._m:
+                raise IndexError("vector index out of range")
+
+            row = VectorI.__new__(VectorI)
+            row._owner = self
+            row._n = row._shape[0] = self._n
+            row._data = <void*> &(data[x][0])
+            return row
+
+        elif isinstance(index, slice):
+            start, stop, step = index.indices(self._m)
+            if stop < 0 or stop > self._m or start < 0 or start >= self._m:
+                raise IndexError("matrix row index out of range")
+
+            new = MatrixI.__new__(MatrixI)
+            new._owner = self
+            new._m = new._shape[0] = stop - start
+            new._n = new._shape[1] = self._n
+            new._data = <void**> &data[start]
+            return new
+
+        elif isinstance(index, tuple):
+            x, y = index
+            if x < 0:
+                x += self._m
+            if y < 0:
+                y += self._n
+            if x < 0 or x >= self._m:
+                raise IndexError("matrix row index out of range")
+            if y < 0 or y >= self._n:
+                raise IndexError("matrix column index out of range")
+            return data[x][y]
+
+        else:
+            ty = type(index).__name__
+            raise TypeError(f"expected integer, tuple or slice, found {ty}")
+
+    def __setitem__(self, object index, int value):
+        assert self._data != NULL
+
+        cdef int   x
+        cdef int   y
+        cdef int** data = <int**> self._data
+
+        if isinstance(index, tuple):
+            x, y = index
+            if x < 0:
+                x += self._m
+            if y < 0:
+                y += self._n
+            if x < 0 or x >= self._m:
+                raise IndexError("matrix row index out of range")
+            if y < 0 or y >= self._n:
+                raise IndexError("matrix column index out of range")
+            data[x][y] = value
+
+        else:
+            raise TypeError("Matrix.__setitem__ can only be used with a 2D index")
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def itemsize(self):
+        return sizeof(int)
+
+    @property
+    def format(self):
+        return "i"
+
+    # --- Utility ------------------------------------------------------------
+
+    cdef const char* _format(self) noexcept:
+        return b"i"
+
+    # --- Methods ------------------------------------------------------------
+
+    cpdef tuple argmax(self):
+        assert self._data != NULL
+
+        cdef int n
+        cdef int x
+        cdef int y
+
+        with nogil:
+            n = libeasel.vec.esl_vec_IArgMax(<int*> self._data[0], self._m*self._n)
+            x = n // self._m
+            y = n % self._n
+
+        return x, y
+
+    cpdef tuple argmin(self):
+        assert self._data != NULL
+
+        cdef int n
+        cdef int x
+        cdef int y
+
+        with nogil:
+            n = libeasel.vec.esl_vec_IArgMin(<int*> self._data[0], self._m*self._n)
+            x = n // self._m
+            y = n % self._n
+
+        return x, y
+
+    cpdef MatrixI copy(self):
+        cdef MatrixI mat = MatrixI.__new__(MatrixI)
+        mat._m = mat._shape[0] = self._m
+        mat._n = mat._shape[1] = self._n
+        with nogil:
+            mat._data = <void**> libeasel.matrixops.esl_mat_IClone(<int**> self._data, self._m, self._n)
+        if mat._data == NULL:
+            raise AllocationError("int**", sizeof(int), self._m * self._n)
+        return mat
+
+    cpdef int max(self):
+        assert self._data != NULL
+        with nogil:
+            return libeasel.matrixops.esl_mat_IMax(<int**> self._data, self._m, self._n)
+
+    cpdef int min(self):
+        assert self._data != NULL
+        with nogil:
+            return libeasel.vec.esl_vec_IMin(<int*> self._data[0], self._m*self._n)
+
+    cpdef int sum(self):
+        assert self._data != NULL
+        with nogil:
+            return libeasel.vec.esl_vec_ISum(<int*> self._data[0], self._m*self._n)
 
 cdef class MatrixU8(Matrix):
     """A matrix storing byte-sized unsigned integers.

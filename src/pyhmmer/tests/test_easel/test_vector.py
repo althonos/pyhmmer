@@ -4,8 +4,13 @@ import pickle
 import struct
 import sys
 
-from pyhmmer.easel import Vector, VectorD, VectorF, VectorU8
-
+from pyhmmer.easel import (
+    Vector, 
+    VectorD, 
+    VectorF, 
+    VectorI,
+    VectorU8
+)
 
 class _TestVectorBase(object):
 
@@ -461,6 +466,44 @@ class TestVectorD(_TestVectorBase, unittest.TestCase):
         vec = self.Vector._from_raw_bytes(b'\x3f\xd0\x00\x00\x00\x00\x00\x00', 1, byteorder="big")
         self.assertEqual(len(vec), 1)
         self.assertEqual(vec[0], 0.25)
+
+
+class TestVectorI(_TestVectorBase, unittest.TestCase):
+
+    Vector = VectorI
+
+    def test_strides(self):
+        vec = self.Vector([1, 2, 3])
+        sizeof_int = len(struct.pack('i', 1))
+        self.assertEqual(vec.strides, (sizeof_int,))
+
+    def test_neg(self):
+        v1 = self.Vector([1, 2, 3])
+        v2 = self.Vector([-1, -2, -3])
+        self.assertEqual(-v1, v2)
+
+    def test_isub_negative(self):
+        vec = self.Vector([0, 1, 2])
+        vec -= 1
+        self.assertEqual(vec[0], -1)
+        self.assertEqual(vec[1], 0)
+        self.assertEqual(vec[2], 1)
+
+    def test_memoryview_tolist(self):
+        vec = self.Vector([1, 2, 3])
+        mem = memoryview(vec)
+        self.assertEqual(mem.tolist(), [1, 2, 3])
+
+    def test_eq_bytebuffer(self):
+        vec = self.Vector([1, 2, 3])
+        b1 = array.array('i', [1, 2, 3])
+        self.assertEqual(vec, b1)
+
+        b2 = array.array('B', [1, 2, 3])
+        self.assertNotEqual(vec, b2)
+
+        b3 = array.array('i', [1, 2, 3, 4])
+        self.assertNotEqual(vec, b3)
 
 
 class TestVectorU8(_TestVectorBase, unittest.TestCase):
