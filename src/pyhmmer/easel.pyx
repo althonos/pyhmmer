@@ -2557,7 +2557,7 @@ cdef class VectorI(Vector):
 
         >>> v = VectorI([1.0, 2.0, 3.0])
         >>> numpy.asarray(v)
-        array([1, 2, 3])
+        array([1, 2, 3], dtype=int32)
         >>> numpy.pow(v, 2)
         array([1, 4, 9], dtype=int32)
 
@@ -4102,7 +4102,7 @@ cdef class MatrixI(Matrix):
         >>> m = MatrixI([ [1, 2], [3, 4] ])
         >>> numpy.asarray(m)
         array([[1, 2],
-               [3, 4]])
+               [3, 4]], dtype=int32)
         >>> numpy.pow(m, 2)
         array([[ 1,  4],
                [ 9, 16]], dtype=int32)
