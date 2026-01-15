@@ -598,9 +598,15 @@ class DigitalMSA(typing.Generic[ABC], MSA):
         preference: IDENTITY_FILTER_PREFERENCE = "conscover",
     ) -> DigitalMSA[ABC]: ...
     @typing.overload
-    def reverse_complement(self, inplace: Literal[True]) -> None: ...
+    def reverse_complement(
+        self, 
+        inplace: Literal[True]
+    ) -> None: ...
     @typing.overload
-    def reverse_complement(self, inplace: Literal[False] = False) -> DigitalMSA[ABC]: ...
+    def reverse_complement(
+        self: Union[DigitalMSA[DNA] | DigitalMSA[RNA]], 
+        inplace: Literal[False] = False
+    ) -> DigitalMSA[ABC]: ...
 
 
 # --- MSA File ---------------------------------------------------------------
@@ -774,17 +780,17 @@ class DigitalSequence(typing.Generic[ABC], Sequence):
     def copy(self) -> DigitalSequence[ABC]: ...
     def textize(self) -> TextSequence: ...
     def translate(
-        self: Union[DigitalSequence[AA] | DigitalSequence[RNA]],
+        self: Union[DigitalSequence[DNA] | DigitalSequence[RNA]],
         genetic_code: GeneticCode = ...
     ) -> DigitalSequence[AA]: ...
     @typing.overload
     def reverse_complement(
-        self: Union[DigitalSequence[AA] | DigitalSequence[RNA]],
+        self: Union[DigitalSequence[DNA] | DigitalSequence[RNA]],
         inplace: Literal[True]
     ) -> None: ...
     @typing.overload
     def reverse_complement(
-        self: Union[DigitalSequence[AA] | DigitalSequence[RNA]],
+        self: Union[DigitalSequence[DNA] | DigitalSequence[RNA]],
         inplace: Literal[False] = False
     ) -> DigitalSequence[ABC]: ...
 
