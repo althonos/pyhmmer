@@ -164,4 +164,4 @@ section for more information.
 the original* `HMMER <http://hmmer.org>`_ *authors. It was developed by*
 `Martin Larralde <https://github.com/althonos>`_ *during his PhD project
 at the* `European Molecular Biology Laboratory <https://www.embl.de/>`_
-*in the* `Zeller team <https://github.com/zellerlab>`_.
+*in the* `Zeller team <https://zellerlab.org>`_.
