@@ -8781,14 +8781,15 @@ cdef class TopHits:
         # Reset nincluded/nreports before thresholding
         # TODO(@althonos, @zdk123): Replace with `p7_tophits_Threshold` as implemented
         #                  in EddyRivasLab/hmmer#307 when formally released.
-        for i in range(merged._th.N):
-            merged._th.hit[i].flags &= (~p7_hitflags_e.p7_IS_REPORTED)
-            merged._th.hit[i].flags &= (~p7_hitflags_e.p7_IS_INCLUDED)
-            merged._th.hit[i].nincluded = 0
-            merged._th.hit[i].nreported = 0
-            for j in range(merged._th.hit[i].ndom):
-                merged._th.hit[i].dcl[j].is_reported = False
-                merged._th.hit[i].dcl[j].is_included = False
+        if not self._pli.use_bit_cutoffs:
+            for i in range(merged._th.N):
+                merged._th.hit[i].flags &= (~p7_hitflags_e.p7_IS_REPORTED)
+                merged._th.hit[i].flags &= (~p7_hitflags_e.p7_IS_INCLUDED)
+                merged._th.hit[i].nincluded = 0
+                merged._th.hit[i].nreported = 0
+                for j in range(merged._th.hit[i].ndom):
+                    merged._th.hit[i].dcl[j].is_reported = False
+                    merged._th.hit[i].dcl[j].is_included = False
 
         # threshold the merged hits with new values
         status = libhmmer.p7_tophits.p7_tophits_Threshold(merged._th, &merged._pli)
