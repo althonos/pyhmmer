@@ -15,7 +15,7 @@ See Also:
 cimport cython
 from cpython.list cimport PyList_New, PyList_SET_ITEM
 from cpython.ref cimport PyObject
-from cpython.exc cimport PyErr_Clear
+from cpython.exc cimport PyErr_Clear, PyErr_WarnEx, PyErr_CheckSignals
 from cpython.unicode cimport PyUnicode_DecodeASCII
 from libc.math cimport exp, ceil
 from libc.stddef cimport ptrdiff_t
@@ -3641,7 +3641,7 @@ cdef class HMMFile:
 
     def __dealloc__(self):
         if self._hfp:
-            warnings.warn("unclosed HMM file", ResourceWarning)
+            PyErr_WarnEx(ResourceWarning, "unclosed HMM file", 1)
             self.close()
 
     def __repr__(self):
@@ -5813,7 +5813,7 @@ cdef class Pipeline:
         return argv
 
     cpdef void clear(self):
-        """Reset the pipeline configuration to its default state.
+        """Reset the pipeline to its default state.
         """
         assert self._pli != NULL
 
@@ -5832,7 +5832,9 @@ cdef class Pipeline:
         # it unconditionally.
         self.randomness.seed(self._seed)
         # reinitialize the domaindef
-        libhmmer.p7_domaindef.p7_domaindef_Reuse(self._pli.ddef)
+        status = libhmmer.p7_domaindef.p7_domaindef_Reuse(self._pli.ddef)
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_domaindef_Reuse")
 
         # Reset accounting values
         self._pli.nmodels         = 0

@@ -193,7 +193,7 @@ cdef class Alphabet:
     # --- Default constructors -----------------------------------------------
 
     @staticmethod
-    cdef Alphabet from_ptr(ESL_ALPHABET* _abc):
+    cdef Alphabet from_ptr(const ESL_ALPHABET* _abc):
         assert _abc != NULL
         cdef Alphabet alphabet
         if _abc.type == libeasel.alphabet.eslDNA:

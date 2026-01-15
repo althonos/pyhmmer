@@ -23,10 +23,10 @@ from libeasel cimport ESL_DSQ
 # --- Alphabet ---------------------------------------------------------------
 
 cdef class Alphabet:
-    cdef ESL_ALPHABET* _abc
+    cdef const ESL_ALPHABET* _abc
 
     @staticmethod
-    cdef Alphabet from_ptr(ESL_ALPHABET* _abc)
+    cdef Alphabet from_ptr(const ESL_ALPHABET* _abc)
     @staticmethod
     cdef Alphabet from_type(int ty)
 
