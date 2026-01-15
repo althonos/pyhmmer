@@ -6659,11 +6659,17 @@ cdef class TextSequence(Sequence):
             Passing positional arguments to constructor.
 
         """
-        cdef bytes sq
+        cdef const unsigned char[::1] seqview
+        cdef const char*              seqdata = NULL
 
         if sequence is not None:
-            sq = PyUnicode_AsASCIIString(sequence)
-            self._sq = libeasel.sq.esl_sq_CreateFrom(NULL, sq, NULL, NULL, NULL)
+            if isinstance(sequence, str):
+                seqdata = <const char*> PyUnicode_AsUTF8AndSize(sequence, NULL)
+            else:
+                seqview = sequence
+                if seqview.shape[0] > 0:
+                    seqdata = <const char*> &seqview[0]
+            self._sq = libeasel.sq.esl_sq_CreateFrom(NULL, seqdata, NULL, NULL, NULL)
         else:
             self._sq = libeasel.sq.esl_sq_Create()
         if self._sq == NULL:

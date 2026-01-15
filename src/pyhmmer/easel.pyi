@@ -731,11 +731,11 @@ class TextSequence(Sequence):
     def __init__(
         self,
         *,
-        name: Union[str, bytes, None] = None,
-        description: Union[str, bytes, None] = None,
-        accession: Union[str, bytes, None] = None,
-        sequence: Optional[str] = None,
-        source: Union[str, bytes, None] = None,
+        name: Union[str, Buffer, None] = None,
+        description: Union[str, Buffer, None] = None,
+        accession: Union[str, Buffer, None] = None,
+        sequence: Union[str, Buffer, None] = None,
+        source: Union[str, Buffer, None] = None,
         residue_markups: Optional[typing.Mapping[str, str]] = None,
     ) -> None: ...
     def __reduce__(
