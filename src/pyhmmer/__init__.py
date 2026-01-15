@@ -5,16 +5,24 @@ HMMER is a biological sequence analysis tool that uses profile hidden Markov
 models to search for sequence homologs. HMMER3 is maintained by members of the
 the `Eddy/Rivas Laboratory <http://eddylab.org/>`_ at Harvard University.
 
-``pyhmmer`` is a module, implemented using the `Cython <https://cython.org/>`_
-language, that provides bindings to HMMER3. It directly interacts with the
-HMMER internals, which has several advantages over CLI wrappers like
-`hmmer-py <https://pypi.org/project/hmmer/>`_.
+``pyhmmer`` is a package implemented with the `Cython <https://cython.org/>`_
+language that provides bindings to HMMER3. It directly interacts with the
+HMMER internals. The `pyhmmer.easel` module exports the generic
+bioinformatics functions and classes from the Easel library, while
+`pyhmmer.plan7` exports functions and classes for manipulating profile HMMs. 
+The `pyhmmer.hmmer` module re-implement HMMER command line applications
+(such as ``hmmsearch``, ``hmmalign`` or ``hmmscan``) as highly-configurable
+Python functions for convenience.
 
 References:
-    Larralde, Martin, and Georg Zeller.
-    "PyHMMER: A Python Library Binding to HMMER for Efficient
-    Sequence Analysis". Bioinformatics, 19 April 2023, btad214.
-    :doi:`10.1093/bioinformatics/btad214`. :pmid:`37074928`.
+    - Larralde, Martin, and Georg Zeller.
+      “PyHMMER: a Python library binding to HMMER for efficient sequence
+      analysis.” Bioinformatics (Oxford, England) vol. 39,5 (2023): btad214.
+      :doi:`10.1093/bioinformatics/btad214`. :pmid:`37074928`.
+    - Eddy, Sean R.
+      "Accelerated Profile HMM Searches"
+      PLoS computational biology vol. 7,10 (2011): e1002195.
+      :doi:`10.1371/journal.pcbi.1002195`. :pmid:`22039361`.
 
 """
 import collections.abc as _collections_abc
