@@ -26,7 +26,7 @@ from libc.stdio cimport fprintf, FILE, stdout, fclose
 from libc.string cimport memset, memcpy, memmove, strdup, strndup, strlen, strcmp, strncpy
 from libc.time cimport ctime, strftime, time, time_t, tm, localtime_r
 from cpython.bytes cimport (
-    PyBytes_FromStringAndSize, 
+    PyBytes_FromStringAndSize,
     PyBytes_FromString,
 )
 from cpython.unicode cimport (
@@ -2370,9 +2370,9 @@ cdef class HMM:
         self._hmm = NULL
 
     def __init__(
-        self, 
-        Alphabet alphabet not None, 
-        int M, 
+        self,
+        Alphabet alphabet not None,
+        int M,
         str name not None
     ):
         """__init__(self, alphabet, M, name)\n--\n
@@ -2973,22 +2973,20 @@ cdef class HMM:
     def command_line(self, object cli):
         assert self._hmm != NULL
 
+        cdef const char*  cli_
+        cdef ssize_t      n    = -1
+
         if cli is None:
             free(self._hmm.comlog)
             self._hmm.comlog = NULL
             return
-
-        cdef bytes  cli_ = cli.encode("ascii")
-        cdef size_t n    = strlen(cli_)
-
-        if self._hmm.comlog == NULL:
-            self._hmm.comlog = strndup(<const char*> cli_, n + 1)
         else:
+            cli_ = PyUnicode_AsUTF8AndSize(cli, &n)
             self._hmm.comlog = <char*> realloc(<void*> self._hmm.comlog, sizeof(char) * (n + 1))
-            if self._hmm.comlog != NULL:
-                strncpy(self._hmm.comlog, <char*> cli_, n+1)
-        if self._hmm.comlog == NULL:
-            raise AllocationError("char", sizeof(char), n+1)
+            if self._hmm.comlog == NULL:
+                raise AllocationError("char", sizeof(char), n+1)
+            with nogil:
+                strncpy(self._hmm.comlog, cli_, n+1)
 
     @property
     def nseq(self):
@@ -3059,9 +3057,10 @@ cdef class HMM:
     def creation_time(self, object ctime):
         assert self._hmm != NULL
 
-        cdef str    ty
-        cdef bytes  formatted
-        cdef size_t n
+        cdef str         ty
+        cdef str         formatted
+        cdef const char* s
+        cdef ssize_t     n
 
         if ctime is None:
             free(self._hmm.ctime)
@@ -3071,17 +3070,14 @@ cdef class HMM:
             ty = type(ctime).__name__
             raise TypeError(f"Expected datetime.datetime or None, found {ty}")
 
-        formatted = ctime.strftime('%a %b %e %H:%M:%S %Y').encode('ascii')
-        n = len(formatted)
+        formatted = ctime.strftime('%a %b %e %H:%M:%S %Y')
+        s = PyUnicode_AsUTF8AndSize(formatted, &n)
 
-        if self._hmm.ctime == NULL:
-            self._hmm.ctime = <char*> malloc(sizeof(char) * (n + 1))
-        else:
-            self._hmm.ctime = <char*> realloc(<void*> self._hmm.ctime, sizeof(char) * (n + 1))
+        self._hmm.ctime = <char*> realloc(<void*> self._hmm.ctime, sizeof(char) * (n + 1))
         if self._hmm.ctime == NULL:
             raise AllocationError("char", sizeof(char), n+1)
-        if self._hmm.ctime != NULL:
-            strncpy(self._hmm.ctime, <const char*> formatted, n + 1)
+        with nogil:
+            strncpy(self._hmm.ctime, s, n + 1)
 
     @property
     def evalue_parameters(self):
@@ -3584,15 +3580,15 @@ cdef class HMMFile:
         self._name = None
 
     def __init__(
-        self, 
-        object file, 
+        self,
+        object file,
         bint db = True,
         *,
         Alphabet alphabet = None,
     ):
         """__init__(self, file, db=True, *, alphabet=None)\n--\n
 
-        Create a new HMM reader from the given file.
+        Create a new HMM reader from the given path or file.
 
         Arguments:
             file (`str`, `bytes`, `os.PathLike` or file-like object): Either
@@ -3693,7 +3689,7 @@ cdef class HMMFile:
     cdef void _close_hmmfile(P7_HMMFILE* hfp) noexcept nogil:
         # if we read from a file-like object, `p7_hmmfile_Close` won't
         # close self._hfp.f but we actually still need to free it, so we
-        # preemptively close the FILE*. 
+        # preemptively close the FILE*.
         fclose(hfp.f)
         hfp.f = NULL
         libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
@@ -3864,8 +3860,8 @@ cdef class HMMPressedFile:
             file (`str`, `bytes` or `os.PathLike`): The path to the pressed
                 HMM file containing the optimized profiles to read.
             alphabet (`~pyhmmer.easel.Alphabet`, optional): The alphabet
-                of the profiles in the file. Supports auto-detection, but 
-                passing a non-`None` argument will facilitate MyPy type 
+                of the profiles in the file. Supports auto-detection, but
+                passing a non-`None` argument will facilitate MyPy type
                 inference.
 
         """

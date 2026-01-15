@@ -1,5 +1,5 @@
 from cpython.exc cimport PyErr_WarnEx
-from cpython.unicode cimport PyUnicode_AsUTF8AndSize, PyUnicode_FromString
+from cpython.unicode cimport PyUnicode_AsUTF8AndSize, PyUnicode_FromString, PyUnicode_FromStringAndSize
 
 class _strwrapper(str):
 
@@ -52,7 +52,7 @@ cdef object _get_str(const char* ptr):
     return PyUnicode_FromString(ptr)
 
 cdef object _get_str_sized(const char* ptr, ssize_t size):
-    return _strwrapper(PyUnicode_FromStringAndSize(ptr, size))
+    return PyUnicode_FromStringAndSize(ptr, size)
 
 ctypedef int (*setter_t)(void*, const char*) noexcept nogil 
 cdef int _set_str(
