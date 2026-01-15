@@ -8,12 +8,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 [Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.11.4...HEAD
 
-## [v0.12.0-alpha.3] - 2026-01-13
-[v0.12.0-alpha.3]: https://github.com/althonos/pyhmmer/compare/v0.11.4...v0.12.0-alpha.3
+## [v0.12.0-alpha.4] - 2026-01-15
+[v0.12.0-alpha.4]: https://github.com/althonos/pyhmmer/compare/v0.11.4...v0.12.0-alpha.4
 
 ### Added
 - `SequenceBlock.write` method to write all sequences from a block to a file.
+- `SequenceBlock.total_length` to compute the sum of lengths of sequences in a block.
 - Subclasses `DNA`, `RNA` and `AA` of `pyhmmer.easel.Alphabet` to allow marking the alphabet type with type annotations.
+- `VectorI` and `MatrixI` classes to `pyhmmer.easel` to store C `int` types (usually 32 bits).
+- `OptimizedProfile.ssv_filter` method for NEON target in addition to SSE.
 ### Changed
 - Setup compilation in Stable ABI mode for Python 3.12 and later.
 - **breaking**: Make most textual attributes and properties `str` rather than `bytes` ([#88](https://github.com/althonos/pyhmmer/issues/88)).
@@ -28,12 +31,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Reorganize tests to skip tests in the absence of data files and remove larger test files from PyPI distributions.
 - Enforce detection of invalid buffer sizes in `_from_raw_bytes` class constructors of various objects.
 - Use `PyUnicode_DecodeASCII` to decode ASCII strings of known length instead of `PyUnicode_FromString` where applicable.
+- Allow passing a buffer-protocol object interpreted as an ASCII string to the `TextSequence` constructor.
 ### Fixed
 - Remove `hmmlogo.c` from compiled HMMER sources to avoid an issue with the presence of a `main` function when linking.
 - Avoid using `multiprocessing.Value` in `pyhmmer.hmmer` while in single-threaded mode for improved compatibility.
 - Memory leak in `Matrix` caused by outdated allocation logic for zero dimensions.
 - Make `HMMFile` constructor pretend to stream when given a file-like object to prevent HMMER from calling `fseek` and `ftell`.
 - Incorrect declaration of Cython type declarations in various `MSA` property setters.
+- Ensure correct background alphabet in `Pipeline` constructor when given a `Background` as argument.
 ### Removed
 - Outdated compatibility code for PyPy 3.6.
 - Support for positional arguments other than `alphabet` in `TextMSA`, `DigitalMSA`, `TextSequence` and `DigitalSequence` constructors.
