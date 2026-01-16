@@ -1,0 +1,92 @@
+diff --git a/easel.c b/easel.c
+index 982b1c9..4a4721a 100644
+--- a/easel.c
++++ b/easel.c
+@@ -33,12 +33,22 @@
+ #include <sys/types.h>
+ #endif
+ 
++#ifdef HAVE_SYSLOG_H
++#include <syslog.h>
++#endif
++
+ #ifdef HAVE_MPI
+ #include <mpi.h>		/* MPI_Abort() may be used in esl_fatal() or other program killers */
+ #endif
+ 
+ #include "easel.h"
+-#include <syslog.h>
++
++#if defined(_WIN32) || defined(_WIN64) || defined(__MINGW32__) || defined(__CYGWIN__)
++#include "Windows.h"
++#undef ERROR
++#define getppid() 0
++#endif
++
+ 
+ /*****************************************************************
+  * 1. Exception and fatal error handling.
+@@ -78,12 +88,14 @@ esl_fail(char *errbuf, const char *format, ...)
+ 	  if (errbuf) vsnprintf(errbuf, eslERRBUFSIZE, format, ap);
+ 	  va_end(ap);
+ 	}
++#ifdef HAVE_SYSLOG_H
+       else
+         {
+           va_start(ap, format);
+           vsyslog(LOG_ERR, format, ap); 
+           va_end(ap);
+         }
++#endif
+     }
+ }
+ 
+@@ -159,12 +171,14 @@ esl_exception(int errcode, int use_errno, char *sourcefile, int sourceline, char
+ 	  if (use_errno && errno) perror("system error");
+ 	  fflush(stderr);
+ 	}  
++#ifdef HAVE_SYSLOG_H
+       else
+         {
+           va_start(argp, format);
+           vsyslog(LOG_ERR, format, argp);
+           va_end(argp);
+         }
++#endif
+ 
+ #ifdef HAVE_MPI
+       MPI_Initialized(&mpiflag);                 /* we're assuming we can do this, even in a corrupted, dying process...? */
+@@ -315,12 +329,14 @@ esl_fatal(const char *format, ...)
+       fprintf(stderr, "\n");
+       fflush(stderr);
+     } 
++#ifdef HAVE_SYSLOG_H
+   else
+     {
+       va_start(argp, format);
+       vsyslog(LOG_ERR, format, argp);
+       va_end(argp);
+     }
++#endif
+ 
+ #ifdef HAVE_MPI
+   MPI_Initialized(&mpiflag);
+@@ -2113,6 +2129,10 @@ esl_tmpfile(char *basename6X, FILE **ret_fp)
+   int   status;
+   mode_t old_mode;
+ 
++#if defined(_WIN32) || defined(_WIN64) || defined(__MINGW32__) || defined(__CYGWIN__)
++  ESL_ALLOC(tmpdir, (MAX_PATH+1) * sizeof(char));
++  if(!GetTempPathA(MAX_PATH+1, tmpdir)) ESL_XEXCEPTION(eslESYS, "GetTempPathA() failed.");
++#else
+   /* Determine what tmp directory to use, and construct the
+    * file name.
+    */
+@@ -2122,6 +2142,7 @@ esl_tmpfile(char *basename6X, FILE **ret_fp)
+       if (tmpdir == NULL) tmpdir = getenv("TMP");
+     }
+   if (tmpdir == NULL) tmpdir = "/tmp";
++#endif
+   if ((status = esl_FileConcat(tmpdir, basename6X, &path)) != eslOK) goto ERROR; 
+ 
+   old_mode = umask(077);

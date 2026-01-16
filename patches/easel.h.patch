@@ -1,0 +1,16 @@
+diff --git a/easel.h b/easel.h
+index ddb29f5..5776c66 100644
+--- a/easel.h
++++ b/easel.h
+@@ -423,7 +423,11 @@ typedef uint8_t ESL_DSQ;
+  *
+  * This gets used in easel.c's *_File*() functions.
+  */
++#if defined(_WIN32) || defined(_WIN64) || defined(__MINGW32__) || defined(__CYGWIN__)
++#define eslDIRSLASH '\\'
++#else
+ #define eslDIRSLASH '/'           /* UNIX directory paths have /foo/bar */
++#endif
+ 
+ /* Some generic macros for swapping, min, and max.
+  */
