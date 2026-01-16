@@ -29,8 +29,7 @@ the [Eddy/Rivas Laboratory](http://eddylab.org/) at Harvard University.
 
 `pyhmmer` is a Python package, implemented using the [Cython](https://cython.org/)
 language, that provides bindings to HMMER3. It directly interacts with the
-HMMER internals, which has the following advantages over CLI wrappers
-(like [`hmmer-py`](https://pypi.org/project/hmmer/)):
+HMMER internals, which has the following advantages over CLI wrappers:
 
 - **single dependency**: If your software or your analysis pipeline is
   distributed as a Python package, you can add `pyhmmer` as a dependency to
@@ -64,7 +63,7 @@ HMMER internals, which has the following advantages over CLI wrappers
 
 *This library is still a work-in-progress. It follows [semantic-versioning](https://semver.org/),
 so API changes will be documented, but past `v0.10` the API has been more or
-less stable. It should already pack enough features to run biological analyses 
+less stable. It should already pack enough features to run biological analyses
 or workflows involving `hmmsearch`, `hmmscan`, `nhmmer`, `phmmer`, `hmmbuild`
 and `hmmalign`.*
 
@@ -85,6 +84,9 @@ A [Bioconda](https://bioconda.github.io/) package is also available:
 ```console
 $ conda install -c bioconda pyhmmer
 ```
+
+See the [`Installation page`](https://pyhmmer.readthedocs.io/en/stable/guide/install.html)
+of the documentation to find other ways to install ``pyhmmer``.
 
 ## 🔖 Citation
 
@@ -111,7 +113,6 @@ directly from the command line using
 $ pydoc pyhmmer.easel
 $ pydoc pyhmmer.plan7
 ```
-
 
 ## 💡 Example
 
@@ -191,12 +192,6 @@ package, providing bindings to [FAMSA](https://github.com/refresh-bio/FAMSA),
 a very fast multiple sequence aligner. In addition, you may want to trim alignments:
 in that case, consider [`pytrimal`](https://pypi.org/project/pytrimal), which
 wraps [trimAl 2.0](https://github.com/inab/trimal/tree/2.0_RC).
-
-If despite of all the advantages listed earlier, you would rather use HMMER
-through its CLI, this package will not be of great help. You can instead check
-the [`hmmer-py`](https://github.com/EBI-Metagenomics/hmmer-py) package developed
-by [Danilo Horta](https://github.com/horta) at the [EMBL-EBI](https://www.ebi.ac.uk).
-
 
 ## ⚖️ License
 
