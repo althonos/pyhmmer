@@ -219,7 +219,7 @@ cdef class Alphabet:
 
     cdef int _init_default(self, int ty) except 1 nogil:
         if self._abc != NULL:
-            libeasel.alphabet.esl_alphabet_Destroy(self._abc)
+            libeasel.alphabet.esl_alphabet_Destroy(<ESL_ALPHABET*> self._abc)
         self._abc = libeasel.alphabet.esl_alphabet_Create(ty)
         if not self._abc:
             raise AllocationError("ESL_ALPHABET", sizeof(ESL_ALPHABET))
@@ -264,7 +264,7 @@ cdef class Alphabet:
         self._abc = NULL
 
     def __dealloc__(self):
-        libeasel.alphabet.esl_alphabet_Destroy(self._abc)
+        libeasel.alphabet.esl_alphabet_Destroy(<ESL_ALPHABET*> self._abc)
 
     def __repr__(self):
         assert self._abc != NULL
@@ -299,7 +299,7 @@ cdef class Alphabet:
 
     def __sizeof__(self):
         assert self._abc != NULL
-        return libeasel.alphabet.esl_alphabet_Sizeof(self._abc) + sizeof(self)
+        return libeasel.alphabet.esl_alphabet_Sizeof(<ESL_ALPHABET*> self._abc) + sizeof(self)
 
     # --- Properties ---------------------------------------------------------
 
@@ -434,16 +434,16 @@ cdef class Alphabet:
         """
         assert self._abc != NULL
 
-        cdef ssize_t  i
-        cdef Py_UCS4  c
-        cdef ssize_t  length
-        cdef int      kind
-        cdef void*    data
-        cdef VectorU8 encoded 
-        cdef uint8_t* buffer
+        cdef ssize_t     i
+        cdef Py_UCS4     c
+        cdef ssize_t     length
+        cdef int         kind
+        cdef const void* data
+        cdef VectorU8    encoded 
+        cdef uint8_t*    buffer
 
         if LIMITED_API:
-            data    = PyUnicode_AsUTF8AndSize(sequence, &length)
+            data    = <void*> PyUnicode_AsUTF8AndSize(sequence, &length)
             encoded = VectorU8.zeros(length)
             buffer  = <uint8_t*> encoded._data
             for i in range(length):
@@ -6000,7 +6000,7 @@ cdef class DigitalMSA(MSA):
 
         status = libeasel.msa.esl_msa_Sample(
             rng._rng,
-            alphabet._abc,
+            <ESL_ALPHABET*> alphabet._abc,
             max_sequences,
             max_length,
             &msa._msa,
@@ -7399,7 +7399,7 @@ cdef class TextSequence(Sequence):
         assert libeasel.sq.esl_sq_IsText(self._sq)
 
         cdef int             status
-        cdef ESL_ALPHABET*   abc    = alphabet._abc
+        cdef ESL_ALPHABET*   abc    = <ESL_ALPHABET*> alphabet._abc
         cdef DigitalSequence new    = DigitalSequence.__new__(DigitalSequence, alphabet)
 
         with nogil:
@@ -7553,7 +7553,7 @@ cdef class DigitalSequence(Sequence):
 
         status = libeasel.sq.esl_sq_Sample(
             rng._rng,
-            alphabet._abc,
+            <ESL_ALPHABET*> alphabet._abc,
             max_length,
             &seq._sq
         )
@@ -7703,7 +7703,7 @@ cdef class DigitalSequence(Sequence):
         assert libeasel.sq.esl_sq_IsDigital(self._sq)
 
         cdef int             status
-        cdef ESL_ALPHABET*   abc    = self.alphabet._abc
+        cdef ESL_ALPHABET*   abc    = <ESL_ALPHABET*> self.alphabet._abc
         cdef DigitalSequence new    = DigitalSequence.__new__(DigitalSequence, self.alphabet)
 
         with nogil:
