@@ -23,7 +23,7 @@ from libc.stdio cimport printf, rewind
 from libc.stdlib cimport calloc, malloc, realloc, free, llabs
 from libc.stdint cimport uint8_t, uint32_t, uint64_t, int64_t
 from libc.stdio cimport fprintf, FILE, stdout, fclose
-from libc.string cimport memset, memcpy, memmove, strdup, strndup, strlen, strcmp, strncpy
+from libc.string cimport memset, memcpy, memmove, strdup, strlen, strcmp, strncpy
 from libc.time cimport ctime, strftime, time, time_t, tm, localtime_r
 from cpython.bytes cimport (
     PyBytes_FromStringAndSize,
@@ -204,6 +204,8 @@ from .easel cimport (
 
 if TARGET_SYSTEM == "Linux":
     from .fileobj.linux cimport fileobj_linux_open as fopen_obj
+elif TARGET_SYSTEM == "Windows":
+    from .fileobj.win32 cimport fopen_obj
 elif TARGET_SYSTEM == "Darwin" or TARGET_SYSTEM.endswith("BSD"):
     from .fileobj.bsd cimport fileobj_bsd_open as fopen_obj
 
