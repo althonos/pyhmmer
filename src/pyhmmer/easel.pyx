@@ -103,6 +103,8 @@ from libeasel.sqio.ascii cimport (
 
 if TARGET_SYSTEM == "Linux":
     from .fileobj.linux cimport fileobj_linux_open as fopen_obj
+elif TARGET_SYSTEM == "Windows":
+    from .fileobj.win32 cimport fopen_obj
 elif TARGET_SYSTEM == "Darwin" or TARGET_SYSTEM.endswith("BSD"):
     from .fileobj.bsd cimport fileobj_bsd_open as fopen_obj
 
