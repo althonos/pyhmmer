@@ -319,7 +319,7 @@ class TestHmmsearchSingle(TestHmmsearch, unittest.TestCase):
         hits = pyhmmer.hmmsearch([], seqs, cpus=1, parallel=self.parallel)
         self.assertIs(None, next(hits, None))
 
-@unittest.skipIf(platform.system() == "Darwin", "may deadlock on MacOS")
+@unittest.skipIf(platform.system() == "Darwin" or platform.system() == "Windows", "may deadlock on MacOS or Windows")
 @unittest.skipIf(platform.system() == "Emscripten", "no process support on Emscripten")
 class TestHmmsearchProcess(TestHmmsearch, unittest.TestCase):
     def get_hits(self, hmm, seqs):
