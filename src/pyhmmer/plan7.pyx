@@ -623,6 +623,41 @@ cdef class Background:
         new.residue_frequencies._n = new.residue_frequencies._shape[0] = new.alphabet.K
         return new
 
+    cpdef float null1(self, Sequence sequence) except? NAN:
+        """Compute the null1 lod score for a given sequence.
+
+        Arguments:
+            sequence (`~pyhmmer.easel.Sequence`): The sequence for which
+                to compute the null1 lod score. The actual content of the
+                sequence is irrelevant, only its length is taken into
+                account.
+
+        Returns:
+            `float`: The null1 lod score for the sequence. This score can
+            be subtracted from the MSV score obtained with 
+            `Profile.msv_filter` or `OptimizedProfile.msv_filter` to compute
+            the sequence bitscore (scaled by a factor of :math:`log(2)`).
+
+        .. versionadded:: 0.12.0
+
+        """
+        assert self._bg != NULL
+
+        cdef float score
+
+        with nogil:
+            status = libhmmer.p7_bg.p7_bg_NullOne(
+                self._bg, 
+                sequence._sq.dsq, 
+                sequence._sq.L, 
+                &score
+            )
+        if status == libeasel.eslOK:
+            return score
+        else:
+            raise UnexpectedError(status, "p7_bg_NullOne")
+
+
 
 cdef class Builder:
     """A factory for constructing new HMMs from raw sequences.

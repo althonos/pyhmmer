@@ -81,6 +81,7 @@ cdef class Background:
     cdef          int      _L
 
     cpdef Background copy(self)
+    cpdef float null1(self, Sequence sequence) except? NAN
 
 
 cdef class Builder:
