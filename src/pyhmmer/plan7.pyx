@@ -2487,7 +2487,7 @@ cdef class HMM:
         if id(self) not in memo:
             new = memo[id(self)] = self.copy()
             new.alphabet = copy.deepcopy(self.alphabet, memo=memo)
-            new._hmm.abc = new.alphabet._abc
+            new._hmm.abc = <ESL_ALPHABET*> new.alphabet._abc
         return memo[id(self)]
 
     def __sizeof__(self):
@@ -3693,7 +3693,7 @@ cdef class HMMFile:
             self._abc = NULL
         else:
             self._alphabet = alphabet
-            self._abc = self._alphabet._abc
+            self._abc = <ESL_ALPHABET*> self._alphabet._abc
 
     def __dealloc__(self):
         if self._hfp:
@@ -3930,7 +3930,7 @@ cdef class HMMPressedFile:
             self._abc = NULL
         else:
             self._alphabet = alphabet
-            self._abc = self._alphabet._abc
+            self._abc = <ESL_ALPHABET*> self._alphabet._abc
 
     def __iter__(self):
         return self
