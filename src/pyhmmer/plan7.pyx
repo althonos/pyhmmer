@@ -2256,6 +2256,8 @@ cdef class HMM:
 
     """
 
+    Transitions = Transitions
+
     @classmethod
     def sample(
         cls,
@@ -2854,16 +2856,17 @@ cdef class HMM:
         Columns correspond to the following transitions, in order:
         :math:`M_n \to M_{n+1}`, :math:`M_n \to I_n`, :math:`M_n \to D_{n+1}`,
         :math:`I_n \to I_n`, :math:`I_n \to M_{n+1}`, :math:`D_n \to D_{n+1}`,
-        :math:`D_n \to M_{n+1}`. Use the `pyhmmer.plan7.Transitions` enum
-        instead of hardcoded indices to make your code more legible.
+        :math:`D_n \to M_{n+1}`. Use the `pyhmmer.plan7.HMM.Transitions`
+        enum instead of hardcoded indices to make your code more legible.
 
         Example:
+            >>> TR = HMM.Transitions
             >>> t = thioesterase.transition_probabilities
-            >>> t[1, Transitions.MM]
+            >>> t[1, HMM.TR.MM]
             0.999...
-            >>> t[0, Transitions.DM]  # 1 by convention for the first node
+            >>> t[0, HMM.TR.DM]  # 1 by convention for the first node
             1.0
-            >>> t[-1, Transitions.MD] # 0 by convention for the last node
+            >>> t[-1, HMM.TR.MD] # 0 by convention for the last node
             0.0
 
         Caution:
@@ -2872,12 +2875,13 @@ cdef class HMM:
             :math:`D_n` transition probabilities should only contain
             probabilities between 0 and 1, and sum to 1::
 
+                >>> TR = HMM.Transitions
                 >>> t = thioesterase.transition_probabilities
-                >>> t[50, Transitions.MM] + t[50, Transitions.MI] + t[50, Transitions.MD]
+                >>> t[50, TR.MM] + t[50, TR.MI] + t[50, TR.MD]
                 1.000...
-                >>> t[50, Transitions.IM] + t[50, Transitions.II]
+                >>> t[50, TR.IM] + t[50, TR.II]
                 1.000...
-                >>> t[50, Transitions.DM] + t[50, Transitions.DD]
+                >>> t[50, TR.DM] + t[50, TR.DD]
                 1.000...
 
             Consider calling `HMM.validate` after manual edition.
@@ -7530,6 +7534,7 @@ cdef class LongTargetsPipeline(Pipeline):
         return 0
 
 
+
 cdef class Profile:
     """A Plan7 search profile.
 
@@ -7765,8 +7770,8 @@ cdef class Profile:
 
     @property
     def transition_scores(self):
-        r"""`~pyhmmer.easel.MatrixF`: The transition scores of the model.
-        
+        r"""`~pyhmmer.easel.MatrixF`: The transition lod scores of the model.
+
         .. versionadded:: 0.12.0
 
         """
@@ -7936,7 +7941,7 @@ cdef class Profile:
 
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_GMSV")
-        
+
         return score
 
 
@@ -9622,9 +9627,9 @@ class Transitions(enum.IntEnum):
 
 class ProfileTransitions(enum.IntEnum):
     """A helper enum for indices of the `Profile.transition_scores` matrix.
-    
+
     .. versionadded:: 0.12.0
-    
+
     """
     MM = p7p_tsc_e.p7P_MM
     IM = p7p_tsc_e.p7P_IM

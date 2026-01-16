@@ -119,6 +119,7 @@ Miscellaneous
     EvalueParameters
     Offsets
     Transitions
+    ProfileTransitions
 
 .. toctree::
     :caption: Miscellaneous

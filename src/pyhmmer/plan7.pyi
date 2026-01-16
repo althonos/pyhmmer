@@ -7,7 +7,7 @@ import sys
 import types
 import typing
 from typing import (
-    Any, 
+    Any,
     ClassVar,
     Dict,
     Iterable,
@@ -87,11 +87,7 @@ class Alignment(collections.abc.Sized):
     def identity_sequence(self) -> str: ...
 
 class Background(typing.Generic[ABC]):
-    def __init__(
-        self, 
-        alphabet: ABC, 
-        uniform: bool = False
-    ) -> None: ...
+    def __init__(self, alphabet: ABC, uniform: bool = False) -> None: ...
     def __copy__(self) -> Background[ABC]: ...
     @property
     def L(self) -> int: ...
@@ -181,9 +177,7 @@ class Cutoffs(object):
     @property
     def gathering(self) -> Optional[typing.Tuple[float, float]]: ...
     @gathering.setter
-    def gathering(
-        self, gathering: Optional[typing.Tuple[float, float]]
-    ) -> None: ...
+    def gathering(self, gathering: Optional[typing.Tuple[float, float]]) -> None: ...
     @gathering.deleter
     def gathering(self) -> None: ...
     @property
@@ -425,7 +419,9 @@ class HMM(typing.Generic[ABC]):
     def write(self, fh: typing.BinaryIO, binary: bool = False) -> None: ...
     def zero(self) -> None: ...
 
-class HMMFile(typing.Generic[ABC], typing.ContextManager[HMMFile[ABC]], typing.Iterator[HMM[ABC]]):
+class HMMFile(
+    typing.Generic[ABC], typing.ContextManager[HMMFile[ABC]], typing.Iterator[HMM[ABC]]
+):
     _FORMATS: ClassVar[Dict[str, int]]
     _MAGIC: ClassVar[Dict[int, int]]
     @typing.overload
@@ -464,7 +460,11 @@ class HMMFile(typing.Generic[ABC], typing.ContextManager[HMMFile[ABC]], typing.I
     def rewind(self) -> None: ...
     def optimized_profiles(self) -> HMMPressedFile[ABC]: ...
 
-class HMMPressedFile(typing.Generic[ABC], typing.ContextManager[HMMPressedFile[ABC]], typing.Iterator[OptimizedProfile[ABC]]):
+class HMMPressedFile(
+    typing.Generic[ABC],
+    typing.ContextManager[HMMPressedFile[ABC]],
+    typing.Iterator[OptimizedProfile[ABC]],
+):
     @typing.overload
     def __init__(
         self: HMMPressedFile[ABC],
@@ -606,12 +606,12 @@ class OptimizedProfile(typing.Generic[ABC]):
     def msv_filter(self, seq: DigitalSequence[ABC]) -> float: ...
     def ssv_filter(self, seq: DigitalSequence[ABC]) -> float: ...
 
-class OptimizedProfileBlock(typing.Generic[ABC], typing.MutableSequence[OptimizedProfile[ABC]]):
+class OptimizedProfileBlock(
+    typing.Generic[ABC], typing.MutableSequence[OptimizedProfile[ABC]]
+):
     alphabet: ABC
     def __init__(
-        self, 
-        alphabet: ABC, 
-        iterable: Iterable[OptimizedProfile[ABC]] = ()
+        self, alphabet: ABC, iterable: Iterable[OptimizedProfile[ABC]] = ()
     ) -> None: ...
     def __len__(self) -> int: ...
     @typing.overload
@@ -619,7 +619,9 @@ class OptimizedProfileBlock(typing.Generic[ABC], typing.MutableSequence[Optimize
     @typing.overload
     def __getitem__(self, index: slice) -> OptimizedProfileBlock[ABC]: ...
     @typing.overload
-    def __setitem__(self, index: int, optimized_profile: OptimizedProfile[ABC]) -> None: ...
+    def __setitem__(
+        self, index: int, optimized_profile: OptimizedProfile[ABC]
+    ) -> None: ...
     @typing.overload
     def __setitem__(
         self, index: slice, optimized_profile: Iterable[OptimizedProfile[ABC]]
@@ -647,7 +649,9 @@ class OptimizedProfileBlock(typing.Generic[ABC], typing.MutableSequence[Optimize
     def remove(self, optimized_profile: OptimizedProfile[ABC]) -> None: ...
 
 class Offsets(object):
-    def __init__(self, owner: Union[Profile[Alphabet], OptimizedProfile[Alphabet]]) -> None: ...
+    def __init__(
+        self, owner: Union[Profile[Alphabet], OptimizedProfile[Alphabet]]
+    ) -> None: ...
     def __copy__(self) -> Offsets: ...
     def __repr__(self) -> str: ...
     @property
@@ -787,14 +791,18 @@ class Pipeline(typing.Generic[ABC]):
         query: DigitalSequence[ABC],
         sequences: DigitalSequenceBlock[ABC],
         builder: Optional[Builder[ABC]] = None,
-        select_hits: Optional[typing.Callable[[TopHits[DigitalSequence[ABC]]], None]] = None,
+        select_hits: Optional[
+            typing.Callable[[TopHits[DigitalSequence[ABC]]], None]
+        ] = None,
     ) -> IterativeSearch[ABC]: ...
     def iterate_hmm(
         self,
         query: HMM[ABC],
         sequences: DigitalSequenceBlock[ABC],
         builder: Optional[Builder[ABC]] = None,
-        select_hits: Optional[typing.Callable[[TopHits[DigitalSequence[ABC]]], None]] = None,
+        select_hits: Optional[
+            typing.Callable[[TopHits[DigitalSequence[ABC]]], None]
+        ] = None,
     ) -> IterativeSearch[ABC]: ...
 
 class LongTargetsPipeline(typing.Generic[ABC], Pipeline[ABC]):
@@ -1069,3 +1077,13 @@ class Transitions(enum.IntEnum):
     II = ...
     DM = ...
     DD = ...
+
+class ProfileTransitions(enum.IntEnum):
+    MM = ...
+    IM = ...
+    DM = ...
+    BM = ...
+    MD = ...
+    DD = ...
+    MI = ...
+    II = ...
