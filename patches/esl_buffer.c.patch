@@ -1,0 +1,58 @@
+diff --git a/esl_buffer.c b/esl_buffer.c
+index 7d660e2..24b2b39 100644
+--- a/esl_buffer.c
++++ b/esl_buffer.c
+@@ -29,7 +29,9 @@
+ #endif
+ #ifdef _POSIX_VERSION
+ #include <fcntl.h>
++#ifdef HAVE_SYS_MMAN_H
+ #include <sys/mman.h>
++#endif
+ #include <sys/stat.h>
+ #endif /* _POSIX_VERSION */
+ 
+@@ -223,8 +225,10 @@ esl_buffer_OpenFile(const char *filename, ESL_BUFFER **ret_bf)
+   if      (filesize != -1 && filesize <= eslBUFFER_SLURPSIZE)  
+     { if ((status = buffer_init_file_slurped(bf, filesize)) != eslOK) goto ERROR; }
+ #ifdef _POSIX_VERSION
++#ifdef HAVE_SYS_MMAN_H
+   else if (filesize > eslBUFFER_SLURPSIZE) 
+     { if ((status = buffer_init_file_mmap(bf, filesize))    != eslOK) goto ERROR; }
++#endif
+ #endif
+   else
+     { if ((status = buffer_init_file_basic(bf))             != eslOK) goto ERROR; }
+@@ -520,7 +524,9 @@ esl_buffer_Close(ESL_BUFFER *bf)
+       if (bf->mem) 
+ 	{
+ 	  switch (bf->mode_is) {
++#ifdef HAVE_SYS_MMAN_H
+ 	  case eslBUFFER_MMAP:   if (munmap(bf->mem, bf->n) == -1) ESL_EXCEPTION(eslESYS, "munmap() failed"); break;
++#endif
+ 	  case eslBUFFER_STRING: break; /* caller provided and remains responsible for an input memory buffer */
+ 	  default:               free(bf->mem);
+ 	  }
+@@ -1574,8 +1580,12 @@ buffer_init_file_mmap(ESL_BUFFER *bf, esl_pos_t filesize)
+ {
+   int          status;
+   /*    mmap(addr, len,          prot,      flags,       fd,             offset */
++#ifdef HAVE_SYS_MMAN_H
+   bf->mem = mmap(0,    filesize, PROT_READ, MAP_PRIVATE, fileno(bf->fp), 0);
+   if (bf->mem == MAP_FAILED) ESL_XEXCEPTION(eslESYS, "mmap()");
++#else
++   ESL_XEXCEPTION(eslEUNIMPLEMENTED, "mmap() unsupported");
++#endif
+ 
+   bf->n       = filesize;
+   bf->mode_is = eslBUFFER_MMAP;
+@@ -1586,7 +1596,9 @@ buffer_init_file_mmap(ESL_BUFFER *bf, esl_pos_t filesize)
+   return eslOK;
+ 
+  ERROR:
++#ifdef HAVE_SYS_MMAN_H
+   if (bf->mem != MAP_FAILED) munmap(bf->mem, bf->n); 
++#endif
+   bf->mem     = NULL; 
+   bf->n       = 0;
+   bf->mode_is = eslBUFFER_UNSET;
