@@ -29,6 +29,13 @@ import collections.abc as _collections_abc
 import contextlib as _contextlib
 import os as _os
 
+if hasattr(_os, "add_dll_directory"):
+    _os.add_dll_directory(
+        _os.path.realpath(
+          _os.path.join(__file__, _os.pardir, _os.pardir, "pyhmmer.libs")
+        )
+    )
+
 from . import errors
 from . import easel
 from . import plan7
