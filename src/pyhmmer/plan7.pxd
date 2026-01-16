@@ -3,6 +3,7 @@
 
 # --- C imports --------------------------------------------------------------
 
+from libc.math cimport NAN
 from libc.stdint cimport uint8_t, uint32_t
 from posix.types cimport off_t
 from cpython.pythread cimport PyThread_type_lock
@@ -221,8 +222,8 @@ cdef class OptimizedProfile:
     cpdef OptimizedProfile copy(self)
     cpdef void convert(self, Profile profile) except *
     cpdef void write(self, object fh_filter, object fh_profile) except *
-    cpdef object ssv_filter(self, DigitalSequence seq)
-
+    cpdef float ssv_filter(self, DigitalSequence seq) except? NAN
+    cpdef float msv_filter(self, DigitalSequence seq) except? NAN
 
 cdef class OptimizedProfileBlock:
     cdef          PyThread_type_lock* _locks
@@ -405,6 +406,7 @@ cdef class Profile:
     cpdef void configure(self, HMM hmm, Background background, int L=?, bint multihit=*, bint local=*) except *
     cpdef Profile copy(self)
     cpdef OptimizedProfile to_optimized(self)
+    cpdef float msv_filter(self, DigitalSequence seq, float nu=?) except? NAN
 
 
 cdef class ScoreData:

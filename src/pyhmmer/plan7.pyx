@@ -17,7 +17,7 @@ from cpython.list cimport PyList_New, PyList_SET_ITEM
 from cpython.ref cimport PyObject
 from cpython.exc cimport PyErr_Clear, PyErr_WarnEx, PyErr_CheckSignals
 from cpython.unicode cimport PyUnicode_DecodeASCII
-from libc.math cimport exp, ceil
+from libc.math cimport exp, ceil, NAN, INFINITY
 from libc.stddef cimport ptrdiff_t
 from libc.stdio cimport printf, rewind
 from libc.stdlib cimport calloc, malloc, realloc, free, llabs
@@ -55,6 +55,7 @@ cimport libeasel.scorematrix
 cimport libeasel.getopts
 cimport libeasel.vec
 cimport libhmmer
+cimport libhmmer.generic
 cimport libhmmer.modelconfig
 cimport libhmmer.modelstats
 cimport libhmmer.p7_alidisplay
@@ -63,6 +64,7 @@ cimport libhmmer.p7_builder
 cimport libhmmer.p7_bg
 cimport libhmmer.p7_domain
 cimport libhmmer.p7_domaindef
+cimport libhmmer.p7_gmx
 cimport libhmmer.p7_hit
 cimport libhmmer.p7_hmmfile
 cimport libhmmer.p7_pipeline
@@ -92,12 +94,13 @@ from libhmmer cimport (
 )
 from libhmmer.logsum cimport p7_FLogsumInit
 from libhmmer.p7_builder cimport P7_BUILDER, p7_archchoice_e, p7_wgtchoice_e, p7_effnchoice_e
+from libhmmer.p7_gmx cimport P7_GMX
 from libhmmer.p7_hmm cimport p7H_NTRANSITIONS, p7H_TC, p7H_GA, p7H_NC, p7H_MAP, p7h_transitions_e
 from libhmmer.p7_hmmfile cimport p7_hmmfile_formats_e
 from libhmmer.p7_hit cimport p7_hitflags_e, P7_HIT
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_pipeline cimport P7_PIPELINE, p7_pipemodes_e, p7_zsetby_e, p7_strands_e, p7_complementarity_e
-from libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL
+from libhmmer.p7_profile cimport p7_LOCAL, p7_GLOCAL, p7_UNILOCAL, p7_UNIGLOCAL, p7p_tsc_e
 from libhmmer.p7_trace cimport P7_TRACE, p7t_statetype_e
 from libhmmer.p7_prior cimport P7_PRIOR
 from libhmmer.p7_tophits cimport p7_tophits_Reuse
@@ -116,12 +119,15 @@ from libhmmer.p7_hmmfile cimport (
 )
 
 if HMMER_IMPL == "VMX":
-    from libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init, p7O_EXTRA_SB
+    from libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init, p7_MSVFilter, p7O_EXTRA_SB
     from libhmmer.impl_vmx.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
     from libhmmer.impl_vmx.p7_omx cimport (
+        P7_OMX,
         P7_OM_BLOCK,
         p7_oprofile_CreateBlock,
         p7_oprofile_DestroyBlock,
+        p7_omx_Create,
+        p7_omx_Destroy,
     )
     from libhmmer.impl_vmx.p7_oprofile cimport (
         P7_OPROFILE,
@@ -135,12 +141,15 @@ if HMMER_IMPL == "VMX":
         p7_oprofile_Destroy,
     )
 elif HMMER_IMPL == "SSE":
-    from libhmmer.impl_sse cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7O_EXTRA_SB
+    from libhmmer.impl_sse cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7_MSVFilter, p7O_EXTRA_SB
     from libhmmer.impl_sse.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
     from libhmmer.impl_sse.p7_omx cimport (
+        P7_OMX,
         P7_OM_BLOCK,
         p7_oprofile_CreateBlock,
         p7_oprofile_DestroyBlock,
+        p7_omx_Create,
+        p7_omx_Destroy,
     )
     from libhmmer.impl_sse.p7_oprofile cimport (
         P7_OPROFILE,
@@ -154,12 +163,15 @@ elif HMMER_IMPL == "SSE":
         p7_oprofile_Destroy
     )
 elif HMMER_IMPL == "NEON":
-    from libhmmer.impl_neon cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7O_EXTRA_SB
+    from libhmmer.impl_neon cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7_MSVFilter, p7O_EXTRA_SB
     from libhmmer.impl_neon.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
     from libhmmer.impl_neon.p7_omx cimport (
+        P7_OMX,
         P7_OM_BLOCK,
         p7_oprofile_CreateBlock,
         p7_oprofile_DestroyBlock,
+        p7_omx_Create,
+        p7_omx_Destroy,
     )
     from libhmmer.impl_neon.p7_oprofile cimport (
         P7_OPROFILE,
@@ -4726,7 +4738,60 @@ cdef class OptimizedProfile:
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_oprofile_Convert")
 
-    cpdef object ssv_filter(self, DigitalSequence seq):
+    cpdef float msv_filter(self, DigitalSequence seq) except? NAN:
+        """Compute the MSV filter score for the given sequence.
+
+        Arguments:
+            seq (`~pyhmmer.easel.DigitalSequence`): The sequence in digital
+                format for which to compute the MSV filter score.
+
+        Returns:
+            `float`: The MSV filter score, in nats, for the input sequence.
+
+
+        Note:
+            `math.inf` may be returned if an overflow occurs.
+
+        Raises:
+            `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
+                sequence does not correspond to the profile alphabet.
+
+        .. versionadded:: 0.12.0
+
+        """
+        assert self._om != NULL
+
+        cdef float   score
+        cdef int     status
+        cdef P7_OMX* omx
+
+        if self.alphabet != seq.alphabet:
+            raise AlphabetMismatch(self.alphabet, seq.alphabet)
+
+        omx = p7_omx_Create(self._om.M, 0, 0)
+        if omx == NULL:
+            raise AllocationError("P7_OMX", sizeof(P7_OMX))
+
+        try:
+            with nogil:
+                status = p7_MSVFilter(
+                    seq._sq.dsq,
+                    seq._sq.n,
+                    self._om,
+                    omx,
+                    &score,
+                )
+        finally:
+            p7_omx_Destroy(omx)
+
+        if status == libeasel.eslOK:
+            return score
+        elif status == libeasel.eslERANGE:
+            return INFINITY
+        else:
+            raise UnexpectedError(status, "p7_MSVFilter")
+
+    cpdef float ssv_filter(self, DigitalSequence seq) except? NAN:
         """Compute the SSV filter score for the given sequence.
 
         Arguments:
@@ -4768,9 +4833,9 @@ cdef class OptimizedProfile:
             if status == libeasel.eslOK:
                 return score
             elif status == libeasel.eslERANGE:
-                return math.inf
+                return INFINITY
             elif status == libeasel.eslENORESULT:
-                return None
+                return NAN
             else:
                 raise UnexpectedError(status, "p7_SSVFilter")
         else:
@@ -7698,6 +7763,34 @@ cdef class Profile:
             if self.multihit:
                 libhmmer.modelconfig.p7_ReconfigUnihit(self._gm, self._gm.L)
 
+    @property
+    def transition_scores(self):
+        r"""`~pyhmmer.easel.MatrixF`: The transition scores of the model.
+        
+        .. versionadded:: 0.12.0
+
+        """
+        assert self._gm != NULL
+
+        cdef size_t  i
+        cdef MatrixF mat = MatrixF.__new__(MatrixF)
+        mat._m = mat._shape[0] = self._gm.M
+        mat._n = mat._shape[1] = libhmmer.p7_profile.p7P_NTRANS
+        mat._owner = self
+
+        # NOTE: since tsc is hand indexed, it is stored as a 1D float array,
+        #       not 2D, so we need to allocated mat.data and assign the pointer
+        #       to mat[0] instead
+        mat._data = <void**> calloc(self._gm.M, sizeof(float*))
+        if mat._data == NULL:
+            raise AllocationError("float*", sizeof(float*), self._gm.M)
+
+        mat._data[0] = <void*> self._gm.tsc
+        for i in range(mat._m):
+            mat._data[i] = mat._data[0] + i * mat._n * sizeof(float)
+
+        return mat
+
     # --- Methods ------------------------------------------------------------
 
     cpdef void clear(self) except *:
@@ -7788,6 +7881,63 @@ cdef class Profile:
         cdef OptimizedProfile opt = OptimizedProfile(self._gm.M, self.alphabet)
         opt.convert(self)
         return opt
+
+    cpdef float msv_filter(self, DigitalSequence seq, float nu=2.0) except? NAN:
+        """Compute the generic MSV filter score for the given sequence.
+
+        Arguments:
+            seq (`~pyhmmer.easel.DigitalSequence`): The sequence in digital
+                format for which to compute the SSV filter score.
+            nu (`float`): The expected number of hits.
+
+        Returns:
+            `float` or `None`: The raw MSV filter score for the sequence.
+
+        Note:
+            * `math.inf` may be returned if an overflow occurs that will also
+              occur in the MSV filter. This is the case whenever
+              :math:`\\text{base} - \\text{tjb} - \\text{tbm} \\ge 128`
+            * `None` may be returned if the MSV filter score needs to be
+              recomputed (because it may not overflow even though the SSV
+              filter did).
+
+        Raises:
+            `~pyhmmer.errors.AlphabetMismatch`: When the alphabet of the
+                sequence does not correspond to the profile alphabet.
+
+        .. versionadded:: 0.12.0
+
+        """
+        assert self._gm != NULL
+
+        cdef float   score
+        cdef int     status
+        cdef P7_GMX* gmx
+
+        if self.alphabet != seq.alphabet:
+            raise AlphabetMismatch(self.alphabet, seq.alphabet)
+
+        gmx = libhmmer.p7_gmx.p7_gmx_Create(self._gm.M, seq._sq.L)
+        if gmx == NULL:
+            raise AllocationError("P7_GMX", sizeof(P7_GMX))
+
+        try:
+            with nogil:
+                status = libhmmer.generic.p7_GMSV(
+                    seq._sq.dsq,
+                    seq._sq.n,
+                    self._gm,
+                    gmx,
+                    2.0,
+                    &score,
+                )
+        finally:
+            libhmmer.p7_gmx.p7_gmx_Destroy(gmx)
+
+        if status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_GMSV")
+        
+        return score
 
 
 cdef class ScoreData:
@@ -9449,7 +9599,7 @@ cdef class TraceAligner:
 
 
 class Transitions(enum.IntEnum):
-    """A helper enum for indices of the HMM transition probability matrix.
+    """A helper enum for indices of the `HMM` transition probability matrix.
 
     The Plan 7 model architecture used in HMMER describes a HMM which has
     3 states and 7 transitions (hence the name) for every node of the model.
@@ -9468,6 +9618,22 @@ class Transitions(enum.IntEnum):
     II = p7h_transitions_e.p7H_II
     DM = p7h_transitions_e.p7H_DM
     DD = p7h_transitions_e.p7H_DD
+
+
+class ProfileTransitions(enum.IntEnum):
+    """A helper enum for indices of the `Profile.transition_scores` matrix.
+    
+    .. versionadded:: 0.12.0
+    
+    """
+    MM = p7p_tsc_e.p7P_MM
+    IM = p7p_tsc_e.p7P_IM
+    DM = p7p_tsc_e.p7P_DM
+    BM = p7p_tsc_e.p7P_BM
+    MD = p7p_tsc_e.p7P_MD
+    DD = p7p_tsc_e.p7P_DD
+    MI = p7p_tsc_e.p7P_MI
+    II = p7p_tsc_e.p7P_II
 
 
 # --- Module init code -------------------------------------------------------
