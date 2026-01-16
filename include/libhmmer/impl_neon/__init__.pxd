@@ -1,6 +1,6 @@
 from libeasel cimport ESL_DSQ
 from libhmmer.impl_neon.p7_oprofile cimport P7_OPROFILE
-from libhmmer.impl_vmx.p7_omx cimport P7_OMX
+from libhmmer.impl_neon.p7_omx cimport P7_OMX
 
 
 cdef extern from "impl_neon/impl_neon.h" nogil:
