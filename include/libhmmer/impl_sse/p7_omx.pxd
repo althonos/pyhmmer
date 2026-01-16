@@ -44,8 +44,8 @@ cdef extern from "impl_sse/impl_sse.h" nogil:
         float     totscale
         bint       has_own_scales
 
-        bint     debugging;
-        FILE   *dfp;
+        bint     debugging
+        FILE   *dfp
 
 
     P7_OMX* p7_omx_Create(int allocM, int allocL, int allocXL)
