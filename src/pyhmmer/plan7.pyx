@@ -638,6 +638,13 @@ cdef class Background:
             `Profile.msv_filter` or `OptimizedProfile.msv_filter` to compute
             the sequence bitscore (scaled by a factor of :math:`log(2)`).
 
+        Example:
+            >>> dna = easel.Alphabet.dna()
+            >>> seq = easel.DigitalSequence.sample(dna, 100, randomness=42)
+            >>> bg = plan7.Background(dna)
+            >>> bg.null1(seq)
+            -6.0605...
+
         .. versionadded:: 0.12.0
 
         """
@@ -2291,8 +2298,6 @@ cdef class HMM:
 
     """
 
-    Transitions = Transitions
-
     @classmethod
     def sample(
         cls,
@@ -2891,17 +2896,17 @@ cdef class HMM:
         Columns correspond to the following transitions, in order:
         :math:`M_n \to M_{n+1}`, :math:`M_n \to I_n`, :math:`M_n \to D_{n+1}`,
         :math:`I_n \to I_n`, :math:`I_n \to M_{n+1}`, :math:`D_n \to D_{n+1}`,
-        :math:`D_n \to M_{n+1}`. Use the `pyhmmer.plan7.HMM.Transitions`
+        :math:`D_n \to M_{n+1}`. Use the `pyhmmer.plan7.Transitions`
         enum instead of hardcoded indices to make your code more legible.
 
         Example:
-            >>> TR = HMM.Transitions
-            >>> t = thioesterase.transition_probabilities
-            >>> t[1, HMM.TR.MM]
+            >>> T = plan7.Transitions
+            >>> p = thioesterase.transition_probabilities
+            >>> p[1, T.MM]
             0.999...
-            >>> t[0, HMM.TR.DM]  # 1 by convention for the first node
+            >>> p[0, T.DM]  # 1 by convention for the first node
             1.0
-            >>> t[-1, HMM.TR.MD] # 0 by convention for the last node
+            >>> p[-1, T.MD] # 0 by convention for the last node
             0.0
 
         Caution:
@@ -2910,13 +2915,13 @@ cdef class HMM:
             :math:`D_n` transition probabilities should only contain
             probabilities between 0 and 1, and sum to 1::
 
-                >>> TR = HMM.Transitions
-                >>> t = thioesterase.transition_probabilities
-                >>> t[50, TR.MM] + t[50, TR.MI] + t[50, TR.MD]
+                >>> T = plan7.Transitions
+                >>> p = thioesterase.transition_probabilities
+                >>> p[50, T.MM] + p[50, T.MI] + p[50, T.MD]
                 1.000...
-                >>> t[50, TR.IM] + t[50, TR.II]
+                >>> p[50, T.IM] + p[50, T.II]
                 1.000...
-                >>> t[50, TR.DM] + t[50, TR.DD]
+                >>> p[50, T.DM] + p[50, T.DD]
                 1.000...
 
             Consider calling `HMM.validate` after manual edition.

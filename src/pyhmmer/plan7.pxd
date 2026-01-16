@@ -44,9 +44,10 @@ from .easel cimport (
     KeyHash,
     MSA,
     Randomness,
+    Sequence,
+    SequenceFile,
     VectorF,
     VectorU8,
-    SequenceFile,
 )
 
 
