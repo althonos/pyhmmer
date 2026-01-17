@@ -466,18 +466,18 @@ class TestDigitalMSA(_TestMSA, unittest.TestCase):
 
     def test_reverse_complement(self):
         dna = easel.Alphabet.dna()
-
-        buffer = io.BytesIO(
-            b"# STOCKHOLM 1.0\n\n"
-            b"seq1  ..TTAAAACC\n"
-            b"seq2  AAAAGGAATT\n"
-            b"seq3  CCCCGGGG..\n"
-            b"seq4  GGGGGGGGGG\n"
-            b"//\n"
+        msa = easel.MSAFile.parse(
+            (
+                b"# STOCKHOLM 1.0\n\n"
+                b"seq1  ..TTAAAACC\n"
+                b"seq2  AAAAGGAATT\n"
+                b"seq3  CCCCGGGG..\n"
+                b"seq4  GGGGGGGGGG\n"
+                b"//\n"
+            ), 
+            format="stockholm", 
+            alphabet=dna
         )
-
-        with easel.MSAFile(buffer, format="stockholm", digital=True, alphabet=dna) as msa_file:
-            msa = msa_file.read()
 
         rc = msa.reverse_complement()
         self.assertEqual(dna.decode(rc.alignment[0]), "GGTTTTAA--")
