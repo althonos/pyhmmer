@@ -1,7 +1,6 @@
-import copy
-import gc
 import io
 import os
+import platform
 import unittest
 import tempfile
 from itertools import zip_longest
@@ -106,6 +105,7 @@ class _TestReadFilename(object):
 
 class _TestReadFileObject(object):
 
+    @unittest.skipIf(platform.system() == "Windows", "reading from fileobj unsupported on Windows")
     def test_read_fileobject_guess_format(self):
         for filename, start, count, length in zip_longest(self.filenames, self.starts, self.counts, self.lengths):
             path = os.path.join(self.folder, filename)
@@ -117,6 +117,7 @@ class _TestReadFileObject(object):
                 self.assertEqual(len(msa), length)
                 self.assertEqual(len(msa.sequences), count)
 
+    @unittest.skipIf(platform.system() == "Windows", "reading from fileobj unsupported on Windows")
     def test_read_filename_given_format(self):
         for filename, start, count, length in zip_longest(self.filenames, self.starts, self.counts, self.lengths):
             path = os.path.join(self.folder, filename)
@@ -128,6 +129,7 @@ class _TestReadFileObject(object):
                 self.assertEqual(len(msa), length)
                 self.assertEqual(len(msa.sequences), count)
 
+    @unittest.skipIf(platform.system() == "Windows", "reading from fileobj unsupported on Windows")
     def test_guess_alphabet(self):
         for filename, alphabet in zip_longest(self.filenames, self.alphabet):
             path = os.path.join(self.folder, filename)

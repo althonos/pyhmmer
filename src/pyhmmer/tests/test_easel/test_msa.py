@@ -3,6 +3,7 @@ import functools
 import gc
 import io
 import os
+import platform
 import unittest
 import tempfile
 
@@ -24,6 +25,7 @@ class _TestMSA(object):
         else:
             super().assertAlmostEqual(x, y, places=places)
 
+    @unittest.skipIf(platform.system() == "Windows", "writing to fileobj unsupported on Windows")
     @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
     def test_write_roundtrip_stockholm(self):
         sto = os.path.join(self.formats_folder, "stockholm.1")
