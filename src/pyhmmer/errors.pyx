@@ -8,6 +8,8 @@ cimport libeasel.alphabet
 
 include "_getid.pxi"
 
+__version__ = PROJECT_VERSION
+
 statuscode = {
     libeasel.eslOK: "eslOK",
     libeasel.eslFAIL: "eslFAIL",

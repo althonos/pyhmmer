@@ -133,6 +133,8 @@ from .utils import peekable
 
 # --- Constants --------------------------------------------------------------
 
+__version__ = PROJECT_VERSION
+
 cdef dict MSA_FILE_FORMATS = {
     "stockholm": libeasel.msafile.eslMSAFILE_STOCKHOLM,
     "pfam": libeasel.msafile.eslMSAFILE_PFAM,
