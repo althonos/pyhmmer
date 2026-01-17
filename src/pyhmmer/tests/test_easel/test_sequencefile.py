@@ -1,7 +1,6 @@
-import copy
-import gc
 import io
 import os
+import platform
 import unittest
 import tempfile
 from itertools import zip_longest
@@ -309,6 +308,7 @@ class TestClustalFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase)
 
 
 @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
+@unittest.skipIf(platform.system() == "Windows", "reading from fileobj unsupported on Windows")
 class TestClustalLikeFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "clustal")
     filenames = ["clustal.good.1"]
@@ -319,6 +319,7 @@ class TestClustalLikeFile(_TestReadFilename, _TestReadFileObject, unittest.TestC
 
 
 @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
+@unittest.skipIf(platform.system() == "Windows", "reading from fileobj unsupported on Windows")
 class TestPhylipFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "phylip")
     filenames = ["phylip.good.1", "phylip.good.2", "phylip.good.3"]
@@ -329,6 +330,7 @@ class TestPhylipFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
 
 
 @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
+@unittest.skipIf(platform.system() == "Windows", "reading from fileobj unsupported on Windows")
 class TestPhylipsFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "phylips")
     filenames = ["phylips.good.1", "phylips.good.2"]
@@ -339,6 +341,7 @@ class TestPhylipsFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase)
 
 
 @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
+@unittest.skipIf(platform.system() == "Windows", "reading from fileobj unsupported on Windows")
 class TestPsiblastFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "psiblast")
     filenames = ["psiblast.good.1", "psiblast.good.2"]
@@ -349,6 +352,7 @@ class TestPsiblastFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase
 
 
 @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
+@unittest.skipIf(platform.system() == "Windows", "reading from fileobj unsupported on Windows")
 class TestSelexFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "selex")
     filenames = ["selex.good.1", "selex.good.2", "selex.good.3", "selex.good.4"]
@@ -374,6 +378,7 @@ class TestSelexFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
 
 
 @unittest.skipUnless(os.path.exists(EASEL_FOLDER), "test data not available")
+@unittest.skipIf(platform.system() == "Windows", "reading from fileobj unsupported on Windows")
 class TestStockholmFile(_TestReadFilename, _TestReadFileObject, unittest.TestCase):
     folder    = os.path.join(EASEL_FOLDER, "esl_msa_testfiles", "stockholm")
     filenames = ["stockholm.good.1"]
