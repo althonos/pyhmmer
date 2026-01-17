@@ -65,6 +65,7 @@ class TestSSIReader(unittest.TestCase):
 class TestSSIWriter(unittest.TestCase):
     def test_init_error_fileexists(self):
         with tempfile.NamedTemporaryFile() as tmp:
+            self.assertTrue(os.path.exists(tmp.name))
             self.assertRaises(
                 FileExistsError, easel.SSIWriter, tmp.name, exclusive=True
             )
