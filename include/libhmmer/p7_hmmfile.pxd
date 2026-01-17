@@ -46,16 +46,16 @@ cdef extern from "hmmer.h" nogil:
         char[eslERRBUFSIZE] errbuf
 
 
-    int  p7_hmmfile_Open     (const char *filename, char *env, P7_HMMFILE **ret_hfp, char *errbuf)# except *
-    int  p7_hmmfile_OpenNoDB (const char *filename, char *env, P7_HMMFILE **ret_hfp, char *errbuf)# except *
-    int  p7_hmmfile_OpenBuffer(const char *buffer, int size, P7_HMMFILE **ret_hfp)# except *
-    void p7_hmmfile_Close(P7_HMMFILE *hfp)# except *
+    int  p7_hmmfile_Open     (const char *filename, char *env, P7_HMMFILE **ret_hfp, char *errbuf) except *
+    int  p7_hmmfile_OpenNoDB (const char *filename, char *env, P7_HMMFILE **ret_hfp, char *errbuf) except *
+    int  p7_hmmfile_OpenBuffer(const char *buffer, int size, P7_HMMFILE **ret_hfp) except *
+    void p7_hmmfile_Close(P7_HMMFILE *hfp) except *
 
-    int  p7_hmmfile_WriteBinary(FILE *fp, int format, P7_HMM *hmm)# except *
-    int  p7_hmmfile_WriteASCII (FILE *fp, int format, P7_HMM *hmm)# except *
+    int  p7_hmmfile_WriteBinary(FILE *fp, int format, P7_HMM *hmm) except *
+    int  p7_hmmfile_WriteASCII (FILE *fp, int format, P7_HMM *hmm) except *
     int  p7_hmmfile_WriteToString (char **s, int format, P7_HMM *hmm)
 
-    int  p7_hmmfile_Read(P7_HMMFILE *hfp, ESL_ALPHABET **ret_abc,  P7_HMM **opt_hmm)# except *
+    int  p7_hmmfile_Read(P7_HMMFILE *hfp, ESL_ALPHABET **ret_abc,  P7_HMM **opt_hmm) except *
     int  p7_hmmfile_PositionByKey(P7_HMMFILE *hfp, const char *key)
     int  p7_hmmfile_Position(P7_HMMFILE *hfp, const off_t offset)
 
