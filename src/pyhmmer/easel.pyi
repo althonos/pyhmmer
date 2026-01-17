@@ -951,13 +951,18 @@ class SequenceFile(typing.Generic[S], typing.ContextManager[SequenceFile[S]], ty
     @classmethod
     def parse(
         cls,
-        buffer: BUFFER,
+        buffer: Union[str, Buffer],
         format: str,
         *,
         alphabet: Optional[Alphabet] = None,
     ) -> Sequence: ...
     @classmethod
-    def parseinto(cls, seq: Sequence, buffer: BUFFER, format: str) -> Sequence: ...
+    def parseinto(
+        cls, 
+        seq: S, 
+        buffer: Union[str, Buffer],
+        format: str
+    ) -> S: ...
     @typing.overload
     def __init__(
         self: SequenceFile[DigitalSequence[ABC]],
