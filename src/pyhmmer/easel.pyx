@@ -46,6 +46,7 @@ from cpython.unicode cimport (
 )
 
 cimport libeasel
+cimport libeasel.arr2
 cimport libeasel.alphabet
 cimport libeasel.bitfield
 cimport libeasel.buffer
@@ -6513,12 +6514,12 @@ cdef class MSAFile:
         """Parse a `MSA` from a binary ``buffer`` using the given ``format``.
 
         Argument:
-            buffer (`str`, `bytes` or byte-like buffer): A buffer containing 
-                the sequence data to parse. In addition to `str`, any type 
-                implementing the buffer protocol (such as `bytes`, 
+            buffer (`str`, `bytes` or byte-like buffer): A buffer containing
+                the sequence data to parse. In addition to `str`, any type
+                implementing the buffer protocol (such as `bytes`,
                 `bytearray`, or `memoryview`) is supported and interpreted
                 as containing an ASCII string.
-            format (`str`, optional): The format of the sequence data. See 
+            format (`str`, optional): The format of the sequence data. See
                 the `MSAFile.__init__` documentation for allowed values.
                 If `None` given, will be auto detected.
 
@@ -7237,47 +7238,54 @@ cdef class Sequence:
     def residue_markups(self, dict xr):
         assert self._sq != NULL
 
-        cdef str     tag
-        cdef str     val
-        cdef int     i
-        cdef ssize_t xrlen = len(xr)
-        cdef size_t  off   = 0 if libeasel.sq.esl_sq_IsText(self._sq) else 1
-        cdef size_t  xrdim = self._sq.n + 2 * libeasel.sq.esl_sq_IsDigital(self._sq)
+        cdef str         tag
+        cdef str         val
+        cdef int         i
+        cdef ssize_t     tlen  = -1
+        cdef const char* tdata = NULL
+        cdef ssize_t     xrlen = len(xr)
+        cdef size_t      off   = 0 if libeasel.sq.esl_sq_IsText(self._sq) else 1
+        cdef size_t      xrdim = self._sq.n + 1 + libeasel.sq.esl_sq_IsDigital(self._sq)
 
         # check the values have the right length before doing anything
         for tag, val in xr.items():
             if len(val) != self._sq.n:
                 raise ValueError(f"Residue markup annotation has an invalid length (expected {self._sq.n}, got {len(val)})")
+
         # clear old values
-        for i in range(self._sq.nxr):
-            free(self._sq.xr_tag[i])
-            free(self._sq.xr[i])
-        # reallocate arrays if needed
-        if xrlen == 0:
-            free(self._sq.xr)
+        if self._sq.nxr > 0:
+            libeasel.arr2.esl_arr2_Destroy(<void**> self._sq.xr,     self._sq.nxr)
+            libeasel.arr2.esl_arr2_Destroy(<void**> self._sq.xr_tag, self._sq.nxr)
             self._sq.xr = NULL
-            free(self._sq.xr_tag)
             self._sq.xr_tag = NULL
-        elif xrlen != self._sq.nxr:
-            self._sq.xr = <char**> realloc(<void*> self._sq.xr, xrlen * sizeof(char*))
-            self._sq.xr_tag = <char**> realloc(<void*> self._sq.xr_tag, xrlen * sizeof(char*))
+            self._sq.nxr = 0
+
+        if xrlen > 0:
+            self._sq.xr = <char**> calloc(xrlen, sizeof(char*))
+            self._sq.xr_tag = <char**> calloc(xrlen, sizeof(char*))
             if self._sq.xr == NULL or self._sq.xr_tag == NULL:
                 raise AllocationError("char*", sizeof(char*), xrlen)
-        # set array to NULL
-        self._sq.nxr = xrlen
-        for i in range(self._sq.nxr):
-            self._sq.xr_tag[i] = NULL
-            self._sq.xr[i] = NULL
+            for i in range(self._sq.nxr, xrlen):
+                self._sq.xr_tag[i] = NULL
+                self._sq.xr[i] = NULL
+            self._sq.nxr = xrlen
         # assign the new values
         for i, (tag, val) in enumerate(xr.items()):
-            self._sq.xr_tag[i] = strdup(PyUnicode_AsUTF8AndSize(tag, NULL))
+            # copy tag using esl_strdup
+            tdata = PyUnicode_AsUTF8AndSize(tag, &tlen)
+            status = libeasel.esl_strdup(tdata, tlen, &self._sq.xr_tag[i])
+            if status == libeasel.eslEMEM:
+                raise AllocationError("char", sizeof(char), tlen)
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_strdup")
+            # copy value
             self._sq.xr[i] = <char*> calloc(xrdim, sizeof(char))
-            if self._sq.xr_tag[i] == NULL or self._sq.xr[i] == NULL:
+            if self._sq.xr[i] == NULL:
                 raise AllocationError("char", sizeof(char), xrdim)
             memcpy(
                 &self._sq.xr[i][off],
                 PyUnicode_AsUTF8AndSize(val, NULL),
-                self._sq.n * sizeof(unsigned char)
+                (self._sq.n + 1) * sizeof(unsigned char)
             )
 
     # --- Abstract methods ---------------------------------------------------
@@ -8780,9 +8788,9 @@ cdef class SequenceFile:
         """Parse a sequence from a binary ``buffer`` using the given ``format``.
 
         Argument:
-            buffer (`str`, `bytes` or byte-like buffer): A buffer containing 
-                the sequence data to parse. In addition to `str`, any type 
-                implementing the buffer protocol (such as `bytes`, 
+            buffer (`str`, `bytes` or byte-like buffer): A buffer containing
+                the sequence data to parse. In addition to `str`, any type
+                implementing the buffer protocol (such as `bytes`,
                 `bytearray`, or `memoryview`) is supported and interpreted
                 as containing an ASCII string.
             format (`str`): The format of the sequence data. See the
@@ -8830,9 +8838,9 @@ cdef class SequenceFile:
         Argument:
             seq (`~pyhmmer.easel.Sequence`): The sequence object into which
                 the deseriazlied sequence data will be written.
-            buffer (`str`, `bytes` or byte-like buffer): A buffer containing 
-                the sequence data to parse. In addition to `str`, any type 
-                implementing the buffer protocol (such as `bytes`, 
+            buffer (`str`, `bytes` or byte-like buffer): A buffer containing
+                the sequence data to parse. In addition to `str`, any type
+                implementing the buffer protocol (such as `bytes`,
                 `bytearray`, or `memoryview`) is supported and interpreted
                 as containing an ASCII string.
             format (`str`): The format of the sequence data. See the
