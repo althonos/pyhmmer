@@ -91,15 +91,18 @@ class _TestMSA(object):
 
     def test_mark_fragments(self):
         dna = easel.Alphabet.dna()
-        buffer = io.BytesIO(
-            b"# STOCKHOLM 1.0\n\n"
-            b"seq1  ..AAAAAA..\n"
-            b"seq2  .....AAAA.\n"
-            b"seq3  .CCC.CCCCC\n"
-            b"seq4  GGGGGGGGGG\n"
-            b"//\n"
+        msa = easel.MSAFile.parse(
+            (
+                b"# STOCKHOLM 1.0\n\n"
+                b"seq1  ..AAAAAA..\n"
+                b"seq2  .....AAAA.\n"
+                b"seq3  .CCC.CCCCC\n"
+                b"seq4  GGGGGGGGGG\n"
+                b"//\n"
+            ),
+            alphabet=dna,
+            format="stockholm",
         )
-        msa = self.read_msa(buffer, alphabet=dna)
 
         f1 = msa.mark_fragments(0.5)    
         self.assertEqual(len(f1), 4)
@@ -122,33 +125,44 @@ class _TestMSA(object):
 
     def test_compute_weights_identical_seqs_nt(self):
         nt = easel.Alphabet.dna()
-        buffer = io.BytesIO(b"# STOCKHOLM 1.0\n\nseq1 AAAAA\nseq2 AAAAA\nseq3 AAAAA\nseq4 AAAAA\nseq5 AAAAA\n//\n")
-        msa = self.read_msa(buffer, alphabet=nt)
+        msa = easel.MSAFile.parse(
+            b"# STOCKHOLM 1.0\n\nseq1 AAAAA\nseq2 AAAAA\nseq3 AAAAA\nseq4 AAAAA\nseq5 AAAAA\n//\n", 
+            format="stockholm",
+            alphabet=nt
+        )
         uniform = easel.VectorD([1.0, 1.0, 1.0, 1.0, 1.0])
         for method in ["gsc", "pb", "blosum"]:
             self.assertEqual(msa.compute_weights(method), uniform)
 
     def test_compute_weights_identical_seqs_aa(self):
         aa = easel.Alphabet.amino()
-        buffer = io.BytesIO(b"# STOCKHOLM 1.0\n\nseq1 AAAAA\nseq2 AAAAA\nseq3 AAAAA\nseq4 AAAAA\nseq5 AAAAA\n//\n")
-        msa = self.read_msa(buffer, alphabet=aa)
+        msa = easel.MSAFile.parse(
+            b"# STOCKHOLM 1.0\n\nseq1 AAAAA\nseq2 AAAAA\nseq3 AAAAA\nseq4 AAAAA\nseq5 AAAAA\n//\n",
+            format="stockholm",
+            alphabet=aa,
+        )
         uniform = easel.VectorD([1.0, 1.0, 1.0, 1.0, 1.0])
         for method in ["gsc", "pb", "blosum"]:
             self.assertEqual(msa.compute_weights(method), uniform)
 
     def test_compute_weights_henikoff_contrived(self):
         aa = easel.Alphabet.amino()
-        buffer = io.BytesIO(b"# STOCKHOLM 1.0\n\nseq1 AAAAA\nseq2 AAAAA\nseq3 CCCCC\nseq4 CCCCC\nseq5 TTTTT\n//\n")
-        msa = self.read_msa(buffer, alphabet=aa)
+        msa = easel.MSAFile.parse(
+            b"# STOCKHOLM 1.0\n\nseq1 AAAAA\nseq2 AAAAA\nseq3 CCCCC\nseq4 CCCCC\nseq5 TTTTT\n//\n",
+            format="stockholm",
+            alphabet=aa,
+        )
         expected = easel.VectorD([0.833333, 0.833333, 0.833333, 0.833333, 1.66667])
         for method in ["gsc", "pb", "blosum"]:
             self.assertAlmostEqual(msa.compute_weights(method), expected, places=3)
 
     def test_compute_weights_nitrogenase(self):
         aa = easel.Alphabet.amino()
-        buffer = io.BytesIO(b"# STOCKHOLM 1.0\n\nNIFE_CLOPA GYVGS\nNIFD_AZOVI GFDGF\nNIFD_BRAJA GYDGF\nNIFK_ANASP GYQGG\n//\n")
-        msa = self.read_msa(buffer, alphabet=aa)
-
+        msa = easel.MSAFile.parse(
+            b"# STOCKHOLM 1.0\n\nNIFE_CLOPA GYVGS\nNIFD_AZOVI GFDGF\nNIFD_BRAJA GYDGF\nNIFK_ANASP GYQGG\n//\n",
+            format="stockholm",
+            alphabet=aa,
+        )
         exp_gsc = easel.VectorD([1.125000, 0.875000, 0.875000, 1.125000])
         exp_pb  = easel.VectorD([1.066667, 1.066667, 0.800000, 1.066667])
         exp_blo = easel.VectorD([1.333333, 0.666667, 0.666667, 1.333333])
@@ -411,18 +425,18 @@ class TestDigitalMSA(_TestMSA, unittest.TestCase):
         # adapted from `utest_idfilter` in `esl_msaweight.c`
         dna = easel.Alphabet.dna()
         s1 = easel.DigitalSequence
-
-        buffer = io.BytesIO(
-            b"# STOCKHOLM 1.0\n\n"
-            b"seq1  ..AAAAAAAA\n"
-            b"seq2  AAAAAAAAAA\n"
-            b"seq3  CCCCCCCCCC\n"
-            b"seq4  GGGGGGGGGG\n"
-            b"//\n"
+        msa = easel.MSAFile.parse(
+            (
+                b"# STOCKHOLM 1.0\n\n"
+                b"seq1  ..AAAAAAAA\n"
+                b"seq2  AAAAAAAAAA\n"
+                b"seq3  CCCCCCCCCC\n"
+                b"seq4  GGGGGGGGGG\n"
+                b"//\n"
+            ),
+            alphabet=dna,
+            format="stockholm",
         )
-
-        with easel.MSAFile(buffer, format="stockholm", digital=True, alphabet=dna) as msa_file:
-            msa = msa_file.read()
 
         msa2 = msa.identity_filter(1.0)
         self.assertEqual(len(msa2.sequences), 3)
