@@ -3686,7 +3686,8 @@ cdef class HMMFile:
                     raise IsADirectoryError(errno.EISDIR, f"Is a directory: {file!r}")
                 elif os.stat(file).st_size == 0:
                     raise EOFError("HMM file is empty")
-            raise ValueError("format not recognized by HMMER")
+            text = errbuf.decode("utf-8", "replace")
+            raise ValueError(f"format not recognized by HMMER") from EaselError(status, text)
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, function)
 
