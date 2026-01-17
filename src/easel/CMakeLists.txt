@@ -72,7 +72,7 @@ set(EASEL_SOURCES
     esl_dirichlet.c
     esl_distance.c
     esl_dmatrix.c
-    esl_dsqdata.c
+    # esl_dsqdata.c  # <-- don't compile esl_dsqdata.c because it is not used, and depends heavily on pthreads
     esl_exponential.c
     esl_fileparser.c
     esl_gamma.c
