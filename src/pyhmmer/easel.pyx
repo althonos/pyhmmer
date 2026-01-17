@@ -255,7 +255,7 @@ cdef class Alphabet:
 
         Returns:
             `pyhmmer.easel.RNA`: A new RNA alphabet object.
-            
+
         """
         return RNA()
 
@@ -443,7 +443,7 @@ cdef class Alphabet:
         cdef ssize_t     length
         cdef int         kind
         cdef const void* data
-        cdef VectorU8    encoded 
+        cdef VectorU8    encoded
         cdef uint8_t*    buffer
 
         if LIMITED_API:
@@ -6500,6 +6500,100 @@ cdef class MSAFile:
 
     _FORMATS = dict(MSA_FILE_FORMATS) # copy dict to prevent editing
 
+    # --- Class methods ------------------------------------------------------
+
+    @classmethod
+    def parse(
+        cls,
+        object buffer,
+        str format = None,
+        *,
+        Alphabet alphabet=None
+    ):
+        """Parse a `MSA` from a binary ``buffer`` using the given ``format``.
+
+        Argument:
+            buffer (`bytes` or byte-like buffer): A buffer containing the
+                sequence data to parse. Any type implementing the buffer
+                protocol (such as `bytes`, `bytearray`, or `memoryview`)
+                is supported.
+            format (`str`): The format of the sequence data. See the
+                `MSAFile.__init__` documentation for allowed values.
+
+        Keyword Arguments:
+            alphabet (`~pyhmmer.easel.Alphabet`): The alphabet to use to
+                digitize the returned sequence, if desired.
+
+        Returns:
+            `~pyhmmer.easel.MSA`: The MSA parsed from the buffer,
+            either as a `DigitalMSA` if an alphabet was provided, or as
+            a `TextMSA` if `None` was given.
+
+        Raises:
+            `ValueError`: When ``format`` is not a valid sequence format.
+            `OSError`: If an internal parser error occurred while guessing
+                the alphabet or the format.
+
+        """
+        cdef MSAFile                  msafile
+        cdef MSA                      msa
+        cdef ESL_BUFFER*              buf
+        cdef const unsigned char[::1] view
+        cdef const char*              data      = NULL
+        cdef ssize_t                  length    = -1
+        cdef int                      fmt       = libeasel.msafile.eslMSAFILE_UNKNOWN
+
+        # validate given format
+        if format is not None:
+            format_ = format.lower()
+            if format_ not in MSA_FILE_FORMATS:
+                raise InvalidParameter("format", format, choices=list(MSA_FILE_FORMATS))
+            fmt = MSA_FILE_FORMATS[format_]
+
+        # get string buffer or use buffer protocol
+        if isinstance(buffer, str):
+            data = PyUnicode_AsUTF8AndSize(buffer, &length)
+        else:
+            view = buffer
+            length = view.shape[0]
+            if length > 0:
+                data = <const char*> &view[0]
+
+        # create a ESL_BUFFER pointing to the string data
+        status = libeasel.buffer.esl_buffer_OpenMem(
+            <const char*> data,
+            <esl_pos_t> length,
+            &buf,
+        )
+        if status == libeasel.eslEMEM:
+            raise AllocationError("ESL_BUFFER", sizeof(ESL_BUFFER))
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_buffer_OpenMem")
+
+        try:
+            # open a MSA File from the buffer
+            msafile = MSAFile.__new__(MSAFile)
+            status = libeasel.msafile.esl_msafile_OpenBuffer(
+                NULL,
+                buf,
+                fmt,
+                NULL,
+                &msafile._msaf,
+            )
+            if status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_msafile_OpenBuffer")
+            # set alphabet if reading in digital mode
+            if alphabet is not None:
+                msafile.alphabet = alphabet
+                libeasel.msafile.esl_msafile_SetDigital(msafile._msaf, alphabet._abc)
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "esl_msafile_SetDigital")
+            return msafile.read()
+        finally:
+            if msafile._msaf == NULL:
+                libeasel.buffer.esl_buffer_Close(buf)
+            msafile.close()
+
     # --- Constructor --------------------------------------------------------
 
     @staticmethod
@@ -7172,8 +7266,8 @@ cdef class Sequence:
             if self._sq.xr_tag[i] == NULL or self._sq.xr[i] == NULL:
                 raise AllocationError("char", sizeof(char), xrdim)
             memcpy(
-                &self._sq.xr[i][off], 
-                PyUnicode_AsUTF8AndSize(val, NULL), 
+                &self._sq.xr[i][off],
+                PyUnicode_AsUTF8AndSize(val, NULL),
                 self._sq.n * sizeof(unsigned char)
             )
 
@@ -8689,7 +8783,7 @@ cdef class SequenceFile:
                 digitize the returned sequence, if desired.
 
         Returns:
-            `~pyhmmer.easel.Sequence`: The sequenced parsed from the buffer,
+            `~pyhmmer.easel.Sequence`: The sequence parsed from the buffer,
             either as a `DigitalSequence` if an alphabet was provided, or as
             a `TextSequence` if `None` was given.
 
