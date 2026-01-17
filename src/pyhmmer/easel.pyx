@@ -7251,16 +7251,23 @@ cdef class Sequence:
         # clear old values
         for i in range(self._sq.nxr):
             free(self._sq.xr_tag[i])
-            self._sq.xr_tag[i] = NULL
             free(self._sq.xr[i])
-            self._sq.xr[i] = NULL
         # reallocate arrays if needed
-        if xrlen != self._sq.nxr:
-            self._sq.nxr = xrlen
+        if xrlen == 0:
+            free(self._sq.xr)
+            self._sq.xr = NULL
+            free(self._sq.xr_tag)
+            self._sq.xr_tag = NULL
+        elif xrlen != self._sq.nxr:
             self._sq.xr = <char**> realloc(<void*> self._sq.xr, xrlen * sizeof(char*))
             self._sq.xr_tag = <char**> realloc(<void*> self._sq.xr_tag, xrlen * sizeof(char*))
             if self._sq.xr == NULL or self._sq.xr_tag == NULL:
                 raise AllocationError("char*", sizeof(char*), xrlen)
+        # set array to NULL
+        self._sq.nxr = xrlen
+        for i in range(self._sq.nxr):
+            self._sq.xr_tag[i] = NULL
+            self._sq.xr[i] = NULL
         # assign the new values
         for i, (tag, val) in enumerate(xr.items()):
             self._sq.xr_tag[i] = strdup(PyUnicode_AsUTF8AndSize(tag, NULL))
