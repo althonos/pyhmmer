@@ -1,29 +1,55 @@
 diff --git a/esl_buffer.c b/esl_buffer.c
-index 7d660e2..24b2b39 100644
+index 7d660e2..96cb769 100644
 --- a/esl_buffer.c
 +++ b/esl_buffer.c
-@@ -29,7 +29,9 @@
+@@ -27,11 +27,12 @@
+ #ifdef HAVE_UNISTD_H
+ #include <unistd.h>
  #endif
- #ifdef _POSIX_VERSION
- #include <fcntl.h>
+-#ifdef _POSIX_VERSION
+-#include <fcntl.h>
 +#ifdef HAVE_SYS_MMAN_H
  #include <sys/mman.h>
 +#endif
++#ifdef HAVE_SYS_STAT_H
  #include <sys/stat.h>
- #endif /* _POSIX_VERSION */
+-#endif /* _POSIX_VERSION */
++#endif
  
-@@ -223,8 +225,10 @@ esl_buffer_OpenFile(const char *filename, ESL_BUFFER **ret_bf)
+ #include "easel.h"
+ #include "esl_mem.h"
+@@ -194,7 +195,7 @@ int
+ esl_buffer_OpenFile(const char *filename, ESL_BUFFER **ret_bf)
+ {
+   ESL_BUFFER *bf = NULL;
+-#ifdef _POSIX_VERSION
++#ifdef HAVE_SYS_STAT_H
+   struct stat fileinfo;
+ #endif
+   esl_pos_t   filesize = -1;
+@@ -212,17 +213,19 @@ esl_buffer_OpenFile(const char *filename, ESL_BUFFER **ret_bf)
+    * If we don't have fstat(), we'll just read normally, and pagesize
+    * will be the Easel default 4096 (set in buffer_create().)
+    */
+-#ifdef _POSIX_VERSION
++#ifdef HAVE_SYS_STAT_H
+   if (fstat(fileno(bf->fp), &fileinfo) == -1) ESL_XEXCEPTION(eslESYS, "fstat() failed");
+   filesize     = fileinfo.st_size;
++#ifdef _POSIX_VERSION
+   bf->pagesize = fileinfo.st_blksize;
+   if (bf->pagesize < 512)     bf->pagesize = 512;      /* I feel paranoid about st_blksize range not being guaranteed to be sensible */
+   if (bf->pagesize > 4194304) bf->pagesize = 4194304;
++#endif
+ #endif  
+ 
    if      (filesize != -1 && filesize <= eslBUFFER_SLURPSIZE)  
      { if ((status = buffer_init_file_slurped(bf, filesize)) != eslOK) goto ERROR; }
- #ifdef _POSIX_VERSION
+-#ifdef _POSIX_VERSION
 +#ifdef HAVE_SYS_MMAN_H
    else if (filesize > eslBUFFER_SLURPSIZE) 
      { if ((status = buffer_init_file_mmap(bf, filesize))    != eslOK) goto ERROR; }
-+#endif
  #endif
-   else
-     { if ((status = buffer_init_file_basic(bf))             != eslOK) goto ERROR; }
-@@ -520,7 +524,9 @@ esl_buffer_Close(ESL_BUFFER *bf)
+@@ -520,7 +523,9 @@ esl_buffer_Close(ESL_BUFFER *bf)
        if (bf->mem) 
  	{
  	  switch (bf->mode_is) {
@@ -33,7 +59,7 @@ index 7d660e2..24b2b39 100644
  	  case eslBUFFER_STRING: break; /* caller provided and remains responsible for an input memory buffer */
  	  default:               free(bf->mem);
  	  }
-@@ -1574,8 +1580,12 @@ buffer_init_file_mmap(ESL_BUFFER *bf, esl_pos_t filesize)
+@@ -1574,8 +1579,12 @@ buffer_init_file_mmap(ESL_BUFFER *bf, esl_pos_t filesize)
  {
    int          status;
    /*    mmap(addr, len,          prot,      flags,       fd,             offset */
@@ -46,7 +72,7 @@ index 7d660e2..24b2b39 100644
  
    bf->n       = filesize;
    bf->mode_is = eslBUFFER_MMAP;
-@@ -1586,7 +1596,9 @@ buffer_init_file_mmap(ESL_BUFFER *bf, esl_pos_t filesize)
+@@ -1586,7 +1595,9 @@ buffer_init_file_mmap(ESL_BUFFER *bf, esl_pos_t filesize)
    return eslOK;
  
   ERROR:
@@ -56,3 +82,28 @@ index 7d660e2..24b2b39 100644
    bf->mem     = NULL; 
    bf->n       = 0;
    bf->mode_is = eslBUFFER_UNSET;
+@@ -2190,7 +2201,7 @@ buffer_OpenFileAs(const char *filename, enum esl_buffer_mode_e mode_is, ESL_BUFF
+ {
+   char        msg[] = "buffer_OpenFileAs() failed";
+   ESL_BUFFER *bf    = NULL;
+-#ifdef _POSIX_VERSION
++#ifdef HAVE_SYS_STAT_H
+   struct stat fileinfo;
+ #endif
+   esl_pos_t   filesize = -1;
+@@ -2199,12 +2210,14 @@ buffer_OpenFileAs(const char *filename, enum esl_buffer_mode_e mode_is, ESL_BUFF
+   if ((bf->fp = fopen(filename, "rb"))           == NULL)  esl_fatal(msg);
+   if (esl_strdup(filename, -1, &(bf->filename))  != eslOK) esl_fatal(msg);
+ 
+-#ifdef _POSIX_VERSION
++#ifdef HAVE_SYS_STAT_H
+   if (fstat(fileno(bf->fp), &fileinfo)           == -1)    esl_fatal(msg);
+   filesize     = fileinfo.st_size;
++#ifdef _POSIX_VERSION
+   bf->pagesize = fileinfo.st_blksize;
+   if (bf->pagesize < 512)     bf->pagesize = 512;     
+   if (bf->pagesize > 4194304) bf->pagesize = 4194304;
++#endif
+ #endif  
+ 
+   switch (mode_is) {
