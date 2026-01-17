@@ -13,25 +13,9 @@ from .utils import EASEL_FOLDER, resource_files
 
 class TestSequenceFile(unittest.TestCase):
 
-    def test_guess_alphabet_empty_sequence(self):
-        buffer = io.BytesIO(b">seq1\n\n")
-        self.assertRaises(ValueError, easel.SequenceFile, buffer, format="fasta", digital=True)
-
     def test_init_error_unknownformat(self):
         with self.assertRaises(ValueError):
             _file = easel.SequenceFile("file.x", format="nonsense")
-
-    def test_init_error_empty(self):
-        with tempfile.NamedTemporaryFile() as empty:
-            # without a format argument, we can't determine the file format
-            self.assertRaises(ValueError, easel.SequenceFile, empty.name)
-            # with a format argument, we don't expect the file to be empty
-            self.assertRaises(EOFError, easel.SequenceFile, empty.name, "fasta")
-        with io.BytesIO(b"") as buffer:
-            # without a format argument, we can't determine the file format
-            self.assertRaises(ValueError, easel.SequenceFile, buffer)
-            # with a format argument, we don't expect the file to be empty
-            self.assertRaises(EOFError, easel.SequenceFile, buffer, "fasta")
 
     def test_init_error_filenotfound(self):
         self.assertRaises(
@@ -101,6 +85,19 @@ class TestSequenceFile(unittest.TestCase):
 
 class _TestReadFilename(object):
 
+    def test_init_error_empty(self):
+        try:
+            fd, filename = tempfile.mkstemp(suffix=".msa")
+            self.assertTrue(os.path.exists(filename))
+            # without a format argument, we can't determine the file format
+            self.assertRaises(ValueError, easel.SequenceFile, filename)
+            # with a format argument, we don't expect the file to be empty
+            self.assertRaises(EOFError, easel.SequenceFile, filename, "fasta")
+        finally:
+            os.close(fd)
+            if os.path.exists(filename):
+                os.remove(filename)
+
     def test_read_filename_guess_format(self):
         # check reading a file without specifying the format works
         for filename, start in zip_longest(self.filenames, self.starts):
@@ -159,6 +156,17 @@ class _TestReadFilename(object):
 
 
 class _TestReadFileObject(object):
+
+    def test_guess_alphabet_empty_sequence(self):
+        buffer = io.BytesIO(b">seq1\n\n")
+        self.assertRaises(ValueError, easel.SequenceFile, buffer, format="fasta", digital=True)
+
+    def test_init_error_empty(self):
+        with io.BytesIO(b"") as buffer:
+            # without a format argument, we can't determine the file format
+            self.assertRaises(ValueError, easel.SequenceFile, buffer)
+            # with a format argument, we don't expect the file to be empty
+            self.assertRaises(EOFError, easel.SequenceFile, buffer, "fasta")
 
     def test_read_fileobject_guess_format(self):
         # check reading a file while specifying the format works
