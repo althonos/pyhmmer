@@ -8861,7 +8861,7 @@ cdef class SequenceFile:
             view = buffer
             length = view.shape[0]
             if length > 0:
-                data = &view[0]
+                data = <const char*> &view[0]
 
         status = libeasel.sqio.esl_sqio_Parse(<char*> data, <int> length, seq._sq, fmt)
         if status == libeasel.eslEFORMAT:
