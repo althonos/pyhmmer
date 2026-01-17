@@ -296,6 +296,12 @@ add_library(libeasel ${EASEL_PATCHED_SOURCES})
 target_include_directories(libeasel PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(libeasel PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
+# On Windows, compile with 64-bit file offsets to allow reading 
+# SSI files created on 64-bit platforms.
+if(WIN32)
+    target_compile_definitions(libeasel PRIVATE -D_LARGE_FILES=1 -D_FILE_OFFSET_BITS=64)
+endif()
+
 # --- Install shared libraries & headers if required ---------------------------
 
 if(DEFINED PYHMMER_INSTALL_LIBS_DIR)
