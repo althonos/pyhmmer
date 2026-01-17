@@ -243,6 +243,8 @@ from .errors import (
 
 # --- Constants --------------------------------------------------------------
 
+__version__ = PROJECT_VERSION
+
 cdef dict BUILDER_ARCHITECTURE_STRATEGY = {
     "fast": p7_archchoice_e.p7_ARCH_FAST,
     "hand": p7_archchoice_e.p7_ARCH_HAND,

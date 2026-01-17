@@ -52,6 +52,9 @@ import io
 import socket
 import warnings
 
+# --- Constants --------------------------------------------------------------
+
+__version__ = PROJECT_VERSION
 
 # --- Cython classes ---------------------------------------------------------
 
