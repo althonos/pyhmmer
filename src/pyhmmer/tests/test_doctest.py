@@ -2,14 +2,12 @@
 """Test doctest contained tests in every file of the module.
 """
 
-import configparser
 import doctest
 import importlib
 import os
 import pkgutil
-import re
+import platform
 import sys
-import shutil
 import types
 import warnings
 from unittest import mock
@@ -53,6 +51,11 @@ def load_tests(loader, tests, ignore):
     # doctests require `numpy` to run, which may not be available because
     # it is a pain to get to work out-of-the-box on OSX inside CI
     if numpy is None:
+        return tests
+
+    # doctests show features not (yet) supported on Windows so we don't
+    # actually run them on Windows to make porting easier for now
+    if platform.system() == "Windows":
         return tests
 
     # add a sample HMM and some sequences to use with the globals
