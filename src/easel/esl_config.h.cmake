@@ -61,9 +61,6 @@
 #ifndef HAVE_UNISTD_H
 #cmakedefine HAVE_UNISTD_H @HAVE_UNISTD_H@
 #endif
-#ifndef HAVE_SYS_TYPES_H
-#cmakedefine HAVE_SYS_TYPES_H @HAVE_SYS_TYPES_H@
-#endif
 #ifndef HAVE_STRINGS_H
 #cmakedefine HAVE_STRINGS_H @HAVE_STRINGS_H@
 #endif
@@ -76,8 +73,14 @@
 #ifndef HAVE_SYS_PARAM_H
 #cmakedefine HAVE_SYS_PARAM_H @HAVE_SYS_PARAM_H@
 #endif
+#ifndef HAVE_SYS_STAT_H
+#cmakedefine HAVE_SYS_STAT_H @HAVE_SYS_STAT_H@
+#endif
 #ifndef HAVE_SYS_SYSCTL_H
 #cmakedefine HAVE_SYS_SYSCTL_H @HAVE_SYS_SYSCTL_H@
+#endif
+#ifndef HAVE_SYS_TYPES_H
+#cmakedefine HAVE_SYS_TYPES_H @HAVE_SYS_TYPES_H@
 #endif
 #ifndef HAVE_SYSLOG_H
 #cmakedefine HAVE_SYSLOG_H  @HAVE_SYSLOG_H@
