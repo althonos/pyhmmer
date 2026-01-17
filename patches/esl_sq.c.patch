@@ -1,0 +1,24 @@
+diff --git a/esl_sq.c b/esl_sq.c
+index e901dac..a1a8472 100644
+--- a/esl_sq.c
++++ b/esl_sq.c
+@@ -2211,6 +2211,9 @@ sq_init(ESL_SQ *sq, int do_digital)
+   sq->ss       = NULL;		/* Note that ss is optional - it will only be allocated if needed */
+   /* n, coord bookkeeping, and strings are all set below by a call to Reuse() */
+ 
++  /* ensure NULL in case the caller is CreateFrom() */
++  sq->abc = NULL;
++
+   sq->nalloc   = eslSQ_NAMECHUNK;	
+   sq->aalloc   = eslSQ_ACCCHUNK;
+   sq->dalloc   = eslSQ_DESCCHUNK;
+@@ -2264,6 +2267,9 @@ sq_create_from(const char *name, const char *desc, const char *acc)
+   sq->ss     = NULL;
+   sq->source = NULL;
+ 
++  /* ensure NULL in case the caller is CreateFrom() */
++  sq->abc = NULL;
++
+   /* optional for extra residue markups */
+   sq->nxr    = 0;
+   sq->xr_tag = NULL;
