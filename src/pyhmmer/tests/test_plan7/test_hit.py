@@ -1,9 +1,4 @@
-import io
-import itertools
-import os
-import shutil
 import unittest
-import tempfile
 
 import pyhmmer
 from pyhmmer.errors import EaselError

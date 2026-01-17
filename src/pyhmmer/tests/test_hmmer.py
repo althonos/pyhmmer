@@ -319,7 +319,8 @@ class TestHmmsearchSingle(TestHmmsearch, unittest.TestCase):
         hits = pyhmmer.hmmsearch([], seqs, cpus=1, parallel=self.parallel)
         self.assertIs(None, next(hits, None))
 
-@unittest.skipIf(platform.system() == "Darwin" or platform.system() == "Windows", "may deadlock on MacOS or Windows")
+@unittest.skipIf(platform.system() == "Darwin", "may deadlock on MacOS")
+@unittest.skipIf(platform.system() == "Windows", "may deadlock on Windows")
 @unittest.skipIf(platform.system() == "Emscripten", "no process support on Emscripten")
 class TestHmmsearchProcess(TestHmmsearch, unittest.TestCase):
     def get_hits(self, hmm, seqs):
@@ -351,6 +352,7 @@ class TestHmmsearchReverseSingle(TestHmmsearchSingle):
 
 
 @unittest.skipIf(platform.system() == "Darwin", "may deadlock on MacOS")
+@unittest.skipIf(platform.system() == "Windows", "may deadlock on Windows")
 @unittest.skipIf(platform.system() == "Emscripten", "no process support on Emscripten")
 class TestHmmsearchReverseProcess(TestHmmsearchProcess):
     parallel = "targets"
@@ -377,22 +379,38 @@ class TestHmmpress(unittest.TestCase):
                 os.remove(self.tmp + ext)
 
     @unittest.skipUnless(resource_files, "importlib.resources not available")
-    def test_roundtrip(self):
+    @unittest.skipIf(platform.system() == "Windows", "writing to fileobj unsupported on Windows")
+    def test_roundtrip_txt(self):
+        db_folder = resource_files(__package__).joinpath("data", "hmms", "txt")
+        if not db_folder.exists():
+            self.skipTest("data files not available")
+        with HMMFile(db_folder.joinpath("Thioesterase.hmm")) as hmms:
+            self.hmms = list(hmms)
+        n = pyhmmer.hmmer.hmmpress(self.hmms, self.tmp)
+        self.assertEqual(n, 1)
+        with HMMFile(self.tmp) as hmm_file:
+            for pressed_hmm, base_hmm in zip(hmm_file, self.hmms):
+                self.assertEqual(pressed_hmm.name, base_hmm.name)
+                self.assertEqual(pressed_hmm.accession, base_hmm.accession)
+                self.assertEqual(pressed_hmm.description, base_hmm.description)
+                self.assertEqual(pressed_hmm, base_hmm)
+
+    @unittest.skipUnless(resource_files, "importlib.resources not available")
+    @unittest.skipIf(platform.system() == "Windows", "writing to fileobj unsupported on Windows")
+    def test_roundtrip_db(self):
         db_folder = resource_files(__package__).joinpath("data", "hmms", "db")
         if not db_folder.exists():
             self.skipTest("data files not available")
-        self.hmm = db_folder.joinpath("Thioesterase.hmm")
-        self.h3p = db_folder.joinpath("Thioesterase.hmm.h3p")
-        self.h3m = db_folder.joinpath("Thioesterase.hmm.h3m")
-        self.h3f = db_folder.joinpath("Thioesterase.hmm.h3f")
-        self.h3i = db_folder.joinpath("Thioesterase.hmm.h3f")
-        with HMMFile(self.hmm) as hmms:
-            n = pyhmmer.hmmer.hmmpress(hmms, self.tmp)
-            self.assertEqual(n, 1)
+        with HMMFile(db_folder.joinpath("Thioesterase.hmm")) as hmms:
+            self.hmms = list(hmms)
+        n = pyhmmer.hmmer.hmmpress(self.hmms, self.tmp)
+        self.assertEqual(n, 1)
         with HMMFile(self.tmp) as hmm_file:
-            hmm = next(hmm_file)
-            self.assertEqual(hmm.name, "Thioesterase")
-
+            for pressed_hmm, base_hmm in zip(hmm_file, self.hmms):
+                self.assertEqual(pressed_hmm.name, base_hmm.name)
+                self.assertEqual(pressed_hmm.accession, base_hmm.accession)
+                self.assertEqual(pressed_hmm.description, base_hmm.description)
+                self.assertEqual(pressed_hmm, base_hmm)
 
 class TestPhmmer(unittest.TestCase):
 
