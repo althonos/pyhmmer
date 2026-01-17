@@ -1,7 +1,6 @@
 import io
 import itertools
-import os
-import shutil
+import platform
 import unittest
 import tempfile
 
@@ -215,10 +214,12 @@ class _TestRREFam(_TestHMMFile):
 
 # --- Test cases ---------------------------------------------------------------
 
+@unittest.skipIf(platform.system() == "Windows", "reading from fileobj unsupported on Windows")
 @unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class TestFileobjSingle(_TestHMMFileobj, _TestThioesterase, unittest.TestCase):
     pass
 
+@unittest.skipIf(platform.system() == "Windows", "reading from fileobj unsupported on Windows")
 @unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class TestFileObjMultiple(_TestHMMFileobj, _TestRREFam, unittest.TestCase):
     pass
