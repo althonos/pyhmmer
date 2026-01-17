@@ -6513,12 +6513,14 @@ cdef class MSAFile:
         """Parse a `MSA` from a binary ``buffer`` using the given ``format``.
 
         Argument:
-            buffer (`bytes` or byte-like buffer): A buffer containing the
-                sequence data to parse. Any type implementing the buffer
-                protocol (such as `bytes`, `bytearray`, or `memoryview`)
-                is supported.
-            format (`str`): The format of the sequence data. See the
-                `MSAFile.__init__` documentation for allowed values.
+            buffer (`str`, `bytes` or byte-like buffer): A buffer containing 
+                the sequence data to parse. In addition to `str`, any type 
+                implementing the buffer protocol (such as `bytes`, 
+                `bytearray`, or `memoryview`) is supported and interpreted
+                as containing an ASCII string.
+            format (`str`, optional): The format of the sequence data. See 
+                the `MSAFile.__init__` documentation for allowed values.
+                If `None` given, will be auto detected.
 
         Keyword Arguments:
             alphabet (`~pyhmmer.easel.Alphabet`): The alphabet to use to
@@ -8763,7 +8765,7 @@ cdef class SequenceFile:
     @classmethod
     def parse(
         cls,
-        const unsigned char[::1] buffer,
+        object buffer,
         str format,
         *,
         Alphabet alphabet=None
@@ -8771,10 +8773,11 @@ cdef class SequenceFile:
         """Parse a sequence from a binary ``buffer`` using the given ``format``.
 
         Argument:
-            buffer (`bytes` or byte-like buffer): A buffer containing the
-                sequence data to parse. Any type implementing the buffer
-                protocol (such as `bytes`, `bytearray`, or `memoryview`)
-                is supported.
+            buffer (`str`, `bytes` or byte-like buffer): A buffer containing 
+                the sequence data to parse. In addition to `str`, any type 
+                implementing the buffer protocol (such as `bytes`, 
+                `bytearray`, or `memoryview`) is supported and interpreted
+                as containing an ASCII string.
             format (`str`): The format of the sequence data. See the
                 `SequenceFile.__init__` documentation for allowed values.
 
@@ -8793,7 +8796,7 @@ cdef class SequenceFile:
                 the alphabet or the format.
 
         """
-        cdef Sequence seq
+        cdef Sequence                 seq
 
         if alphabet is None:
             seq = TextSequence.__new__(TextSequence)
@@ -8812,7 +8815,7 @@ cdef class SequenceFile:
     def parseinto(
         cls,
         Sequence seq,
-        const unsigned char[::1] buffer,
+        object buffer,
         str format
     ):
         """Parse a sequence from a binary ``buffer`` into ``seq``.
@@ -8820,10 +8823,11 @@ cdef class SequenceFile:
         Argument:
             seq (`~pyhmmer.easel.Sequence`): The sequence object into which
                 the deseriazlied sequence data will be written.
-            buffer (`bytes` or byte-like buffer): A buffer containing the
-                sequence data to parse. Any type implementing the buffer
-                protocol (such as `bytes`, `bytearray`, or `memoryview`)
-                is supported.
+            buffer (`str`, `bytes` or byte-like buffer): A buffer containing 
+                the sequence data to parse. In addition to `str`, any type 
+                implementing the buffer protocol (such as `bytes`, 
+                `bytearray`, or `memoryview`) is supported and interpreted
+                as containing an ASCII string.
             format (`str`): The format of the sequence data. See the
                 `SequenceFile.__init__` documentation for allowed values.
 
@@ -8839,18 +8843,27 @@ cdef class SequenceFile:
         """
         assert seq._sq != NULL
 
-        cdef int fmt = libeasel.sqio.eslSQFILE_UNKNOWN
+        cdef int                      status
+        cdef const unsigned char[::1] view
+        cdef int                      fmt    = libeasel.sqio.eslSQFILE_UNKNOWN
+        cdef const char*              data   = NULL
+        cdef ssize_t                  length = -1
+
         if format is not None:
             format_ = format.lower()
             if format_ not in SEQUENCE_FILE_FORMATS:
                 raise InvalidParameter("format", format, choices=list(SEQUENCE_FILE_FORMATS))
             fmt = SEQUENCE_FILE_FORMATS[format_]
 
-        cdef int status = libeasel.sqio.esl_sqio_Parse(
-            <char*> &buffer[0],
-            buffer.shape[0],
-            seq._sq, fmt
-        )
+        if isinstance(buffer, str):
+            data = PyUnicode_AsUTF8AndSize(buffer, &length)
+        else:
+            view = buffer
+            length = view.shape[0]
+            if length > 0:
+                data = &view[0]
+
+        status = libeasel.sqio.esl_sqio_Parse(<char*> data, <int> length, seq._sq, fmt)
         if status == libeasel.eslEFORMAT:
             raise AllocationError("ESL_SQFILE", sizeof(ESL_SQFILE))
         elif status == libeasel.eslOK:
