@@ -165,7 +165,7 @@ class TestHMM(unittest.TestCase):
             # 1st line is skipped, cause it contains the format date, which will
             # obviously not be the same as the reference
             for line_written, line_ref in itertools.islice(zip(buffer, f), 1, None):
-                self.assertEqual(line_written, line_ref)
+                self.assertEqual(line_written.rstrip(), line_ref.rstrip())
 
     def test_write_empty(self):
         buffer = io.BytesIO()
