@@ -129,10 +129,12 @@ class _TestHMMPath:
         folder = tempfile.mkdtemp()
         try:
             self.assertTrue(os.path.exists(folder))
-            self.assertRaises(IsADirectoryError, HMMFile, folder)
+            expected = OSError if platform.system() == "Windows" else IsADirectoryError
+            self.assertRaises(expected, HMMFile, folder)
         finally:
             os.rmdir(folder)
 
+    @unittest.skipIf(platform.system() == "Windows", "cannot read through symlinks on Windows")
     def test_read_optimized_profiles(self):
         path = self.hmms_folder.joinpath("db", "{}.hmm".format(self.ID))
         if not path.exists():
@@ -140,6 +142,7 @@ class _TestHMMPath:
         with self.open_hmm(path) as f:
             self.check_hmmfile(f.optimized_profiles())
 
+    @unittest.skipIf(platform.system() == "Windows", "cannot read through symlinks on Windows")
     def test_optimized_profiles_length(self):
         path = self.hmms_folder.joinpath("db", "{}.hmm".format(self.ID))
         if not path.exists():
@@ -174,6 +177,7 @@ class _TestHMMPath:
             self.assertIsNot(hmm1, hmm2)
             self.assertEqual(hmm1.name, hmm2.name)
 
+    @unittest.skipIf(platform.system() == "Windows", "cannot read through symlinks on Windows")
     def test_rewind_optimized_profiles(self):
         path = self.hmms_folder.joinpath("db", "{}.hmm".format(self.ID))
         if not path.exists():
@@ -192,6 +196,7 @@ class _TestHMMPath:
         with self.open_hmm(path) as f:
             self.assertEqual(f.name, str(path))
 
+    @unittest.skipIf(platform.system() == "Windows", "cannot read through symlinks on Windows")
     def test_name_hmmpressed(self):
         path = self.hmms_folder.joinpath("db", "{}.hmm".format(self.ID))
         if not path.exists():
