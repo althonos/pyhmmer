@@ -24,9 +24,9 @@ cdef extern from "windows.h" nogil:
         DWORD  nLength
         void*  lpSecurityDescriptor
         BOOL   bInheritHandle
-    ctypedef _SECURITY_ATTRIBUTES  SECURITY_ATTRIBUTES 
-    ctypedef _SECURITY_ATTRIBUTES* PSECURITY_ATTRIBUTES 
-    ctypedef _SECURITY_ATTRIBUTES* LPSECURITY_ATTRIBUTES 
+    ctypedef _SECURITY_ATTRIBUTES  SECURITY_ATTRIBUTES
+    ctypedef _SECURITY_ATTRIBUTES* PSECURITY_ATTRIBUTES
+    ctypedef _SECURITY_ATTRIBUTES* LPSECURITY_ATTRIBUTES
 
 cdef extern from "errhandlingapi.h" nogil:
     DWORD GetLastError()
@@ -80,7 +80,7 @@ class _WinReader(threading.Thread):
         self.ready.clear()
 
     def run(self):
-        cdef int       fdwrite 
+        cdef int       fdwrite
         cdef bytes     out
         cdef int       error    = 0
         cdef FILE*     f        = NULL
@@ -88,13 +88,13 @@ class _WinReader(threading.Thread):
         cdef bint      readinto = hasattr(self.file, "readinto")
         cdef ssize_t   length   = 1
         cdef char*     b        = PyByteArray_AsString(data)
-        
+
         # Get a CRT file descriptor from the pipe HANDLE
         fdwrite = _open_osfhandle(<size_t> self.handle, 0)
         if fdwrite == -1:
             raise RuntimeError("Failed opening file descriptor")
         # print("Opened file descriptor")
-        
+
         # Get a FILE* from the CRF file descriptor
         f = fdopen(fdwrite, "w")
         if f == NULL:
@@ -116,7 +116,7 @@ class _WinReader(threading.Thread):
                             out = self.file.read(io.DEFAULT_BUFFER_SIZE)
                             PyBytes_AsStringAndSize(out, &b, &length)
                         # Having obtained the first chunk, we can now let the consumer
-                        # read the pipe, otherwise there is a chance of deadlock 
+                        # read the pipe, otherwise there is a chance of deadlock
                         # because we could not acquire the GIL to read the data while
                         # the consumer would already be blocking and reading from the pipe
                         # if length > 0:
@@ -125,13 +125,18 @@ class _WinReader(threading.Thread):
                         break
                     # Write data from the file into the pipe
                     if length > 0:
-                        # Write to the pipe while the GIL is not held, so that if 
+                        # Write to the pipe while the GIL is not held, so that if
                         # blocking happens because the pipe is full, the code does
                         # not lock
                         w = fwrite(b, sizeof(char), <size_t> length, f)
                         if w < length:
                             fclose(f)
-                            raise OSError(libc.errno.errno)
+                            # don't error on EPIPE, it means the main thread closed
+                            # this file so it shouldn't be treated as an error here.
+                            if libc.errno.errno == libc.errno.EPIPE:
+                                break
+                            else:
+                                raise OSError(libc.errno.errno)
                         # Need to flush, otherwise we may try to re-acquire the GIL
                         # before all data has been written to the pipe, and therefore
                         # end up with a deadlock
@@ -153,7 +158,7 @@ cdef FILE* fopen_obj(object obj, const char* mode) except NULL:
     cdef HANDLE hWritePipe
     cdef int    fdread
     cdef FILE*  fread
-    
+
     success = CreatePipe(&hReadPipe, &hWritePipe, NULL, 0)
     if not success:
         raise RuntimeError("Failed creating a pipe")
@@ -178,4 +183,4 @@ cdef FILE* fopen_obj(object obj, const char* mode) except NULL:
     _t.ready.wait()
 
     return fread
-    
+
