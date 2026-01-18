@@ -126,8 +126,11 @@ class _TestHMMPath:
         self.assertRaises(FileNotFoundError, HMMFile, "path/to/missing/file")
 
     def test_init_error_folder(self):
-        folder = tempfile.gettempdir()
-        self.assertRaises(IsADirectoryError, HMMFile, folder)
+        folder = tempfile.mkdtemp()
+        try:
+            self.assertRaises(IsADirectoryError, HMMFile, folder)
+        finally:
+            os.rmdir(folder)
 
     def test_read_optimized_profiles(self):
         path = self.hmms_folder.joinpath("db", "{}.hmm".format(self.ID))
