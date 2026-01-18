@@ -2,7 +2,65 @@ from cpython.bytearray cimport PyByteArray_AsString
 from cpython.bytes cimport PyBytes_AsStringAndSize
 
 cimport libc.errno
-from libc.stdio cimport FILE, fwrite, fclose, printf, fflush
+from libc.stdio cimport FILE, fwrite, fclose, printf, fflush, fdopen
+from libc.stdint cimport uint32_t
+from libc.string cimport strcmp
+
+cdef extern from "stdarg.h":
+    ctypedef struct va_list
+
+cdef extern from "windows.h" nogil:
+    ctypedef size_t   SIZE_T
+    ctypedef bint     BOOL
+    ctypedef void*    LPVOID
+    ctypedef const void* LPCVOID
+    ctypedef void*    HANDLE
+    ctypedef HANDLE*  PHANDLE
+    ctypedef uint32_t DWORD
+    ctypedef DWORD*   LPDWORD
+    ctypedef char*    LPTSTR
+
+    cdef struct _SECURITY_ATTRIBUTES:
+        DWORD  nLength
+        void*  lpSecurityDescriptor
+        BOOL   bInheritHandle
+    ctypedef _SECURITY_ATTRIBUTES  SECURITY_ATTRIBUTES 
+    ctypedef _SECURITY_ATTRIBUTES* PSECURITY_ATTRIBUTES 
+    ctypedef _SECURITY_ATTRIBUTES* LPSECURITY_ATTRIBUTES 
+
+cdef extern from "errhandlingapi.h" nogil:
+    DWORD GetLastError()
+
+cdef extern from "winbase.h" nogil:
+    DWORD FormatMessage(DWORD dwFlags, void* lpSource, DWORD dwMessageId, DWORD dwLanguageId, char* lpBuffer, DWORD nSize, va_list* Arguments)
+
+    cdef enum:
+        FORMAT_MESSAGE_ALLOCATE_BUFFER
+        FORMAT_MESSAGE_ARGUMENT_ARRAY
+        FORMAT_MESSAGE_FROM_HMODULE
+        FORMAT_MESSAGE_FROM_STRING
+        FORMAT_MESSAGE_FROM_SYSTEM
+        FORMAT_MESSAGE_IGNORE_INSERTS
+
+cdef extern from "handleapi.h" nogil:
+    BOOL CloseHandle(HANDLE hObject)
+
+cdef extern from "namedpipeapi.h" nogil:
+    BOOL CreatePipe(PHANDLE hReadPipe, PHANDLE hWritePipe, LPSECURITY_ATTRIBUTES lpPipeAttributes, DWORD nSize)
+
+cdef extern from "minwinbase.h" nogil:
+    cdef struct _OVERLAPPED:
+        pass
+    ctypedef _OVERLAPPED  OVERLAPPED
+    ctypedef _OVERLAPPED* LPOVERLAPPED
+
+cdef extern from "fileapi.h" nogil:
+    BOOL WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped)
+
+cdef extern from "io.h" nogil:
+    int _open_osfhandle(size_t fd, int flags)
+    int _close(int fd)
+
 
 import threading
 import os
@@ -24,6 +82,7 @@ class _WinReader(threading.Thread):
     def run(self):
         cdef int       fdwrite 
         cdef bytes     out
+        cdef int       error    = 0
         cdef FILE*     f        = NULL
         cdef bytearray data     = bytearray(io.DEFAULT_BUFFER_SIZE)
         cdef bint      readinto = hasattr(self.file, "readinto")
@@ -71,11 +130,16 @@ class _WinReader(threading.Thread):
                         # not lock
                         w = fwrite(b, sizeof(char), <size_t> length, f)
                         if w < length:
-                            raise OSError(libc.errno.errno)
+                            error = libc.errno.errno
+                            break
                         # Need to flush, otherwise we may try to re-acquire the GIL
                         # before all data has been written to the pipe, and therefore
                         # end up with a deadlock
                         fflush(f)
+            
+            # if error != 0:
+            #     raise OSError(error)
+
         finally:
             fclose(f)
             # No need to call _close on the file descriptor, as fclose will also close it
@@ -84,7 +148,7 @@ class _WinReader(threading.Thread):
 
 
 
-cdef inline FILE* fopen_obj(object obj, const char* mode) except NULL:
+cdef FILE* fopen_obj(object obj, const char* mode) except NULL:
 
     if strcmp(mode, "r") != 0 and strcmp(mode, "rb") != 0:
         raise io.UnsupportedOperation("Cannot open a file-like object on Windows")
