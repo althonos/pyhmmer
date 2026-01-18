@@ -2025,15 +2025,20 @@ cdef class Hit:
     def name(self, str name not None):
         assert self._hit != NULL
 
+        cdef int         status
         cdef const char* data   = NULL
         cdef ssize_t     length = -1
 
+        if self._hit.name != NULL:
+            libeasel.esl_free(self._hit.name)
+            self._hit.name = NULL
+
         data = PyUnicode_AsUTF8AndSize(name, &length)
-        self._hit.name = <char*> realloc(self._hit.name, max(1, sizeof(char) * length))
-        if self._hit.name == NULL:
+        status = libeasel.esl_strdup(data, length, &self._hit.name)
+        if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), length)
-        with nogil:
-            memcpy(self._hit.name, data, sizeof(char) * (length + 1))
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_strdup")
 
     @property
     def accession(self):
@@ -2052,19 +2057,21 @@ cdef class Hit:
     def accession(self, str accession):
         assert self._hit != NULL
 
+        cdef int         status
         cdef const char* data   = NULL
         cdef ssize_t     length = -1
 
-        if accession is None:
-            free(self._hit.acc)
+        if self._hit.acc != NULL:
+            libeasel.esl_free(self._hit.acc)
             self._hit.acc = NULL
-        else:
+
+        if accession is not None:
             data = PyUnicode_AsUTF8AndSize(accession, &length)
-            self._hit.acc = <char*> realloc(self._hit.acc, max(1, sizeof(char) * length))
-            if self._hit.name == NULL:
+            status = libeasel.esl_strdup(data, length, &self._hit.acc)
+            if status == libeasel.eslEMEM:
                 raise AllocationError("char", sizeof(char), length)
-            with nogil:
-                memcpy(self._hit.acc, data, sizeof(char) * (length + 1))
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_strdup")
 
     @property
     def description(self):
@@ -2083,19 +2090,21 @@ cdef class Hit:
     def description(self, str description):
         assert self._hit != NULL
 
+        cdef int         status
         cdef const char* data   = NULL
         cdef ssize_t     length = -1
 
-        if description is None:
-            free(self._hit.desc)
+        if self._hit.desc != NULL:
+            libeasel.esl_free(self._hit.desc)
             self._hit.desc = NULL
-        else:
+
+        if description is not None:
             data = PyUnicode_AsUTF8AndSize(description, &length)
-            self._hit.desc = <char*> realloc(self._hit.desc, max(1, sizeof(char) * length))
-            if self._hit.name == NULL:
+            status = libeasel.esl_strdup(data, length, &self._hit.desc)
+            if status == libeasel.eslEMEM:
                 raise AllocationError("char", sizeof(char), length)
-            with nogil:
-                memcpy(self._hit.desc, data, sizeof(char) * (length + 1))
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_strdup")
 
     @property
     def length(self):
