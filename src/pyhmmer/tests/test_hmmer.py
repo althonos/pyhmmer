@@ -795,10 +795,11 @@ class TestNhmmer(unittest.TestCase):
 
 class TestHmmalign(unittest.TestCase):
     def setUp(self):
-        self.tmpout = tempfile.NamedTemporaryFile(suffix=".hmm", delete=False).name
+        self.tmpfile = tempfile.NamedTemporaryFile(suffix=".hmm", delete=True)
+        self.tmpout = self.tmpfile.name
 
     def tearDown(self):
-        os.remove(self.tmpout)
+        self.tmpfile.close()
 
     @unittest.skipUnless(resource_files, "importlib.resources not available")
     def test_luxc(self):
