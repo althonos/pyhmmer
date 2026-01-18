@@ -5,4 +5,6 @@ include(CythonExtension)
 # cython_extension(plan7  LINKS libeasel libhmmer DIRECTIVES -E HMMER_IMPL=${HMMER_IMPL})
 # cython_extension(daemon LINKS libeasel libhmmer DIRECTIVES -E HMMER_IMPL=${HMMER_IMPL})
 
-cython_extension(win32)
+if(WIN32)
+  cython_extension(win32)
+endif()
