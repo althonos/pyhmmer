@@ -3557,8 +3557,24 @@ cdef class HMMFile:
         if not hasattr(fh, "peek"):
             fh_ = io.BufferedReader(fh)
 
+        # check if the file is in binary format before
+        # we actually open it with fopen_obj, otherwise
+        # the Windows background thread may start piping
+        # and we cannot peek without a potential race 
+        # condition
+        magic_bytes = fh_.peek(4)[:4]
+        if not isinstance(magic_bytes, bytes):
+            ty = type(magic_bytes).__name__
+            raise TypeError("expected bytes, found {}".format(ty))
+        magic = int.from_bytes(magic_bytes, sys.byteorder)
+        if magic in HMM_FILE_MAGIC:
+            # NB: the file must be advanced, since read_bin30hmm assumes
+            #     the binary tag has been skipped already, buf we only peeked
+            #     so far; note that we advance without seeking or rewinding.
+            fh_.read(4)
+
         # attempt to allocate space for the P7_HMMFILE
-        hfp = <P7_HMMFILE*> malloc(sizeof(P7_HMMFILE));
+        hfp = <P7_HMMFILE*> malloc(sizeof(P7_HMMFILE))
         if hfp == NULL:
             raise AllocationError("P7_HMMFILE", sizeof(P7_HMMFILE))
 
@@ -3587,14 +3603,9 @@ cdef class HMMFile:
                 raise AllocationError("char", sizeof(char), strlen(filename))
 
         # check if the parser is in binary format,
-        magic = int.from_bytes(fh_.peek(4)[:4], sys.byteorder)
         if magic in HMM_FILE_MAGIC:
             hfp.format = HMM_FILE_MAGIC[magic]
             hfp.parser = read_bin30hmm
-            # NB: the file must be advanced, since read_bin30hmm assumes
-            #     the binary tag has been skipped already, buf we only peeked
-            #     so far; note that we advance without seeking or rewinding.
-            fh_.read(4)
             return hfp
 
         # create and configure the file parser
@@ -3618,7 +3629,7 @@ cdef class HMMFile:
         status = libeasel.fileparser.esl_fileparser_GetToken(hfp.efp, &token, &token_len)
         if status != libeasel.eslOK:
             HMMFile._close_hmmfile(hfp)
-            raise UnexpectedError(status, "esl_fileparser_GetToken");
+            raise UnexpectedError(status, "esl_fileparser_GetToken")
 
         # detect the format
         if token.startswith(b"HMMER3/"):
@@ -3635,8 +3646,9 @@ cdef class HMMFile:
         # check the format tag was recognized
         if hfp.parser == NULL:
             HMMFile._close_hmmfile(hfp)
-            text = token.decode("utf-8", "replace")
-            raise ValueError("Unrecognized format tag in HMM file: {!r}".format(text))
+            # text = token.decode("utf-8", "replace")
+            b = PyBytes_FromString(token)
+            raise ValueError(f"Unrecognized format tag in HMM file: {b!r}")
 
         # return the finalized P7_HMMFILE*
         return hfp

@@ -128,6 +128,7 @@ class _TestHMMPath:
     def test_init_error_folder(self):
         folder = tempfile.mkdtemp()
         try:
+            self.assertTrue(os.path.exists(folder))
             self.assertRaises(IsADirectoryError, HMMFile, folder)
         finally:
             os.rmdir(folder)
