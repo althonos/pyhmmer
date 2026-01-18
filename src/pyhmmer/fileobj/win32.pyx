@@ -130,16 +130,12 @@ class _WinReader(threading.Thread):
                         # not lock
                         w = fwrite(b, sizeof(char), <size_t> length, f)
                         if w < length:
-                            error = libc.errno.errno
-                            break
+                            fclose(f)
+                            raise OSError(libc.errno.errno)
                         # Need to flush, otherwise we may try to re-acquire the GIL
                         # before all data has been written to the pipe, and therefore
                         # end up with a deadlock
                         fflush(f)
-            
-            # if error != 0:
-            #     raise OSError(error)
-
         finally:
             fclose(f)
             # No need to call _close on the file descriptor, as fclose will also close it
