@@ -14,39 +14,52 @@
 
 
 Py_ssize_t fileobj_linux_write(void* cookie, const char* buf, size_t size) {
+    PyGILState_STATE state;
     PyObject* file = (PyObject*) cookie;
 
     if (buf == NULL)
         return 0;
+
+    state = PyGILState_Ensure();
     
     PyObject* out = PyObject_CallMethod(file, "write", "y#", buf, (Py_ssize_t) size);
-    if (out == NULL)
+    if (out == NULL) {
+        PyGILState_Release(state);
         return _COOKIE_ERROR_WRITE;
+    }
 
     if (!PyLong_Check(out)) {
         Py_DECREF(out);
         PyErr_SetString(PyExc_TypeError, "Expected int");
+        PyGILState_Release(state);
         return _COOKIE_ERROR_WRITE;
     }
 
     Py_ssize_t n = PyLong_AsSize_t(out);
     Py_DECREF(out);
+    PyGILState_Release(state);
     return n;
 }
 
 Py_ssize_t fileobj_linux_read(void* cookie, char* buf, size_t size) {
+    PyGILState_STATE state;
     PyObject* file = (PyObject*) cookie;
 
     if (buf == NULL)
         return 0;
 
+    state = PyGILState_Ensure();
+
     PyObject* chunk = PyObject_CallMethod(file, "read", "n", size);
-    if (chunk == NULL)
+    if (chunk == NULL) {
+        PyGILState_Release(state);
         return _COOKIE_ERROR_READ;
+    }
 
     const char* data = PyBytes_AsString(chunk);
     if (data == NULL) {
         Py_DECREF(chunk);
+        PyGILState_Release(state);
         return _COOKIE_ERROR_READ;
     }
 
@@ -54,28 +67,36 @@ Py_ssize_t fileobj_linux_read(void* cookie, char* buf, size_t size) {
     if (len > size) {
         Py_DECREF(chunk);
         PyErr_SetString(PyExc_BufferError, "buffer too small to store `read` result");
+        PyGILState_Release(state);
         return _COOKIE_ERROR_READ;
     }
 
     memcpy(buf, data, len);
 
     Py_DECREF(chunk);
+    PyGILState_Release(state);
     return len;
 }
 
 Py_ssize_t fileobj_linux_readinto(void* cookie, char* buf, size_t size) {
+    PyGILState_STATE state;
     PyObject* file = (PyObject*) cookie;
 
     if (buf == NULL)
         return 0;
 
+    state = PyGILState_Ensure();
+
     PyObject* mem  = PyMemoryView_FromMemory(buf, (Py_ssize_t) size, PyBUF_WRITE);
-    if (mem == NULL) 
+    if (mem == NULL) {
+        PyGILState_Release(state);
         return _COOKIE_ERROR_READ;
+    }
 
     PyObject* out = PyObject_CallMethod(file, "readinto", "O", mem);
     if (out == NULL) {
         Py_DECREF(mem);
+        PyGILState_Release(state);
         return _COOKIE_ERROR_READ;
     }
 
@@ -83,36 +104,48 @@ Py_ssize_t fileobj_linux_readinto(void* cookie, char* buf, size_t size) {
         Py_DECREF(out);
         Py_DECREF(mem);
         PyErr_SetString(PyExc_TypeError, "Expected int");
+        PyGILState_Release(state);
         return _COOKIE_ERROR_WRITE;
     }    
 
     Py_ssize_t len = PyLong_AsSize_t(out);
     Py_DECREF(out);
     Py_DECREF(mem);
+        PyGILState_Release(state);
     return len;
 }
 
 int fileobj_linux_seek(void* cookie, off_t* offset, int whence) {
+    PyGILState_STATE state;
     PyObject* file = (PyObject*) cookie;
 
+    state = PyGILState_Ensure();
+
     PyObject* out = PyObject_CallMethod(file, "seek", "Li", *offset, whence);
-    if (out == NULL) 
+    if (out == NULL) {
+        PyGILState_Release(state);
         return _COOKIE_ERROR_SEEK;
+    }
 
     if (!PyLong_Check(out)) {
         Py_DECREF(out);
         PyErr_SetString(PyExc_TypeError, "Expected int");
+        PyGILState_Release(state);
         return _COOKIE_ERROR_SEEK;
     }
 
     *offset = PyLong_AsLongLong(out);
     Py_DECREF(out);
+    PyGILState_Release(state);
     return 0;
 }
 
 int fileobj_linux_close(void* cookie) {
+    PyGILState_STATE state;
+    state = PyGILState_Ensure();
     PyObject* file = (PyObject*) cookie;
     Py_DECREF(file);
+    PyGILState_Release(state);
     return _COOKIE_ERROR_CLOSE;
 }
 
