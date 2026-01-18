@@ -1,5 +1,6 @@
 import io
 import itertools
+import os
 import platform
 import unittest
 import tempfile
@@ -35,9 +36,16 @@ class _TestHMMFile:
             self.assertIsNot(hmm.evalue_parameters, None)
 
     def test_empty(self):
-        with tempfile.NamedTemporaryFile() as empty:
-            self.assertRaises(EOFError, self.open_hmm, empty.name)
+        try:
+            fd, filename = tempfile.mkstemp(suffix=".msa")
+            self.assertTrue(os.path.exists(filename))
+            self.assertRaises(EOFError, self.open_hmm, filename)
+        finally:
+            os.close(fd)
+            if os.path.exists(filename):
+                os.remove(filename)
 
+    @unittest.skipIf(platform.system() == "Windows", "deadlocks on Windows")
     def test_read_hmmpressed(self):
         path = self.hmms_folder.joinpath("db", "{}.hmm".format(self.ID))
         if not path.exists():
@@ -214,12 +222,10 @@ class _TestRREFam(_TestHMMFile):
 
 # --- Test cases ---------------------------------------------------------------
 
-@unittest.skipIf(platform.system() == "Windows", "reading from fileobj unsupported on Windows")
 @unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class TestFileobjSingle(_TestHMMFileobj, _TestThioesterase, unittest.TestCase):
     pass
 
-@unittest.skipIf(platform.system() == "Windows", "reading from fileobj unsupported on Windows")
 @unittest.skipUnless(resource_files, "importlib.resources.files not available")
 class TestFileObjMultiple(_TestHMMFileobj, _TestRREFam, unittest.TestCase):
     pass
