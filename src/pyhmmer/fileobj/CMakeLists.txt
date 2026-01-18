@@ -1,10 +1,12 @@
 include(CythonExtension)
 
-# cython_extension(errors LINKS libeasel)
-# cython_extension(easel  LINKS libeasel)
-# cython_extension(plan7  LINKS libeasel libhmmer DIRECTIVES -E HMMER_IMPL=${HMMER_IMPL})
-# cython_extension(daemon LINKS libeasel libhmmer DIRECTIVES -E HMMER_IMPL=${HMMER_IMPL})
-
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    cython_extension(win32 LINKS libeasel)
+    cython_extension(win32  LINKS libeasel)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    cython_extension(cookie LINKS libeasel)
+elseif((CMAKE_SYSTEM_NAME STREQUAL "Darwin") OR (CMAKE_SYSTEM_NAME MATCHES "*BSD"))
+    cython_extension(fun    LINKS libeasel)
 endif()
+
+add_library(fileobj INTERFACE)
+target_include_directories(fileobj INTERFACE ${CMAKE_CURRENT_LIST_DIR})

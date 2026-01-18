@@ -203,7 +203,11 @@ from .easel cimport (
 )
 
 if TARGET_SYSTEM == "Linux":
-    from .fileobj.linux cimport fileobj_linux_open as fopen_obj
+    from .fileobj.cookie cimport (
+        fileobj_linux_open as fopen_obj,
+        _CookieReader as _FileobjReader,
+        _CookieWriter as _FileobjWriter,
+    )
 elif TARGET_SYSTEM == "Windows":
     from .fileobj.win32 cimport (
         fopen_obj,
@@ -211,7 +215,11 @@ elif TARGET_SYSTEM == "Windows":
         _WinSynchronizedWriter as _FileobjWriter
     )
 elif TARGET_SYSTEM == "Darwin" or TARGET_SYSTEM.endswith("BSD"):
-    from .fileobj.bsd cimport fileobj_bsd_open as fopen_obj
+    from .fileobj.fun cimport (
+        fileobj_bsd_open as fopen_obj,
+        _FunReader as _FileobjReader, 
+        _FunWriter as _FileobjWriter
+    )
 
 include "exceptions.pxi"
 include "_strings.pxi"

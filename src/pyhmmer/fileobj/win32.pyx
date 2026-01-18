@@ -172,7 +172,10 @@ class _WinReader(threading.Thread):
 
 
 cdef class _WinSynchronizedReader:
-    
+   
+    def __cinit__(self):
+        self.file = NULL
+
     def __init__(self, object fileobj):
 
         cdef HANDLE hReadPipe
@@ -278,6 +281,9 @@ class _WinWriter(threading.Thread):
 
 
 cdef class _WinSynchronizedWriter:
+   
+    def __cinit__(self):
+        self.file = NULL
 
     def __init__(self, object fileobj):
 
