@@ -1,10 +1,31 @@
+# coding: utf-8
+# cython: language_level=3
+"""File object emulation for Windows.
+"""
+
+# --- C imports --------------------------------------------------------------
+
 from cpython.bytearray cimport PyByteArray_AsString
 from cpython.bytes cimport PyBytes_AsStringAndSize
 
 cimport libc.errno
-from libc.stdio cimport FILE, fwrite, fclose, printf, fflush, fdopen
-from libc.stdint cimport uint32_t
+from libc.stdio cimport FILE, ferror, feof, fwrite, fread, fclose, printf, fflush, fdopen
+from libc.stdint cimport uint32_t, intptr_t
 from libc.string cimport strcmp
+
+cimport libeasel
+
+from ..errors import EaselError
+
+# --- Python imports ---------------------------------------------------------
+
+import threading
+import os
+import io
+import shutil
+import time
+
+# --- WinApi definitions -----------------------------------------------------
 
 cdef extern from "stdarg.h":
     ctypedef struct va_list
@@ -47,6 +68,15 @@ cdef extern from "handleapi.h" nogil:
 
 cdef extern from "namedpipeapi.h" nogil:
     BOOL CreatePipe(PHANDLE hReadPipe, PHANDLE hWritePipe, LPSECURITY_ATTRIBUTES lpPipeAttributes, DWORD nSize)
+    BOOL SetNamedPipeHandleState(HANDLE  hNamedPipe, LPDWORD lpMode, LPDWORD lpMaxCollectionCount, LPDWORD lpCollectDataTimeout)
+
+    enum:
+        PIPE_WAIT
+        PIPE_NOWAIT
+
+cdef extern from "ioapiset.h" nogil:
+    enum:
+        ERROR_IO_PENDING
 
 cdef extern from "minwinbase.h" nogil:
     cdef struct _OVERLAPPED:
@@ -62,12 +92,7 @@ cdef extern from "io.h" nogil:
     int _close(int fd)
 
 
-import threading
-import os
-import io
-import shutil
-import time
-
+# --- Reader code ------------------------------------------------------------
 
 class _WinReader(threading.Thread):
     daemon = True
@@ -90,17 +115,16 @@ class _WinReader(threading.Thread):
         cdef char*     b        = PyByteArray_AsString(data)
 
         # Get a CRT file descriptor from the pipe HANDLE
-        fdwrite = _open_osfhandle(<size_t> self.handle, 0)
+        fdwrite = _open_osfhandle(<intptr_t> self.handle, 0)
         if fdwrite == -1:
+            CloseHandle(<HANDLE> self.handle)
             raise RuntimeError("Failed opening file descriptor")
-        # print("Opened file descriptor")
 
         # Get a FILE* from the CRF file descriptor
-        f = fdopen(fdwrite, "w")
+        f = fdopen(fdwrite, "wb")
         if f == NULL:
             _close(fdwrite) # ensure the file descriptor is still closed
             raise RuntimeError("Failed opening pipe")
-        # print("Opened pipe")
 
         try:
             with nogil:
@@ -147,40 +171,154 @@ class _WinReader(threading.Thread):
             # (per https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/open-osfhandle?view=msvc-170#remarks)
 
 
+cdef class _WinSynchronizedReader:
+    
+    def __init__(self, object fileobj):
 
+        cdef HANDLE hReadPipe
+        cdef HANDLE hWritePipe
+        cdef int    fdread
+        cdef FILE*  fread
+
+        success = CreatePipe(&hReadPipe, &hWritePipe, NULL, 0)
+        if not success:
+            raise RuntimeError("Failed creating a pipe")
+
+        fdread = _open_osfhandle(<size_t> hReadPipe, 0)
+        if fdread == -1:
+            CloseHandle(hReadPipe)
+            CloseHandle(hWritePipe)
+            raise RuntimeError("Failed opening file descriptor")
+
+        fread  = fdopen(fdread, "rb")
+        if fread == NULL:
+            _close(fdread)
+            CloseHandle(hWritePipe)
+            raise RuntimeError("Failed opening file")
+
+        self.file = fread
+        self.thread = _WinReader(fileobj, <size_t> hWritePipe)
+        self.thread.start()
+        self.thread.ready.wait()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    cpdef object close(self):
+        if self.file != NULL:
+            fclose(self.file)
+       
 
 cdef FILE* fopen_obj(object obj, const char* mode) except NULL:
+    if strcmp(mode, "r") != 0:
+        raise ValueError("invalid mode")
 
-    if strcmp(mode, "r") != 0 and strcmp(mode, "rb") != 0:
-        raise io.UnsupportedOperation("Cannot open a file-like object on Windows")
+    cdef _WinSynchronizedReader r = _WinSynchronizedReader(obj)
+    return r.file
 
-    cdef HANDLE hReadPipe
-    cdef HANDLE hWritePipe
-    cdef int    fdread
-    cdef FILE*  fread
+# --- Writer code ------------------------------------------------------------
 
-    success = CreatePipe(&hReadPipe, &hWritePipe, NULL, 0)
-    if not success:
-        raise RuntimeError("Failed creating a pipe")
+class _WinWriter(threading.Thread):
+    daemon = True
 
-    fdread = _open_osfhandle(<size_t> hReadPipe, 0)
-    if fdread == -1:
-        CloseHandle(hReadPipe)
-        CloseHandle(hWritePipe)
-        raise RuntimeError("Failed opening file descriptor")
+    def __init__(self, file, handle):
+        super().__init__()
+        self.file = file
+        self.handle = handle
+        self.ready = threading.Barrier(2)
+        self.done = threading.Event()
+        self.error = None
 
-    fread  = fdopen(fdread, "r")
-    if fread == NULL:
-        _close(fdread)
-        CloseHandle(hWritePipe)
-        raise RuntimeError("Failed opening file")
+    def run(self):
+        cdef int        fdread
+        cdef int        error    = 0
+        cdef FILE*      f        = NULL
+        cdef bytearray  data     = bytearray(io.DEFAULT_BUFFER_SIZE)
+        cdef memoryview mem     = memoryview(data)
+        cdef size_t     datalen  = io.DEFAULT_BUFFER_SIZE
+        cdef bint       readinto = hasattr(self.file, "readinto")
+        cdef ssize_t    length   = -1
+        cdef ssize_t    n        = 0
+        cdef char*      b        = PyByteArray_AsString(data)
 
-    # print("Creating _WinReader")
-    _t = _WinReader(obj, <size_t> hWritePipe)
-    # print("Starting _WinReader")
-    _t.start()
-    # print("Started _WinReader")
-    _t.ready.wait()
+        # Get a CRT file descriptor from the pipe HANDLE
+        fdread = _open_osfhandle(<size_t> self.handle, 0)
+        if fdread == -1:
+            CloseHandle(<HANDLE> self.handle)
+            raise RuntimeError("Failed opening file descriptor")
 
-    return fread
+        # Get a FILE* from the CRF file descriptor
+        f = fdopen(fdread, "rb")
+        if f == NULL:
+            _close(fdread) # ensure the file descriptor is still closed
+            raise RuntimeError("Failed opening pipe")
+
+        try:
+            with nogil:
+                while True:
+                    length = fread(b, sizeof(char), datalen, f)
+                    if length == 0:
+                        if ferror(f):
+                            raise OSError(libc.errno.errno)
+                        break
+                    with gil:
+                        n = 0
+                        while n < length:
+                            try:
+                                n += self.file.write(mem[n:length])
+                            except Exception as err:
+                                self.error = err
+                                break
+        finally:
+            fclose(f)
+            self.done.set()
+
+
+cdef class _WinSynchronizedWriter:
+
+    def __init__(self, object fileobj):
+
+        cdef HANDLE hReadPipe
+        cdef HANDLE hWritePipe
+        cdef int    fdread
+        cdef FILE*  fread
+        cdef DWORD  mode       = PIPE_NOWAIT
+
+        success = CreatePipe(&hReadPipe, &hWritePipe, NULL, 64)
+        if not success:
+            raise RuntimeError("Failed creating a pipe")
+
+        # SetNamedPipeHandleState(hReadPipe, &mode, NULL, NULL)
+        fdwrite = _open_osfhandle(<intptr_t> hWritePipe, 0)
+        if fdwrite == -1:
+            CloseHandle(hReadPipe)
+            CloseHandle(hWritePipe)
+            raise RuntimeError("Failed opening file descriptor")
+
+        fwrite  = fdopen(fdwrite, "wb")
+        if fwrite == NULL:
+            _close(fdwrite)
+            CloseHandle(hReadPipe)
+            raise RuntimeError("Failed opening file")
+
+        self.file   = fwrite
+        self.thread = _WinWriter(fileobj, <intptr_t> hReadPipe)
+        self.thread.start()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    cpdef object close(self):
+        if self.file != NULL:
+            fclose(self.file)
+        self.thread.done.wait()
+        if self.thread.error is not None:
+            raise EaselError(libeasel.eslEWRITE, "write failed") from self.thread.error
+        return None
 

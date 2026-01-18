@@ -205,14 +205,17 @@ from .easel cimport (
 if TARGET_SYSTEM == "Linux":
     from .fileobj.linux cimport fileobj_linux_open as fopen_obj
 elif TARGET_SYSTEM == "Windows":
-    from .fileobj.win32 cimport fopen_obj
+    from .fileobj.win32 cimport (
+        fopen_obj,
+        _WinSynchronizedReader as _FileobjReader, 
+        _WinSynchronizedWriter as _FileobjWriter
+    )
 elif TARGET_SYSTEM == "Darwin" or TARGET_SYSTEM.endswith("BSD"):
     from .fileobj.bsd cimport fileobj_bsd_open as fopen_obj
 
 include "exceptions.pxi"
 include "_strings.pxi"
 include "_getid.pxi"
-
 
 # --- Python imports ---------------------------------------------------------
 
@@ -3483,25 +3486,24 @@ cdef class HMM:
                 the binary HMMER3 format.
 
         """
-        cdef PyObject*  type
-        cdef PyObject*  value
-        cdef PyObject*  traceback
-        cdef int        status
-        cdef FILE*      file
-        cdef P7_HMM*    hm     = self._hmm
+        cdef _FileobjWriter fw
+        cdef int            status
+        cdef str            funcname
+        cdef P7_HMM*        hm       = self._hmm
+        
+        with _FileobjWriter(fh) as fw:
+            if binary:
+                funcname = "p7_hmmfile_WriteBinary"
+                with nogil:
+                    status = libhmmer.p7_hmmfile.p7_hmmfile_WriteBinary(fw.file, -1, hm)
+            else:
+                funcname = "p7_hmmfile_WriteASCII"
+                with nogil:
+                    status = libhmmer.p7_hmmfile.p7_hmmfile_WriteASCII(fw.file, -1, hm)
 
-        file = fopen_obj(fh, "w")
-
-        if binary:
-            status = libhmmer.p7_hmmfile.p7_hmmfile_WriteBinary(file, -1, hm)
-        else:
-            status = libhmmer.p7_hmmfile.p7_hmmfile_WriteASCII(file, -1, hm)
-
-        if status == libeasel.eslOK:
-            fclose(file)
-        else:
+        if status != libeasel.eslOK:
             _reraise_error()
-            raise UnexpectedError(status, "p7_hmmfile_WriteASCII")
+            raise UnexpectedError(status, funcname)
 
     cpdef void zero(self) noexcept:
         """Set all parameters to zero, including model composition.
@@ -8843,13 +8845,13 @@ cdef class TopHits:
         .. versionadded:: 0.6.1
 
         """
-        cdef FILE*       file
-        cdef str         fname
-        cdef int         status
-        cdef str         sname  = None
-        cdef str         sacc   = None
-        cdef const char* qname  = NULL
-        cdef const char* qacc   = NULL
+        cdef _FileobjWriter fw
+        cdef str            fname
+        cdef int            status
+        cdef str            sname  = None
+        cdef str            sacc   = None
+        cdef const char*    qname  = NULL
+        cdef const char*    qacc   = NULL
 
         if isinstance(self._query, HMM):
             qname = (<HMM> self._query)._hmm.name
@@ -8874,46 +8876,45 @@ cdef class TopHits:
                 sacc = self._query.accession
                 qacc = PyUnicode_AsUTF8AndSize(sacc, NULL)
 
-        file = fopen_obj(fh, "w")
-        try:
+        with _FileobjWriter(fh) as fw:
             if format == "targets":
                 fname = "p7_tophits_TabularTargets"
-                status = libhmmer.p7_tophits.p7_tophits_TabularTargets(
-                    file,
-                    <char*> qname,
-                    <char*> qacc,
-                    self._th,
-                    &self._pli,
-                    header
-                )
+                with nogil:
+                    status = libhmmer.p7_tophits.p7_tophits_TabularTargets(
+                        fw.file,
+                        <char*> qname,
+                        <char*> qacc,
+                        self._th,
+                        &self._pli,
+                        header
+                    )
             elif format == "domains":
                 fname = "p7_tophits_TabularDomains"
-                status = libhmmer.p7_tophits.p7_tophits_TabularDomains(
-                    file,
-                    <char*> qname,
-                    <char*> qacc,
-                    self._th,
-                    &self._pli,
-                    header
-                )
+                with nogil:
+                    status = libhmmer.p7_tophits.p7_tophits_TabularDomains(
+                        fw.file,
+                        <char*> qname,
+                        <char*> qacc,
+                        self._th,
+                        &self._pli,
+                        header
+                    )
             elif format == "pfam":
                 fname = "p7_tophits_TabularXfam"
-                status = libhmmer.p7_tophits.p7_tophits_TabularXfam(
-                    file,
-                    <char*> qname,
-                    <char*> qacc,
-                    self._th,
-                    &self._pli,
-                )
+                with nogil:
+                    status = libhmmer.p7_tophits.p7_tophits_TabularXfam(
+                        fw.file,
+                        <char*> qname,
+                        <char*> qacc,
+                        self._th,
+                        &self._pli,
+                    )
             else:
                 raise InvalidParameter("format", format, choices=["targets", "domains", "pfam"])
-            if status != libeasel.eslOK:
-                _reraise_error()
-                raise UnexpectedError(status, fname)
-        finally:
-            fclose(file)
-            del sname
-            del sacc
+
+        if status != libeasel.eslOK:
+            _reraise_error()
+            raise UnexpectedError(status, fname)
 
     def merge(self, *others):
         """Concatenate the hits from this instance and ``others``.

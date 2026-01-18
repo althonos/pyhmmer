@@ -19,7 +19,7 @@ from cpython.ref cimport Py_INCREF
 from cpython.exc cimport PyErr_WarnEx
 from cpython.tuple cimport PyTuple_New, PyTuple_SetItem, PyTuple_SET_ITEM
 from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t, SIZE_MAX
-from libc.stdio cimport fclose, FILE
+from libc.stdio cimport fclose, fflush, FILE
 from libc.stdlib cimport abs, calloc, malloc, realloc, free
 from libc.string cimport memcmp, memcpy, memmove, memset, strdup, strlen, strncpy
 from libc.math cimport fabs, fabsf
@@ -105,7 +105,11 @@ from libeasel.sqio.ascii cimport (
 if TARGET_SYSTEM == "Linux":
     from .fileobj.linux cimport fileobj_linux_open as fopen_obj
 elif TARGET_SYSTEM == "Windows":
-    from .fileobj.win32 cimport fopen_obj
+    from .fileobj.win32 cimport (
+        fopen_obj,
+        # _WinSynchronizedReader as _FileobjReader, 
+        _WinSynchronizedWriter as _FileobjWriter
+    )
 elif TARGET_SYSTEM == "Darwin" or TARGET_SYSTEM.endswith("BSD"):
     from .fileobj.bsd cimport fileobj_bsd_open as fopen_obj
 
@@ -124,6 +128,7 @@ import itertools
 import os
 import operator
 import collections
+import time
 import pickle
 import struct
 import sys
@@ -5468,7 +5473,6 @@ cdef class MSA:
         else:
             raise UnexpectedError(status, fname)
 
-
     cpdef void write(self, object fh, str format) except *:
         """Write the multiple sequence alignement to a file handle.
 
@@ -5488,21 +5492,18 @@ cdef class MSA:
         """
         assert self._msa != NULL
 
-        cdef int    fmt
-        cdef int    status
-        cdef FILE*  file   = NULL
+        cdef int            fmt
+        cdef int            status
+        cdef _FileobjWriter fw
 
         if format not in MSA_FILE_FORMATS:
             raise InvalidParameter("format", format, choices=list(MSA_FILE_FORMATS))
 
         fmt = MSA_FILE_FORMATS[format]
 
-        try:
-            file = fopen_obj(fh, "w")
-            status = libeasel.msafile.esl_msafile_Write(file, self._msa, fmt)
-        finally:
-            if file is not NULL:
-                fclose(file)
+        with _FileobjWriter(fh) as fw:
+            with nogil:
+                status = libeasel.msafile.esl_msafile_Write(fw.file, self._msa, fmt)
 
         if status != libeasel.eslOK:
             _reraise_error()
@@ -7329,7 +7330,7 @@ cdef class Sequence:
     cpdef void write(self, object fh) except *:
         """Write the sequence to a file handle, in FASTA format.
 
-        Arguments:
+        Arguments:4
             fh (`io.IOBase`): A Python file handle, opened in binary mode.
 
         .. versionadded:: 0.3.0
@@ -7337,17 +7338,17 @@ cdef class Sequence:
         """
         assert self._sq != NULL
 
-        cdef int    status
-        cdef FILE*  file   = NULL
+        cdef int            status
+        cdef _FileobjWriter fw
 
-        try:
-            file = fopen_obj(fh, "w")
-            status = libeasel.sqio.ascii.esl_sqascii_WriteFasta(file, self._sq, False)
-        finally:
-            if file is not NULL:
-                fclose(file)
+        with _FileobjWriter(fh) as fw:
+            with nogil:
+                status = libeasel.sqio.ascii.esl_sqascii_WriteFasta(fw.file, self._sq, False)
+
         if status != libeasel.eslOK:
+            _reraise_error()
             raise UnexpectedError(status, "esl_sqascii_WriteFasta")
+
 
 
 cdef class TextSequence(Sequence):
@@ -8346,19 +8347,17 @@ cdef class SequenceBlock:
         .. versionadded:: 0.12.0
 
         """
-        cdef size_t i
-        cdef int    status
-        cdef FILE*  file   = NULL
+        cdef size_t         i
+        cdef int            status
+        cdef _FileobjWriter fw
 
-        try:
-            file = fopen_obj(fh, "w")
-            for i in range(self._length):
-                status = libeasel.sqio.ascii.esl_sqascii_WriteFasta(file, self._refs[i], False)
-                if status != libeasel.eslOK:
-                    raise UnexpectedError(status, "esl_sqascii_WriteFasta")
-        finally:
-            if file is not NULL:
-                fclose(file)
+        with _FileobjWriter(fh) as fw:
+            with nogil:
+                for i in range(self._length):
+                    status = libeasel.sqio.ascii.esl_sqascii_WriteFasta(fw.file, self._refs[i], False)
+                    if status != libeasel.eslOK:
+                        raise UnexpectedError(status, "esl_sqascii_WriteFasta")
+       
 
     cpdef size_t total_length(self) noexcept:
         """Compute the total length of the sequence block.
