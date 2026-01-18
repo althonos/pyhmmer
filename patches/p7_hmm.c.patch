@@ -2,13 +2,12 @@ diff --git a/src/p7_hmm.c b/src/p7_hmm.c
 index 99cb20f9..3a801a8f 100644
 --- a/src/p7_hmm.c
 +++ b/src/p7_hmm.c
-@@ -580,7 +580,12 @@ p7_hmm_SetCtime(P7_HMM *hmm)
+@@ -580,7 +580,11 @@ p7_hmm_SetCtime(P7_HMM *hmm)
  
    ESL_ALLOC(s, 32);
    if ((date = time(NULL)) == -1)               { status = eslESYS; goto ERROR; }
 +#if defined(_WIN32) || defined(_WIN64) || defined(__MINGW32__) || defined(__CYGWIN__)
-+    ESL_ALLOC(s, sizeof(char)*26);
-+    if (ctime_s(s, 26, &date) != 0)            { status = eslESYS; goto ERROR; }
++    if (ctime_s(s, 32, &date) != 0)            { status = eslESYS; goto ERROR; }
 +#else
    if (ctime_r(&date, s) == NULL)               { status = eslESYS; goto ERROR; }
 +#endif
