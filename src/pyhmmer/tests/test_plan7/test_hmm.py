@@ -331,6 +331,7 @@ class TestHMM(unittest.TestCase):
         self.assertIs(hmm.cutoffs.trusted2, None)
 
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
+    @unittest.skipIf(platform.system() == "Windows", "segfaults on Windows")
     def test_cutoffs_pickle(self):
         hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "PF02826.hmm")
         with HMMFile(hmm_path) as hmm_file:

@@ -12,7 +12,7 @@ from ..utils import EASEL_FOLDER
 
 class TestMSAFile(unittest.TestCase):
 
-    @unittest.skipIf(platform.system() == "Windows", "reading from fileobj unsupported on Windows")
+    @unittest.skipIf(platform.system() == "Windows", "deadlocks on Windows")
     def test_guess_alphabet_empty_sequence(self):
         buffer = io.BytesIO(b">seq1\n\n")
         self.assertRaises(ValueError, easel.MSAFile, buffer, format="afa", digital=True)
