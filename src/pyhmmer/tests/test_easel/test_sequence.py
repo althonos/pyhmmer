@@ -6,6 +6,7 @@ import os
 import platform
 import pickle
 import unittest
+import time
 import tempfile
 import warnings
 
@@ -112,7 +113,6 @@ class TestSequence(unittest.TestCase):
     def test_init_abstract(self):
         self.assertRaises(TypeError, easel.Sequence, name="ecoRI", sequence="GAATTC")
 
-    @unittest.skipIf(platform.system() == "Windows", "writing to fileobj unsupported on Windows")
     def test_write_roundtrip(self):
         seq = easel.TextSequence(name="ecoRI", sequence="GAATTC")
         with io.BytesIO() as buffer:

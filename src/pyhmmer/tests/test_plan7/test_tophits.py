@@ -356,7 +356,6 @@ class TestTopHits(unittest.TestCase):
     def test_query_length(self):
         self.assertEqual(self.hits.query.M, self.hmm.M)
 
-    @unittest.skipIf(platform.system() == "Windows", "writing to fileobj unsupported on Windows")
     def test_write_target(self):
         buffer = io.BytesIO()
         self.hits.write(buffer, format="targets")
@@ -369,7 +368,6 @@ class TestTopHits(unittest.TestCase):
 
         self.assertMultiLineEqual("\n".join(lines), "\n".join(expected))
 
-    @unittest.skipIf(platform.system() == "Windows", "writing to fileobj unsupported on Windows")
     def test_write_domains(self):
         buffer = io.BytesIO()
         self.hits.write(buffer, format="domains")

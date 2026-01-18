@@ -150,7 +150,6 @@ class TestHMM(unittest.TestCase):
         self.assertGreater(sys.getsizeof(hmm), 0)
 
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
-    @unittest.skipIf(platform.system() == "Windows", "writing to fileobj unsupported on Windows")
     def test_write(self):
         hmm_path = resource_files(__package__).joinpath("data", "hmms", "txt", "Thioesterase.hmm")
         with HMMFile(hmm_path) as hmm_file:
@@ -168,7 +167,6 @@ class TestHMM(unittest.TestCase):
             for line_written, line_ref in itertools.islice(zip(buffer, f), 1, None):
                 self.assertEqual(line_written, line_ref)
 
-    @unittest.skipIf(platform.system() == "Windows", "writing to fileobj unsupported on Windows")
     def test_write_empty(self):
         buffer = io.BytesIO()
         abc = Alphabet.amino()
@@ -177,7 +175,6 @@ class TestHMM(unittest.TestCase):
         self.assertGreater(len(buffer.getvalue()), 0)
 
     @unittest.skipIf(platform.system() == "Darwin", "segfault at exit on MacOS")
-    @unittest.skipIf(platform.system() == "Windows", "writing to fileobj unsupported on Windows")
     def test_write_error(self):
         buffer = io.StringIO()
 
