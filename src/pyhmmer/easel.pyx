@@ -6829,7 +6829,8 @@ cdef class MSAFile:
         if self._msaf == NULL:
             raise ValueError("I/O operation on closed file.")
 
-        status = libeasel.msafile.esl_msafile_GuessAlphabet(self._msaf, &ty)
+        with nogil:
+            status = libeasel.msafile.esl_msafile_GuessAlphabet(self._msaf, &ty)
         if status == libeasel.eslOK:
             return Alphabet.from_type(ty)
         elif status == libeasel.eslENOALPHABET or status == libeasel.eslEOD:
@@ -6863,7 +6864,8 @@ cdef class MSAFile:
 
         if self._msaf == NULL:
             raise ValueError("I/O operation on closed file.")
-        else:
+
+        with nogil:
             status = libeasel.msafile.esl_msafile_Read(self._msaf, &msa._msa)
 
         if status == libeasel.eslOK:
@@ -9365,13 +9367,16 @@ cdef class SequenceFile:
 
         if not skip_info and not skip_sequence:
             funcname = "esl_sqio_Read"
-            status = libeasel.sqio.esl_sqio_Read(self._sqfp, seq._sq)
+            with nogil:
+                status = libeasel.sqio.esl_sqio_Read(self._sqfp, seq._sq)
         elif not skip_info:
             funcname = "esl_sqio_ReadInfo"
-            status = libeasel.sqio.esl_sqio_ReadInfo(self._sqfp, seq._sq)
+            with nogil:
+                status = libeasel.sqio.esl_sqio_ReadInfo(self._sqfp, seq._sq)
         elif not skip_sequence:
             funcname = "esl_sqio_ReadSequence"
-            status = libeasel.sqio.esl_sqio_ReadSequence(self._sqfp, seq._sq)
+            with nogil:
+                status = libeasel.sqio.esl_sqio_ReadSequence(self._sqfp, seq._sq)
         else:
             raise ValueError("Cannot skip reading both sequence and metadata.")
 

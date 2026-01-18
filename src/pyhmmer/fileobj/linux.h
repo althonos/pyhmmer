@@ -21,7 +21,7 @@ Py_ssize_t fileobj_linux_write(void* cookie, const char* buf, size_t size) {
         return 0;
 
     state = PyGILState_Ensure();
-    
+
     PyObject* out = PyObject_CallMethod(file, "write", "y#", buf, (Py_ssize_t) size);
     if (out == NULL) {
         PyGILState_Release(state);
@@ -106,7 +106,7 @@ Py_ssize_t fileobj_linux_readinto(void* cookie, char* buf, size_t size) {
         PyErr_SetString(PyExc_TypeError, "Expected int");
         PyGILState_Release(state);
         return _COOKIE_ERROR_WRITE;
-    }    
+    }
 
     Py_ssize_t len = PyLong_AsSize_t(out);
     Py_DECREF(out);
@@ -179,7 +179,7 @@ FILE* fileobj_linux_open(PyObject* obj, const char* mode) {
     if (seekable == NULL)
         return NULL;
     switch (PyObject_IsTrue(seekable)) {
-        case 1: 
+        case 1:
             Py_DECREF(seekable);
             functions.seek = fileobj_linux_seek;
             break;
@@ -192,12 +192,12 @@ FILE* fileobj_linux_open(PyObject* obj, const char* mode) {
             PyErr_Format(PyExc_TypeError, "Expected `io.IOBase` instance, found %N", obj);
             return NULL;
     }
-    
+
     PyObject* writable = PyObject_CallMethod(obj, "writable", NULL);
     if (writable == NULL)
         return NULL;
     switch (PyObject_IsTrue(writable)) {
-        case 1: 
+        case 1:
             Py_DECREF(writable);
             functions.write = fileobj_linux_write;
             break;

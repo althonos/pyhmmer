@@ -638,7 +638,7 @@ cdef class Background:
 
         Returns:
             `float`: The null1 lod score for the sequence. This score can
-            be subtracted from the MSV score obtained with 
+            be subtracted from the MSV score obtained with
             `Profile.msv_filter` or `OptimizedProfile.msv_filter` to compute
             the sequence bitscore (scaled by a factor of :math:`log(2)`).
 
@@ -658,9 +658,9 @@ cdef class Background:
 
         with nogil:
             status = libhmmer.p7_bg.p7_bg_NullOne(
-                self._bg, 
-                sequence._sq.dsq, 
-                sequence._sq.L, 
+                self._bg,
+                sequence._sq.dsq,
+                sequence._sq.L,
                 &score
             )
         if status == libeasel.eslOK:
@@ -3795,8 +3795,9 @@ cdef class HMMFile:
         if self._hfp == NULL:
             raise ValueError("I/O operation on closed file.")
 
-        # don't run in *nogil* because the file may call a file-like handle
-        status = libhmmer.p7_hmmfile.p7_hmmfile_Read(self._hfp, &self._abc, &hmm)
+        # run in *nogil* or it may deadlock
+        with nogil:
+            status = libhmmer.p7_hmmfile.p7_hmmfile_Read(self._hfp, &self._abc, &hmm)
 
         # wrap the internal alphabet
         if self._alphabet is None and self._abc != NULL:
