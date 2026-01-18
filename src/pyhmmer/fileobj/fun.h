@@ -87,7 +87,7 @@ int fileobj_bsd_readinto(void* cookie, char* buf, int size) {
     if (mem == NULL) {
         PyGILState_Release(state);
         return _COOKIE_ERROR_READ;
-    |
+    }
 
     PyObject* out = PyObject_CallMethod(file, "readinto", "O", mem);
     if (out == NULL) {
