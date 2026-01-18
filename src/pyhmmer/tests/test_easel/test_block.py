@@ -255,7 +255,6 @@ class _TestSequenceBlock(abc.ABC):
         self.assertEqual(len(block), 2)
         self.assertEqual(len(block_copy), 3)
 
-    @unittest.skipIf(platform.system() == "Windows", "segfaults on Windows")  # FIXME
     def test_pickle(self):
         seq1 = self._new_sequence("seq1", "ATGC")
         seq2 = self._new_sequence("seq2", "ATGCA")
