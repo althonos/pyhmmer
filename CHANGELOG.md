@@ -8,8 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 [Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.11.4...HEAD
 
-## [v0.12.0-alpha.4] - 2026-01-15
-[v0.12.0-alpha.4]: https://github.com/althonos/pyhmmer/compare/v0.11.4...v0.12.0-alpha.4
+## [v0.12.0-alpha.5] - 2026-01-15
+[v0.12.0-alpha.5]: https://github.com/althonos/pyhmmer/compare/v0.11.4...v0.12.0-alpha.5
 
 ### Added
 - `SequenceBlock.write` method to write all sequences from a block to a file.
@@ -17,8 +17,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Subclasses `DNA`, `RNA` and `AA` of `pyhmmer.easel.Alphabet` to allow marking the alphabet type with type annotations.
 - `VectorI` and `MatrixI` classes to `pyhmmer.easel` to store C `int` types (usually 32 bits).
 - `OptimizedProfile.ssv_filter` method for NEON target in addition to SSE.
+- `msv_filter` method to `Profile` and `OptimizedProfile` classes.
+- `Background.null1` to compute the null1 lod score for an arbitrary `Sequence`.
 ### Changed
 - Setup compilation in Stable ABI mode for Python 3.12 and later.
+- Setup distribution to generate a CMake package file to facilitate usage with downstream `scikit-build-core` dependent packages.
 - **breaking**: Make most textual attributes and properties `str` rather than `bytes` ([#88](https://github.com/althonos/pyhmmer/issues/88)).
   - Turn the following properties of `Sequence` into `str` instead of `bytes`: `accession`, `description`, `name`, `source`.
   - Turn the following properties of `MSA` into `str` instead of `bytes`: `accession`, `description`, `name`, `source`, `author`, `names`, `reference`, `model_mask`, `secondary_structure`, `surface_accessibility`, `posterior_probabilities`.
@@ -39,6 +42,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Make `HMMFile` constructor pretend to stream when given a file-like object to prevent HMMER from calling `fseek` and `ftell`.
 - Incorrect declaration of Cython type declarations in various `MSA` property setters.
 - Ensure correct background alphabet in `Pipeline` constructor when given a `Background` as argument.
+- `TopHits.merge` potentially recomputing inclusion/reporting flags for hits obtained with bitscore cuttoffs.
+- `SSIReader` missing methods in type stubs ([#85](https://github.com/althonos/pyhmmer/issues/85)).
 ### Removed
 - Outdated compatibility code for PyPy 3.6.
 - Support for positional arguments other than `alphabet` in `TextMSA`, `DigitalMSA`, `TextSequence` and `DigitalSequence` constructors.
