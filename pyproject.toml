@@ -53,6 +53,9 @@ dependencies = [
 [project.optional-dependencies]
 test = ["importlib-resources ; python_version < '3.9'"]
 
+[project.entry-points."cmake.root"]
+PyHMMER = "pyhmmer"
+
 [tool.scikit-build]
 build-dir = "build/{build_type}"
 wheel.py-api = "cp312"
@@ -155,5 +158,5 @@ warn_unused_ignores = true
 warn_return_any = true
 exclude = ["tests/.*\\.py"]
 
-["tool.mypy-pyhmmer.tests.*"]
+[tool."mypy-pyhmmer.tests.*"]
 ignore_errors = true
