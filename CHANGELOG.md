@@ -8,10 +8,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 [Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.11.4...HEAD
 
-## [v0.12.0-alpha.5] - 2026-01-15
-[v0.12.0-alpha.5]: https://github.com/althonos/pyhmmer/compare/v0.11.4...v0.12.0-alpha.5
+## [v0.12.0-alpha.6] - 2026-01-21
+[v0.12.0-alpha.6]: https://github.com/althonos/pyhmmer/compare/v0.11.4...v0.12.0-alpha.6
 
 ### Added
+- Support for Windows AMD64 builds with MinGW ([#92](https://github.com/althonos/pyhmmer/issues/92), see [documentation](https://pyhmmer.readthedocs.io/en/latest/guide/windows.html)).
 - `SequenceBlock.write` method to write all sequences from a block to a file.
 - `SequenceBlock.total_length` to compute the sum of lengths of sequences in a block.
 - Subclasses `DNA`, `RNA` and `AA` of `pyhmmer.easel.Alphabet` to allow marking the alphabet type with type annotations.
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - `OptimizedProfile.ssv_filter` method for NEON target in addition to SSE.
 - `msv_filter` method to `Profile` and `OptimizedProfile` classes.
 - `Background.null1` to compute the null1 lod score for an arbitrary `Sequence`.
+- `HMMFile._file` exposing the internal file-like object given to `HMMFile` constructor, if any ([#89](https://github.com/althonos/pyhmmer/issues/89)).
 ### Changed
 - Setup compilation in Stable ABI mode for Python 3.12 and later.
 - Setup distribution to generate a CMake package file to facilitate usage with downstream `scikit-build-core` dependent packages.

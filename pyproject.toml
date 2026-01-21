@@ -1,10 +1,11 @@
+
 [build-system]
 requires = ["scikit-build-core >=0.11", "cython >=3.0"]
 build-backend = "scikit_build_core.build"
 
 [project]
 name = "pyhmmer"
-version = "0.12.0-alpha.5"
+version = "0.12.0-alpha.6"
 description = "Cython bindings and Python interface to HMMER3."
 readme = "README.md"
 requires-python = ">=3.7"
@@ -99,37 +100,19 @@ cmake.define.CMAKE_CXX_COMPILER_LAUNCHER = "sccache"
 if.env.MOLD = true
 cmake.define.CMAKE_LINKER_TYPE = "mold"
 
-[[tool.scikit-build.overrides]]
-if.env.CIBUILDWHEEL = true
-sdist.exclude = [
-    "build",
-    "benches",
-    "docs",
-    "vendor/easel/documentation",
-    "vendor/easel/demotic",
-    "vendor/easel/miniapps",
-    "vendor/hmmer/documentation",
-    "vendor/**/*.ai",
-    "vendor/**/*.pl",
-    # Remove extra test files to trim the wheels that go on PyPI
-    "src/pyhmmer/tests/data/hmms/txt2/RREFam.*",
-    "src/pyhmmer/tests/data/hmms/txt/RREFam.*",
-    "src/pyhmmer/tests/data/hmms/db/RREFam.*",
-    "src/pyhmmer/tests/data/hmms/*/bmyD.*",
-    "src/pyhmmer/tests/data/seqs/BGC0001090.gbk",
-    "src/pyhmmer/tests/data/seqs/1390.SAMEA104415756.*",
-]
-
 [tool.coverage.run]
 plugins = ["Cython.Coverage"]
 
 [tool.cibuildwheel]
 before-build = "pip install scikit-build-core cython ninja"
-build-frontend = { name = "build", args = ["-w", "--no-isolation"] }
+build-frontend = { name = "build" }
 build-verbosity = 1
 test-command = "python -m unittest pyhmmer.tests -v"
 test-extras = ["test"]
 config-settings = { cmake.define.PYHMMER_INSTALL_LIBS = false }
+
+[tool.cibuildwheel.windows]
+skip = "cp3??t-win*"
 
 [tool.coverage.report]
 include = ["src/pyhmmer/*"]
