@@ -4,7 +4,7 @@
 from libc.stdio cimport fclose
 
 
-cdef class _CookieReader:
+cdef class _LinuxReader:
 
     def __cinit__(self):
         self.file = NULL
@@ -23,7 +23,7 @@ cdef class _CookieReader:
             fclose(self.file)
 
 
-cdef class _CookieWriter:
+cdef class _LinuxWriter:
 
     def __cinit__(self):
         self.file = NULL

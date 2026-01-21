@@ -8,13 +8,13 @@ cdef extern from "fun.h":
     FILE* fileobj_bsd_open(object obj, const char* mode) except NULL
 
 
-cdef class _FunReader:
+cdef class _BSDReader:
     cdef FILE*  file
 
     cpdef object close(self)
 
 
-cdef class _FunWriter:
+cdef class _BSDWriter:
     cdef FILE*  file
 
     cpdef object close(self)

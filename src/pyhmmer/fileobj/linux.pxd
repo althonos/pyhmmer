@@ -4,17 +4,17 @@
 from libc.stdio cimport FILE
 
 
-cdef extern from "cookie.h":
+cdef extern from "fileobj/linux.h":
     FILE* fileobj_linux_open(object obj, const char* mode) except NULL
 
 
-cdef class _CookieReader:
+cdef class _LinuxReader:
     cdef FILE*  file
 
     cpdef object close(self)
 
 
-cdef class _CookieWriter:
+cdef class _LinuxWriter:
     cdef FILE*  file
 
     cpdef object close(self)

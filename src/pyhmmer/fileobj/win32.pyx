@@ -27,10 +27,10 @@ import time
 
 # --- WinApi definitions -----------------------------------------------------
 
-cdef extern from "stdarg.h":
+cdef extern from "<stdarg.h>":
     ctypedef struct va_list
 
-cdef extern from "windows.h" nogil:
+cdef extern from "<windows.h>" nogil:
     ctypedef size_t   SIZE_T
     ctypedef bint     BOOL
     ctypedef void*    LPVOID
@@ -49,10 +49,10 @@ cdef extern from "windows.h" nogil:
     ctypedef _SECURITY_ATTRIBUTES* PSECURITY_ATTRIBUTES
     ctypedef _SECURITY_ATTRIBUTES* LPSECURITY_ATTRIBUTES
 
-cdef extern from "errhandlingapi.h" nogil:
+cdef extern from "<errhandlingapi.h>" nogil:
     DWORD GetLastError()
 
-cdef extern from "winbase.h" nogil:
+cdef extern from "<winbase.h>" nogil:
     DWORD FormatMessage(DWORD dwFlags, void* lpSource, DWORD dwMessageId, DWORD dwLanguageId, char* lpBuffer, DWORD nSize, va_list* Arguments)
 
     cdef enum:
@@ -63,10 +63,10 @@ cdef extern from "winbase.h" nogil:
         FORMAT_MESSAGE_FROM_SYSTEM
         FORMAT_MESSAGE_IGNORE_INSERTS
 
-cdef extern from "handleapi.h" nogil:
+cdef extern from "<handleapi.h>" nogil:
     BOOL CloseHandle(HANDLE hObject)
 
-cdef extern from "namedpipeapi.h" nogil:
+cdef extern from "<namedpipeapi.h>" nogil:
     BOOL CreatePipe(PHANDLE hReadPipe, PHANDLE hWritePipe, LPSECURITY_ATTRIBUTES lpPipeAttributes, DWORD nSize)
     BOOL SetNamedPipeHandleState(HANDLE  hNamedPipe, LPDWORD lpMode, LPDWORD lpMaxCollectionCount, LPDWORD lpCollectDataTimeout)
 
@@ -74,27 +74,27 @@ cdef extern from "namedpipeapi.h" nogil:
         PIPE_WAIT
         PIPE_NOWAIT
 
-cdef extern from "ioapiset.h" nogil:
+cdef extern from "<ioapiset.h>" nogil:
     enum:
         ERROR_IO_PENDING
 
-cdef extern from "minwinbase.h" nogil:
+cdef extern from "<minwinbase.h>" nogil:
     cdef struct _OVERLAPPED:
         pass
     ctypedef _OVERLAPPED  OVERLAPPED
     ctypedef _OVERLAPPED* LPOVERLAPPED
 
-cdef extern from "fileapi.h" nogil:
+cdef extern from "<fileapi.h>" nogil:
     BOOL WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped)
 
-cdef extern from "io.h" nogil:
+cdef extern from "<io.h>" nogil:
     int _open_osfhandle(size_t fd, int flags)
     int _close(int fd)
 
 
 # --- Reader code ------------------------------------------------------------
 
-class _WinReader(threading.Thread):
+class _Win32Reader(threading.Thread):
     daemon = True
 
     def __init__(self, file, handle):
@@ -171,7 +171,7 @@ class _WinReader(threading.Thread):
             # (per https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/open-osfhandle?view=msvc-170#remarks)
 
 
-cdef class _WinSynchronizedReader:
+cdef class _Win32SynchronizedReader:
    
     def __cinit__(self):
         self.file = NULL
@@ -200,7 +200,7 @@ cdef class _WinSynchronizedReader:
             raise RuntimeError("Failed opening file")
 
         self.file = fread
-        self.thread = _WinReader(fileobj, <size_t> hWritePipe)
+        self.thread = _Win32Reader(fileobj, <size_t> hWritePipe)
         self.thread.start()
         self.thread.ready.wait()
 
@@ -219,12 +219,12 @@ cdef FILE* fopen_obj(object obj, const char* mode) except NULL:
     if strcmp(mode, "r") != 0:
         raise ValueError("invalid mode")
 
-    cdef _WinSynchronizedReader r = _WinSynchronizedReader(obj)
+    cdef _Win32SynchronizedReader r = _Win32SynchronizedReader(obj)
     return r.file
 
 # --- Writer code ------------------------------------------------------------
 
-class _WinWriter(threading.Thread):
+class _Win32Writer(threading.Thread):
     daemon = True
 
     def __init__(self, file, handle):
@@ -280,7 +280,7 @@ class _WinWriter(threading.Thread):
             self.done.set()
 
 
-cdef class _WinSynchronizedWriter:
+cdef class _Win32SynchronizedWriter:
    
     def __cinit__(self):
         self.file = NULL
@@ -311,7 +311,7 @@ cdef class _WinSynchronizedWriter:
             raise RuntimeError("Failed opening file")
 
         self.file   = fwrite
-        self.thread = _WinWriter(fileobj, <intptr_t> hReadPipe)
+        self.thread = _Win32Writer(fileobj, <intptr_t> hReadPipe)
         self.thread.start()
 
     def __enter__(self):

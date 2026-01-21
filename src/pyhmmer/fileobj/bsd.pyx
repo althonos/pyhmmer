@@ -4,7 +4,7 @@
 from libc.stdio cimport fclose
 
 
-cdef class _FunReader:
+cdef class _BSDReader:
 
     def __cinit__(self):
         self.file = NULL
@@ -23,7 +23,7 @@ cdef class _FunReader:
             fclose(self.file)
 
 
-cdef class _FunWriter:
+cdef class _BSDWriter:
 
     def __cinit__(self):
         self.file = NULL
