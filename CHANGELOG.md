@@ -8,8 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 [Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.11.4...HEAD
 
-## [v0.12.0-alpha.6] - 2026-01-21
-[v0.12.0-alpha.6]: https://github.com/althonos/pyhmmer/compare/v0.11.4...v0.12.0-alpha.6
+## [v0.12.0-alpha.7] - 2026-01-21
+[v0.12.0-alpha.7]: https://github.com/althonos/pyhmmer/compare/v0.11.4...v0.12.0-alpha.7
 
 ### Added
 - Support for Windows AMD64 builds with MinGW ([#92](https://github.com/althonos/pyhmmer/issues/92), see [documentation](https://pyhmmer.readthedocs.io/en/latest/guide/windows.html)).
