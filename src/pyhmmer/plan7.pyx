@@ -56,6 +56,10 @@ cimport libeasel.getopts
 cimport libeasel.vec
 cimport libhmmer
 cimport libhmmer.generic
+cimport libhmmer.impl
+cimport libhmmer.impl.io
+cimport libhmmer.impl.p7_omx
+cimport libhmmer.impl.p7_oprofile
 cimport libhmmer.modelconfig
 cimport libhmmer.modelstats
 cimport libhmmer.p7_alidisplay
@@ -92,6 +96,8 @@ from libhmmer cimport (
     p7_cutoffs_e,
     p7_evparams_e,
 )
+from libhmmer.impl.p7_omx cimport P7_OMX
+from libhmmer.impl.p7_oprofile cimport P7_OPROFILE, P7_OM_BLOCK
 from libhmmer.logsum cimport p7_FLogsumInit
 from libhmmer.p7_builder cimport P7_BUILDER, p7_archchoice_e, p7_wgtchoice_e, p7_effnchoice_e
 from libhmmer.p7_gmx cimport P7_GMX
@@ -117,73 +123,6 @@ from libhmmer.p7_hmmfile cimport (
     v3e_magic,
     v3f_magic
 )
-
-if HMMER_IMPL == "VMX":
-    from libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init, p7_MSVFilter, p7O_EXTRA_SB
-    from libhmmer.impl_vmx.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
-    from libhmmer.impl_vmx.p7_omx cimport (
-        P7_OMX,
-        P7_OM_BLOCK,
-        p7_oprofile_CreateBlock,
-        p7_oprofile_DestroyBlock,
-        p7_omx_Create,
-        p7_omx_Destroy,
-    )
-    from libhmmer.impl_vmx.p7_oprofile cimport (
-        P7_OPROFILE,
-        p7O_NXSTATES,
-        p7O_NXTRANS,
-        p7O_NQB,
-        p7O_NQF,
-        p7_oprofile_Compare,
-        p7_oprofile_Dump,
-        p7_oprofile_Sizeof,
-        p7_oprofile_Destroy,
-    )
-elif HMMER_IMPL == "SSE":
-    from libhmmer.impl_sse cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7_MSVFilter, p7O_EXTRA_SB
-    from libhmmer.impl_sse.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
-    from libhmmer.impl_sse.p7_omx cimport (
-        P7_OMX,
-        P7_OM_BLOCK,
-        p7_oprofile_CreateBlock,
-        p7_oprofile_DestroyBlock,
-        p7_omx_Create,
-        p7_omx_Destroy,
-    )
-    from libhmmer.impl_sse.p7_oprofile cimport (
-        P7_OPROFILE,
-        p7O_NXSTATES,
-        p7O_NXTRANS,
-        p7O_NQB,
-        p7O_NQF,
-        p7_oprofile_Compare,
-        p7_oprofile_Dump,
-        p7_oprofile_Sizeof,
-        p7_oprofile_Destroy
-    )
-elif HMMER_IMPL == "NEON":
-    from libhmmer.impl_neon cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7_MSVFilter, p7O_EXTRA_SB
-    from libhmmer.impl_neon.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
-    from libhmmer.impl_neon.p7_omx cimport (
-        P7_OMX,
-        P7_OM_BLOCK,
-        p7_oprofile_CreateBlock,
-        p7_oprofile_DestroyBlock,
-        p7_omx_Create,
-        p7_omx_Destroy,
-    )
-    from libhmmer.impl_neon.p7_oprofile cimport (
-        P7_OPROFILE,
-        p7O_NXSTATES,
-        p7O_NXTRANS,
-        p7O_NQB,
-        p7O_NQF,
-        p7_oprofile_Compare,
-        p7_oprofile_Dump,
-        p7_oprofile_Sizeof,
-        p7_oprofile_Destroy,
-    )
 
 from .easel cimport (
     Alphabet,
@@ -4040,9 +3979,9 @@ cdef class HMMPressedFile:
             raise ValueError("I/O operation on closed file.")
 
         with nogil:
-            status = p7_oprofile_ReadMSV(self._hfp, &self._abc, &om._om)
+            status = libhmmer.impl.io.p7_oprofile_ReadMSV(self._hfp, &self._abc, &om._om)
             if status == libeasel.eslOK:
-                status = p7_oprofile_ReadRest(self._hfp, om._om)
+                status = libhmmer.impl.io.p7_oprofile_ReadRest(self._hfp, om._om)
 
         if self._alphabet is None and self._abc != NULL:
             self._alphabet = Alphabet.from_ptr(self._abc)
@@ -4281,12 +4220,12 @@ cdef class OptimizedProfile:
         self.alphabet = alphabet
         # create a new optimized profile large enough to store M nodes
         with nogil:
-            self._om = p7_oprofile.p7_oprofile_Create(M, alphabet._abc)
+            self._om = libhmmer.impl.p7_oprofile.p7_oprofile_Create(M, alphabet._abc)
         if self._om == NULL:
             raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
 
     def __dealloc__(self):
-        p7_oprofile.p7_oprofile_Destroy(self._om)
+        libhmmer.impl.p7_oprofile.p7_oprofile_Destroy(self._om)
 
     def __repr__(self):
         cdef str ty = type(self).__name__
@@ -4310,9 +4249,10 @@ cdef class OptimizedProfile:
             return NotImplemented
 
         cdef char[eslERRBUFSIZE] errbuf
-        cdef OptimizedProfile    op     = <Profile> other
-        cdef int                 status = p7_oprofile_Compare(self._om, op._om, 0.0, errbuf)
+        cdef int                 status 
+        cdef OptimizedProfile    op     = <OptimizedProfile> other
 
+        status = libhmmer.impl.p7_oprofile.p7_oprofile_Compare(self._om, op._om, 0.0, errbuf)
         if status == libeasel.eslOK:
             return True
         elif status == libeasel.eslFAIL:
@@ -4322,7 +4262,7 @@ cdef class OptimizedProfile:
 
     def __sizeof__(self):
         assert self._om != NULL
-        return p7_oprofile_Sizeof(self._om) + sizeof(self)
+        return libhmmer.impl.p7_oprofile.p7_oprofile_Sizeof(self._om) + sizeof(self)
 
     # --- Properties ---------------------------------------------------------
 
@@ -4351,7 +4291,7 @@ cdef class OptimizedProfile:
         assert self._om != NULL
         cdef int status
         with nogil:
-            status = p7_oprofile.p7_oprofile_ReconfigLength(self._om, L)
+            status = libhmmer.impl.p7_oprofile.p7_oprofile_ReconfigLength(self._om, L)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
 
@@ -4464,7 +4404,7 @@ cdef class OptimizedProfile:
 
         cdef MatrixU8 mat = MatrixU8.__new__(MatrixU8)
         mat._m = mat._shape[0] = self.alphabet.Kp
-        mat._n = mat._shape[1] = 16 * p7O_NQB(self._om.M)
+        mat._n = mat._shape[1] = 16 * libhmmer.impl.p7_oprofile.p7O_NQB(self._om.M)
         mat._owner = self
         mat._data = <void**> self._om.rbv
         return mat
@@ -4478,8 +4418,8 @@ cdef class OptimizedProfile:
         """
         assert self._om != NULL
 
-        cdef int nqb = p7O_NQB(self._om.M)
-        cdef int nqs = nqb + p7O_EXTRA_SB
+        cdef int nqb = libhmmer.impl.p7_oprofile.p7O_NQB(self._om.M)
+        cdef int nqs = nqb + libhmmer.impl.p7O_EXTRA_SB
 
         cdef MatrixU8 mat = MatrixU8.__new__(MatrixU8)
         mat._m = mat._shape[0] = self.alphabet.Kp
@@ -4610,7 +4550,7 @@ cdef class OptimizedProfile:
 
         cdef MatrixF mat = MatrixF.__new__(MatrixF)
         mat._m = mat._shape[0] = self.alphabet.Kp
-        mat._n = mat._shape[1] = 4 * p7O_NQF(self._om.M)
+        mat._n = mat._shape[1] = 4 * libhmmer.impl.p7_oprofile.p7O_NQF(self._om.M)
         mat._owner = self
         mat._data = <void**> self._om.rfv
         return mat
@@ -4625,7 +4565,7 @@ cdef class OptimizedProfile:
         assert self._om != NULL
 
         cdef VectorF vec = VectorF.__new__(VectorF)
-        vec._n = vec._shape[0] = 8 * 4 * p7O_NQF(self._om.M)
+        vec._n = vec._shape[0] = 8 * 4 * libhmmer.impl.p7_oprofile.p7O_NQF(self._om.M)
         vec._owner = self
         vec._data = <void*> self._om.tfv
         return vec
@@ -4640,8 +4580,8 @@ cdef class OptimizedProfile:
         assert self._om != NULL
 
         cdef MatrixF mat = MatrixF.__new__(MatrixF)
-        mat._m = mat._shape[0] = p7O_NXSTATES
-        mat._n = mat._shape[1] = p7O_NXTRANS
+        mat._m = mat._shape[0] = libhmmer.impl.p7_oprofile.p7O_NXSTATES
+        mat._n = mat._shape[1] = libhmmer.impl.p7_oprofile.p7O_NXTRANS
         mat._owner = self
         mat._data = <void**> self._om.xf
         return mat
@@ -4703,7 +4643,7 @@ cdef class OptimizedProfile:
 
         """
         assert self._om != NULL
-        return p7_oprofile.p7_oprofile_IsLocal(self._om)
+        return libhmmer.impl.p7_oprofile.p7_oprofile_IsLocal(self._om)
 
     @property
     def multihit(self):
@@ -4719,10 +4659,10 @@ cdef class OptimizedProfile:
     def multihit(self, multihit):
         if multihit:
             if not self.multihit:
-                p7_oprofile.p7_oprofile_ReconfigMultihit(self._om, self._om.L)
+                libhmmer.impl.p7_oprofile.p7_oprofile_ReconfigMultihit(self._om, self._om.L)
         else:
             if self.multihit:
-                p7_oprofile.p7_oprofile_ReconfigUnihit(self._om, self._om.L)
+                libhmmer.impl.p7_oprofile.p7_oprofile_ReconfigUnihit(self._om, self._om.L)
 
 
     # --- Methods ------------------------------------------------------------
@@ -4739,7 +4679,7 @@ cdef class OptimizedProfile:
         cdef OptimizedProfile new = OptimizedProfile.__new__(OptimizedProfile)
         new.alphabet = self.alphabet
         with nogil:
-            new._om = p7_oprofile.p7_oprofile_Copy(self._om)
+            new._om = libhmmer.impl.p7_oprofile.p7_oprofile_Copy(self._om)
         if new._om == NULL:
             raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
         return new
@@ -4753,20 +4693,18 @@ cdef class OptimizedProfile:
         the profile is saved to ``fh_profile``.
 
         """
-        cdef P7_OPROFILE* om     = self._om
-        cdef int          status
-        cdef FILE*        pfp
-        cdef FILE*        ffp
-
         assert self._om != NULL
+       
+        cdef int            status
+        cdef _FileobjWriter fwp
+        cdef _FileobjWriter fwf
+        cdef P7_OPROFILE*   om     = self._om
 
-        pfp = fopen_obj(fh_profile, "w")
-        ffp = fopen_obj(fh_filter, "w")
-        status = p7_oprofile_Write(ffp, pfp, self._om)
-        if status == libeasel.eslOK:
-            fclose(ffp)
-            fclose(pfp)
-        else:
+        with _FileobjWriter(fh_filter) as fwf, _FileobjWriter(fh_profile) as fwp:
+            with nogil:
+                status = libhmmer.impl.io.p7_oprofile_Write(fwf.file, fwp.file, self._om)
+        if status != libeasel.eslOK:
+            _reraise_error()
             raise UnexpectedError(status, "p7_oprofile_Write")
 
     cpdef void convert(self, Profile profile) except *:
@@ -4794,7 +4732,7 @@ cdef class OptimizedProfile:
         if self._om.allocM < profile._gm.M:
             raise ValueError("Optimized profile is too small to hold profile")
         with nogil:
-            status = p7_oprofile.p7_oprofile_Convert(profile._gm, self._om)
+            status = libhmmer.impl.p7_oprofile.p7_oprofile_Convert(profile._gm, self._om)
         if status == libeasel.eslEINVAL:
             raise ValueError("Standard and optimized profiles are not compatible.")
         elif status == libeasel.eslEMEM:
@@ -4832,13 +4770,13 @@ cdef class OptimizedProfile:
         if self.alphabet != seq.alphabet:
             raise AlphabetMismatch(self.alphabet, seq.alphabet)
 
-        omx = p7_omx_Create(self._om.M, 0, 0)
+        omx = libhmmer.impl.p7_omx.p7_omx_Create(self._om.M, 0, 0)
         if omx == NULL:
             raise AllocationError("P7_OMX", sizeof(P7_OMX))
 
         try:
             with nogil:
-                status = p7_MSVFilter(
+                status = libhmmer.impl.p7_MSVFilter(
                     seq._sq.dsq,
                     seq._sq.n,
                     self._om,
@@ -4846,7 +4784,7 @@ cdef class OptimizedProfile:
                     &score,
                 )
         finally:
-            p7_omx_Destroy(omx)
+            libhmmer.impl.p7_omx.p7_omx_Destroy(omx)
 
         if status == libeasel.eslOK:
             return score
@@ -4893,7 +4831,7 @@ cdef class OptimizedProfile:
             if self.alphabet != seq.alphabet:
                 raise AlphabetMismatch(self.alphabet, seq.alphabet)
             with nogil:
-                status = p7_SSVFilter(seq._sq.dsq, seq._sq.L, self._om, &score)
+                status = libhmmer.impl.p7_SSVFilter(seq._sq.dsq, seq._sq.L, self._om, &score)
             if status == libeasel.eslOK:
                 return score
             elif status == libeasel.eslERANGE:
@@ -4931,7 +4869,7 @@ cdef class OptimizedProfileBlock:
 
         """
         if self._block == NULL:
-            self._block = p7_oprofile_CreateBlock(8)
+            self._block = libhmmer.impl.p7_oprofile.p7_oprofile_CreateBlock(8)
             if self._block == NULL:
                 raise AllocationError("P7_OM_BLOCK", sizeof(P7_OM_BLOCK))
         if self._locks == NULL:
@@ -4952,7 +4890,7 @@ cdef class OptimizedProfileBlock:
             # avoid a double free of the sequence contents
             for i in range(self._block.listSize):
                 self._block.list[i] = NULL
-            p7_oprofile_DestroyBlock(self._block)
+            libhmmer.impl.p7_oprofile.p7_oprofile_DestroyBlock(self._block)
 
     def __len__(self):
         assert self._block != NULL
@@ -5154,18 +5092,23 @@ cdef class OptimizedProfileBlock:
 
         """
         assert self._block != NULL
+
         cdef OptimizedProfileBlock new = OptimizedProfileBlock.__new__(OptimizedProfileBlock, self.alphabet)
+        
         new._storage = self._storage.copy()
-        new._block = p7_oprofile_CreateBlock(self._block.count)
+        new._block = libhmmer.impl.p7_oprofile.p7_oprofile_CreateBlock(self._block.count)
         if new._block == NULL:
             raise AllocationError("P7_OM_BLOCK", sizeof(P7_OM_BLOCK))
+        
         memcpy(new._block.list, self._block.list, self._block.count * sizeof(ESL_SQ*))
         new._block.count = self._block.count
+        
         new._locks = <PyThread_type_lock*> calloc(self._block.count, sizeof(PyThread_type_lock))
         if new._locks == NULL:
             raise AllocationError("PyThread_type_lock", sizeof(PyThread_type_lock), new._block.count)
         for i in range(new._block.listSize):
             new._locks[i] = PyThread_allocate_lock()
+
         return new
 
 
@@ -5830,8 +5773,8 @@ cdef class Pipeline:
         if SearchQuery is Profile:
             # reallocate the optimized profile if it is too small
             if self.opt._om.allocM < query.M:
-                p7_oprofile.p7_oprofile_Destroy(self.opt._om)
-                self.opt._om = p7_oprofile.p7_oprofile_Create(query.M, self.alphabet._abc)
+                libhmmer.impl.p7_oprofile.p7_oprofile_Destroy(self.opt._om)
+                self.opt._om = libhmmer.impl.p7_oprofile.p7_oprofile_Create(query.M, self.alphabet._abc)
                 if self.opt._om == NULL:
                     raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
             # convert the profile to an optimized one
@@ -6266,7 +6209,7 @@ cdef class Pipeline:
             status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq[t].n)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_bg_SetLength")
-            status = p7_oprofile.p7_oprofile_ReconfigLength(om, sq[t].n)
+            status = libhmmer.impl.p7_oprofile.p7_oprofile_ReconfigLength(om, sq[t].n)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
             # run the pipeline on the target sequence
@@ -6330,7 +6273,7 @@ cdef class Pipeline:
                 elif status == libeasel.eslEFORMAT:
                     raise ValueError("Could not parse file")
                 elif status != libeasel.eslOK:
-                    raise UnexpectedError(status, "p7_oprofile_ReadMSV")
+                    raise UnexpectedError(status, "esl_sqio_Read")
                 # check sequence length
                 if dbsq.L > HMMER_TARGET_LIMIT:
                     raise ValueError(f"sequence length over comparison pipeline limit ({HMMER_TARGET_LIMIT})")
@@ -6341,7 +6284,7 @@ cdef class Pipeline:
                 status = libhmmer.p7_bg.p7_bg_SetLength(bg, dbsq.n)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_bg_SetLength")
-                status = p7_oprofile.p7_oprofile_ReconfigLength(om, dbsq.n)
+                status = libhmmer.impl.p7_oprofile.p7_oprofile_ReconfigLength(om, dbsq.n)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
                 # run the pipeline on the target sequence
@@ -6488,7 +6431,7 @@ cdef class Pipeline:
             if not PyThread_acquire_lock(locks[t], WAIT_LOCK):
                 raise RuntimeError("Failed to acquire lock")
             try:
-                status = p7_oprofile.p7_oprofile_ReconfigLength(om[t], sq.n)
+                status = libhmmer.impl.p7_oprofile.p7_oprofile_ReconfigLength(om[t], sq.n)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
                 # run the pipeline on the query sequence
@@ -6527,9 +6470,9 @@ cdef class Pipeline:
         # run the inner loop on all HMMs
         while True:
             # read the next profile from the file
-            status = p7_oprofile_ReadMSV(hfp, &abc, &om)
+            status = libhmmer.impl.io.p7_oprofile_ReadMSV(hfp, &abc, &om)
             if status == libeasel.eslOK:
-                status = p7_oprofile_ReadRest(hfp, om)
+                status = libhmmer.impl.io.p7_oprofile_ReadRest(hfp, om)
             if status == libeasel.eslEOF:
                 break
             elif status != libeasel.eslOK:
@@ -6546,7 +6489,7 @@ cdef class Pipeline:
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_bg_SetLength")
                 # configure the profile
-                status = p7_oprofile.p7_oprofile_ReconfigLength(om, sq.n)
+                status = libhmmer.impl.p7_oprofile.p7_oprofile_ReconfigLength(om, sq.n)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
                 # run the pipeline on the query sequence
@@ -6558,7 +6501,7 @@ cdef class Pipeline:
                 elif status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_Pipeline")
             finally:
-               p7_oprofile_Destroy(om)
+               libhmmer.impl.p7_oprofile.p7_oprofile_Destroy(om)
                om = NULL
 
             # clear pipeline for reuse for next target
@@ -6970,8 +6913,8 @@ cdef class LongTargetsPipeline(Pipeline):
         if SearchQuery is Profile:
             # reallocate the optimized profile if it is too small
             if self.opt._om.allocM < (<Profile> query)._gm.M:
-                p7_oprofile.p7_oprofile_Destroy(self.opt._om)
-                self.opt._om = p7_oprofile.p7_oprofile_Create((<Profile> query)._gm.M, self.alphabet._abc)
+                libhmmer.impl.p7_oprofile.p7_oprofile_Destroy(self.opt._om)
+                self.opt._om = libhmmer.impl.p7_oprofile.p7_oprofile_Create((<Profile> query)._gm.M, self.alphabet._abc)
                 if self.opt._om == NULL:
                     raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
             # convert the profile to an optimized one
@@ -9721,4 +9664,4 @@ p7_FLogsumInit()
 #                  this function, but beware that no other "useful" code is
 #                  included in the `impl_Init` code in a future HMMER release.
 #
-#impl_Init()
+#libhmmer.impl.impl_Init()
