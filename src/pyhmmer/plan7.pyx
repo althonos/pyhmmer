@@ -3596,7 +3596,7 @@ cdef class HMMFile:
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
-        self._alphabet = None
+        self.alphabet = None
         self._hfp = NULL
         self._name = None
 
@@ -3656,11 +3656,11 @@ cdef class HMMFile:
 
         self._file = file
         if alphabet is None:
-            self._alphabet = None
+            self.alphabet = None
             self._abc = NULL
         else:
-            self._alphabet = alphabet
-            self._abc = <ESL_ALPHABET*> self._alphabet._abc
+            self.alphabet = alphabet
+            self._abc = <ESL_ALPHABET*> self.alphabet._abc
 
     def __dealloc__(self):
         if self._hfp:
@@ -3753,12 +3753,12 @@ cdef class HMMFile:
             status = libhmmer.p7_hmmfile.p7_hmmfile_Read(self._hfp, &self._abc, &hmm)
 
         # wrap the internal alphabet
-        if self._alphabet is None and self._abc != NULL:
-            self._alphabet = Alphabet.from_ptr(self._abc)
+        if self.alphabet is None and self._abc != NULL:
+            self.alphabet = Alphabet.from_ptr(self._abc)
 
         if status == libeasel.eslOK:
             py_hmm = HMM.__new__(HMM)
-            py_hmm.alphabet = self._alphabet # keep a reference to the alphabet
+            py_hmm.alphabet = self.alphabet # keep a reference to the alphabet
             py_hmm._hmm = hmm
             return py_hmm
         elif status == libeasel.eslEOF:
@@ -3770,7 +3770,7 @@ cdef class HMMFile:
         elif status == libeasel.eslEFORMAT:
             raise ValueError("Invalid format in file: {}".format(self._hfp.errbuf.decode("utf-8", "replace")))
         elif status == libeasel.eslEINCOMPAT:
-            raise AlphabetMismatch(self._alphabet)
+            raise AlphabetMismatch(self.alphabet)
         else:
             _reraise_error()
             raise UnexpectedError(status, "p7_hmmfile_Read")
@@ -3833,7 +3833,7 @@ cdef class HMMFile:
         if not self._hfp.is_pressed:
             raise ValueError("HMM file does not contain optimized profiles.")
         cdef HMMPressedFile optimized = HMMPressedFile.__new__(HMMPressedFile)
-        optimized._alphabet = self._alphabet
+        optimized.alphabet = self.alphabet
         optimized._hmmfile = self
         optimized._hfp = self._hfp
         return optimized
@@ -3869,7 +3869,7 @@ cdef class HMMPressedFile:
     # --- Magic methods ------------------------------------------------------
 
     def __cinit__(self):
-        self._alphabet = None
+        self.alphabet = None
         self._hmmfile = None
         self._hfp = NULL
         self._position = 0
@@ -3893,11 +3893,11 @@ cdef class HMMPressedFile:
         if not self._hfp.is_pressed:
             raise ValueError("HMM file does not contain optimized profiles.")
         if alphabet is None:
-            self._alphabet = None
+            self.alphabet = None
             self._abc = NULL
         else:
-            self._alphabet = alphabet
-            self._abc = <ESL_ALPHABET*> self._alphabet._abc
+            self.alphabet = alphabet
+            self._abc = <ESL_ALPHABET*> self.alphabet._abc
 
     def __iter__(self):
         return self
@@ -3991,11 +3991,11 @@ cdef class HMMPressedFile:
             if status == libeasel.eslOK:
                 status = libhmmer.impl.io.p7_oprofile_ReadRest(self._hfp, om._om)
 
-        if self._alphabet is None and self._abc != NULL:
-            self._alphabet = Alphabet.from_ptr(self._abc)
+        if self.alphabet is None and self._abc != NULL:
+            self.alphabet = Alphabet.from_ptr(self._abc)
 
         if status == libeasel.eslOK:
-            om.alphabet = self._alphabet
+            om.alphabet = self.alphabet
             self._position += 1
             return om
         elif status == libeasel.eslEOF:
@@ -4007,7 +4007,7 @@ cdef class HMMPressedFile:
         elif status == libeasel.eslEFORMAT:
             raise ValueError("Invalid format in file: {}".format(self._hfp.errbuf.decode("utf-8", "replace")))
         elif status == libeasel.eslEINCOMPAT:
-            raise AlphabetMismatch(self._alphabet)
+            raise AlphabetMismatch(self.alphabet)
         else:
             _reraise_error()
             raise UnexpectedError(status, "p7_oprofile_ReadMSV")

@@ -158,10 +158,10 @@ cdef class HMM:
 cdef class HMMFile:
     cdef          P7_HMMFILE*    _hfp
     cdef          ESL_ALPHABET*  _abc
-    cdef          Alphabet       _alphabet
     cdef          str            _name
     cdef readonly _FileobjReader _reader
     cdef readonly object         _file
+    cdef readonly Alphabet       alphabet
 
     cdef int _open_fileobj(self, object fh) except 1
 
@@ -175,11 +175,11 @@ cdef class HMMFile:
 
 
 cdef class HMMPressedFile:
-    cdef P7_HMMFILE*   _hfp
-    cdef ESL_ALPHABET* _abc
-    cdef Alphabet      _alphabet
-    cdef HMMFile       _hmmfile
-    cdef size_t        _position
+    cdef          P7_HMMFILE*   _hfp
+    cdef          ESL_ALPHABET* _abc
+    cdef          HMMFile       _hmmfile
+    cdef          size_t        _position
+    cdef readonly Alphabet       alphabet
 
     cpdef void close(self) except *
     cpdef void rewind(self) except *
