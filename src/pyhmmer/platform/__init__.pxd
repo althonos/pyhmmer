@@ -1,5 +1,5 @@
 if TARGET_SYSTEM == "Linux":
-    from .cookie cimport (
+    from .linux cimport (
         _LinuxReader as _FileobjReader,
         _LinuxWriter as _FileobjWriter,
     )
@@ -9,7 +9,7 @@ elif TARGET_SYSTEM == "Windows":
         _Win32SynchronizedWriter as _FileobjWriter
     )
 elif TARGET_SYSTEM == "Darwin" or TARGET_SYSTEM.endswith("BSD"):
-    from .fun cimport (
+    from .bsd cimport (
         _BSDReader as _FileobjReader, 
         _BSDWriter as _FileobjWriter
     )
