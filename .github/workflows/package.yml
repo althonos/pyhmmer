@@ -95,12 +95,16 @@ jobs:
       with:
         submodules: true
     - name: Set up MinGW
+      id: setup
       uses: egor-tensin/setup-mingw@v3
       with:
         platform: x64
     - name: Build manylinux wheels
       uses: pypa/cibuildwheel@v3.2.1
       env:
+        CC: "${{ steps.setup.outputs.gcc }}"
+        CMAKE_GENERATOR: Ninja
+        CMAKE_GENERATOR_PLATFORM: ""
         CIBW_ARCHS: AMD64
         CIBW_BUILD: 'cp*-win_amd64'
         CIBW_BUILD_VERBOSITY: 2

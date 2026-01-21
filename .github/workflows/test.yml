@@ -226,7 +226,11 @@ jobs:
     - name: Install Python requirements
       run: python -m pip install -r .github/workflows/requirements.txt
     - name: Build C extension
-      run: pip install -vv . --no-build-isolation -C cmake.define.CMAKE_C_COMPILER="${{ steps.setup.outputs.gcc }}"  -C cmake.define.CMAKE_GENERATOR="Ninja" -C cmake.define.CMAKE_GENERATOR_PLATFORM=""
+      run: pip install -vv . --no-build-isolation
+      env:
+        CC: "${{ steps.setup.outputs.gcc }}"
+        CMAKE_GENERATOR: Ninja
+        CMAKE_GENERATOR_PLATFORM: ""
     - name: Install test requirements
       run: python -m pip install -r src/pyhmmer/tests/requirements.txt
     - name: Test without coverage
