@@ -1,9 +1,6 @@
 Miscellaneous
 =============
 
-.. autoclass:: pyhmmer.easel.Alphabet
-   :members:
-
 .. autoclass:: pyhmmer.easel.GeneticCode
    :special-members: __init__
    :members:

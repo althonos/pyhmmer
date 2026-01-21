@@ -23,6 +23,24 @@ Data Structures
    Data Structures <data>
 
 
+Biological Alphabets
+--------------------
+
+.. autosummary::
+
+   Alphabet
+   DNA
+   RNA
+   AA
+
+.. toctree::
+   :caption: Miscellaneous
+   :maxdepth: 1
+   :hidden:
+
+   Biological Alphabets <alphabet>
+
+
 Sequences
 ---------
 
@@ -117,7 +135,6 @@ Miscellaneous
 
 .. autosummary::
 
-   Alphabet
    GeneticCode
    Randomness
    SSIReader
