@@ -8984,9 +8984,9 @@ cdef class SequenceFile:
         ascii.ssi              = NULL
 
         try:
-            # use the repr string of the file-like object as a filename
-            frepr = repr(reader.obj)
-            filename = PyUnicode_AsUTF8AndSize(frepr, &flen)
+            # use the repr string of the file-like object as a "filename"
+            frepr = getattr(reader.obj, "name", repr(reader.obj))
+            fname = PyUnicode_AsUTF8AndSize(frepr, &flen)
             status = libeasel.esl_strdup(fname, flen, &self._sqfp.filename)
             if status == libeasel.eslEMEM:
                 raise AllocationError("char", sizeof(char), flen)
