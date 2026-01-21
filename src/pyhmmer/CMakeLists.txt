@@ -1,6 +1,6 @@
 include(CythonExtension)
 
-add_subdirectory(fileobj)
+add_subdirectory(platform)
 
 cython_extension(errors   LINKS libeasel)
 cython_extension(easel    LINKS libeasel)

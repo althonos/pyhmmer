@@ -102,7 +102,7 @@ from libeasel.sqio.ascii cimport (
     fileheader_hmmpgmd,
 )
 
-from .fileobj cimport fopen_obj, _FileobjReader, _FileobjWriter
+from .platform cimport fopen_obj, _FileobjReader, _FileobjWriter
 
 include "exceptions.pxi"
 include "_strings.pxi"
