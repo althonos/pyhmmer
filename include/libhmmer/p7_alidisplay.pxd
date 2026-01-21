@@ -70,9 +70,6 @@ cdef extern from "hmmer.h" nogil:
     int            p7_alidisplay_Dump(FILE *fp, const P7_ALIDISPLAY *ad)
     int            p7_alidisplay_Compare(const P7_ALIDISPLAY *ad1, const P7_ALIDISPLAY *ad2)
 
-# The GIL may be held there in case the FILE* is a Python file object
-cdef extern from "hmmer.h":
-
     int            p7_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, P7_PIPELINE *pli)
     int            p7_translated_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, P7_PIPELINE *pli)
     int            p7_nontranslated_alidisplay_Print(FILE *fp, P7_ALIDISPLAY *ad, int min_aliwidth, int linewidth, int show_accessions)

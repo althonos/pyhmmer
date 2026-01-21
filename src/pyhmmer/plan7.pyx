@@ -248,24 +248,23 @@ cdef class Alignment:
     def __str__(self):
         assert self._ad != NULL
 
-        cdef int    status
-        cdef object buffer = io.BytesIO()
-        cdef FILE*  fp     = fopen_obj(buffer, "w")
+        cdef int            status
+        cdef _FileobjWriter fw
+        cdef object         buffer = io.BytesIO()
 
-        try:
-            status = libhmmer.p7_alidisplay.p7_nontranslated_alidisplay_Print(
-                fp,
-                self._ad,
-                0,
-                -1,
-                False,
-            )
-            if status == libeasel.eslEWRITE:
-                raise OSError("Failed to write alignment")
-            elif status != libeasel.eslOK:
-                raise UnexpectedError(status, "p7_alidisplay_Print")
-        finally:
-            fclose(fp)
+        with _FileobjWriter(buffer) as fw:
+            with nogil:
+                status = libhmmer.p7_alidisplay.p7_nontranslated_alidisplay_Print(
+                    fw.file,
+                    self._ad,
+                    0,
+                    -1,
+                    False,
+                )
+        if status == libeasel.eslEWRITE:
+            raise OSError("Failed to write alignment")
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_alidisplay_Print")
 
         return buffer.getvalue().decode("ascii")
 
