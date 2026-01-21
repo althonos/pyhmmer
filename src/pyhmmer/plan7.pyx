@@ -3475,12 +3475,12 @@ cdef class HMMFile:
 
     # --- Constructor --------------------------------------------------------
 
-    @staticmethod
-    cdef P7_HMMFILE* _open_fileobj(object fh) except *:
+    cdef int _open_fileobj(self, object fh) except 1:
         cdef int         status
         cdef char*       token
         cdef int         token_len
-        cdef bytes       filename
+        cdef const char* filename
+        cdef ssize_t     flen      = -1
         cdef object      fh_       = fh
         cdef P7_HMMFILE* hfp       = NULL
 
@@ -3505,84 +3505,87 @@ cdef class HMMFile:
             fh_.read(4)
 
         # attempt to allocate space for the P7_HMMFILE
-        hfp = <P7_HMMFILE*> malloc(sizeof(P7_HMMFILE))
-        if hfp == NULL:
+        self._hfp = <P7_HMMFILE*> malloc(sizeof(P7_HMMFILE))
+        if self._hfp == NULL:
             raise AllocationError("P7_HMMFILE", sizeof(P7_HMMFILE))
 
+        # create the reader
+        self._reader = _FileobjReader(fh_)
+
         # store options
-        hfp.f            = fopen_obj(fh_, "r")
-        hfp.do_gzip      = True
-        hfp.do_stdin     = False
-        hfp.newly_opened = True
-        hfp.is_pressed   = False
+        self._hfp.f            = self._reader.file
+        self._hfp.do_gzip      = True
+        self._hfp.do_stdin     = False
+        self._hfp.newly_opened = True
+        self._hfp.is_pressed   = False
 
         # set pointers as NULL for now
-        hfp.parser    = NULL
-        hfp.efp       = NULL
-        hfp.ffp       = NULL
-        hfp.pfp       = NULL
-        hfp.ssi       = NULL
-        hfp.fname     = NULL
-        hfp.errbuf[0] = b"\0"
+        self._hfp.parser    = NULL
+        self._hfp.efp       = NULL
+        self._hfp.ffp       = NULL
+        self._hfp.pfp       = NULL
+        self._hfp.ssi       = NULL
+        self._hfp.fname     = NULL
+        self._hfp.errbuf[0] = b"\0"
 
         # extract the filename if the file handle has a `name` attribute
         if getattr(fh, "name", None) is not None:
-            filename = fh.name.encode()
-            hfp.fname = strdup(filename)
-            if hfp.fname == NULL:
-                HMMFile._close_hmmfile(hfp)
-                raise AllocationError("char", sizeof(char), strlen(filename))
+            filename = PyUnicode_AsUTF8AndSize(fh.name, &flen)
+            libeasel.esl_strdup(filename, flen, &self._hfp.fname)
+            if self._hfp.fname == NULL:
+                self.close()
+                raise AllocationError("char", sizeof(char), flen)
 
         # check if the parser is in binary format,
         if magic in HMM_FILE_MAGIC:
-            hfp.format = HMM_FILE_MAGIC[magic]
-            hfp.parser = read_bin30hmm
-            return hfp
+            self._hfp.format = HMM_FILE_MAGIC[magic]
+            self._hfp.parser = read_bin30hmm
+            return 0
 
         # create and configure the file parser
-        hfp.efp = libeasel.fileparser.esl_fileparser_Create(hfp.f)
-        if hfp.efp == NULL:
-            HMMFile._close_hmmfile(hfp)
+        self._hfp.efp = libeasel.fileparser.esl_fileparser_Create(self._hfp.f)
+        if self._hfp.efp == NULL:
+            self.close()
             raise AllocationError("ESL_FILEPARSER", sizeof(ESL_FILEPARSER))
-        status = libeasel.fileparser.esl_fileparser_SetCommentChar(hfp.efp, b"#")
+        status = libeasel.fileparser.esl_fileparser_SetCommentChar(self._hfp.efp, b"#")
         if status != libeasel.eslOK:
-            HMMFile._close_hmmfile(hfp)
+            self.close()
             raise UnexpectedError(status, "esl_fileparser_SetCommentChar")
 
         # get the magic string at the beginning
-        status = libeasel.fileparser.esl_fileparser_NextLine(hfp.efp)
+        status = libeasel.fileparser.esl_fileparser_NextLine(self._hfp.efp)
         if status == libeasel.eslEOF:
-            HMMFile._close_hmmfile(hfp)
+            self.close()
             raise EOFError("HMM file is empty")
         elif status != libeasel.eslOK:
-            HMMFile._close_hmmfile(hfp)
-            raise UnexpectedError(status, "esl_fileparser_NextLine");
-        status = libeasel.fileparser.esl_fileparser_GetToken(hfp.efp, &token, &token_len)
+            self.close()
+            raise UnexpectedError(status, "esl_fileparser_NextLine")
+        status = libeasel.fileparser.esl_fileparser_GetToken(self._hfp.efp, &token, &token_len)
         if status != libeasel.eslOK:
-            HMMFile._close_hmmfile(hfp)
+            self.close()
             raise UnexpectedError(status, "esl_fileparser_GetToken")
 
         # detect the format
         if token.startswith(b"HMMER3/"):
-            hfp.parser = read_asc30hmm
+            self._hfp.parser = read_asc30hmm
             format = token[5:].decode("utf-8", "replace")
             if format in HMM_FILE_FORMATS:
-                hfp.format = HMM_FILE_FORMATS[format]
+                self._hfp.format = HMM_FILE_FORMATS[format]
             else:
-                hfp.parser = NULL
+                self._hfp.parser = NULL
         elif token.startswith(b"HMMER2.0"):
-            hfp.parser = read_asc20hmm
-            hfp.format = p7_hmmfile_formats_e.p7_HMMFILE_20
+            self._hfp.parser = read_asc20hmm
+            self._hfp.format = p7_hmmfile_formats_e.p7_HMMFILE_20
 
         # check the format tag was recognized
-        if hfp.parser == NULL:
-            HMMFile._close_hmmfile(hfp)
+        if self._hfp.parser == NULL:
+            self.close()
             # text = token.decode("utf-8", "replace")
             b = PyBytes_FromString(token)
             raise ValueError(f"Unrecognized format tag in HMM file: {b!r}")
 
-        # return the finalized P7_HMMFILE*
-        return hfp
+        # 0 on success
+        return 0
 
     # --- Magic methods ------------------------------------------------------
 
@@ -3627,7 +3630,7 @@ cdef class HMMFile:
                 function = "p7_hmmfile_OpenENoDB"
                 status = libhmmer.p7_hmmfile.p7_hmmfile_OpenNoDB(fspath, NULL, &self._hfp, errbuf)
         except TypeError:
-            self._hfp = HMMFile._open_fileobj(file)
+            self._open_fileobj(file)
             status    = libeasel.eslOK
 
         if status == libeasel.eslENOTFOUND:
@@ -3697,15 +3700,6 @@ cdef class HMMFile:
         return self._name
 
     # --- Python Methods -----------------------------------------------------
-
-    @staticmethod
-    cdef void _close_hmmfile(P7_HMMFILE* hfp) noexcept nogil:
-        # if we read from a file-like object, `p7_hmmfile_Close` won't
-        # close self._hfp.f but we actually still need to free it, so we
-        # preemptively close the FILE*.
-        fclose(hfp.f)
-        hfp.f = NULL
-        libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
 
     cpdef void rewind(self) except *:
         """Rewind the file back to the beginning.
@@ -3784,9 +3778,17 @@ cdef class HMMFile:
             ...     hmm = hmm_file.read()
 
         """
+        # close the reader first to ensure flushing of the pipes if needed
+        if self._reader is not None:
+            self._reader.close()
+            # closing the reader effectively closes the file so we need to
+            # set it to NULL otherwise `p7_hmmfile_Close` will try to close
+            # it a second time
+            self._hfp.f = NULL
         if self._hfp:
-            HMMFile._close_hmmfile(self._hfp)
+            libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
             self._hfp = NULL
+
 
     cpdef bint is_pressed(self) except *:
         """Check whether the HMM file is a pressed HMM database.
@@ -4013,9 +4015,8 @@ cdef class HMMPressedFile:
             ...     optimized_profile = hmm_db.read()
 
         """
-        if self._hfp:
-            libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
-            self._hfp = self._hmmfile._hfp = NULL
+        if self._hmmfile is not None:
+            self._hmmfile.close()
 
 cdef class IterationResult:
     """The results of a single iteration from an `IterativeSearch`.

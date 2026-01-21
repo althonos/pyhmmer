@@ -27,6 +27,7 @@ from libhmmer.p7_tophits cimport P7_TOPHITS
 from libhmmer.p7_trace cimport P7_TRACE
 from libhmmer.nhmmer cimport ID_LENGTH_LIST
 
+from .platform cimport _FileobjReader
 from .easel cimport (
     Alphabet,
     DigitalSequence,
@@ -155,11 +156,14 @@ cdef class HMM:
 
 
 cdef class HMMFile:
-    cdef str           _name
-    cdef P7_HMMFILE*   _hfp
-    cdef ESL_ALPHABET* _abc
-    cdef Alphabet      _alphabet
-    cdef object        _file
+    cdef str            _name
+    cdef P7_HMMFILE*    _hfp
+    cdef ESL_ALPHABET*  _abc
+    cdef Alphabet       _alphabet
+    cdef _FileobjReader _reader
+    cdef object         _file
+
+    cdef int _open_fileobj(self, object fh) except 1
 
     cpdef void close(self) except *
     cpdef void rewind(self) except *
@@ -167,10 +171,7 @@ cdef class HMMFile:
     cpdef bint is_pressed(self) except *
     cpdef HMMPressedFile optimized_profiles(self)
 
-    @staticmethod
-    cdef P7_HMMFILE* _open_fileobj(object fh) except *
-    @staticmethod
-    cdef void _close_hmmfile(P7_HMMFILE* hfp) noexcept nogil
+
 
 
 cdef class HMMPressedFile:
