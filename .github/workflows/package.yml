@@ -168,7 +168,7 @@ jobs:
     - wheel-linux-x86_64
     - wheel-macos-x86_64
     - wheel-macos-aarch64
-    - wheel-win32-amd64
+    - wheel-win-amd64
     steps:
     - name: Download source distribution
       uses: actions/download-artifact@v4
