@@ -254,7 +254,7 @@ cdef class MSAFile:
     cdef readonly Alphabet     alphabet
     cdef readonly str          name
 
-    cdef int _open_fileobj(self, object fh, int fmt) except 1
+    cdef int _open_fileobj(self, _FileobjReader reader, int fmt) except 1
 
     cpdef void close(self)
     cpdef Alphabet guess_alphabet(self)
@@ -366,7 +366,7 @@ cdef class SequenceFile:
     cdef readonly Alphabet       alphabet
     cdef readonly str            name
 
-    cdef int _open_fileobj(self, object fh, int fmt) except 1
+    cdef int _open_fileobj(self, _FileobjReader reader, int fmt) except 1
 
     cpdef void close(self) except *
     cpdef Alphabet guess_alphabet(self)

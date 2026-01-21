@@ -6591,7 +6591,7 @@ cdef class MSAFile:
 
     # --- Constructor --------------------------------------------------------
 
-    cdef int _open_fileobj(self, object fh, int fmt) except 1:
+    cdef int _open_fileobj(self, _FileobjReader reader, int fmt) except 1:
         """Get an ``ESL_MSAFILE*`` to read MSA from the file-like object ``fh``.
 
         Adapted from the ``esl_msafile_Open`` function in ``esl_msafile.c``.
@@ -6604,16 +6604,13 @@ cdef class MSAFile:
 
         """
         cdef int          status
-        cdef ESL_BUFFER*  buffer  = NULL
-        cdef ESL_MSAFILE* msaf    = NULL
-        cdef bytes        fh_repr = repr(fh).encode("ascii")
-
-        self._reader = _FileobjReader(fh)
+        cdef ESL_BUFFER*  buffer   = NULL
+        cdef ESL_MSAFILE* msaf     = NULL
 
         try:
             # get an ESL_BUFFER from the file object
             with nogil:
-                status = libeasel.buffer.esl_buffer_OpenStream(self._reader.file, &buffer)
+                status = libeasel.buffer.esl_buffer_OpenStream(reader.file, &buffer)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "esl_buffer_OpenStream")
         except:
@@ -6625,7 +6622,7 @@ cdef class MSAFile:
             with nogil:
                 status = libeasel.msafile.esl_msafile_OpenBuffer(NULL, buffer, fmt, NULL, &self._msaf)
             if status == libeasel.eslENOFORMAT:
-                raise ValueError("Could not determine format of file: {!r}".format(fh))
+                raise ValueError("Could not determine format of file: {!r}".format(reader.obj))
             elif status != libeasel.eslOK:
                 raise UnexpectedError(status, "esl_msafile_OpenBuffer")
         except:
@@ -6700,7 +6697,8 @@ cdef class MSAFile:
             if os.path.isdir(fspath):
                 raise IsADirectoryError(errno.EISDIR, f"Is a directory: {file!r}")
         except TypeError:
-            self._open_fileobj(file, fmt)
+            self._reader = _FileobjReader(file)
+            self._open_fileobj(self._reader, fmt)
             status = libeasel.eslOK
         else:
             self.name = os.fsdecode(fspath)
@@ -8353,7 +8351,7 @@ cdef class SequenceBlock:
                     status = libeasel.sqio.ascii.esl_sqascii_WriteFasta(fw.file, self._refs[i], False)
                     if status != libeasel.eslOK:
                         raise UnexpectedError(status, "esl_sqascii_WriteFasta")
-       
+
 
     cpdef size_t total_length(self) noexcept:
         """Compute the total length of the sequence block.
@@ -8885,7 +8883,7 @@ cdef class SequenceFile:
 
     # --- Constructor --------------------------------------------------------
 
-    cdef int _open_fileobj(self, object fh, int fmt) except 1:
+    cdef int _open_fileobj(self, _FileobjReader reader, int fmt) except 1:
         """Get an ``ESL_SQFILE*`` to read sequences from the file-like object ``fh``.
 
         Adapted from the ``esl_sqfile_Open`` function in ``esl_sqio.c`` and
@@ -8901,17 +8899,17 @@ cdef class SequenceFile:
         """
         cdef int               n
         cdef int               status
+        cdef str               frepr
+        cdef MSAFile           msaf
         cdef ESL_SQFILE*       sqfp    = NULL
         cdef ESL_SQASCII_DATA* ascii   = NULL
-        cdef bytes             fh_repr = repr(fh).encode("ascii")
+        cdef const char*       fname   = NULL
+        cdef ssize_t           flen    = -1
 
         # bail out early if format is not supported
         if fmt == libeasel.sqio.eslSQFILE_NCBI:
             self.close()
             raise NotImplementedError("Cannot use a file-like object to read sequences from an NCBI database")
-
-        # create a reader for the file-like object
-        self._reader = _FileobjReader(fh)
 
         # attempt to allocate space for the ESL_SQFILE
         self._sqfp = <ESL_SQFILE*> malloc(sizeof(ESL_SQFILE))
@@ -8949,7 +8947,7 @@ cdef class SequenceFile:
         # we know we are going to read from an ASCII file, so we can just
         # inline the `esl_sqascii_Open` function.
         ascii                  = &self._sqfp.data.ascii
-        ascii.fp               = self._reader.file
+        ascii.fp               = reader.file
         ascii.do_gzip          = False
         ascii.do_stdin         = False
         ascii.do_buffer        = False
@@ -8987,9 +8985,13 @@ cdef class SequenceFile:
 
         try:
             # use the repr string of the file-like object as a filename
-            self._sqfp.filename = strdup(<const char*> fh_repr)
-            if self._sqfp.filename == NULL:
-                raise AllocationError("char", sizeof(char), len(fh_repr))
+            frepr = repr(reader.obj)
+            filename = PyUnicode_AsUTF8AndSize(frepr, &flen)
+            status = libeasel.esl_strdup(fname, flen, &self._sqfp.filename)
+            if status == libeasel.eslEMEM:
+                raise AllocationError("char", sizeof(char), flen)
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_strdup")
 
             # if we don't know the format yet, try to autodetect
             if fmt == libeasel.sqio.eslSQFILE_UNKNOWN:
@@ -9002,7 +9004,9 @@ cdef class SequenceFile:
 
             # if we still couldn't guess, it may be an MSA, try opening it as such
             if fmt == libeasel.sqio.eslSQFILE_UNKNOWN or libeasel.sqio.esl_sqio_IsAlignment(fmt):
-                self._open_fileobj(fh, fmt)
+                msaf = MSAFile.__new__(MSAFile)
+                msaf._open_fileobj(reader, fmt)
+                ascii.afp, msaf._msaf = msaf._msaf, NULL
                 self._sqfp.format = fmt = ascii.afp.format
 
             # NOTE: at this point, we either successfully determined the format
@@ -9141,7 +9145,8 @@ cdef class SequenceFile:
             if os.path.isdir(fspath):
                 raise IsADirectoryError(errno.EISDIR, f"Is a directory: {file!r}")
         except TypeError:
-            self._open_fileobj(file, fmt)
+            self._reader = _FileobjReader(file)
+            self._open_fileobj(self._reader, fmt)
             status = libeasel.eslOK
         else:
             status = libeasel.sqio.esl_sqfile_Open(fspath, fmt, NULL, &self._sqfp)
