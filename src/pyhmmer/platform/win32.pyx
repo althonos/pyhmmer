@@ -214,14 +214,6 @@ cdef class _Win32SynchronizedReader:
         if self.file != NULL:
             fclose(self.file)
        
-
-cdef FILE* fopen_obj(object obj, const char* mode) except NULL:
-    if strcmp(mode, "r") != 0:
-        raise ValueError("invalid mode")
-
-    cdef _Win32SynchronizedReader r = _Win32SynchronizedReader(obj)
-    return r.file
-
 # --- Writer code ------------------------------------------------------------
 
 class _Win32Writer(threading.Thread):
