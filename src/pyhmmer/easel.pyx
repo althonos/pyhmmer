@@ -6697,7 +6697,7 @@ cdef class MSAFile:
             if os.path.isdir(fspath):
                 raise IsADirectoryError(errno.EISDIR, f"Is a directory: {file!r}")
         except TypeError:
-            self._reader = _FileobjReader(file)
+            self._reader = _FileobjReader(io.BufferedReader(file))
             self._open_fileobj(self._reader, fmt)
             status = libeasel.eslOK
         else:
@@ -9145,7 +9145,7 @@ cdef class SequenceFile:
             if os.path.isdir(fspath):
                 raise IsADirectoryError(errno.EISDIR, f"Is a directory: {file!r}")
         except TypeError:
-            self._reader = _FileobjReader(file)
+            self._reader = _FileobjReader(io.BufferedReader(file))
             self._open_fileobj(self._reader, fmt)
             status = libeasel.eslOK
         else:
