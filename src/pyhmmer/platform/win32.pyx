@@ -157,7 +157,7 @@ class _Win32Reader(threading.Thread):
                             fclose(f)
                             # don't error on EPIPE, it means the main thread closed
                             # this file so it shouldn't be treated as an error here.
-                            if libc.errno.errno == libc.errno.EPIPE:
+                            if libc.errno.errno == libc.errno.EPIPE or libc.errno.errno == libc.errno.EINVAL:
                                 break
                             else:
                                 raise OSError(libc.errno.errno)
