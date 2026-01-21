@@ -21,7 +21,7 @@ from cpython.tuple cimport PyTuple_New, PyTuple_SetItem, PyTuple_SET_ITEM
 from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t, SIZE_MAX
 from libc.stdio cimport fclose, fflush, FILE
 from libc.stdlib cimport abs, calloc, malloc, realloc, free
-from libc.string cimport memcmp, memcpy, memmove, memset, strdup, strlen, strncpy
+from libc.string cimport memcmp, memcpy, memmove, memset, strlen, strncpy
 from libc.math cimport fabs, fabsf
 from posix.types cimport off_t
 from cpython.bytes cimport (

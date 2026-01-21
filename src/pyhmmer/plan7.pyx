@@ -23,7 +23,7 @@ from libc.stdio cimport printf, rewind
 from libc.stdlib cimport calloc, malloc, realloc, free, llabs
 from libc.stdint cimport uint8_t, uint32_t, uint64_t, int64_t
 from libc.stdio cimport fprintf, FILE, stdout, fclose
-from libc.string cimport memset, memcpy, memmove, strdup, strlen, strcmp, strncpy
+from libc.string cimport memset, memcpy, memmove, strlen, strcmp, strncpy
 from libc.time cimport ctime, strftime, time, time_t, tm, localtime_r
 from cpython.bytes cimport (
     PyBytes_FromStringAndSize,
@@ -2974,20 +2974,21 @@ cdef class HMM:
     def command_line(self, object cli):
         assert self._hmm != NULL
 
-        cdef const char*  cli_
-        cdef ssize_t      n    = -1
+        cdef int          status
+        cdef const char*  cli_   = NULL
+        cdef ssize_t      n      = -1
 
         if cli is None:
-            free(self._hmm.comlog)
+            libeasel.esl_free(self._hmm.comlog)
             self._hmm.comlog = NULL
-            return
         else:
             cli_ = PyUnicode_AsUTF8AndSize(cli, &n)
-            self._hmm.comlog = <char*> realloc(<void*> self._hmm.comlog, sizeof(char) * (n + 1))
-            if self._hmm.comlog == NULL:
-                raise AllocationError("char", sizeof(char), n+1)
             with nogil:
-                strncpy(self._hmm.comlog, cli_, n+1)
+                status = libeasel.esl_strdup(cli_, n, &self._hmm.comlog)
+            if status == libeasel.eslEMEM:
+                raise AllocationError("char", sizeof(char), n+1)
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_strdup")
 
     @property
     def nseq(self):
@@ -3064,7 +3065,7 @@ cdef class HMM:
         cdef ssize_t     n
 
         if ctime is None:
-            free(self._hmm.ctime)
+            libeasel.esl_free(self._hmm.ctime)
             self._hmm.ctime = NULL
             return
         elif not isinstance(ctime, datetime.datetime):
@@ -3074,11 +3075,12 @@ cdef class HMM:
         formatted = ctime.strftime('%a %b %e %H:%M:%S %Y')
         s = PyUnicode_AsUTF8AndSize(formatted, &n)
 
-        self._hmm.ctime = <char*> realloc(<void*> self._hmm.ctime, sizeof(char) * (n + 1))
-        if self._hmm.ctime == NULL:
-            raise AllocationError("char", sizeof(char), n+1)
         with nogil:
-            strncpy(self._hmm.ctime, s, n + 1)
+            status = libeasel.esl_strdup(s, n, &self._hmm.ctime)
+        if status == libeasel.eslEMEM:
+            raise AllocationError("char", sizeof(char), n+1)
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_strdup")
 
     @property
     def evalue_parameters(self):
