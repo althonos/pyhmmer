@@ -1,7 +1,5 @@
 from libc.stdio cimport FILE
 
-from libhmmer.impl_neon.p7_oprofile cimport P7_OPROFILE
-
 
 cdef extern from "<arm_neon.h>":
 
@@ -16,14 +14,6 @@ cdef extern from "<arm_neon.h>":
         
 
 cdef extern from "impl_neon/impl_neon.h" nogil:
-
-    ctypedef struct P7_OM_BLOCK:
-        int count
-        int listSize
-        P7_OPROFILE** list
-
-    P7_OM_BLOCK *p7_oprofile_CreateBlock(int size)
-    void p7_oprofile_DestroyBlock(P7_OM_BLOCK *block)
 
     ctypedef p7_omx_s P7_OMX
     ctypedef struct p7_omx_s:

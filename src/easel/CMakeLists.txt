@@ -9,13 +9,15 @@ CHECK_INCLUDE_FILE("string.h" HAVE_STRING_H)
 CHECK_INCLUDE_FILE("inttypes.h" HAVE_INTTYPES_H)
 CHECK_INCLUDE_FILE("stdint.h" HAVE_STDINT_H)
 CHECK_INCLUDE_FILE("strings.h" HAVE_STRINGS_H)
-CHECK_INCLUDE_FILE("sys/stat.h" HAVE_SYS_STAT_H)
-CHECK_INCLUDE_FILE("sys/types.h" HAVE_SYS_TYPES_H)
 CHECK_INCLUDE_FILE("unistd.h" HAVE_UNISTD_H)
 CHECK_INCLUDE_FILE("endian.h" HAVE_ENDIAN_H)
 CHECK_INCLUDE_FILE("netinet/in.h" HAVE_NETINET_IN_H)
+CHECK_INCLUDE_FILE("sys/mman.h" HAVE_SYS_MMAN_H)
 CHECK_INCLUDE_FILE("sys/param.h" HAVE_SYS_PARAM_H)
+CHECK_INCLUDE_FILE("sys/stat.h" HAVE_SYS_STAT_H)
 CHECK_INCLUDE_FILE("sys/sysctl.h" HAVE_SYS_SYSCTL_H)
+CHECK_INCLUDE_FILE("sys/types.h" HAVE_SYS_TYPES_H)
+CHECK_INCLUDE_FILE("syslog.h" HAVE_SYSLOG_H)
 
 CHECK_FUNCTION_EXISTS(aligned_alloc HAVE_ALIGNED_ALLOC)
 CHECK_FUNCTION_EXISTS(erfc HAVE_ERFC)
@@ -70,7 +72,7 @@ set(EASEL_SOURCES
     esl_dirichlet.c
     esl_distance.c
     esl_dmatrix.c
-    esl_dsqdata.c
+    # esl_dsqdata.c  # <-- don't compile esl_dsqdata.c because it is not used, and depends heavily on pthreads
     esl_exponential.c
     esl_fileparser.c
     esl_gamma.c
@@ -293,6 +295,12 @@ endforeach()
 add_library(libeasel ${EASEL_PATCHED_SOURCES})
 target_include_directories(libeasel PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(libeasel PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+# On Windows, compile with 64-bit file offsets to allow reading 
+# SSI files created on 64-bit platforms.
+if(WIN32)
+    target_compile_definitions(libeasel PUBLIC -D_LARGE_FILES=1 -D_FILE_OFFSET_BITS=64)
+endif()
 
 # --- Install shared libraries & headers if required ---------------------------
 

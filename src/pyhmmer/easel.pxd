@@ -19,6 +19,8 @@ from libeasel.sqio cimport ESL_SQFILE
 from libeasel.ssi cimport ESL_SSI, ESL_NEWSSI
 from libeasel cimport ESL_DSQ
 
+from .platform cimport _FileobjReader
+
 
 # --- Alphabet ---------------------------------------------------------------
 
@@ -246,13 +248,13 @@ cdef class DigitalMSA(MSA):
 # --- MSA File ---------------------------------------------------------------
 
 cdef class MSAFile:
-    cdef          ESL_MSAFILE* _msaf
+    cdef          ESL_MSAFILE*   _msaf
+    cdef readonly _FileobjReader _reader
     cdef readonly object       _file
     cdef readonly Alphabet     alphabet
     cdef readonly str          name
 
-    @staticmethod
-    cdef ESL_MSAFILE* _open_fileobj(object fh, int fmt) except NULL
+    cdef int _open_fileobj(self, _FileobjReader reader, int fmt) except 1
 
     cpdef void close(self)
     cpdef Alphabet guess_alphabet(self)
@@ -358,13 +360,13 @@ cdef class DigitalSequenceBlock(SequenceBlock):
 # --- Sequence File ----------------------------------------------------------
 
 cdef class SequenceFile:
-    cdef          ESL_SQFILE* _sqfp
-    cdef readonly object      _file
-    cdef readonly Alphabet    alphabet
-    cdef readonly str         name
+    cdef          ESL_SQFILE*    _sqfp
+    cdef readonly _FileobjReader _reader
+    cdef readonly object         _file
+    cdef readonly Alphabet       alphabet
+    cdef readonly str            name
 
-    @staticmethod
-    cdef ESL_SQFILE* _open_fileobj(object fh, int fmt) except NULL
+    cdef int _open_fileobj(self, _FileobjReader reader, int fmt) except 1
 
     cpdef void close(self) except *
     cpdef Alphabet guess_alphabet(self)

@@ -685,6 +685,33 @@ class MSAFile(typing.Generic[M], typing.ContextManager[MSAFile[M]], typing.Itera
     alphabet: Optional[Alphabet]
     name: Optional[str]
     @typing.overload
+    @classmethod
+    def parse(
+        cls,
+        buffer: Union[str, Buffer],
+        format: Optional[str] = None,
+        *,
+        alphabet: ABC,
+    ) -> DigitalMSA[ABC]: ...
+    @typing.overload
+    @classmethod
+    def parse(
+        cls,
+        buffer: Union[str, Buffer],
+        format: Optional[str] = None,
+        *,
+        alphabet: Literal[None] = None,
+    ) -> TextMSA: ...
+    @typing.overload
+    @classmethod
+    def parse(
+        cls,
+        buffer: Union[str, Buffer],
+        format: Optional[str] = None,
+        *,
+        alphabet: Optional[Alphabet] = None,
+    ) -> MSA: ...
+    @typing.overload
     def __init__(
         self: MSAFile[DigitalMSA[ABC]],
         file: Union[typing.AnyStr, os.PathLike[typing.AnyStr], typing.BinaryIO],
@@ -924,13 +951,18 @@ class SequenceFile(typing.Generic[S], typing.ContextManager[SequenceFile[S]], ty
     @classmethod
     def parse(
         cls,
-        buffer: BUFFER,
+        buffer: Union[str, Buffer],
         format: str,
         *,
         alphabet: Optional[Alphabet] = None,
     ) -> Sequence: ...
     @classmethod
-    def parseinto(cls, seq: Sequence, buffer: BUFFER, format: str) -> Sequence: ...
+    def parseinto(
+        cls, 
+        seq: S, 
+        buffer: Union[str, Buffer],
+        format: str
+    ) -> S: ...
     @typing.overload
     def __init__(
         self: SequenceFile[DigitalSequence[ABC]],

@@ -1,5 +1,6 @@
 import abc
 import io
+import platform
 import pickle
 import textwrap
 import unittest
@@ -298,6 +299,7 @@ class _TestSequenceBlock(abc.ABC):
         with self.assertRaises(TypeError):
             block.indexed[1]    
 
+    @unittest.skipIf(platform.system() == "Windows", "writing to fileobj unsupported on Windows")
     def test_write(self):
         seq1 = self._new_sequence("seq1", "ATGC")
         seq2 = self._new_sequence("seq2", "ATGCA")

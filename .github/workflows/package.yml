@@ -87,6 +87,34 @@ jobs:
         name: wheels-macosx_arm64
         path: dist/*
 
+  wheel-win-amd64:
+    name: Build Windows wheels (AMD64)
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - name: Set up MinGW
+      id: setup
+      uses: egor-tensin/setup-mingw@v3
+      with:
+        platform: x64
+    - name: Build manylinux wheels
+      uses: pypa/cibuildwheel@v3.2.1
+      env:
+        CC: "${{ steps.setup.outputs.gcc }}"
+        CMAKE_GENERATOR: Ninja
+        CMAKE_GENERATOR_PLATFORM: ""
+        CIBW_ARCHS: AMD64
+        CIBW_BUILD: 'cp*-win_amd64'
+        CIBW_BUILD_VERBOSITY: 2
+      with:
+        output-dir: dist
+    - uses: actions/upload-artifact@v4
+      with:
+        name: wheels-macosx_arm64
+        path: dist/*
+
   sdist:
     runs-on: ubuntu-latest
     name: Build source distribution
@@ -144,6 +172,7 @@ jobs:
     - wheel-linux-x86_64
     - wheel-macos-x86_64
     - wheel-macos-aarch64
+    - wheel-win-amd64
     steps:
     - name: Download source distribution
       uses: actions/download-artifact@v4

@@ -23,7 +23,7 @@ from libc.stdio cimport printf, rewind
 from libc.stdlib cimport calloc, malloc, realloc, free, llabs
 from libc.stdint cimport uint8_t, uint32_t, uint64_t, int64_t
 from libc.stdio cimport fprintf, FILE, stdout, fclose
-from libc.string cimport memset, memcpy, memmove, strdup, strndup, strlen, strcmp, strncpy
+from libc.string cimport memset, memcpy, memmove, strdup, strlen, strcmp, strncpy
 from libc.time cimport ctime, strftime, time, time_t, tm, localtime_r
 from cpython.bytes cimport (
     PyBytes_FromStringAndSize,
@@ -56,6 +56,10 @@ cimport libeasel.getopts
 cimport libeasel.vec
 cimport libhmmer
 cimport libhmmer.generic
+cimport libhmmer.impl
+cimport libhmmer.impl.io
+cimport libhmmer.impl.p7_omx
+cimport libhmmer.impl.p7_oprofile
 cimport libhmmer.modelconfig
 cimport libhmmer.modelstats
 cimport libhmmer.p7_alidisplay
@@ -92,6 +96,8 @@ from libhmmer cimport (
     p7_cutoffs_e,
     p7_evparams_e,
 )
+from libhmmer.impl.p7_omx cimport P7_OMX
+from libhmmer.impl.p7_oprofile cimport P7_OPROFILE, P7_OM_BLOCK
 from libhmmer.logsum cimport p7_FLogsumInit
 from libhmmer.p7_builder cimport P7_BUILDER, p7_archchoice_e, p7_wgtchoice_e, p7_effnchoice_e
 from libhmmer.p7_gmx cimport P7_GMX
@@ -118,73 +124,6 @@ from libhmmer.p7_hmmfile cimport (
     v3f_magic
 )
 
-if HMMER_IMPL == "VMX":
-    from libhmmer.impl_vmx cimport p7_oprofile, p7_omx, impl_Init, p7_MSVFilter, p7O_EXTRA_SB
-    from libhmmer.impl_vmx.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
-    from libhmmer.impl_vmx.p7_omx cimport (
-        P7_OMX,
-        P7_OM_BLOCK,
-        p7_oprofile_CreateBlock,
-        p7_oprofile_DestroyBlock,
-        p7_omx_Create,
-        p7_omx_Destroy,
-    )
-    from libhmmer.impl_vmx.p7_oprofile cimport (
-        P7_OPROFILE,
-        p7O_NXSTATES,
-        p7O_NXTRANS,
-        p7O_NQB,
-        p7O_NQF,
-        p7_oprofile_Compare,
-        p7_oprofile_Dump,
-        p7_oprofile_Sizeof,
-        p7_oprofile_Destroy,
-    )
-elif HMMER_IMPL == "SSE":
-    from libhmmer.impl_sse cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7_MSVFilter, p7O_EXTRA_SB
-    from libhmmer.impl_sse.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
-    from libhmmer.impl_sse.p7_omx cimport (
-        P7_OMX,
-        P7_OM_BLOCK,
-        p7_oprofile_CreateBlock,
-        p7_oprofile_DestroyBlock,
-        p7_omx_Create,
-        p7_omx_Destroy,
-    )
-    from libhmmer.impl_sse.p7_oprofile cimport (
-        P7_OPROFILE,
-        p7O_NXSTATES,
-        p7O_NXTRANS,
-        p7O_NQB,
-        p7O_NQF,
-        p7_oprofile_Compare,
-        p7_oprofile_Dump,
-        p7_oprofile_Sizeof,
-        p7_oprofile_Destroy
-    )
-elif HMMER_IMPL == "NEON":
-    from libhmmer.impl_neon cimport p7_oprofile, p7_omx, impl_Init, p7_SSVFilter, p7_MSVFilter, p7O_EXTRA_SB
-    from libhmmer.impl_neon.io cimport p7_oprofile_Write, p7_oprofile_ReadMSV, p7_oprofile_ReadRest
-    from libhmmer.impl_neon.p7_omx cimport (
-        P7_OMX,
-        P7_OM_BLOCK,
-        p7_oprofile_CreateBlock,
-        p7_oprofile_DestroyBlock,
-        p7_omx_Create,
-        p7_omx_Destroy,
-    )
-    from libhmmer.impl_neon.p7_oprofile cimport (
-        P7_OPROFILE,
-        p7O_NXSTATES,
-        p7O_NXTRANS,
-        p7O_NQB,
-        p7O_NQF,
-        p7_oprofile_Compare,
-        p7_oprofile_Dump,
-        p7_oprofile_Sizeof,
-        p7_oprofile_Destroy,
-    )
-
 from .easel cimport (
     Alphabet,
     Sequence,
@@ -202,15 +141,11 @@ from .easel cimport (
     RandomnessOrSeed,
 )
 
-if TARGET_SYSTEM == "Linux":
-    from .fileobj.linux cimport fileobj_linux_open as fopen_obj
-elif TARGET_SYSTEM == "Darwin" or TARGET_SYSTEM.endswith("BSD"):
-    from .fileobj.bsd cimport fileobj_bsd_open as fopen_obj
+from .platform cimport _FileobjReader, _FileobjWriter
 
 include "exceptions.pxi"
 include "_strings.pxi"
 include "_getid.pxi"
-
 
 # --- Python imports ---------------------------------------------------------
 
@@ -240,6 +175,8 @@ from .errors import (
 
 
 # --- Constants --------------------------------------------------------------
+
+__version__ = PROJECT_VERSION
 
 cdef dict BUILDER_ARCHITECTURE_STRATEGY = {
     "fast": p7_archchoice_e.p7_ARCH_FAST,
@@ -311,24 +248,23 @@ cdef class Alignment:
     def __str__(self):
         assert self._ad != NULL
 
-        cdef int    status
-        cdef object buffer = io.BytesIO()
-        cdef FILE*  fp     = fopen_obj(buffer, "w")
+        cdef int            status
+        cdef _FileobjWriter fw
+        cdef object         buffer = io.BytesIO()
 
-        try:
-            status = libhmmer.p7_alidisplay.p7_nontranslated_alidisplay_Print(
-                fp,
-                self._ad,
-                0,
-                -1,
-                False,
-            )
-            if status == libeasel.eslEWRITE:
-                raise OSError("Failed to write alignment")
-            elif status != libeasel.eslOK:
-                raise UnexpectedError(status, "p7_alidisplay_Print")
-        finally:
-            fclose(fp)
+        with _FileobjWriter(buffer) as fw:
+            with nogil:
+                status = libhmmer.p7_alidisplay.p7_nontranslated_alidisplay_Print(
+                    fw.file,
+                    self._ad,
+                    0,
+                    -1,
+                    False,
+                )
+        if status == libeasel.eslEWRITE:
+            raise OSError("Failed to write alignment")
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "p7_alidisplay_Print")
 
         return buffer.getvalue().decode("ascii")
 
@@ -634,7 +570,7 @@ cdef class Background:
 
         Returns:
             `float`: The null1 lod score for the sequence. This score can
-            be subtracted from the MSV score obtained with 
+            be subtracted from the MSV score obtained with
             `Profile.msv_filter` or `OptimizedProfile.msv_filter` to compute
             the sequence bitscore (scaled by a factor of :math:`log(2)`).
 
@@ -654,9 +590,9 @@ cdef class Background:
 
         with nogil:
             status = libhmmer.p7_bg.p7_bg_NullOne(
-                self._bg, 
-                sequence._sq.dsq, 
-                sequence._sq.L, 
+                self._bg,
+                sequence._sq.dsq,
+                sequence._sq.L,
                 &score
             )
         if status == libeasel.eslOK:
@@ -2021,15 +1957,20 @@ cdef class Hit:
     def name(self, str name not None):
         assert self._hit != NULL
 
+        cdef int         status
         cdef const char* data   = NULL
         cdef ssize_t     length = -1
 
+        if self._hit.name != NULL:
+            libeasel.esl_free(self._hit.name)
+            self._hit.name = NULL
+
         data = PyUnicode_AsUTF8AndSize(name, &length)
-        self._hit.name = <char*> realloc(self._hit.name, max(1, sizeof(char) * length))
-        if self._hit.name == NULL:
+        status = libeasel.esl_strdup(data, length, &self._hit.name)
+        if status == libeasel.eslEMEM:
             raise AllocationError("char", sizeof(char), length)
-        with nogil:
-            memcpy(self._hit.name, data, sizeof(char) * (length + 1))
+        elif status != libeasel.eslOK:
+            raise UnexpectedError(status, "esl_strdup")
 
     @property
     def accession(self):
@@ -2048,19 +1989,21 @@ cdef class Hit:
     def accession(self, str accession):
         assert self._hit != NULL
 
+        cdef int         status
         cdef const char* data   = NULL
         cdef ssize_t     length = -1
 
-        if accession is None:
-            free(self._hit.acc)
+        if self._hit.acc != NULL:
+            libeasel.esl_free(self._hit.acc)
             self._hit.acc = NULL
-        else:
+
+        if accession is not None:
             data = PyUnicode_AsUTF8AndSize(accession, &length)
-            self._hit.acc = <char*> realloc(self._hit.acc, max(1, sizeof(char) * length))
-            if self._hit.name == NULL:
+            status = libeasel.esl_strdup(data, length, &self._hit.acc)
+            if status == libeasel.eslEMEM:
                 raise AllocationError("char", sizeof(char), length)
-            with nogil:
-                memcpy(self._hit.acc, data, sizeof(char) * (length + 1))
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_strdup")
 
     @property
     def description(self):
@@ -2079,19 +2022,21 @@ cdef class Hit:
     def description(self, str description):
         assert self._hit != NULL
 
+        cdef int         status
         cdef const char* data   = NULL
         cdef ssize_t     length = -1
 
-        if description is None:
-            free(self._hit.desc)
+        if self._hit.desc != NULL:
+            libeasel.esl_free(self._hit.desc)
             self._hit.desc = NULL
-        else:
+
+        if description is not None:
             data = PyUnicode_AsUTF8AndSize(description, &length)
-            self._hit.desc = <char*> realloc(self._hit.desc, max(1, sizeof(char) * length))
-            if self._hit.name == NULL:
+            status = libeasel.esl_strdup(data, length, &self._hit.desc)
+            if status == libeasel.eslEMEM:
                 raise AllocationError("char", sizeof(char), length)
-            with nogil:
-                memcpy(self._hit.desc, data, sizeof(char) * (length + 1))
+            elif status != libeasel.eslOK:
+                raise UnexpectedError(status, "esl_strdup")
 
     @property
     def length(self):
@@ -3470,25 +3415,24 @@ cdef class HMM:
                 the binary HMMER3 format.
 
         """
-        cdef PyObject*  type
-        cdef PyObject*  value
-        cdef PyObject*  traceback
-        cdef int        status
-        cdef FILE*      file
-        cdef P7_HMM*    hm     = self._hmm
+        cdef _FileobjWriter fw
+        cdef int            status
+        cdef str            funcname
+        cdef P7_HMM*        hm       = self._hmm
+        
+        with _FileobjWriter(fh) as fw:
+            if binary:
+                funcname = "p7_hmmfile_WriteBinary"
+                with nogil:
+                    status = libhmmer.p7_hmmfile.p7_hmmfile_WriteBinary(fw.file, -1, hm)
+            else:
+                funcname = "p7_hmmfile_WriteASCII"
+                with nogil:
+                    status = libhmmer.p7_hmmfile.p7_hmmfile_WriteASCII(fw.file, -1, hm)
 
-        file = fopen_obj(fh, "w")
-
-        if binary:
-            status = libhmmer.p7_hmmfile.p7_hmmfile_WriteBinary(file, -1, hm)
-        else:
-            status = libhmmer.p7_hmmfile.p7_hmmfile_WriteASCII(file, -1, hm)
-
-        if status == libeasel.eslOK:
-            fclose(file)
-        else:
+        if status != libeasel.eslOK:
             _reraise_error()
-            raise UnexpectedError(status, "p7_hmmfile_WriteASCII")
+            raise UnexpectedError(status, funcname)
 
     cpdef void zero(self) noexcept:
         """Set all parameters to zero, including model composition.
@@ -3531,12 +3475,12 @@ cdef class HMMFile:
 
     # --- Constructor --------------------------------------------------------
 
-    @staticmethod
-    cdef P7_HMMFILE* _open_fileobj(object fh) except *:
+    cdef int _open_fileobj(self, object fh) except 1:
         cdef int         status
         cdef char*       token
         cdef int         token_len
-        cdef bytes       filename
+        cdef const char* filename
+        cdef ssize_t     flen      = -1
         cdef object      fh_       = fh
         cdef P7_HMMFILE* hfp       = NULL
 
@@ -3544,89 +3488,108 @@ cdef class HMMFile:
         if not hasattr(fh, "peek"):
             fh_ = io.BufferedReader(fh)
 
-        # attempt to allocate space for the P7_HMMFILE
-        hfp = <P7_HMMFILE*> malloc(sizeof(P7_HMMFILE));
-        if hfp == NULL:
-            raise AllocationError("P7_HMMFILE", sizeof(P7_HMMFILE))
-
-        # store options
-        hfp.f            = fopen_obj(fh_, "r")
-        hfp.do_gzip      = True
-        hfp.do_stdin     = False
-        hfp.newly_opened = True
-        hfp.is_pressed   = False
-
-        # set pointers as NULL for now
-        hfp.parser    = NULL
-        hfp.efp       = NULL
-        hfp.ffp       = NULL
-        hfp.pfp       = NULL
-        hfp.ssi       = NULL
-        hfp.fname     = NULL
-        hfp.errbuf[0] = b"\0"
-
-        # extract the filename if the file handle has a `name` attribute
-        if getattr(fh, "name", None) is not None:
-            filename = fh.name.encode()
-            hfp.fname = strdup(filename)
-            if hfp.fname == NULL:
-                HMMFile._close_hmmfile(hfp)
-                raise AllocationError("char", sizeof(char), strlen(filename))
-
-        # check if the parser is in binary format,
-        magic = int.from_bytes(fh_.peek(4)[:4], sys.byteorder)
+        # check if the file is in binary format before
+        # we actually open it with fopen_obj, otherwise
+        # the Windows background thread may start piping
+        # and we cannot peek without a potential race 
+        # condition
+        magic_bytes = fh_.peek(4)[:4]
+        if not isinstance(magic_bytes, bytes):
+            ty = type(magic_bytes).__name__
+            raise TypeError("expected bytes, found {}".format(ty))
+        magic = int.from_bytes(magic_bytes, sys.byteorder)
         if magic in HMM_FILE_MAGIC:
-            hfp.format = HMM_FILE_MAGIC[magic]
-            hfp.parser = read_bin30hmm
             # NB: the file must be advanced, since read_bin30hmm assumes
             #     the binary tag has been skipped already, buf we only peeked
             #     so far; note that we advance without seeking or rewinding.
             fh_.read(4)
-            return hfp
+
+        # attempt to allocate space for the P7_HMMFILE
+        self._hfp = <P7_HMMFILE*> malloc(sizeof(P7_HMMFILE))
+        if self._hfp == NULL:
+            raise AllocationError("P7_HMMFILE", sizeof(P7_HMMFILE))
+
+        # create the reader
+        self._reader = _FileobjReader(fh_)
+
+        # store options
+        self._hfp.f            = self._reader.file
+        self._hfp.do_gzip      = True
+        self._hfp.do_stdin     = False
+        self._hfp.newly_opened = True
+        self._hfp.is_pressed   = False
+
+        # set pointers as NULL for now
+        self._hfp.parser    = NULL
+        self._hfp.efp       = NULL
+        self._hfp.ffp       = NULL
+        self._hfp.pfp       = NULL
+        self._hfp.ssi       = NULL
+        self._hfp.fname     = NULL
+        self._hfp.errbuf[0] = b"\0"
+
+        # extract the filename if the file handle has a `name` attribute
+        if getattr(fh, "name", None) is not None:
+            filename = PyUnicode_AsUTF8AndSize(fh.name, &flen)
+            libeasel.esl_strdup(filename, flen, &self._hfp.fname)
+            if self._hfp.fname == NULL:
+                self.close()
+                raise AllocationError("char", sizeof(char), flen)
+
+        # check if the parser is in binary format,
+        if magic in HMM_FILE_MAGIC:
+            self._hfp.format = HMM_FILE_MAGIC[magic]
+            self._hfp.parser = read_bin30hmm
+            return 0
 
         # create and configure the file parser
-        hfp.efp = libeasel.fileparser.esl_fileparser_Create(hfp.f)
-        if hfp.efp == NULL:
-            HMMFile._close_hmmfile(hfp)
+        with nogil:
+            self._hfp.efp = libeasel.fileparser.esl_fileparser_Create(self._hfp.f)
+        if self._hfp.efp == NULL:
+            self.close()
             raise AllocationError("ESL_FILEPARSER", sizeof(ESL_FILEPARSER))
-        status = libeasel.fileparser.esl_fileparser_SetCommentChar(hfp.efp, b"#")
+        with nogil:
+            status = libeasel.fileparser.esl_fileparser_SetCommentChar(self._hfp.efp, b"#")
         if status != libeasel.eslOK:
-            HMMFile._close_hmmfile(hfp)
+            self.close()
             raise UnexpectedError(status, "esl_fileparser_SetCommentChar")
 
         # get the magic string at the beginning
-        status = libeasel.fileparser.esl_fileparser_NextLine(hfp.efp)
+        with nogil:
+            status = libeasel.fileparser.esl_fileparser_NextLine(self._hfp.efp)
         if status == libeasel.eslEOF:
-            HMMFile._close_hmmfile(hfp)
+            self.close()
             raise EOFError("HMM file is empty")
         elif status != libeasel.eslOK:
-            HMMFile._close_hmmfile(hfp)
-            raise UnexpectedError(status, "esl_fileparser_NextLine");
-        status = libeasel.fileparser.esl_fileparser_GetToken(hfp.efp, &token, &token_len)
+            self.close()
+            raise UnexpectedError(status, "esl_fileparser_NextLine")
+        with nogil:
+            status = libeasel.fileparser.esl_fileparser_GetToken(self._hfp.efp, &token, &token_len)
         if status != libeasel.eslOK:
-            HMMFile._close_hmmfile(hfp)
-            raise UnexpectedError(status, "esl_fileparser_GetToken");
+            self.close()
+            raise UnexpectedError(status, "esl_fileparser_GetToken")
 
         # detect the format
         if token.startswith(b"HMMER3/"):
-            hfp.parser = read_asc30hmm
+            self._hfp.parser = read_asc30hmm
             format = token[5:].decode("utf-8", "replace")
             if format in HMM_FILE_FORMATS:
-                hfp.format = HMM_FILE_FORMATS[format]
+                self._hfp.format = HMM_FILE_FORMATS[format]
             else:
-                hfp.parser = NULL
+                self._hfp.parser = NULL
         elif token.startswith(b"HMMER2.0"):
-            hfp.parser = read_asc20hmm
-            hfp.format = p7_hmmfile_formats_e.p7_HMMFILE_20
+            self._hfp.parser = read_asc20hmm
+            self._hfp.format = p7_hmmfile_formats_e.p7_HMMFILE_20
 
         # check the format tag was recognized
-        if hfp.parser == NULL:
-            HMMFile._close_hmmfile(hfp)
-            text = token.decode("utf-8", "replace")
-            raise ValueError("Unrecognized format tag in HMM file: {!r}".format(text))
+        if self._hfp.parser == NULL:
+            self.close()
+            # text = token.decode("utf-8", "replace")
+            b = PyBytes_FromString(token)
+            raise ValueError(f"Unrecognized format tag in HMM file: {b!r}")
 
-        # return the finalized P7_HMMFILE*
-        return hfp
+        # 0 on success
+        return 0
 
     # --- Magic methods ------------------------------------------------------
 
@@ -3664,15 +3627,16 @@ cdef class HMMFile:
         try:
             fspath = os.fsencode(file)
             self._name = os.fsdecode(fspath)
+        except TypeError:
+            self._open_fileobj(file)
+            status    = libeasel.eslOK
+        else:
             if db:
                 function = "p7_hmmfile_OpenE"
                 status = libhmmer.p7_hmmfile.p7_hmmfile_Open(fspath, NULL, &self._hfp, errbuf)
             else:
                 function = "p7_hmmfile_OpenENoDB"
                 status = libhmmer.p7_hmmfile.p7_hmmfile_OpenNoDB(fspath, NULL, &self._hfp, errbuf)
-        except TypeError:
-            self._hfp = HMMFile._open_fileobj(file)
-            status    = libeasel.eslOK
 
         if status == libeasel.eslENOTFOUND:
             raise FileNotFoundError(errno.ENOENT, f"No such file or directory: {file!r}")
@@ -3682,7 +3646,8 @@ cdef class HMMFile:
                     raise IsADirectoryError(errno.EISDIR, f"Is a directory: {file!r}")
                 elif os.stat(file).st_size == 0:
                     raise EOFError("HMM file is empty")
-            raise ValueError("format not recognized by HMMER")
+            text = errbuf.decode("utf-8", "replace")
+            raise ValueError(f"format not recognized by HMMER") from EaselError(status, text)
         elif status != libeasel.eslOK:
             raise UnexpectedError(status, function)
 
@@ -3741,15 +3706,6 @@ cdef class HMMFile:
 
     # --- Python Methods -----------------------------------------------------
 
-    @staticmethod
-    cdef void _close_hmmfile(P7_HMMFILE* hfp) noexcept nogil:
-        # if we read from a file-like object, `p7_hmmfile_Close` won't
-        # close self._hfp.f but we actually still need to free it, so we
-        # preemptively close the FILE*.
-        fclose(hfp.f)
-        hfp.f = NULL
-        libhmmer.p7_hmmfile.p7_hmmfile_Close(hfp)
-
     cpdef void rewind(self) except *:
         """Rewind the file back to the beginning.
         """
@@ -3790,8 +3746,9 @@ cdef class HMMFile:
         if self._hfp == NULL:
             raise ValueError("I/O operation on closed file.")
 
-        # don't run in *nogil* because the file may call a file-like handle
-        status = libhmmer.p7_hmmfile.p7_hmmfile_Read(self._hfp, &self._abc, &hmm)
+        # run in *nogil* or it may deadlock
+        with nogil:
+            status = libhmmer.p7_hmmfile.p7_hmmfile_Read(self._hfp, &self._abc, &hmm)
 
         # wrap the internal alphabet
         if self._alphabet is None and self._abc != NULL:
@@ -3826,9 +3783,17 @@ cdef class HMMFile:
             ...     hmm = hmm_file.read()
 
         """
+        # close the reader first to ensure flushing of the pipes if needed
+        if self._reader is not None:
+            self._reader.close()
+            # closing the reader effectively closes the file so we need to
+            # set it to NULL otherwise `p7_hmmfile_Close` will try to close
+            # it a second time
+            self._hfp.f = NULL
         if self._hfp:
-            HMMFile._close_hmmfile(self._hfp)
+            libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
             self._hfp = NULL
+
 
     cpdef bint is_pressed(self) except *:
         """Check whether the HMM file is a pressed HMM database.
@@ -4020,9 +3985,9 @@ cdef class HMMPressedFile:
             raise ValueError("I/O operation on closed file.")
 
         with nogil:
-            status = p7_oprofile_ReadMSV(self._hfp, &self._abc, &om._om)
+            status = libhmmer.impl.io.p7_oprofile_ReadMSV(self._hfp, &self._abc, &om._om)
             if status == libeasel.eslOK:
-                status = p7_oprofile_ReadRest(self._hfp, om._om)
+                status = libhmmer.impl.io.p7_oprofile_ReadRest(self._hfp, om._om)
 
         if self._alphabet is None and self._abc != NULL:
             self._alphabet = Alphabet.from_ptr(self._abc)
@@ -4055,9 +4020,8 @@ cdef class HMMPressedFile:
             ...     optimized_profile = hmm_db.read()
 
         """
-        if self._hfp:
-            libhmmer.p7_hmmfile.p7_hmmfile_Close(self._hfp)
-            self._hfp = self._hmmfile._hfp = NULL
+        if self._hmmfile is not None:
+            self._hmmfile.close()
 
 cdef class IterationResult:
     """The results of a single iteration from an `IterativeSearch`.
@@ -4261,12 +4225,12 @@ cdef class OptimizedProfile:
         self.alphabet = alphabet
         # create a new optimized profile large enough to store M nodes
         with nogil:
-            self._om = p7_oprofile.p7_oprofile_Create(M, alphabet._abc)
+            self._om = libhmmer.impl.p7_oprofile.p7_oprofile_Create(M, alphabet._abc)
         if self._om == NULL:
             raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
 
     def __dealloc__(self):
-        p7_oprofile.p7_oprofile_Destroy(self._om)
+        libhmmer.impl.p7_oprofile.p7_oprofile_Destroy(self._om)
 
     def __repr__(self):
         cdef str ty = type(self).__name__
@@ -4290,9 +4254,10 @@ cdef class OptimizedProfile:
             return NotImplemented
 
         cdef char[eslERRBUFSIZE] errbuf
-        cdef OptimizedProfile    op     = <Profile> other
-        cdef int                 status = p7_oprofile_Compare(self._om, op._om, 0.0, errbuf)
+        cdef int                 status 
+        cdef OptimizedProfile    op     = <OptimizedProfile> other
 
+        status = libhmmer.impl.p7_oprofile.p7_oprofile_Compare(self._om, op._om, 0.0, errbuf)
         if status == libeasel.eslOK:
             return True
         elif status == libeasel.eslFAIL:
@@ -4302,7 +4267,7 @@ cdef class OptimizedProfile:
 
     def __sizeof__(self):
         assert self._om != NULL
-        return p7_oprofile_Sizeof(self._om) + sizeof(self)
+        return libhmmer.impl.p7_oprofile.p7_oprofile_Sizeof(self._om) + sizeof(self)
 
     # --- Properties ---------------------------------------------------------
 
@@ -4331,7 +4296,7 @@ cdef class OptimizedProfile:
         assert self._om != NULL
         cdef int status
         with nogil:
-            status = p7_oprofile.p7_oprofile_ReconfigLength(self._om, L)
+            status = libhmmer.impl.p7_oprofile.p7_oprofile_ReconfigLength(self._om, L)
         if status != libeasel.eslOK:
             raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
 
@@ -4444,7 +4409,7 @@ cdef class OptimizedProfile:
 
         cdef MatrixU8 mat = MatrixU8.__new__(MatrixU8)
         mat._m = mat._shape[0] = self.alphabet.Kp
-        mat._n = mat._shape[1] = 16 * p7O_NQB(self._om.M)
+        mat._n = mat._shape[1] = 16 * libhmmer.impl.p7_oprofile.p7O_NQB(self._om.M)
         mat._owner = self
         mat._data = <void**> self._om.rbv
         return mat
@@ -4458,8 +4423,8 @@ cdef class OptimizedProfile:
         """
         assert self._om != NULL
 
-        cdef int nqb = p7O_NQB(self._om.M)
-        cdef int nqs = nqb + p7O_EXTRA_SB
+        cdef int nqb = libhmmer.impl.p7_oprofile.p7O_NQB(self._om.M)
+        cdef int nqs = nqb + libhmmer.impl.p7O_EXTRA_SB
 
         cdef MatrixU8 mat = MatrixU8.__new__(MatrixU8)
         mat._m = mat._shape[0] = self.alphabet.Kp
@@ -4590,7 +4555,7 @@ cdef class OptimizedProfile:
 
         cdef MatrixF mat = MatrixF.__new__(MatrixF)
         mat._m = mat._shape[0] = self.alphabet.Kp
-        mat._n = mat._shape[1] = 4 * p7O_NQF(self._om.M)
+        mat._n = mat._shape[1] = 4 * libhmmer.impl.p7_oprofile.p7O_NQF(self._om.M)
         mat._owner = self
         mat._data = <void**> self._om.rfv
         return mat
@@ -4605,7 +4570,7 @@ cdef class OptimizedProfile:
         assert self._om != NULL
 
         cdef VectorF vec = VectorF.__new__(VectorF)
-        vec._n = vec._shape[0] = 8 * 4 * p7O_NQF(self._om.M)
+        vec._n = vec._shape[0] = 8 * 4 * libhmmer.impl.p7_oprofile.p7O_NQF(self._om.M)
         vec._owner = self
         vec._data = <void*> self._om.tfv
         return vec
@@ -4620,8 +4585,8 @@ cdef class OptimizedProfile:
         assert self._om != NULL
 
         cdef MatrixF mat = MatrixF.__new__(MatrixF)
-        mat._m = mat._shape[0] = p7O_NXSTATES
-        mat._n = mat._shape[1] = p7O_NXTRANS
+        mat._m = mat._shape[0] = libhmmer.impl.p7_oprofile.p7O_NXSTATES
+        mat._n = mat._shape[1] = libhmmer.impl.p7_oprofile.p7O_NXTRANS
         mat._owner = self
         mat._data = <void**> self._om.xf
         return mat
@@ -4683,7 +4648,7 @@ cdef class OptimizedProfile:
 
         """
         assert self._om != NULL
-        return p7_oprofile.p7_oprofile_IsLocal(self._om)
+        return libhmmer.impl.p7_oprofile.p7_oprofile_IsLocal(self._om)
 
     @property
     def multihit(self):
@@ -4699,10 +4664,10 @@ cdef class OptimizedProfile:
     def multihit(self, multihit):
         if multihit:
             if not self.multihit:
-                p7_oprofile.p7_oprofile_ReconfigMultihit(self._om, self._om.L)
+                libhmmer.impl.p7_oprofile.p7_oprofile_ReconfigMultihit(self._om, self._om.L)
         else:
             if self.multihit:
-                p7_oprofile.p7_oprofile_ReconfigUnihit(self._om, self._om.L)
+                libhmmer.impl.p7_oprofile.p7_oprofile_ReconfigUnihit(self._om, self._om.L)
 
 
     # --- Methods ------------------------------------------------------------
@@ -4719,7 +4684,7 @@ cdef class OptimizedProfile:
         cdef OptimizedProfile new = OptimizedProfile.__new__(OptimizedProfile)
         new.alphabet = self.alphabet
         with nogil:
-            new._om = p7_oprofile.p7_oprofile_Copy(self._om)
+            new._om = libhmmer.impl.p7_oprofile.p7_oprofile_Copy(self._om)
         if new._om == NULL:
             raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
         return new
@@ -4733,20 +4698,18 @@ cdef class OptimizedProfile:
         the profile is saved to ``fh_profile``.
 
         """
-        cdef P7_OPROFILE* om     = self._om
-        cdef int          status
-        cdef FILE*        pfp
-        cdef FILE*        ffp
-
         assert self._om != NULL
+       
+        cdef int            status
+        cdef _FileobjWriter fwp
+        cdef _FileobjWriter fwf
+        cdef P7_OPROFILE*   om     = self._om
 
-        pfp = fopen_obj(fh_profile, "w")
-        ffp = fopen_obj(fh_filter, "w")
-        status = p7_oprofile_Write(ffp, pfp, self._om)
-        if status == libeasel.eslOK:
-            fclose(ffp)
-            fclose(pfp)
-        else:
+        with _FileobjWriter(fh_filter) as fwf, _FileobjWriter(fh_profile) as fwp:
+            with nogil:
+                status = libhmmer.impl.io.p7_oprofile_Write(fwf.file, fwp.file, self._om)
+        if status != libeasel.eslOK:
+            _reraise_error()
             raise UnexpectedError(status, "p7_oprofile_Write")
 
     cpdef void convert(self, Profile profile) except *:
@@ -4774,7 +4737,7 @@ cdef class OptimizedProfile:
         if self._om.allocM < profile._gm.M:
             raise ValueError("Optimized profile is too small to hold profile")
         with nogil:
-            status = p7_oprofile.p7_oprofile_Convert(profile._gm, self._om)
+            status = libhmmer.impl.p7_oprofile.p7_oprofile_Convert(profile._gm, self._om)
         if status == libeasel.eslEINVAL:
             raise ValueError("Standard and optimized profiles are not compatible.")
         elif status == libeasel.eslEMEM:
@@ -4812,13 +4775,13 @@ cdef class OptimizedProfile:
         if self.alphabet != seq.alphabet:
             raise AlphabetMismatch(self.alphabet, seq.alphabet)
 
-        omx = p7_omx_Create(self._om.M, 0, 0)
+        omx = libhmmer.impl.p7_omx.p7_omx_Create(self._om.M, 0, 0)
         if omx == NULL:
             raise AllocationError("P7_OMX", sizeof(P7_OMX))
 
         try:
             with nogil:
-                status = p7_MSVFilter(
+                status = libhmmer.impl.p7_MSVFilter(
                     seq._sq.dsq,
                     seq._sq.n,
                     self._om,
@@ -4826,7 +4789,7 @@ cdef class OptimizedProfile:
                     &score,
                 )
         finally:
-            p7_omx_Destroy(omx)
+            libhmmer.impl.p7_omx.p7_omx_Destroy(omx)
 
         if status == libeasel.eslOK:
             return score
@@ -4873,7 +4836,7 @@ cdef class OptimizedProfile:
             if self.alphabet != seq.alphabet:
                 raise AlphabetMismatch(self.alphabet, seq.alphabet)
             with nogil:
-                status = p7_SSVFilter(seq._sq.dsq, seq._sq.L, self._om, &score)
+                status = libhmmer.impl.p7_SSVFilter(seq._sq.dsq, seq._sq.L, self._om, &score)
             if status == libeasel.eslOK:
                 return score
             elif status == libeasel.eslERANGE:
@@ -4911,7 +4874,7 @@ cdef class OptimizedProfileBlock:
 
         """
         if self._block == NULL:
-            self._block = p7_oprofile_CreateBlock(8)
+            self._block = libhmmer.impl.p7_oprofile.p7_oprofile_CreateBlock(8)
             if self._block == NULL:
                 raise AllocationError("P7_OM_BLOCK", sizeof(P7_OM_BLOCK))
         if self._locks == NULL:
@@ -4932,7 +4895,7 @@ cdef class OptimizedProfileBlock:
             # avoid a double free of the sequence contents
             for i in range(self._block.listSize):
                 self._block.list[i] = NULL
-            p7_oprofile_DestroyBlock(self._block)
+            libhmmer.impl.p7_oprofile.p7_oprofile_DestroyBlock(self._block)
 
     def __len__(self):
         assert self._block != NULL
@@ -5134,18 +5097,23 @@ cdef class OptimizedProfileBlock:
 
         """
         assert self._block != NULL
+
         cdef OptimizedProfileBlock new = OptimizedProfileBlock.__new__(OptimizedProfileBlock, self.alphabet)
+        
         new._storage = self._storage.copy()
-        new._block = p7_oprofile_CreateBlock(self._block.count)
+        new._block = libhmmer.impl.p7_oprofile.p7_oprofile_CreateBlock(self._block.count)
         if new._block == NULL:
             raise AllocationError("P7_OM_BLOCK", sizeof(P7_OM_BLOCK))
+        
         memcpy(new._block.list, self._block.list, self._block.count * sizeof(ESL_SQ*))
         new._block.count = self._block.count
+        
         new._locks = <PyThread_type_lock*> calloc(self._block.count, sizeof(PyThread_type_lock))
         if new._locks == NULL:
             raise AllocationError("PyThread_type_lock", sizeof(PyThread_type_lock), new._block.count)
         for i in range(new._block.listSize):
             new._locks[i] = PyThread_allocate_lock()
+
         return new
 
 
@@ -5810,8 +5778,8 @@ cdef class Pipeline:
         if SearchQuery is Profile:
             # reallocate the optimized profile if it is too small
             if self.opt._om.allocM < query.M:
-                p7_oprofile.p7_oprofile_Destroy(self.opt._om)
-                self.opt._om = p7_oprofile.p7_oprofile_Create(query.M, self.alphabet._abc)
+                libhmmer.impl.p7_oprofile.p7_oprofile_Destroy(self.opt._om)
+                self.opt._om = libhmmer.impl.p7_oprofile.p7_oprofile_Create(query.M, self.alphabet._abc)
                 if self.opt._om == NULL:
                     raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
             # convert the profile to an optimized one
@@ -6246,7 +6214,7 @@ cdef class Pipeline:
             status = libhmmer.p7_bg.p7_bg_SetLength(bg, sq[t].n)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_bg_SetLength")
-            status = p7_oprofile.p7_oprofile_ReconfigLength(om, sq[t].n)
+            status = libhmmer.impl.p7_oprofile.p7_oprofile_ReconfigLength(om, sq[t].n)
             if status != libeasel.eslOK:
                 raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
             # run the pipeline on the target sequence
@@ -6310,7 +6278,7 @@ cdef class Pipeline:
                 elif status == libeasel.eslEFORMAT:
                     raise ValueError("Could not parse file")
                 elif status != libeasel.eslOK:
-                    raise UnexpectedError(status, "p7_oprofile_ReadMSV")
+                    raise UnexpectedError(status, "esl_sqio_Read")
                 # check sequence length
                 if dbsq.L > HMMER_TARGET_LIMIT:
                     raise ValueError(f"sequence length over comparison pipeline limit ({HMMER_TARGET_LIMIT})")
@@ -6321,7 +6289,7 @@ cdef class Pipeline:
                 status = libhmmer.p7_bg.p7_bg_SetLength(bg, dbsq.n)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_bg_SetLength")
-                status = p7_oprofile.p7_oprofile_ReconfigLength(om, dbsq.n)
+                status = libhmmer.impl.p7_oprofile.p7_oprofile_ReconfigLength(om, dbsq.n)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
                 # run the pipeline on the target sequence
@@ -6468,7 +6436,7 @@ cdef class Pipeline:
             if not PyThread_acquire_lock(locks[t], WAIT_LOCK):
                 raise RuntimeError("Failed to acquire lock")
             try:
-                status = p7_oprofile.p7_oprofile_ReconfigLength(om[t], sq.n)
+                status = libhmmer.impl.p7_oprofile.p7_oprofile_ReconfigLength(om[t], sq.n)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
                 # run the pipeline on the query sequence
@@ -6507,9 +6475,9 @@ cdef class Pipeline:
         # run the inner loop on all HMMs
         while True:
             # read the next profile from the file
-            status = p7_oprofile_ReadMSV(hfp, &abc, &om)
+            status = libhmmer.impl.io.p7_oprofile_ReadMSV(hfp, &abc, &om)
             if status == libeasel.eslOK:
-                status = p7_oprofile_ReadRest(hfp, om)
+                status = libhmmer.impl.io.p7_oprofile_ReadRest(hfp, om)
             if status == libeasel.eslEOF:
                 break
             elif status != libeasel.eslOK:
@@ -6526,7 +6494,7 @@ cdef class Pipeline:
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_bg_SetLength")
                 # configure the profile
-                status = p7_oprofile.p7_oprofile_ReconfigLength(om, sq.n)
+                status = libhmmer.impl.p7_oprofile.p7_oprofile_ReconfigLength(om, sq.n)
                 if status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_oprofile_ReconfigLength")
                 # run the pipeline on the query sequence
@@ -6538,7 +6506,7 @@ cdef class Pipeline:
                 elif status != libeasel.eslOK:
                     raise UnexpectedError(status, "p7_Pipeline")
             finally:
-               p7_oprofile_Destroy(om)
+               libhmmer.impl.p7_oprofile.p7_oprofile_Destroy(om)
                om = NULL
 
             # clear pipeline for reuse for next target
@@ -6950,8 +6918,8 @@ cdef class LongTargetsPipeline(Pipeline):
         if SearchQuery is Profile:
             # reallocate the optimized profile if it is too small
             if self.opt._om.allocM < (<Profile> query)._gm.M:
-                p7_oprofile.p7_oprofile_Destroy(self.opt._om)
-                self.opt._om = p7_oprofile.p7_oprofile_Create((<Profile> query)._gm.M, self.alphabet._abc)
+                libhmmer.impl.p7_oprofile.p7_oprofile_Destroy(self.opt._om)
+                self.opt._om = libhmmer.impl.p7_oprofile.p7_oprofile_Create((<Profile> query)._gm.M, self.alphabet._abc)
                 if self.opt._om == NULL:
                     raise AllocationError("P7_OPROFILE", sizeof(P7_OPROFILE))
             # convert the profile to an optimized one
@@ -8816,13 +8784,13 @@ cdef class TopHits:
         .. versionadded:: 0.6.1
 
         """
-        cdef FILE*       file
-        cdef str         fname
-        cdef int         status
-        cdef str         sname  = None
-        cdef str         sacc   = None
-        cdef const char* qname  = NULL
-        cdef const char* qacc   = NULL
+        cdef _FileobjWriter fw
+        cdef str            fname
+        cdef int            status
+        cdef str            sname  = None
+        cdef str            sacc   = None
+        cdef const char*    qname  = NULL
+        cdef const char*    qacc   = NULL
 
         if isinstance(self._query, HMM):
             qname = (<HMM> self._query)._hmm.name
@@ -8847,46 +8815,45 @@ cdef class TopHits:
                 sacc = self._query.accession
                 qacc = PyUnicode_AsUTF8AndSize(sacc, NULL)
 
-        file = fopen_obj(fh, "w")
-        try:
+        with _FileobjWriter(fh) as fw:
             if format == "targets":
                 fname = "p7_tophits_TabularTargets"
-                status = libhmmer.p7_tophits.p7_tophits_TabularTargets(
-                    file,
-                    <char*> qname,
-                    <char*> qacc,
-                    self._th,
-                    &self._pli,
-                    header
-                )
+                with nogil:
+                    status = libhmmer.p7_tophits.p7_tophits_TabularTargets(
+                        fw.file,
+                        <char*> qname,
+                        <char*> qacc,
+                        self._th,
+                        &self._pli,
+                        header
+                    )
             elif format == "domains":
                 fname = "p7_tophits_TabularDomains"
-                status = libhmmer.p7_tophits.p7_tophits_TabularDomains(
-                    file,
-                    <char*> qname,
-                    <char*> qacc,
-                    self._th,
-                    &self._pli,
-                    header
-                )
+                with nogil:
+                    status = libhmmer.p7_tophits.p7_tophits_TabularDomains(
+                        fw.file,
+                        <char*> qname,
+                        <char*> qacc,
+                        self._th,
+                        &self._pli,
+                        header
+                    )
             elif format == "pfam":
                 fname = "p7_tophits_TabularXfam"
-                status = libhmmer.p7_tophits.p7_tophits_TabularXfam(
-                    file,
-                    <char*> qname,
-                    <char*> qacc,
-                    self._th,
-                    &self._pli,
-                )
+                with nogil:
+                    status = libhmmer.p7_tophits.p7_tophits_TabularXfam(
+                        fw.file,
+                        <char*> qname,
+                        <char*> qacc,
+                        self._th,
+                        &self._pli,
+                    )
             else:
                 raise InvalidParameter("format", format, choices=["targets", "domains", "pfam"])
-            if status != libeasel.eslOK:
-                _reraise_error()
-                raise UnexpectedError(status, fname)
-        finally:
-            fclose(file)
-            del sname
-            del sacc
+
+        if status != libeasel.eslOK:
+            _reraise_error()
+            raise UnexpectedError(status, fname)
 
     def merge(self, *others):
         """Concatenate the hits from this instance and ``others``.
@@ -9702,4 +9669,4 @@ p7_FLogsumInit()
 #                  this function, but beware that no other "useful" code is
 #                  included in the `impl_Init` code in a future HMMER release.
 #
-#impl_Init()
+#libhmmer.impl.impl_Init()

@@ -139,3 +139,11 @@ cdef extern from "impl_neon/impl_neon.h" nogil:
     int          p7_oprofile_GetSSVEmissionScoreArray(const P7_OPROFILE *om, uint8_t *arr )
     int          p7_oprofile_GetFwdEmissionScoreArray(const P7_OPROFILE *om, float *arr )
     int          p7_oprofile_GetFwdEmissionArray(const P7_OPROFILE *om, P7_BG *bg, float *arr )
+
+    ctypedef struct P7_OM_BLOCK:
+        int count
+        int listSize
+        P7_OPROFILE** list
+
+    P7_OM_BLOCK *p7_oprofile_CreateBlock(int size)
+    void p7_oprofile_DestroyBlock(P7_OM_BLOCK *block)

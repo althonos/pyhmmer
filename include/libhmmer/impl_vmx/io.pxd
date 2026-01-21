@@ -3,8 +3,7 @@ from posix.types cimport off_t
 
 from libeasel.alphabet cimport ESL_ALPHABET
 from libhmmer.p7_hmmfile cimport P7_HMMFILE
-from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
-from libhmmer.impl_vmx.p7_omx cimport P7_OM_BLOCK
+from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE, P7_OM_BLOCK
 
 
 cdef extern from "impl_vmx/impl_vmx.h" nogil:

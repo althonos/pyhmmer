@@ -2,6 +2,7 @@ import abc
 import io
 import itertools
 import os
+import platform
 import unittest
 import random
 import tempfile
@@ -238,6 +239,7 @@ class TestScanPipeline(unittest.TestCase):
         hits = pipeline.scan_seq(seq, oprofiles)
         self.assertEqual(len(hits), 3)  # number found with `hmmscan`
 
+    @unittest.skipIf(platform.system() == "Windows", "cannot read through symlinks on Windows")
     def test_scan_seq_file(self):
         seq = next(x for x in self.references if x.name == "938293.PRJEB85.HG003691_78")
 
@@ -355,6 +357,7 @@ class TestLongTargetsPipeline(unittest.TestCase):
         self.assertEqual(hits.query.name, hmm.name)
         self.assertEqual(hits.query.accession, hmm.accession)
 
+    @unittest.skipIf(platform.system() == "Windows", "writing to fileobj unsupported on Windows")
     def test_search_hmm_file(self):
         dna = Alphabet.dna()
         rng = pyhmmer.easel.Randomness(0)

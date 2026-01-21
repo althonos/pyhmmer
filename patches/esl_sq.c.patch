@@ -1,0 +1,44 @@
+diff --git a/esl_sq.c b/esl_sq.c
+index e901dac..a1a8472 100644
+--- a/esl_sq.c
++++ b/esl_sq.c
+@@ -528,13 +528,13 @@ sq_free_internals(ESL_SQ *sq)
+       free(sq->ss);    
+       free(sq->source);
+       if (sq->nxr) {  
+-	for (x = 0; x < sq->nxr; x++) {
+-	  free(sq->xr[x]);
+-	  free(sq->xr_tag[x]);
+-	}
++        for (x = 0; x < sq->nxr; x++) {
++          free(sq->xr[x]); sq->xr[x] = NULL;
++          free(sq->xr_tag[x]); sq->xr_tag[x] = NULL;
++        }
++        free(sq->xr); sq->xr = NULL;
++        free(sq->xr_tag); sq->xr_tag = NULL;
+       }
+-      free(sq->xr);
+-      free(sq->xr_tag);
+     }
+   return;
+ }
+@@ -2211,6 +2211,9 @@ sq_init(ESL_SQ *sq, int do_digital)
+   sq->ss       = NULL;		/* Note that ss is optional - it will only be allocated if needed */
+   /* n, coord bookkeeping, and strings are all set below by a call to Reuse() */
+ 
++  /* ensure NULL in case the caller is CreateFrom() */
++  sq->abc = NULL;
++
+   sq->nalloc   = eslSQ_NAMECHUNK;	
+   sq->aalloc   = eslSQ_ACCCHUNK;
+   sq->dalloc   = eslSQ_DESCCHUNK;
+@@ -2264,6 +2267,9 @@ sq_create_from(const char *name, const char *desc, const char *acc)
+   sq->ss     = NULL;
+   sq->source = NULL;
+ 
++  /* ensure NULL in case the caller is CreateFrom() */
++  sq->abc = NULL;
++
+   /* optional for extra residue markups */
+   sq->nxr    = 0;
+   sq->xr_tag = NULL;

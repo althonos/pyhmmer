@@ -1,6 +1,7 @@
 import io
 import itertools
 import os
+import platform
 import pickle
 import shutil
 import unittest

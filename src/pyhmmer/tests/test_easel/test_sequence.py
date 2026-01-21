@@ -3,8 +3,10 @@ import copy
 import gc
 import io
 import os
+import platform
 import pickle
 import unittest
+import time
 import tempfile
 import warnings
 
@@ -53,6 +55,7 @@ class _TestSequenceBase(abc.ABC):
         self.assertEqual(s1.description, "")
         self.assertEqual(s1.residue_markups, {})
 
+    def test_pickle_residue_markups(self):
         s2 = self.Sequence(
             name="test2", 
             sequence="TTCAAC", 

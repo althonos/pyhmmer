@@ -27,15 +27,26 @@ References:
 """
 import collections.abc as _collections_abc
 import contextlib as _contextlib
-import os as _os
+
+
+def _patch_dll():
+    import os
+
+    if hasattr(os, "add_dll_directory"):
+        libs_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'pyhmmer.libs'))
+        if os.path.isdir(libs_dir):
+            os.add_dll_directory(libs_dir)
+
+_patch_dll()
+del _patch_dll
+
 
 from . import errors
 from . import easel
 from . import plan7
 from . import daemon
-from ._version import __version__
+from .easel import __version__
 from .hmmer import hmmalign, hmmsearch, hmmpress, nhmmer, hmmscan, phmmer, jackhmmer
-
 
 __author__ = "Martin Larralde <martin.larralde@embl.de>"
 __license__ = "MIT"

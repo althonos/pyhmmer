@@ -1,10 +1,6 @@
-import io
-import itertools
-import os
-import shutil
+import platform
 import sys
 import unittest
-import tempfile
 
 import pyhmmer
 from pyhmmer.errors import EaselError
@@ -33,6 +29,7 @@ class TestAlignment(unittest.TestCase):
         self.hits = self._hits.copy()
         self.ali = self.hits[0].best_domain.alignment
 
+    @unittest.skipIf(platform.system() == "Windows", "writing to fileobj unsupported on Windows")
     def test_str(self):
         rendered = str(self.ali)
         lines = rendered.splitlines()

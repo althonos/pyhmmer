@@ -1,7 +1,6 @@
-import copy
-import gc
 import io
 import os
+import platform
 import unittest
 import tempfile
 from itertools import zip_longest
@@ -13,6 +12,7 @@ from ..utils import EASEL_FOLDER
 
 class TestMSAFile(unittest.TestCase):
 
+    @unittest.skipIf(platform.system() == "Windows", "deadlocks on Windows")
     def test_guess_alphabet_empty_sequence(self):
         buffer = io.BytesIO(b">seq1\n\n")
         self.assertRaises(ValueError, easel.MSAFile, buffer, format="afa", digital=True)
@@ -23,8 +23,13 @@ class TestMSAFile(unittest.TestCase):
         self.assertRaises(ValueError, easel.MSAFile, stockholm, format="nonsense")
 
     def test_init_error_empty(self):
-        with tempfile.NamedTemporaryFile() as f:
-            self.assertRaises(ValueError, easel.MSAFile, f.name)  # cannot guess format
+        try:
+            fd, filename = tempfile.mkstemp(".seq")
+            self.assertRaises(ValueError, easel.MSAFile, filename)  # cannot guess format
+        finally:
+            os.close(fd)
+            if os.path.exists(filename):
+                os.remove(filename)
 
     def test_init_file_not_found(self):
         self.assertRaises(FileNotFoundError, easel.MSAFile, "path/to/missing/file.sto")

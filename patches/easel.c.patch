@@ -1,0 +1,117 @@
+diff --git a/easel.c b/easel.c
+index 982b1c9..ff700dd 100644
+--- a/easel.c
++++ b/easel.c
+@@ -28,17 +28,28 @@
+ #ifdef HAVE_UNISTD_H
+ #include <unistd.h>		
+ #endif
+-#ifdef _POSIX_VERSION
++#ifdef HAVE_SYS_STAT_H
+ #include <sys/stat.h>
++#endif
++#ifdef HAVE_SYS_TYPES_H
+ #include <sys/types.h>
+ #endif
++#ifdef HAVE_SYSLOG_H
++#include <syslog.h>
++#endif
+ 
+ #ifdef HAVE_MPI
+ #include <mpi.h>		/* MPI_Abort() may be used in esl_fatal() or other program killers */
+ #endif
+ 
+ #include "easel.h"
+-#include <syslog.h>
++
++#if defined(_WIN32) || defined(_WIN64) || defined(__MINGW32__) || defined(__CYGWIN__)
++#include "Windows.h"
++#undef ERROR
++#define getppid() 0
++#endif
++
+ 
+ /*****************************************************************
+  * 1. Exception and fatal error handling.
+@@ -78,12 +89,14 @@ esl_fail(char *errbuf, const char *format, ...)
+ 	  if (errbuf) vsnprintf(errbuf, eslERRBUFSIZE, format, ap);
+ 	  va_end(ap);
+ 	}
++#ifdef HAVE_SYSLOG_H
+       else
+         {
+           va_start(ap, format);
+           vsyslog(LOG_ERR, format, ap); 
+           va_end(ap);
+         }
++#endif
+     }
+ }
+ 
+@@ -159,12 +172,14 @@ esl_exception(int errcode, int use_errno, char *sourcefile, int sourceline, char
+ 	  if (use_errno && errno) perror("system error");
+ 	  fflush(stderr);
+ 	}  
++#ifdef HAVE_SYSLOG_H
+       else
+         {
+           va_start(argp, format);
+           vsyslog(LOG_ERR, format, argp);
+           va_end(argp);
+         }
++#endif
+ 
+ #ifdef HAVE_MPI
+       MPI_Initialized(&mpiflag);                 /* we're assuming we can do this, even in a corrupted, dying process...? */
+@@ -315,12 +330,14 @@ esl_fatal(const char *format, ...)
+       fprintf(stderr, "\n");
+       fflush(stderr);
+     } 
++#ifdef HAVE_SYSLOG_H
+   else
+     {
+       va_start(argp, format);
+       vsyslog(LOG_ERR, format, argp);
+       va_end(argp);
+     }
++#endif
+ 
+ #ifdef HAVE_MPI
+   MPI_Initialized(&mpiflag);
+@@ -1734,7 +1751,7 @@ esl_str_GetMaxWidth(char **s, int n)
+ int
+ esl_FileExists(const char *filename)
+ {
+-#ifdef _POSIX_VERSION
++#ifdef HAVE_SYS_STAT_H
+   struct stat fileinfo;
+   if (stat(filename, &fileinfo) != 0) return FALSE;
+   if (! (fileinfo.st_mode & S_IRUSR)) return FALSE;
+@@ -2113,6 +2130,10 @@ esl_tmpfile(char *basename6X, FILE **ret_fp)
+   int   status;
+   mode_t old_mode;
+ 
++#if defined(_WIN32) || defined(_WIN64) || defined(__MINGW32__) || defined(__CYGWIN__)
++  ESL_ALLOC(tmpdir, (MAX_PATH+1) * sizeof(char));
++  if(!GetTempPathA(MAX_PATH+1, tmpdir)) ESL_XEXCEPTION(eslESYS, "GetTempPathA() failed.");
++#else
+   /* Determine what tmp directory to use, and construct the
+    * file name.
+    */
+@@ -2122,6 +2143,7 @@ esl_tmpfile(char *basename6X, FILE **ret_fp)
+       if (tmpdir == NULL) tmpdir = getenv("TMP");
+     }
+   if (tmpdir == NULL) tmpdir = "/tmp";
++#endif
+   if ((status = esl_FileConcat(tmpdir, basename6X, &path)) != eslOK) goto ERROR; 
+ 
+   old_mode = umask(077);
+@@ -2238,7 +2260,7 @@ esl_getcwd(char **ret_cwd)
+ {
+   char *cwd      = NULL;
+   int   status   = eslOK;
+-#ifdef _POSIX_VERSION
++#ifdef HAVE_UNISTD_H
+   int   nalloc   = 256;
+   int   maxalloc = 16384;
+   do {

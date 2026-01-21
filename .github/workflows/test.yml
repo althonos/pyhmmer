@@ -76,33 +76,33 @@ jobs:
     #    token: ${{ secrets.CODECOV_TOKEN }}
     #    verbose: true
 
-#  test_linux_arm64:
-#    name: Test (Linux, arm64)
-#    runs-on: ubuntu-22.04-arm
-#    strategy:
-#      matrix:
-#        python-tag:
-#        - cp310-manylinux_aarch64
-#        - cp311-manylinux_aarch64
-#    steps:
-#    - uses: actions/checkout@v4
-#      with:
-#        submodules: true
-#    - name: Build manylinux wheels
-#      uses: pypa/cibuildwheel@v2.16.5
-#      env:
-#        CIBW_ARCHS: aarch64
-#        CIBW_BUILD: ${{ matrix.python-tag }}
-#        CIBW_BUILD_VERBOSITY: 2
-#        CIBW_BEFORE_BUILD: pip install cython
-#        CIBW_TEST_COMMAND: python -m unittest pyhmmer.tests -vv
-#        CIBW_TEST_REQUIRES: importlib-resources
-#      with:
-#        output-dir: dist
-#    - uses: actions/upload-artifact@v3
-#      with:
-#        name: wheels
-#        path: dist/*
+# #  test_linux_arm64:
+# #    name: Test (Linux, arm64)
+# #    runs-on: ubuntu-22.04-arm
+# #    strategy:
+# #      matrix:
+# #        python-tag:
+# #        - cp310-manylinux_aarch64
+# #        - cp311-manylinux_aarch64
+# #    steps:
+# #    - uses: actions/checkout@v4
+# #      with:
+# #        submodules: true
+# #    - name: Build manylinux wheels
+# #      uses: pypa/cibuildwheel@v2.16.5
+# #      env:
+# #        CIBW_ARCHS: aarch64
+# #        CIBW_BUILD: ${{ matrix.python-tag }}
+# #        CIBW_BUILD_VERBOSITY: 2
+# #        CIBW_BEFORE_BUILD: pip install cython
+# #        CIBW_TEST_COMMAND: python -m unittest pyhmmer.tests -vv
+# #        CIBW_TEST_REQUIRES: importlib-resources
+# #      with:
+# #        output-dir: dist
+# #    - uses: actions/upload-artifact@v3
+# #      with:
+# #        name: wheels
+# #        path: dist/*
 
   test_osx_x86:
     name: Test (OSX)
@@ -176,3 +176,72 @@ jobs:
     #     codecov_curl_args: "--globoff"
     #     verbose: true
 
+  test_win32_x86:
+    name: Test (Windows)
+    runs-on: windows-2019
+    env:
+      OS: Windows
+    strategy:
+      matrix:
+        include:
+        - python-version: 3.8
+          python-release: v3.8
+          python-impl: CPython
+        - python-version: 3.9
+          python-release: v3.9
+          python-impl: CPython
+        - python-version: '3.10'
+          python-release: 'v3.10'
+          python-impl: CPython
+        - python-version: '3.11'
+          python-release: 'v3.11'
+          python-impl: CPython
+        - python-version: '3.12'
+          python-release: 'v3.12'
+          python-impl: CPython
+        - python-version: '3.13'
+          python-release: 'v3.13'
+          python-impl: CPython
+        - python-version: '3.14'
+          python-release: 'v3.14'
+          python-impl: CPython
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+    - name: Set up MinGW
+      uses: egor-tensin/setup-mingw@v3
+      id: setup
+      with:
+        platform: x64
+    - name: Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Show Python build environment
+      run: python -m sysconfig
+    - name: Update pip
+      run: python -m pip install -U pip wheel setuptools
+    - name: Install Python requirements
+      run: python -m pip install -r .github/workflows/requirements.txt
+    - name: Build C extension
+      run: pip install -vv . --no-build-isolation
+      env:
+        CC: "${{ steps.setup.outputs.gcc }}"
+        CMAKE_GENERATOR: Ninja
+        CMAKE_GENERATOR_PLATFORM: ""
+    - name: Install test requirements
+      run: python -m pip install -r src/pyhmmer/tests/requirements.txt
+    - name: Test without coverage
+      run: python -m unittest pyhmmer.tests -vv
+    #- name: Upload to Codecov
+    #  if: matrix.python-impl == 'CPython'
+    #  uses: codecov/codecov-action@v3
+    #  with:
+    #    flags: ${{ matrix.python-release }}
+    #    env_vars: OS
+    #    name: test-python-${{ matrix.python-version }}
+    #    fail_ci_if_error: false
+    #    token: ${{ secrets.CODECOV_TOKEN }}
+    #    verbose: true

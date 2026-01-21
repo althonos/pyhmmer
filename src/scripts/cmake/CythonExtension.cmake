@@ -5,10 +5,14 @@ get_property(PYTHON_EXTENSIONS_SOURCE_DIR GLOBAL PROPERTY PYTHON_EXTENSIONS_SOUR
 
 include(CheckSymbolExists)
 
-set(SAFE_CMAKE_REQUIRED_INCLUDES "${CMAKE_REQUIRED_INCLUDES}")
-set(CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES} ${Python_INCLUDE_DIRS})
-check_symbol_exists(PyInterpreterState_GetID "stdint.h;stdlib.h;Python.h" HAVE_PYINTERPRETERSTATE_GETID)
-set(CMAKE_REQUIRED_INCLUDES "${SAFE_CMAKE_REQUIRED_INCLUDES}")
+if(WIN32)
+    set(HAVE_PYINTERPRETERSTATE_GETID ON)
+else()
+    set(SAFE_CMAKE_REQUIRED_INCLUDES "${CMAKE_REQUIRED_INCLUDES}")
+    set(CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES} ${Python_INCLUDE_DIRS})
+    check_symbol_exists(PyInterpreterState_GetID "stdint.h;stdlib.h;Python.h" HAVE_PYINTERPRETERSTATE_GETID)
+    set(CMAKE_REQUIRED_INCLUDES "${SAFE_CMAKE_REQUIRED_INCLUDES}")
+endif()
 
 # --- Detect implementation ----------------------------------------------------
 
@@ -118,6 +122,7 @@ macro(cython_extension _name)
   set_target_properties(${_target} PROPERTIES OUTPUT_NAME ${_name} )
   target_include_directories(${_target} AFTER PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})  
   target_link_libraries(${_target} PUBLIC ${CYTHON_EXTENSION_LINKS})
+  target_compile_definitions(${_target} PRIVATE CYTHON_USE_PYLONG_INTERNALS=0)
   if(HAVE_PYINTERPRETERSTATE_GETID)
     target_compile_definitions(${_target} PUBLIC HAVE_PYINTERPRETERSTATE_GETID)
   endif()

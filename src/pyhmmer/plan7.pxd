@@ -12,6 +12,7 @@ from libeasel import eslINFINITY
 from libeasel.alphabet cimport ESL_ALPHABET
 from libeasel.sq cimport ESL_SQ
 from libeasel.sqio cimport ESL_SQFILE
+from libhmmer.impl.p7_oprofile cimport P7_OM_BLOCK, P7_OPROFILE
 from libhmmer.p7_alidisplay cimport P7_ALIDISPLAY
 from libhmmer.p7_bg cimport P7_BG
 from libhmmer.p7_builder cimport P7_BUILDER
@@ -26,16 +27,7 @@ from libhmmer.p7_tophits cimport P7_TOPHITS
 from libhmmer.p7_trace cimport P7_TRACE
 from libhmmer.nhmmer cimport ID_LENGTH_LIST
 
-if HMMER_IMPL == "VMX":
-    from libhmmer.impl_vmx.p7_omx cimport P7_OM_BLOCK
-    from libhmmer.impl_vmx.p7_oprofile cimport P7_OPROFILE
-elif HMMER_IMPL == "SSE":
-    from libhmmer.impl_sse.p7_omx cimport P7_OM_BLOCK
-    from libhmmer.impl_sse.p7_oprofile cimport P7_OPROFILE
-elif HMMER_IMPL == "NEON":
-    from libhmmer.impl_neon.p7_omx cimport P7_OM_BLOCK
-    from libhmmer.impl_neon.p7_oprofile cimport P7_OPROFILE
-
+from .platform cimport _FileobjReader
 from .easel cimport (
     Alphabet,
     DigitalSequence,
@@ -164,11 +156,14 @@ cdef class HMM:
 
 
 cdef class HMMFile:
-    cdef str           _name
-    cdef P7_HMMFILE*   _hfp
-    cdef ESL_ALPHABET* _abc
-    cdef Alphabet      _alphabet
-    cdef object        _file
+    cdef          P7_HMMFILE*    _hfp
+    cdef          ESL_ALPHABET*  _abc
+    cdef          Alphabet       _alphabet
+    cdef          str            _name
+    cdef readonly _FileobjReader _reader
+    cdef readonly object         _file
+
+    cdef int _open_fileobj(self, object fh) except 1
 
     cpdef void close(self) except *
     cpdef void rewind(self) except *
@@ -176,10 +171,7 @@ cdef class HMMFile:
     cpdef bint is_pressed(self) except *
     cpdef HMMPressedFile optimized_profiles(self)
 
-    @staticmethod
-    cdef P7_HMMFILE* _open_fileobj(object fh) except *
-    @staticmethod
-    cdef void _close_hmmfile(P7_HMMFILE* hfp) noexcept nogil
+
 
 
 cdef class HMMPressedFile:
