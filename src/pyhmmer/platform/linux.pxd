@@ -9,12 +9,14 @@ cdef extern from "platform/linux.h":
 
 
 cdef class _LinuxReader:
+    cdef object obj
     cdef FILE*  file
 
     cpdef object close(self)
 
 
 cdef class _LinuxWriter:
+    cdef object obj
     cdef FILE*  file
 
     cpdef object close(self)

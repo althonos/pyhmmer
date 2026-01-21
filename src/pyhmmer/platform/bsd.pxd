@@ -9,12 +9,14 @@ cdef extern from "platform/bsd.h":
 
 
 cdef class _BSDReader:
+    cdef object obj
     cdef FILE*  file
 
     cpdef object close(self)
 
 
 cdef class _BSDWriter:
+    cdef object obj
     cdef FILE*  file
 
     cpdef object close(self)

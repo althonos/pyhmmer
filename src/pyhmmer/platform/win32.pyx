@@ -199,6 +199,7 @@ cdef class _Win32SynchronizedReader:
             CloseHandle(hWritePipe)
             raise RuntimeError("Failed opening file")
 
+        self.obj = fileobj
         self.file = fread
         self.thread = _Win32Reader(fileobj, <size_t> hWritePipe)
         self.thread.start()
@@ -302,7 +303,8 @@ cdef class _Win32SynchronizedWriter:
             CloseHandle(hReadPipe)
             raise RuntimeError("Failed opening file")
 
-        self.file   = fwrite
+        self.obj = fileobj
+        self.file = fwrite
         self.thread = _Win32Writer(fileobj, <intptr_t> hReadPipe)
         self.thread.start()
 

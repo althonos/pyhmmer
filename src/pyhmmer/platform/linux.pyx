@@ -11,6 +11,7 @@ cdef class _LinuxReader:
 
     def __init__(self, object fileobj):
         self.file = fileobj_linux_open(fileobj, "r")
+        self.obj = fileobj
 
     def __enter__(self):
         return self
@@ -30,6 +31,7 @@ cdef class _LinuxWriter:
 
     def __init__(self, object fileobj):
         self.file = fileobj_linux_open(fileobj, "w")
+        self.obj = fileobj
 
     def __enter__(self):
         return self
