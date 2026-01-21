@@ -371,9 +371,11 @@ class TestPipelinesearch(_TestSearch, unittest.TestCase):
 
 class TestHmmpress(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.NamedTemporaryFile(suffix=".hmm", delete=False).name
+        self.tmpfile = tempfile.NamedTemporaryFile(suffix=".hmm", delete=False)
+        self.tmp = self.tmpfile.name
 
     def tearDown(self):
+        self.tmpfile.close()
         for ext in ["", ".h3m", ".h3p", ".h3i", ".h3f"]:
             if os.path.exists(self.tmp + ext):
                 os.remove(self.tmp + ext)
