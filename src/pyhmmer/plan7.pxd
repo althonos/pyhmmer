@@ -156,12 +156,12 @@ cdef class HMM:
 
 
 cdef class HMMFile:
-    cdef str            _name
-    cdef P7_HMMFILE*    _hfp
-    cdef ESL_ALPHABET*  _abc
-    cdef Alphabet       _alphabet
-    cdef _FileobjReader _reader
-    cdef object         _file
+    cdef          P7_HMMFILE*    _hfp
+    cdef          ESL_ALPHABET*  _abc
+    cdef          Alphabet       _alphabet
+    cdef          str            _name
+    cdef readonly _FileobjReader _reader
+    cdef readonly object         _file
 
     cdef int _open_fileobj(self, object fh) except 1
 

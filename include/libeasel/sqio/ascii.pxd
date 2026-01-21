@@ -63,8 +63,6 @@ cdef extern from "esl_sqio.h" nogil:
     int  esl_sqascii_WriteFasta(FILE *fp, ESL_SQ *s, int update)
     int  esl_sqascii_Parse(char *buf, int size, ESL_SQ *s, int format)
 
-cdef extern from "esl_sqio_ascii.h":
-
     ctypedef esl_sqio_s ESL_SQFILE
 
     # Private re-exports
@@ -101,29 +99,29 @@ cdef extern from "esl_sqio_ascii.h":
     int  skip_whitespace(ESL_SQFILE *sqfp) except -1
 
     # EMBL format also UniProt, TrEMBL
-    void config_embl(ESL_SQFILE *sqfp) nogil
-    void inmap_embl (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap) nogil
+    void config_embl(ESL_SQFILE *sqfp)
+    void inmap_embl (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap)
     int  header_embl(ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
     int  skip_embl  (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
     int  end_embl   (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
 
     # GenBank format also DDBJ
-    void config_genbank(ESL_SQFILE *sqfp) nogil
-    void inmap_genbank (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap) nogil
+    void config_genbank(ESL_SQFILE *sqfp)
+    void inmap_genbank (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap)
     int  header_genbank(ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
     int  skip_genbank  (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
     int  end_genbank   (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
 
     # FASTA format
-    void config_fasta(ESL_SQFILE *sqfp) nogil
-    void inmap_fasta (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap) nogil
+    void config_fasta(ESL_SQFILE *sqfp)
+    void inmap_fasta (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap)
     int  header_fasta(ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
     int  skip_fasta  (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
     int  end_fasta   (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
 
     # daemon format
-    void config_daemon(ESL_SQFILE *sqfp) nogil
-    void inmap_daemon (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap) nogil
+    void config_daemon(ESL_SQFILE *sqfp)
+    void inmap_daemon (ESL_SQFILE *sqfp, const ESL_DSQ *abc_inmap)
     int  end_daemon   (ESL_SQFILE *sqfp, ESL_SQ *sq) except -1
 
     # HMMPGMD format

@@ -3543,24 +3543,28 @@ cdef class HMMFile:
             return 0
 
         # create and configure the file parser
-        self._hfp.efp = libeasel.fileparser.esl_fileparser_Create(self._hfp.f)
+        with nogil:
+            self._hfp.efp = libeasel.fileparser.esl_fileparser_Create(self._hfp.f)
         if self._hfp.efp == NULL:
             self.close()
             raise AllocationError("ESL_FILEPARSER", sizeof(ESL_FILEPARSER))
-        status = libeasel.fileparser.esl_fileparser_SetCommentChar(self._hfp.efp, b"#")
+        with nogil:
+            status = libeasel.fileparser.esl_fileparser_SetCommentChar(self._hfp.efp, b"#")
         if status != libeasel.eslOK:
             self.close()
             raise UnexpectedError(status, "esl_fileparser_SetCommentChar")
 
         # get the magic string at the beginning
-        status = libeasel.fileparser.esl_fileparser_NextLine(self._hfp.efp)
+        with nogil:
+            status = libeasel.fileparser.esl_fileparser_NextLine(self._hfp.efp)
         if status == libeasel.eslEOF:
             self.close()
             raise EOFError("HMM file is empty")
         elif status != libeasel.eslOK:
             self.close()
             raise UnexpectedError(status, "esl_fileparser_NextLine")
-        status = libeasel.fileparser.esl_fileparser_GetToken(self._hfp.efp, &token, &token_len)
+        with nogil:
+            status = libeasel.fileparser.esl_fileparser_GetToken(self._hfp.efp, &token, &token_len)
         if status != libeasel.eslOK:
             self.close()
             raise UnexpectedError(status, "esl_fileparser_GetToken")
@@ -3623,15 +3627,16 @@ cdef class HMMFile:
         try:
             fspath = os.fsencode(file)
             self._name = os.fsdecode(fspath)
+        except TypeError:
+            self._open_fileobj(file)
+            status    = libeasel.eslOK
+        else:
             if db:
                 function = "p7_hmmfile_OpenE"
                 status = libhmmer.p7_hmmfile.p7_hmmfile_Open(fspath, NULL, &self._hfp, errbuf)
             else:
                 function = "p7_hmmfile_OpenENoDB"
                 status = libhmmer.p7_hmmfile.p7_hmmfile_OpenNoDB(fspath, NULL, &self._hfp, errbuf)
-        except TypeError:
-            self._open_fileobj(file)
-            status    = libeasel.eslOK
 
         if status == libeasel.eslENOTFOUND:
             raise FileNotFoundError(errno.ENOENT, f"No such file or directory: {file!r}")
