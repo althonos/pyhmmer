@@ -12,6 +12,8 @@ in `pyhmmer.hmmer`.
     Installation <install>
     Publications <publications>
     Performance <performance>
+    Windows Support <windows>
+
 
 .. toctree::
    :maxdepth: 1
