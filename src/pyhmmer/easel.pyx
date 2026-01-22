@@ -6774,20 +6774,21 @@ cdef class MSAFile:
             raise err
 
         # open index, if any
-        if index is not None:
-            self.index = index
-            self._msaf.ssi = self.index._ssi
-        elif self._reader is None:
-            try:
-                ssiname = f"{self.name}.ssi"
-                self.index = SSIReader(ssiname)
-            except FileNotFoundError:
-                self.index = None
-            except Exception as err:
-                PyErr_WarnFormat(RuntimeWarning, 1, "%S", <PyObject*> err)
-                self.index = None
-            else:
+        if TARGET_SYSTEM != "Windows":
+            if index is not None:
+                self.index = index
                 self._msaf.ssi = self.index._ssi
+            elif self._reader is None:
+                try:
+                    ssiname = f"{self.name}.ssi"
+                    self.index = SSIReader(ssiname)
+                except FileNotFoundError:
+                    self.index = None
+                except Exception as err:
+                    PyErr_WarnFormat(RuntimeWarning, 1, "%S", <PyObject*> err)
+                    self.index = None
+                else:
+                    self._msaf.ssi = self.index._ssi
 
     def __dealloc__(self):
         if self._msaf != NULL:
@@ -9293,7 +9294,7 @@ cdef class SequenceFile:
             raise err
 
         # open index, if any
-        if self._sqfp.format != libeasel.sqio.eslSQFILE_NCBI:
+        if self._sqfp.format != libeasel.sqio.eslSQFILE_NCBI and TARGET_SYSTEM != "Windows":
             if index is not None:
                 self.index = index
                 self._sqfp.data.ascii.ssi = self.index._ssi

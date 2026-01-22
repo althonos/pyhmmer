@@ -85,6 +85,7 @@ class TestSequenceFile(unittest.TestCase):
             self.assertEqual(len(sequences), 13)
 
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
+    @unittest.skipIf(platform.system() == "Windows", "unsupported on Windows")
     def test_sequence_index_path(self):
         luxc = resource_files("pyhmmer.tests").joinpath("data", "seqs", "938293.PRJEB85.HG003687.faa")
         if not os.path.exists(luxc):
@@ -107,6 +108,7 @@ class TestSequenceFile(unittest.TestCase):
                 seq = seq_file.indexed['does not exist']
     
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
+    @unittest.skipIf(platform.system() == "Windows", "unsupported on Windows")
     def test_sequence_index_path_format_error(self):
         luxc = resource_files("pyhmmer.tests").joinpath("data", "seqs", "938293.PRJEB85.HG003687.faa")
         if not os.path.exists(luxc):
@@ -120,6 +122,7 @@ class TestSequenceFile(unittest.TestCase):
                 seq = seq_file.indexed['938293.PRJEB85.HG003684_1']
 
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
+    @unittest.skipIf(platform.system() == "Windows", "unsupported on Windows")
     def test_sequence_index_fileobj(self):
         luxc = resource_files("pyhmmer.tests").joinpath("data", "seqs", "938293.PRJEB85.HG003687.faa")
         if not os.path.exists(luxc):

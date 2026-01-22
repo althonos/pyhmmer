@@ -82,6 +82,7 @@ class TestMSAFile(unittest.TestCase):
         self.assertEqual(msa.secondary_structure, "......>>>>+>> ^^^^ <<<<<<......")
 
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
+    @unittest.skipIf(platform.system() == "Windows", "unsupported on Windows")
     def test_msa_index_path_format_error(self):
         luxc = resource_files("pyhmmer.tests").joinpath("data", "msa", "LuxC.sto")
         if not os.path.exists(luxc):
@@ -95,6 +96,7 @@ class TestMSAFile(unittest.TestCase):
                 msa = msa_file.indexed['LuxC']
 
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
+    @unittest.skipIf(platform.system() == "Windows", "unsupported on Windows")
     def test_msa_index_path(self):
         luxc = resource_files("pyhmmer.tests").joinpath("data", "msa", "LuxC.sto")
         if not os.path.exists(luxc):
@@ -116,6 +118,7 @@ class TestMSAFile(unittest.TestCase):
                 msa = msa_file.indexed['does not exist']
 
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
+    @unittest.skipIf(platform.system() == "Windows", "unsupported on Windows")
     def test_msa_index_fileobj(self):
         luxc = resource_files("pyhmmer.tests").joinpath("data", "msa", "LuxC.sto")
         if not os.path.exists(luxc):
