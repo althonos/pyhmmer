@@ -7,7 +7,7 @@ from itertools import zip_longest
 
 from pyhmmer import easel
 
-from ..utils import EASEL_FOLDER
+from ..utils import EASEL_FOLDER, resource_files
 
 
 class TestMSAFile(unittest.TestCase):
@@ -80,6 +80,57 @@ class TestMSAFile(unittest.TestCase):
         with easel.MSAFile(selex, format="selex") as f:
             msa = f.read()
         self.assertEqual(msa.secondary_structure, "......>>>>+>> ^^^^ <<<<<<......")
+
+    @unittest.skipUnless(resource_files, "importlib.resources.files not available")
+    def test_msa_index_path(self):
+        luxc = resource_files(__package__).joinpath("data", "msa", "LuxC.sto")
+        if not os.path.exists(luxc):
+            self.skipTest("missing data files")
+        if not os.path.exists(luxc.with_suffix(".sto.ssi")):
+            self.skipTest("missing data files")
+        with easel.SequenceFile(luxc, "fasta") as msa_file:
+            self.assertIsNotNone(msa_file.index)
+            self.assertIsNotNone(msa_file.indexed)
+
+            self.assertEqual(len(msa_file.indexed), 1)
+            keys = list(msa_file.indexed)
+            self.assertEqual(len(keys), 1)
+
+            msa = msa_file.indexed['LuxC']
+            self.assertEqual(msa.name, 'LuxC')
+
+            with self.assertRaises(KeyError):
+                msa = msa_file.indexed['does not exist']
+
+    @unittest.skipUnless(resource_files, "importlib.resources.files not available")
+    def test_msa_index_fileobj(self):
+        luxc = resource_files(__package__).joinpath("data", "msa", "LuxC.sto")
+        if not os.path.exists(luxc):
+            self.skipTest("missing data files")
+        if not os.path.exists(luxc.with_suffix(".sto.ssi")):
+            self.skipTest("missing data files")
+
+        with luxc.open("rb") as src:
+            with easel.MSAFile(src, "stockholm") as msa_file:
+                self.assertIsNone(msa_file.index)
+                self.assertIsNone(msa_file.indexed)
+
+        with easel.SSIReader(luxc.with_suffix(".faa.ssi")) as index:
+            with luxc.open("rb") as src:
+                with easel.MSAFile(src, "stockholm", index=index) as msa_file:
+                    self.assertIsNotNone(msa_file.index)
+                    self.assertIsNotNone(msa_file.indexed)
+
+                    self.assertEqual(len(msa_file.indexed), 1)
+                    keys = list(msa_file.indexed)
+                    self.assertEqual(len(keys), 1)
+
+                    msa = msa_file.indexed['LuxC']
+                    self.assertEqual(msa.name, 'LuxC')
+
+                    with self.assertRaises(KeyError):
+                        msa = msa_file.indexed['does not exist']
+
 
 
 class _TestReadFilename(object):

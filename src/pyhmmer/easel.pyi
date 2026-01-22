@@ -719,6 +719,7 @@ class MSAFile(typing.Generic[M], typing.ContextManager[MSAFile[M]], typing.Itera
         *,
         digital: Literal[True],
         alphabet: ABC,
+        index: Optional[SSIReader] = None,
     ) -> None: ...
     @typing.overload
     def __init__(
@@ -728,6 +729,7 @@ class MSAFile(typing.Generic[M], typing.ContextManager[MSAFile[M]], typing.Itera
         *,
         digital: Literal[True],
         alphabet: Optional[Alphabet] = None,
+        index: Optional[SSIReader] = None,
     ) -> None: ...
     @typing.overload
     def __init__(
@@ -737,6 +739,7 @@ class MSAFile(typing.Generic[M], typing.ContextManager[MSAFile[M]], typing.Itera
         *,
         digital: Literal[False] = False,
         alphabet: Optional[Alphabet] = None,
+        index: Optional[SSIReader] = None,
     ) -> None: ...
     def __enter__(self) -> MSAFile[M]: ...
     def __exit__(
@@ -754,6 +757,10 @@ class MSAFile(typing.Generic[M], typing.ContextManager[MSAFile[M]], typing.Itera
     def digital(self) -> bool: ...
     @property
     def format(self) -> MSA_FORMAT: ...
+    @property
+    def index(self) -> Optional[SSIReader]: ...
+    @property
+    def indexed(self) -> typing.Mapping[str, M]: ...
     def read(self) -> Optional[M]: ...
     def close(self) -> None: ...
 

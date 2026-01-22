@@ -111,6 +111,9 @@ include "exceptions.pxi"
 include "_strings.pxi"
 include "_getid.pxi"
 
+cdef extern from *:
+    int PyErr_WarnFormat(object category, Py_ssize_t stack_level, const char *format, ...) except -1
+
 # --- Python imports ---------------------------------------------------------
 
 import abc
@@ -6474,6 +6477,39 @@ cdef class DigitalMSA(MSA):
 
 # --- MSA File ---------------------------------------------------------------
 
+class _MSAFileIndex(collections.abc.Mapping):
+    """A read-only mapping of alignments indexed in a file.
+    """
+    __slots__ = ("file",)
+
+    def __init__(self, MSAFile file):
+        self.file = file
+
+    def __len__(self):
+        assert self.file.index is not None
+        cdef SSIReader index = self.file.index 
+        return index._ssi.nprimary
+
+    def __iter__(self):
+        yield from self.file.index.primary_keys
+
+    def __getitem__(self, str item):
+        assert self.file.index is not None
+
+        cdef const char*  skey
+        cdef MSAFile      msaf = self.file
+
+        skey = PyUnicode_AsUTF8AndSize(item, NULL)
+        with nogil:
+            status = libeasel.msafile.esl_msafile_PositionByKey(msaf._msaf, skey)
+        if status == libeasel.eslOK:
+            return self.read()
+        elif status == libeasel.eslENOTFOUND:
+            raise KeyError(item)
+        else:
+            raise UnexpectedError(status, "esl_msafile_PositionByKey")
+
+
 cdef class MSAFile:
     """A wrapper around a multiple-alignment file.
 
@@ -6648,6 +6684,7 @@ cdef class MSAFile:
         *,
         bint digital = False,
         Alphabet alphabet = None,
+        SSIReader index = None,
     ):
         """__init__(self, file, format=None, *, digital=False, alphabet=False)\n--\n
 
@@ -6736,6 +6773,21 @@ cdef class MSAFile:
             self.close()
             raise err
 
+        # open index, if any
+        if index is not None:
+            self.index = index
+            self._msaf.ssi = self.index._ssi
+        elif self._reader is None:
+            try:
+                ssiname = f"{self.name}.ssi"
+                self.index = SSIReader(ssiname)
+            except FileNotFoundError:
+                pass
+            except Exception as err:
+                PyErr_WarnFormat(RuntimeWarning, 1, "%S", <PyObject*> err)
+            else:
+                self._msaf.ssi = self.index._ssi
+
     def __dealloc__(self):
         if self._msaf != NULL:
             warnings.warn("unclosed MSAFile", ResourceWarning)
@@ -6789,6 +6841,23 @@ cdef class MSAFile:
         if self._msaf == NULL:
             raise ValueError("I/O operation on closed file.")
         return MSA_FILE_FORMATS_INDEX[self._msaf.format]
+    
+    @property
+    def indexed(self):
+        """`~collections.abc.Mapping` or `None`: The indexed alignments.
+
+        This property can be used to access the alignments in a file by name,
+        provided they are indexed in a SSI file (exposed as a `SSIReader` in
+        the `AlignmentFile.index` attribute).
+
+        In the case where the alignment file has no associated index (because
+        it was open from a file, or because the associated index could not
+        be opened successfully), this attribute is also `None`.
+
+        .. versionadded:: 0.12.0
+
+        """
+        return None if self.index is None else _MSAFileIndex(self)
 
     # --- Methods ------------------------------------------------------------
 
@@ -6798,6 +6867,9 @@ cdef class MSAFile:
         if self._reader is not None:
             self._reader.close()
             self._msaf.bf.fp = NULL # internal file is closed now
+        if self.index is not None:
+            self._msaf.ssi = NULL
+            self.index = None
         if self._msaf:
             libeasel.msafile.esl_msafile_Close(self._msaf)
             self._msaf = NULL
@@ -9323,8 +9395,8 @@ cdef class SequenceFile:
             >>> file.index
             <pyhmmer.easel.SSIReader object at 0x...>
             >>> seq = file.indexed['938293.PRJEB85.HG003684_29']
-            >>> seq.name
-            '938293.PRJEB85.HG003684_29'
+            >>> print(seq.name, seq.sequence[:30])
+            938293.PRJEB85.HG003684_29 MESINKKIEDIMTKNTGKIFSINDFYGLGT
             >>> file.close()
 
         .. versionadded:: 0.12.0

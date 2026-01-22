@@ -253,6 +253,7 @@ cdef class MSAFile:
     cdef readonly object       _file
     cdef readonly Alphabet     alphabet
     cdef readonly str          name
+    cdef readonly SSIReader    index
 
     cdef int _open_fileobj(self, _FileobjReader reader, int fmt) except 1
 
