@@ -1,0 +1,37 @@
+diff --git a/esl_dsqdata.c b/esl_dsqdata.c
+index cc03cae..e9e92e7 100644
+--- a/esl_dsqdata.c
++++ b/esl_dsqdata.c
+@@ -1036,6 +1036,7 @@ dsqdata_loader_thread(void *p)
+   //printf("loader: exiting\n");
+   free(idx);
+   pthread_exit(NULL);
++  return NULL;
+ 
+  ERROR: 
+   /* Defying Easel standards, we treat all exceptions as fatal, at
+@@ -1050,6 +1051,7 @@ dsqdata_loader_thread(void *p)
+    */
+   if (idx) free(idx);    
+   esl_fatal("  ... dsqdata loader thread failed: unrecoverable");
++  return NULL;
+ }
+ 
+ 
+@@ -1120,13 +1122,15 @@ dsqdata_unpacker_thread(void *p)
+     //else     printf("unpacker thread %d: exiting EOD\n", u);
+   } while (chu);
+   pthread_exit(NULL);
++  return NULL;
+ 
+  ERROR:
+   /* See comment in loader thread: for lack of a back channel mechanism
+    * to tell other threads to clean up and terminate, we violate Easel standards
+    * and turn nonfatal exceptions into fatal ones.
+    */
+-  esl_fatal("  ... dsqdata unpacker thread failed: unrecoverable"); 
++  esl_fatal("  ... dsqdata unpacker thread failed: unrecoverable");
++  return NULL;
+ }
+ 
+ 
