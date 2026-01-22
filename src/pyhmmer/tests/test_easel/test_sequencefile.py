@@ -75,6 +75,8 @@ class TestSequenceFile(unittest.TestCase):
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
     def test_ignore_gaps(self):
         luxc = resource_files(__package__).joinpath("data", "msa", "LuxC.faa")
+        if not os.path.exists(luxc):
+            self.skipTest("missing data files")
         # fails if not ignoring gaps (since if contains gaps)
         with easel.SequenceFile(luxc, "fasta") as seq_file:
             self.assertRaises(ValueError, seq_file.read)
@@ -82,6 +84,59 @@ class TestSequenceFile(unittest.TestCase):
         with easel.SequenceFile(luxc, "afa") as seq_file:
             sequences = list(seq_file)
             self.assertEqual(len(sequences), 13)
+
+    @unittest.skipUnless(resource_files, "importlib.resources.files not available")
+    def test_sequence_index_path(self):
+        luxc = resource_files(__package__).joinpath("data", "seqs", "938293.PRJEB85.HG003687.faa")
+        if not os.path.exists(luxc):
+            self.skipTest("missing data files")
+        if not os.path.exists(luxc.with_suffix(".faa.ssi")):
+            self.skipTest("missing data files")
+        with easel.SequenceFile(luxc, "fasta") as seq_file:
+            self.assertIsNotNone(seq_file.index)
+            self.assertIsNotNone(seq_file.indexed)
+            
+            self.assertEqual(len(seq_file.indexed), 2100)
+            keys = list(seq_file.indexed)
+            self.assertEqual(len(keys), 2100)
+            
+            seq = seq_file.indexed['938293.PRJEB85.HG003684_3']
+            self.assertEqual(seq.name, '938293.PRJEB85.HG003684_3')
+            self.assertTrue(seq.sequence.startswith('MILEAFENIRVDKYISDEFEEIP'))
+
+            with self.assertRaises(KeyError):
+                seq = seq_file.indexed['does not exist']
+    
+    @unittest.skipUnless(resource_files, "importlib.resources.files not available")
+    def test_sequence_index_fileobj(self):
+        luxc = resource_files(__package__).joinpath("data", "seqs", "938293.PRJEB85.HG003687.faa")
+        if not os.path.exists(luxc):
+            self.skipTest("missing data files")
+        if not os.path.exists(luxc.with_suffix(".faa.ssi")):
+            self.skipTest("missing data files")
+
+        with luxc.open("rb") as src:
+            with easel.SequenceFile(src, "fasta") as seq_file:
+                self.assertIsNone(seq_file.index)
+                self.assertIsNone(seq_file.indexed)
+
+        with easel.SSIReader(luxc.with_suffix(".faa.ssi")) as index:
+            with luxc.open("rb") as src:
+                with easel.SequenceFile(src, "fasta", index=index) as seq_file:
+                    self.assertIsNotNone(seq_file.index)
+                    self.assertIsNotNone(seq_file.indexed)
+                    
+                    self.assertEqual(len(seq_file.indexed), 2100)
+                    keys = list(seq_file.indexed)
+                    self.assertEqual(len(keys), 2100)
+                    
+                    seq = seq_file.indexed['938293.PRJEB85.HG003684_3']
+                    self.assertEqual(seq.name, '938293.PRJEB85.HG003684_3')
+                    self.assertTrue(seq.sequence.startswith('MILEAFENIRVDKYISDEFEEIP'))
+
+                    with self.assertRaises(KeyError):
+                        seq = seq_file.indexed['does not exist']
+
 
 class _TestReadFilename(object):
 

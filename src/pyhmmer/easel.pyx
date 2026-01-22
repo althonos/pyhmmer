@@ -11,7 +11,9 @@ to facilitate the development of biological software in C. It is used by
 # --- C imports --------------------------------------------------------------
 
 cimport cython
+cimport libc.errno
 from cpython cimport Py_buffer
+from cpython.bytearray cimport PyByteArray_AsString
 from cpython.buffer cimport PyBUF_FORMAT, PyBUF_READ, PyBuffer_FillInfo
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.memoryview cimport PyMemoryView_FromMemory
@@ -19,11 +21,12 @@ from cpython.ref cimport Py_INCREF
 from cpython.exc cimport PyErr_WarnEx
 from cpython.tuple cimport PyTuple_New, PyTuple_SetItem, PyTuple_SET_ITEM
 from libc.stdint cimport int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t, SIZE_MAX
-from libc.stdio cimport fclose, fflush, FILE
+from libc.stdio cimport fclose, fflush, FILE, fread, SEEK_SET
 from libc.stdlib cimport abs, calloc, malloc, realloc, free
 from libc.string cimport memcmp, memcpy, memmove, memset, strlen, strncpy
 from libc.math cimport fabs, fabsf
 from posix.types cimport off_t
+from posix.stdio cimport fseeko
 from cpython.bytes cimport (
     PyBytes_FromString,
     PyBytes_FromStringAndSize,
@@ -8737,6 +8740,46 @@ cdef class DigitalSequenceBlock(SequenceBlock):
 
 # --- Sequence File ----------------------------------------------------------
 
+class _SequenceFileIndex(collections.abc.Mapping):
+    """A read-only mapping of sequences indexed in a file.
+    """
+    __slots__ = ("file",)
+
+    def __init__(self, SequenceFile file):
+        self.file = file
+
+    def __len__(self):
+        assert self.file.index is not None
+        cdef SSIReader index = self.file.index 
+        return index._ssi.nprimary
+
+    def __iter__(self):
+        yield from self.file.index.primary_keys
+
+    def __getitem__(self, str item):
+        assert self.file.index is not None
+
+        cdef const char*  skey
+        cdef Sequence     seq
+        cdef SequenceFile seqf = self.file
+
+        if self.file.alphabet is None:
+            seq = TextSequence()
+        else:
+            seq = DigitalSequence(self.file.alphabet)
+
+        skey = PyUnicode_AsUTF8AndSize(item, NULL)
+        with nogil:
+            status = libeasel.sqio.esl_sqio_Fetch(seqf._sqfp, skey, seq._sq)
+        
+        if status == libeasel.eslOK:
+            return seq
+        elif status == libeasel.eslENOTFOUND:
+            raise KeyError(item)
+        else:
+            raise UnexpectedError(status, "esl_sqio_Fetch")
+
+
 cdef class SequenceFile:
     """A wrapper around a sequence file, containing unaligned sequences.
 
@@ -9066,6 +9109,7 @@ cdef class SequenceFile:
     def __cinit__(self):
         self.alphabet = None
         self.name = None
+        self.index = None
         self._sqfp = NULL
 
     def __init__(
@@ -9075,6 +9119,7 @@ cdef class SequenceFile:
         *,
         bint digital = False,
         Alphabet alphabet = None,
+        SSIReader index = None,
     ):
         """__init__(self, file, format=None, *, digital=False, alphabet=None)\n--\n
 
@@ -9181,6 +9226,29 @@ cdef class SequenceFile:
             self.close()
             raise err
 
+        # open index, if any
+        if self._sqfp.format != libeasel.sqio.eslSQFILE_NCBI:
+            if index is not None:
+                self.index = index
+                self._sqfp.data.ascii.ssi = self.index._ssi
+            elif self._reader is None and not libeasel.sqio.esl_sqio_IsAlignment(self._sqfp.format):
+                status = libeasel.sqio.esl_sqfile_OpenSSI(self._sqfp, NULL)
+                if status == libeasel.eslERANGE:
+                    PyErr_WarnEx(
+                        RuntimeWarning,
+                        "SSI index has 64-bit file offsets, which are unsupported on this system",
+                        1,
+                    )
+                elif status == libeasel.eslOK:
+                    self.index = SSIReader.__new__(SSIReader)
+                    self.index._ssi = self._sqfp.data.ascii.ssi
+                elif status != libeasel.eslENOTFOUND:
+                    PyErr_WarnEx(
+                        RuntimeWarning,
+                        "SSI index found, but could not be open",
+                        1,
+                    )
+
     def __enter__(self):
         return self
 
@@ -9238,6 +9306,32 @@ cdef class SequenceFile:
             raise ValueError("I/O operation on closed file.")
         return SEQUENCE_FILE_FORMATS_INDEX[self._sqfp.format]
 
+    @property
+    def indexed(self):
+        """`~collections.abc.Mapping` or `None`: The indexed sequences.
+
+        This property can be used to access the sequences in a file by name,
+        provided they are indexed in a SSI file (exposed as a `SSIReader` in
+        the `SequenceFile.index` attribute).
+
+        In the case where the sequence file has no associated index (because
+        it was open from a file, or because the associated index could not
+        be opened successfully), this attribute is also `None`.
+
+        Example:
+            >>> file = SequenceFile("tests/data/seqs/938293.PRJEB85.HG003687.faa")
+            >>> file.index
+            <pyhmmer.easel.SSIReader object at 0x...>
+            >>> seq = file.indexed['938293.PRJEB85.HG003684_29']
+            >>> seq.name
+            '938293.PRJEB85.HG003684_29'
+            >>> file.close()
+
+        .. versionadded:: 0.12.0
+
+        """
+        return None if self.index is None else _SequenceFileIndex(self)
+
     # --- Methods ------------------------------------------------------------
 
     cpdef void close(self) except *:
@@ -9246,6 +9340,9 @@ cdef class SequenceFile:
         if self._reader is not None:
             self._reader.close()
             self._sqfp.data.ascii.fp = NULL
+        if self.index is not None:
+            self._sqfp.data.ascii.ssi = NULL
+            self.index = None
         if self._sqfp:
             libeasel.sqio.esl_sqfile_Close(self._sqfp)
             self._sqfp = NULL
@@ -9501,6 +9598,45 @@ cdef class SequenceFile:
 
 # --- Sequence/Subsequence Index ---------------------------------------------
 
+class _SSIPrimaryKeys(collections.abc.Sequence):
+
+    __slots__ = ("reader",)
+
+    def __init__(self, SSIReader reader not None):
+        self.reader = reader
+
+    def __len__(self):
+        cdef SSIReader reader = self.reader
+        return reader._ssi.nprimary
+
+    def __getitem__(self, ssize_t index):
+        cdef uint64_t  i
+        cdef int       status
+        cdef ssize_t   idx     = index
+        cdef SSIReader reader  = self.reader
+        cdef uint32_t  klen    = reader._ssi.plen
+        cdef uint32_t  recsize = reader._ssi.precsize
+        cdef off_t     base    = reader._ssi.poffset
+        cdef uint64_t  maxidx  = reader._ssi.nprimary
+        cdef bytearray buf     = bytearray(klen)
+        cdef char*     view    = PyByteArray_AsString(buf)
+
+        assert reader._ssi != NULL
+
+        if idx < 0:
+            idx += reader._ssi.nprimary
+        if idx >= reader._ssi.nprimary or idx < 0:
+            raise IndexError("list index out of range")
+
+        with nogil:
+            if fseeko(reader._ssi.fp, base + recsize*i, SEEK_SET) != 0:
+                raise OSError(libc.errno.errno, "fseeko() failed")
+            if fread(view, sizeof(char), klen, reader._ssi.fp) != klen:
+                raise OSError(libc.errno.errno, "fread() failed")
+
+        return PyUnicode_FromString(view)
+
+
 cdef class SSIReader:
     """A read-only handler for sequence/subsequence index file.
     """
@@ -9552,6 +9688,17 @@ cdef class SSIReader:
     def __exit__(self, exc_value, exc_type, traceback):
         self.close()
         return False
+
+    # --- Properties ---------------------------------------------------------
+
+    @property
+    def primary_keys(self):
+        """`collections.abc.Sequence` of `str`: The primary keys in the index.
+
+        .. versionadded:: 0.12.0
+
+        """
+        return _SSIPrimaryKeys(self)
 
     # --- Methods ------------------------------------------------------------
 
