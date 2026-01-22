@@ -136,7 +136,7 @@ with pyhmmer.easel.SequenceFile("pyhmmer/tests/data/seqs/938293.PRJEB85.HG003687
 
 with pyhmmer.plan7.HMMFile("pyhmmer/tests/data/hmms/txt/t2pks.hmm") as hmm_file:
     for hits in pyhmmer.hmmsearch(hmm_file, sequences, cpus=4):
-      print(f"HMM {hits.query.name.decode()} found {len(hits)} hits in the target sequences")
+      print(f"HMM {hits.query.name} found {len(hits)} hits in the target sequences")
 ```
 
 Have a look at more in-depth examples such as [building a HMM from an alignment](https://pyhmmer.readthedocs.io/en/stable/examples/msa_to_hmm.html),
