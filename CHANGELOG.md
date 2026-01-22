@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - `msv_filter` method to `Profile` and `OptimizedProfile` classes.
 - `Background.null1` to compute the null1 lod score for an arbitrary `Sequence`.
 - `HMMFile._file` exposing the internal file-like object given to `HMMFile` constructor, if any ([#89](https://github.com/althonos/pyhmmer/issues/89)).
+- `SSIReader.primary_keys` exposing a read-only sequence of primary keys inside a SSI file. 
+- `SequenceFile.indexed` and `MSAFile.indexed` to access data indexed with a SSI index ([#85](https://github.com/althonos/pyhmmer/issues/85)).
 ### Changed
 - Setup compilation in Stable ABI mode for Python 3.12 and later.
 - Setup distribution to generate a CMake package file to facilitate usage with downstream `scikit-build-core` dependent packages.
