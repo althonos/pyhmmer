@@ -7,8 +7,7 @@ from itertools import zip_longest
 
 from pyhmmer import easel
 
-from .. import __name__ as __package__
-from .utils import EASEL_FOLDER, resource_files
+from ..utils import EASEL_FOLDER, resource_files
 
 
 class TestSequenceFile(unittest.TestCase):
@@ -74,7 +73,7 @@ class TestSequenceFile(unittest.TestCase):
 
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
     def test_ignore_gaps(self):
-        luxc = resource_files(__package__).joinpath("data", "msa", "LuxC.faa")
+        luxc = resource_files("pyhmmer.tests").joinpath("data", "msa", "LuxC.faa")
         if not os.path.exists(luxc):
             self.skipTest("missing data files")
         # fails if not ignoring gaps (since if contains gaps)
@@ -87,7 +86,7 @@ class TestSequenceFile(unittest.TestCase):
 
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
     def test_sequence_index_path(self):
-        luxc = resource_files(__package__).joinpath("data", "seqs", "938293.PRJEB85.HG003687.faa")
+        luxc = resource_files("pyhmmer.tests").joinpath("data", "seqs", "938293.PRJEB85.HG003687.faa")
         if not os.path.exists(luxc):
             self.skipTest("missing data files")
         if not os.path.exists(luxc.with_suffix(".faa.ssi")):
@@ -108,8 +107,21 @@ class TestSequenceFile(unittest.TestCase):
                 seq = seq_file.indexed['does not exist']
     
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
+    def test_sequence_index_path_format_error(self):
+        luxc = resource_files("pyhmmer.tests").joinpath("data", "seqs", "938293.PRJEB85.HG003687.faa")
+        if not os.path.exists(luxc):
+            self.skipTest("missing data files")
+        if not os.path.exists(luxc.with_suffix(".faa.ssi")):
+            self.skipTest("missing data files")
+        with easel.SequenceFile(luxc, "uniprot") as seq_file:
+            self.assertIsNotNone(seq_file.index)
+            self.assertIsNotNone(seq_file.indexed)
+            with self.assertRaises(ValueError):
+                seq = seq_file.indexed['938293.PRJEB85.HG003684_1']
+
+    @unittest.skipUnless(resource_files, "importlib.resources.files not available")
     def test_sequence_index_fileobj(self):
-        luxc = resource_files(__package__).joinpath("data", "seqs", "938293.PRJEB85.HG003687.faa")
+        luxc = resource_files("pyhmmer.tests").joinpath("data", "seqs", "938293.PRJEB85.HG003687.faa")
         if not os.path.exists(luxc):
             self.skipTest("missing data files")
         if not os.path.exists(luxc.with_suffix(".faa.ssi")):

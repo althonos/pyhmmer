@@ -6503,7 +6503,7 @@ class _MSAFileIndex(collections.abc.Mapping):
         with nogil:
             status = libeasel.msafile.esl_msafile_PositionByKey(msaf._msaf, skey)
         if status == libeasel.eslOK:
-            return self.read()
+            return msaf.read()
         elif status == libeasel.eslENOTFOUND:
             raise KeyError(item)
         else:
@@ -6782,9 +6782,10 @@ cdef class MSAFile:
                 ssiname = f"{self.name}.ssi"
                 self.index = SSIReader(ssiname)
             except FileNotFoundError:
-                pass
+                self.index = None
             except Exception as err:
                 PyErr_WarnFormat(RuntimeWarning, 1, "%S", <PyObject*> err)
+                self.index = None
             else:
                 self._msaf.ssi = self.index._ssi
 
@@ -8831,21 +8832,14 @@ class _SequenceFileIndex(collections.abc.Mapping):
     def __getitem__(self, str item):
         assert self.file.index is not None
 
-        cdef const char*  skey
-        cdef Sequence     seq
+        cdef const char*  skey = NULL
         cdef SequenceFile seqf = self.file
-
-        if self.file.alphabet is None:
-            seq = TextSequence()
-        else:
-            seq = DigitalSequence(self.file.alphabet)
 
         skey = PyUnicode_AsUTF8AndSize(item, NULL)
         with nogil:
-            status = libeasel.sqio.esl_sqio_Fetch(seqf._sqfp, skey, seq._sq)
-        
+            status = libeasel.sqio.ascii.sqascii_PositionByKey(seqf._sqfp, skey)
         if status == libeasel.eslOK:
-            return seq
+            return seqf.read()
         elif status == libeasel.eslENOTFOUND:
             raise KeyError(item)
         else:
@@ -9682,7 +9676,6 @@ class _SSIPrimaryKeys(collections.abc.Sequence):
         return reader._ssi.nprimary
 
     def __getitem__(self, ssize_t index):
-        cdef uint64_t  i
         cdef int       status
         cdef ssize_t   idx     = index
         cdef SSIReader reader  = self.reader
@@ -9701,7 +9694,7 @@ class _SSIPrimaryKeys(collections.abc.Sequence):
             raise IndexError("list index out of range")
 
         with nogil:
-            if fseeko(reader._ssi.fp, base + recsize*i, SEEK_SET) != 0:
+            if fseeko(reader._ssi.fp, base + recsize*idx, SEEK_SET) != 0:
                 raise OSError(libc.errno.errno, "fseeko() failed")
             if fread(view, sizeof(char), klen, reader._ssi.fp) != klen:
                 raise OSError(libc.errno.errno, "fread() failed")

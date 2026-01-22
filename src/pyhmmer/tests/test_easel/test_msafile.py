@@ -82,13 +82,26 @@ class TestMSAFile(unittest.TestCase):
         self.assertEqual(msa.secondary_structure, "......>>>>+>> ^^^^ <<<<<<......")
 
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
-    def test_msa_index_path(self):
-        luxc = resource_files(__package__).joinpath("data", "msa", "LuxC.sto")
+    def test_msa_index_path_format_error(self):
+        luxc = resource_files("pyhmmer.tests").joinpath("data", "msa", "LuxC.sto")
         if not os.path.exists(luxc):
             self.skipTest("missing data files")
         if not os.path.exists(luxc.with_suffix(".sto.ssi")):
             self.skipTest("missing data files")
-        with easel.SequenceFile(luxc, "fasta") as msa_file:
+        with easel.MSAFile(luxc, "afa") as msa_file:
+            self.assertIsNotNone(msa_file.index)
+            self.assertIsNotNone(msa_file.indexed)
+            with self.assertRaises(ValueError):
+                msa = msa_file.indexed['LuxC']
+
+    @unittest.skipUnless(resource_files, "importlib.resources.files not available")
+    def test_msa_index_path(self):
+        luxc = resource_files("pyhmmer.tests").joinpath("data", "msa", "LuxC.sto")
+        if not os.path.exists(luxc):
+            self.skipTest("missing data files")
+        if not os.path.exists(luxc.with_suffix(".sto.ssi")):
+            self.skipTest("missing data files")
+        with easel.MSAFile(luxc, "stockholm") as msa_file:
             self.assertIsNotNone(msa_file.index)
             self.assertIsNotNone(msa_file.indexed)
 
@@ -104,7 +117,7 @@ class TestMSAFile(unittest.TestCase):
 
     @unittest.skipUnless(resource_files, "importlib.resources.files not available")
     def test_msa_index_fileobj(self):
-        luxc = resource_files(__package__).joinpath("data", "msa", "LuxC.sto")
+        luxc = resource_files("pyhmmer.tests").joinpath("data", "msa", "LuxC.sto")
         if not os.path.exists(luxc):
             self.skipTest("missing data files")
         if not os.path.exists(luxc.with_suffix(".sto.ssi")):
@@ -115,7 +128,7 @@ class TestMSAFile(unittest.TestCase):
                 self.assertIsNone(msa_file.index)
                 self.assertIsNone(msa_file.indexed)
 
-        with easel.SSIReader(luxc.with_suffix(".faa.ssi")) as index:
+        with easel.SSIReader(luxc.with_suffix(".sto.ssi")) as index:
             with luxc.open("rb") as src:
                 with easel.MSAFile(src, "stockholm", index=index) as msa_file:
                     self.assertIsNotNone(msa_file.index)
