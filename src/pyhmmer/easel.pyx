@@ -9294,7 +9294,12 @@ cdef class SequenceFile:
             raise err
 
         # open index, if any
-        if self._sqfp.format != libeasel.sqio.eslSQFILE_NCBI and TARGET_SYSTEM != "Windows":
+        if (
+            TARGET_SYSTEM != "Windows"
+            and self._sqfp.format != libeasel.sqio.eslSQFILE_NCBI
+            and not self._sqfp.data.ascii.do_gzip
+            and not self._sqfp.data.ascii.do_stdin
+        ):
             if index is not None:
                 self.index = index
                 self._sqfp.data.ascii.ssi = self.index._ssi
