@@ -3474,6 +3474,22 @@ cdef class Matrix:
         """Create a copy of the matrix, allocating a new buffer.
         """
 
+    def flatten(self):
+        """Return a flattened view over the matrix data.
+
+        Note:
+            This method does not return a copy, but simply exposes the 
+            internal buffer used by the matrix, since all matrices are
+            allocated as a C-contiguous array in HMMER.
+
+        Returns:
+            `~pyhmmer.easel.Vector`: A vector treating the matrix buffer
+            as a 1-D vector with the same item format.
+
+        .. versionadded:: 0.12.1
+
+        """
+
     def max(self):
         """Return the value of the maximum element in the matrix.
 
@@ -3774,6 +3790,14 @@ cdef class MatrixD(Matrix):
             raise AllocationError("double**", sizeof(double), self._m * self._n)
         return mat
 
+    cpdef VectorD flatten(self):
+        cdef double** data = <double**> self._data
+        cdef VectorD  vec  = VectorD.__new__(VectorD)
+        vec._owner = self
+        vec._n = vec._shape[0] = self._m * self._n
+        vec._data = <void*> data[0]
+        return vec
+
     cpdef double max(self):
         assert self._data != NULL
         with nogil:
@@ -4068,6 +4092,14 @@ cdef class MatrixF(Matrix):
         if mat._data == NULL:
             raise AllocationError("float**", sizeof(float), self._m * self._n)
         return mat
+
+    cpdef VectorF flatten(self):
+        cdef float** data = <float**> self._data
+        cdef VectorF vec  = VectorF.__new__(VectorF)
+        vec._owner = self
+        vec._n = vec._shape[0] = self._m * self._n
+        vec._data = <void*> data[0]
+        return vec
 
     cpdef float max(self):
         assert self._data != NULL
@@ -4376,6 +4408,14 @@ cdef class MatrixI(Matrix):
             raise AllocationError("int**", sizeof(int), self._m * self._n)
         return mat
 
+    cpdef VectorI flatten(self):
+        cdef int**   data = <int**> self._data
+        cdef VectorI vec  = VectorI.__new__(VectorI)
+        vec._owner = self
+        vec._n = vec._shape[0] = self._m * self._n
+        vec._data = <void*> data[0]
+        return vec
+
     cpdef int max(self):
         assert self._data != NULL
         with nogil:
@@ -4662,6 +4702,14 @@ cdef class MatrixU8(Matrix):
             memcpy(mat._data[0], self._data[0], self._m * self._n * sizeof(uint8_t))
 
         return mat
+
+    cpdef VectorU8 flatten(self):
+        cdef uint8_t** data = <uint8_t**> self._data
+        cdef VectorU8  vec  = VectorU8.__new__(VectorU8)
+        vec._owner = self
+        vec._n = vec._shape[0] = self._m * self._n
+        vec._data = <void*> data[0]
+        return vec
 
     cpdef uint8_t max(self):
         assert self._data != NULL

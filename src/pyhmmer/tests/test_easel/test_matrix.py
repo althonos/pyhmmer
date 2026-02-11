@@ -211,6 +211,24 @@ class _TestMatrixBase(object):
         mat = self.Matrix([ [1, 2], [3, 4] ])
         self.assertEqual(mat.sum(), 1 + 2 + 3 + 4)
 
+    def test_flatten(self):
+        mat = self.Matrix([ [3, 6], [9, 12] ])
+        vec = mat.flatten()
+        self.assertIsInstance(vec, Vector)
+        self.assertEqual(vec.format, mat.format)
+        self.assertEqual(vec.itemsize, mat.itemsize)
+        self.assertEqual(list(vec), [3, 6, 9, 12])
+
+    def test_flatten_edit(self):
+        mat = self.Matrix([ [3, 6], [9, 12] ])
+        vec = mat.flatten()
+        for i in range(4):
+            vec[i] = i
+        self.assertEqual(mat[0, 0], 0)
+        self.assertEqual(mat[0, 1], 1)
+        self.assertEqual(mat[1, 0], 2)
+        self.assertEqual(mat[1, 1], 3)
+
     def test_getitem_slice(self):
         mat = self.Matrix([ [1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16] ])
 
