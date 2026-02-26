@@ -4284,6 +4284,16 @@ cdef class OptimizedProfile:
         return self._om.M
 
     @property
+    def allocM(self):
+        """`int`: The allocated length of the profile (maximum length).
+
+        .. versionadded:: 0.12.1
+
+        """
+        assert self._om != NULL
+        return self._om.allocM
+
+    @property
     def L(self):
         """`int`: The currently configured target sequence length.
 
@@ -7633,6 +7643,16 @@ cdef class Profile:
         return self._gm.M
 
     @property
+    def allocM(self):
+        """`int`: The allocated length of the profile (maximum length).
+
+        .. versionadded:: 0.12.1
+
+        """
+        assert self._gm != NULL
+        return self._gm.allocM
+
+    @property
     def L(self):
         """`int`: The current configured target sequence length.
         """
@@ -7796,6 +7816,7 @@ cdef class Profile:
         # NOTE: since tsc is hand indexed, it is stored as a 1D float array,
         #       not 2D, so we need to allocated mat.data and assign the pointer
         #       to mat[0] instead
+        #       (FIXME: this may be creating a memory leak?)
         mat._data = <void**> calloc(self._gm.M, sizeof(float*))
         if mat._data == NULL:
             raise AllocationError("float*", sizeof(float*), self._gm.M)
@@ -7803,6 +7824,27 @@ cdef class Profile:
         mat._data[0] = <void*> self._gm.tsc
         for i in range(mat._m):
             mat._data[i] = mat._data[0] + i * mat._n * sizeof(float)
+
+        return mat
+
+    @property
+    def emission_scores(self):
+        r"""`~pyhmmer.easel.MatrixF`: The emission lod scores of the model.
+
+        Note that this is a hand-indexed 3-dimensional tensor, with shape
+        :math:`(K_p, M_{alloc}, 2)`. The last two dimensions are flattened.
+
+        .. versionadded:: 0.12.0
+
+        """
+        assert self._gm != NULL
+
+        cdef size_t  i
+        cdef MatrixF mat = MatrixF.__new__(MatrixF)
+        mat._m = mat._shape[0] = self.alphabet._abc.Kp
+        mat._n = mat._shape[1] = (self._gm.allocM + 1) * libhmmer.p7_profile.p7P_NR
+        mat._owner = self
+        mat._data = <void**> self._gm.rsc
 
         return mat
 
