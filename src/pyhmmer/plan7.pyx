@@ -7799,35 +7799,6 @@ cdef class Profile:
                 libhmmer.modelconfig.p7_ReconfigUnihit(self._gm, self._gm.L)
 
     @property
-    def transition_scores(self):
-        r"""`~pyhmmer.easel.MatrixF`: The transition lod scores of the model.
-
-        .. versionadded:: 0.12.0
-
-        """
-        assert self._gm != NULL
-
-        cdef size_t  i
-        cdef MatrixF mat = MatrixF.__new__(MatrixF)
-        mat._m = mat._shape[0] = self._gm.M
-        mat._n = mat._shape[1] = libhmmer.p7_profile.p7P_NTRANS
-        mat._owner = self
-
-        # NOTE: since tsc is hand indexed, it is stored as a 1D float array,
-        #       not 2D, so we need to allocated mat.data and assign the pointer
-        #       to mat[0] instead
-        #       (FIXME: this may be creating a memory leak?)
-        mat._data = <void**> calloc(self._gm.M, sizeof(float*))
-        if mat._data == NULL:
-            raise AllocationError("float*", sizeof(float*), self._gm.M)
-
-        mat._data[0] = <void*> self._gm.tsc
-        for i in range(mat._m):
-            mat._data[i] = mat._data[0] + i * mat._n * sizeof(float)
-
-        return mat
-
-    @property
     def emission_scores(self):
         r"""`~pyhmmer.easel.MatrixF`: The emission lod scores of the model.
 
