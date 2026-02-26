@@ -7241,6 +7241,16 @@ cdef class Sequence:
     # --- Properties ---------------------------------------------------------
 
     @property
+    def L(self):
+        """`int`: The length of the sequence.
+
+        .. versionadded:: 0.12.1
+
+        """
+        assert self._sq != NULL
+        return self._sq.L
+
+    @property
     def accession(self):
         """`str`: The accession of the sequence.
 
