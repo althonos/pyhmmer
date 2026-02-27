@@ -13,6 +13,7 @@ in `pyhmmer.hmmer`.
     Publications <publications>
     Performance <performance>
     Windows Support <windows>
+    Bitscore, P-values & E-values <significance>
 
 
 .. toctree::
