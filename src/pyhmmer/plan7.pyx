@@ -55,6 +55,7 @@ cimport libeasel.scorematrix
 cimport libeasel.getopts
 cimport libeasel.vec
 cimport libhmmer
+cimport libhmmer.emit
 cimport libhmmer.generic
 cimport libhmmer.impl
 cimport libhmmer.impl.io
@@ -3122,6 +3123,68 @@ cdef class HMM:
         if new._hmm == NULL:
             raise AllocationError("P7_HMM", sizeof(P7_HMM))
         return new
+
+    cpdef DigitalSequence emit_sequence(self, RandomnessOrSeed randomness = None):
+        """Emit a sequence from a core HMM.
+
+        Arguments:
+            randomness (`~pyhmmer.easel.Randomness`, `int` or `None`): The
+                random number generator to use for sampling, or a seed to
+                initialize a generator. If `None` or ``0`` given, create
+                a new random number generator with a random seed.
+
+        Returns:
+            `~pyhmmer.easel.DigitalSequence`: A sequence in digital mode sampled
+            from the HMM. Only the `~pyhmmer.easel.DigitalSequence.sequence` 
+            field will be initialized.
+
+        Note:
+            By default, the ``hmmemit`` executable uses the linear congruential 
+            generator, corresponding to a `~pyhmmer.easel.Randomness` created
+            with ``fast=True``. If either a seed or `None` is passed as the 
+            ``randomness`` argument, the new `~pyhmmer.easel.Randomness` will
+            be created with ``fast=True`` as well.
+
+        Example:
+            Generate a random sequence with a fixed seed::
+
+                >>> seq = thioesterase.emit_sequence(randomness=42)
+                >>> seq.alphabet.decode(seq.sequence)
+                'RALFFLHPGTGAVGCYSQLADE...'
+
+            Generate a sequence from a given random number generator::
+
+                >>> rng = easel.Randomness(123)
+                >>> seq1 = thioesterase.emit_sequence(rng)
+                >>> seq2 = thioesterase.emit_sequence(rng)
+                >>> seq1.sequence != seq2.sequence
+                True
+
+        .. versionadded:: 0.12.1
+
+        """
+        assert self._hmm != NULL
+
+        cdef int             status
+        cdef Randomness      rng
+        cdef DigitalSequence sequence = DigitalSequence(self.alphabet)
+
+        if RandomnessOrSeed is Randomness:
+            rng = randomness
+        else:
+            rng = Randomness(randomness, fast=True)
+
+        with nogil:
+            status = libhmmer.emit.p7_CoreEmit(rng._rng, self._hmm, sequence._sq, NULL)
+        assert sequence._sq != NULL
+        if status == libeasel.eslOK:
+            return sequence
+        elif status == libeasel.eslECORRUPT:
+            raise RuntimeError("illegal state reached")
+        elif status == libeasel.eslEMEM:
+            raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
+        else:
+            raise UnexpectedError(status, "p7_CoreEmit")
 
     cpdef VectorF match_occupancy(self):
         """Calculate the match occupancy for each match state.

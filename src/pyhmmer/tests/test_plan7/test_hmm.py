@@ -338,3 +338,30 @@ class TestHMM(unittest.TestCase):
         self.assertTrue(hmm_pickled.cutoffs.noise_available())
         self.assertTrue(hmm_pickled.cutoffs.trusted_available())
         self.assertEqual(hmm_pickled.cutoffs, hmm.cutoffs)
+
+    def test_emit_sequence_randomness(self):
+        dna = Alphabet.dna()
+        hmm = HMM.sample(dna, 100, randomness=1)
+
+        rng = Randomness(42, fast=True)
+        s1 = hmm.emit_sequence(rng)
+        self.assertEqual(
+            dna.decode(s1.sequence), 
+            'GCCCGCACGTAAGAAGTGTCAAAAAGGTAACAGTAGACAATATAGCCATTAGTATCCCCTGTCACC'
+            'AAACCGCAAAAAAGCAACAGCGACAACGTTAAACTGTGTGTGGATAATAAGGTCGTCTATGCGCGG'
+            'CGGGCCACGGGTACCACACACACGAAACAGCCCAAAACAATCGTCGTCAGCAACTACTGCGCCAAC'
+            'CCCTTAAACCAACAACAACTGTGGTA'
+        )
+    
+    def test_emit_sequence_seed(self):
+        dna = Alphabet.dna()
+        hmm = HMM.sample(dna, 100, randomness=1)
+        
+        s1 = hmm.emit_sequence(42)
+        self.assertEqual(
+            dna.decode(s1.sequence), 
+            'GCCCGCACGTAAGAAGTGTCAAAAAGGTAACAGTAGACAATATAGCCATTAGTATCCCCTGTCACC'
+            'AAACCGCAAAAAAGCAACAGCGACAACGTTAAACTGTGTGTGGATAATAAGGTCGTCTATGCGCGG'
+            'CGGGCCACGGGTACCACACACACGAAACAGCCCAAAACAATCGTCGTCAGCAACTACTGCGCCAAC'
+            'CCCTTAAACCAACAACAACTGTGGTA'
+        )

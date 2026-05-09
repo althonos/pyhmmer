@@ -36,6 +36,7 @@ from .easel cimport (
     KeyHash,
     MSA,
     Randomness,
+    RandomnessOrSeed,
     Sequence,
     SequenceFile,
     VectorF,
@@ -141,6 +142,7 @@ cdef class HMM:
     cdef void _set_annotation_line(self, str line, char** ptr, int flag) except *
 
     cpdef HMM copy(self)
+    cpdef DigitalSequence emit_sequence(self, RandomnessOrSeed randomness=?)
     cpdef VectorF match_occupancy(self)
     cpdef double mean_match_entropy(self) except *
     cpdef double mean_match_information(self, Background background) except *
