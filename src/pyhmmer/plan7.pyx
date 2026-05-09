@@ -3135,15 +3135,8 @@ cdef class HMM:
 
         Returns:
             `~pyhmmer.easel.DigitalSequence`: A sequence in digital mode sampled
-            from the HMM. Only the `~pyhmmer.easel.DigitalSequence.sequence` 
+            from the HMM. Only the `~pyhmmer.easel.DigitalSequence.sequence`
             field will be initialized.
-
-        Note:
-            By default, the ``hmmemit`` executable uses the linear congruential 
-            generator, corresponding to a `~pyhmmer.easel.Randomness` created
-            with ``fast=True``. If either a seed or `None` is passed as the 
-            ``randomness`` argument, the new `~pyhmmer.easel.Randomness` will
-            be created with ``fast=True`` as well.
 
         Example:
             Generate a random sequence with a fixed seed::
@@ -3159,6 +3152,17 @@ cdef class HMM:
                 >>> seq2 = thioesterase.emit_sequence(rng)
                 >>> seq1.sequence != seq2.sequence
                 True
+
+        Note:
+            By default, the ``hmmemit`` executable uses the linear congruential
+            generator, corresponding to a `~pyhmmer.easel.Randomness` created
+            with ``fast=True``. If either a seed or `None` is passed as the
+            ``randomness`` argument, the new `~pyhmmer.easel.Randomness` will
+            be created with ``fast=True`` as well.
+
+        See Also:
+            `Profile.emit_sequence`, which allows generating random sequences
+            from an implicit search profile rather than from the core model.
 
         .. versionadded:: 0.12.1
 
@@ -3484,7 +3488,7 @@ cdef class HMM:
         cdef int            status
         cdef str            funcname
         cdef P7_HMM*        hm       = self._hmm
-        
+
         with _FileobjWriter(fh) as fw:
             if binary:
                 funcname = "p7_hmmfile_WriteBinary"
@@ -3556,7 +3560,7 @@ cdef class HMMFile:
         # check if the file is in binary format before
         # we actually open it with fopen_obj, otherwise
         # the Windows background thread may start piping
-        # and we cannot peek without a potential race 
+        # and we cannot peek without a potential race
         # condition
         magic_bytes = fh_.peek(4)[:4]
         if not isinstance(magic_bytes, bytes):
@@ -4319,7 +4323,7 @@ cdef class OptimizedProfile:
             return NotImplemented
 
         cdef char[eslERRBUFSIZE] errbuf
-        cdef int                 status 
+        cdef int                 status
         cdef OptimizedProfile    op     = <OptimizedProfile> other
 
         status = libhmmer.impl.p7_oprofile.p7_oprofile_Compare(self._om, op._om, 0.0, errbuf)
@@ -4774,7 +4778,7 @@ cdef class OptimizedProfile:
 
         """
         assert self._om != NULL
-       
+
         cdef int            status
         cdef _FileobjWriter fwp
         cdef _FileobjWriter fwf
@@ -5174,15 +5178,15 @@ cdef class OptimizedProfileBlock:
         assert self._block != NULL
 
         cdef OptimizedProfileBlock new = OptimizedProfileBlock.__new__(OptimizedProfileBlock, self.alphabet)
-        
+
         new._storage = self._storage.copy()
         new._block = libhmmer.impl.p7_oprofile.p7_oprofile_CreateBlock(self._block.count)
         if new._block == NULL:
             raise AllocationError("P7_OM_BLOCK", sizeof(P7_OM_BLOCK))
-        
+
         memcpy(new._block.list, self._block.list, self._block.count * sizeof(ESL_SQ*))
         new._block.count = self._block.count
-        
+
         new._locks = <PyThread_type_lock*> calloc(self._block.count, sizeof(PyThread_type_lock))
         if new._locks == NULL:
             raise AllocationError("PyThread_type_lock", sizeof(PyThread_type_lock), new._block.count)
@@ -7959,6 +7963,93 @@ cdef class Profile:
             return new
         else:
             raise UnexpectedError(status, "p7_profile_Copy")
+
+    cpdef DigitalSequence emit_sequence(self, HMM hmm, Background background=None, RandomnessOrSeed randomness=None):
+        """Emit a sequence from the implicit search profile.
+
+        The core model consists only of the homologous states (between the
+        begin and end states of a HMMER Plan7 model). The profile includes the
+        nonhomologous N, C, and J states, local/glocal and uni/multihit
+        algorithm configuration, and the target length model. Therefore
+        sequences sampled from a profile may include nonhomologous as well as
+        homologous sequences, and may contain more than one homologous sequence
+        segment. By default, the profile is in multihit local mode, and the
+        target sequence length is configured for L=400.
+
+        Arguments:
+            HMM (`~pyhmmer.plan7.HMM`): The HMM accompanying this profile,
+                which contains core probabilities.
+            background (`~pyhmmer.plan7.Background` or `None`): The background
+                frequencies of the null1 model.
+            randomness (`~pyhmmer.easel.Randomness`, `int` or `None`): The
+                random number generator to use for sampling, or a seed to
+                initialize a generator. If `None` or ``0`` given, create
+                a new random number generator with a random seed.
+
+        Returns:
+            `~pyhmmer.easel.DigitalSequence`: A sequence in digital mode sampled
+            from the HMM. Only the `~pyhmmer.easel.DigitalSequence.sequence`
+            field will be initialized.
+
+        Example:
+            >>> hmm = thioesterase
+            >>> bg = Background(hmm.alphabet)
+            >>> profile = hmm.to_profile(bg, L=400, multihit=True, local=True)
+            >>> rng = easel.Randomness(42)
+            >>> seq = profile.emit_sequence(hmm, bg, rng)
+
+        Note:
+            By default, the ``hmmemit`` executable uses the linear congruential
+            generator, corresponding to a `~pyhmmer.easel.Randomness` created
+            with ``fast=True``. If either a seed or `None` is passed as the
+            ``randomness`` argument, the new `~pyhmmer.easel.Randomness` will
+            be created with ``fast=True`` as well.
+
+        See Also:
+            `HMM.emit_sequence`, which allows generating random sequences from
+            the core model of the HMM rather than from the a search profile.
+
+        .. versionadded:: 0.12.1
+
+        """
+        assert self._gm != NULL
+
+        cdef int             status
+        cdef Randomness      rng
+        cdef Background      bg
+        cdef DigitalSequence sequence = DigitalSequence(self.alphabet)
+
+        if hmm.alphabet != self.alphabet:
+            raise AlphabetMismatch(self.alphabet, hmm.alphabet)
+
+        if RandomnessOrSeed is Randomness:
+            rng = randomness
+        else:
+            rng = Randomness(randomness, fast=True)
+
+        if background is None:
+            bg = Background(self.alphabet)
+        else:
+            bg = background
+
+        with nogil:
+            status = libhmmer.emit.p7_ProfileEmit(
+                rng._rng,
+                hmm._hmm,
+                self._gm,
+                bg._bg,
+                sequence._sq,
+                NULL
+            )
+        assert sequence._sq != NULL
+        if status == libeasel.eslOK:
+            return sequence
+        elif status == libeasel.eslECORRUPT:
+            raise RuntimeError("illegal state reached")
+        elif status == libeasel.eslEMEM:
+            raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
+        else:
+            raise UnexpectedError(status, "p7_ProfileEmit")
 
     cpdef OptimizedProfile to_optimized(self):
         """Convert the profile to a platform-specific optimized profile.

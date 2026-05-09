@@ -401,6 +401,7 @@ cdef class Profile:
     cpdef void clear(self) except *
     cpdef void configure(self, HMM hmm, Background background, int L=?, bint multihit=*, bint local=*) except *
     cpdef Profile copy(self)
+    cpdef DigitalSequence emit_sequence(self, HMM hmm, Background background=?, RandomnessOrSeed randomness=?)
     cpdef OptimizedProfile to_optimized(self)
     cpdef float msv_filter(self, DigitalSequence seq, float nu=?) except? NAN
 
