@@ -178,7 +178,7 @@ jobs:
 
   test_win32_x86:
     name: Test (Windows)
-    runs-on: windows-2019
+    runs-on: windows-latest
     env:
       OS: Windows
     strategy:
