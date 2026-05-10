@@ -143,6 +143,7 @@ cdef class HMM:
 
     cpdef HMM copy(self)
     cpdef DigitalSequence emit_sequence(self, RandomnessOrSeed randomness=?)
+    cpdef DigitalMSA emit_alignment(self, uint32_t N, RandomnessOrSeed randomness=?)
     cpdef VectorF match_occupancy(self)
     cpdef double mean_match_entropy(self) except *
     cpdef double mean_match_information(self, Background background) except *

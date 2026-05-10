@@ -365,3 +365,12 @@ class TestHMM(unittest.TestCase):
             'CGGGCCACGGGTACCACACACACGAAACAGCCCAAAACAATCGTCGTCAGCAACTACTGCGCCAAC'
             'CCCTTAAACCAACAACAACTGTGGTA'
         )
+
+    def test_emit_alignment(self):
+        dna = Alphabet.dna()
+        hmm = HMM.sample(dna, 100, randomness=1)
+        
+        a1 = hmm.emit_alignment(10, randomness=42)
+        self.assertEqual(len(a1.sequences), 10)
+
+    

@@ -3161,8 +3161,11 @@ cdef class HMM:
             be created with ``fast=True`` as well.
 
         See Also:
-            `Profile.emit_sequence`, which allows generating random sequences
-            from an implicit search profile rather than from the core model.
+            - `Profile.emit_sequence`, which allows generating random sequences
+              from an implicit search profile rather than from the core model.
+            - `HMM.emit_alignment`, which generates an alignment of random
+              sequences emitted from the core model rather than single 
+              individual sequences.
 
         .. versionadded:: 0.12.1
 
@@ -3189,6 +3192,131 @@ cdef class HMM:
             raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
         else:
             raise UnexpectedError(status, "p7_CoreEmit")
+
+    cpdef DigitalMSA emit_alignment(self, uint32_t N, RandomnessOrSeed randomness = None):
+        """Emit a sequence from a core HMM.
+
+        Arguments:
+            N (`int`): The number of sequences (i.e. rows) to generate for 
+                the alignment.
+            randomness (`~pyhmmer.easel.Randomness`, `int` or `None`): The
+                random number generator to use for sampling, or a seed to
+                initialize a generator. If `None` or ``0`` given, create
+                a new random number generator with a random seed.
+
+        Returns:
+            `~pyhmmer.easel.DigitalMSA`: A MSA in digital mode composed of
+            ``N`` sequences sampled from the HMM.
+
+        Example:
+            Generate a random sequence with a fixed seed::
+
+                >>> seq = thioesterase.emit_sequence(randomness=42)
+                >>> seq.alphabet.decode(seq.sequence)
+                'RALFFLHPGTGAVGCYSQLADE...'
+
+            Generate a sequence from a given random number generator::
+
+                >>> rng = easel.Randomness(123)
+                >>> seq1 = thioesterase.emit_sequence(rng)
+                >>> seq2 = thioesterase.emit_sequence(rng)
+                >>> seq1.sequence != seq2.sequence
+                True
+
+        Note:
+            By default, the ``hmmemit`` executable uses the linear congruential
+            generator, corresponding to a `~pyhmmer.easel.Randomness` created
+            with ``fast=True``. If either a seed or `None` is passed as the
+            ``randomness`` argument, the new `~pyhmmer.easel.Randomness` will
+            be created with ``fast=True`` as well.
+
+        See Also:
+            - `Profile.emit_sequence`, which allows generating random sequences
+              from an implicit search profile rather than from the core model.
+            - `HMM.emit_sequence`, which allows generating random sequences from
+              the core model of the HMM rather than from the a search profile.
+
+        .. versionadded:: 0.12.1
+
+        """
+        assert self._hmm != NULL
+
+        cdef uint32_t             i
+        cdef int                  status
+        cdef Randomness           rng
+        cdef ESL_SQ**             sequences = NULL
+        cdef P7_TRACE**           traces    = NULL
+        cdef DigitalMSA           msa       = DigitalMSA.__new__(DigitalMSA, self.alphabet)
+
+        if RandomnessOrSeed is Randomness:
+            rng = randomness
+        else:
+            rng = Randomness(randomness, fast=True)
+
+        try:
+            with nogil:
+                # Allocate buffers for traces and sequences
+                sequences = <ESL_SQ**> calloc(sizeof(ESL_SQ*), N)
+                if not sequences:
+                    raise AllocationError("ESL_SQ*", sizeof(ESL_SQ*), N)
+                traces = <P7_TRACE**> calloc(sizeof(P7_TRACE*), N)
+                if not traces:
+                    raise AllocationError("P7_TRACE*", sizeof(P7_TRACE*), N) 
+                # Initialize traces and sequences
+                for i in range(N):
+                    sequences[i] = libeasel.sq.esl_sq_CreateDigital(self.alphabet._abc)
+                    if not sequences[i]:
+                        raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
+                    traces[i] = libhmmer.p7_trace.p7_trace_Create()
+                    if not traces[i]:
+                        raise AllocationError("P7_TRACE", sizeof(P7_TRACE))
+                # Name each row of the alignment from the HMM name
+                for i in range(N):
+                    status = libeasel.sq.esl_sq_FormatName(
+                        sequences[i], 
+                        "%s-sample%d", 
+                        self._hmm.name, 
+                        i+1
+                    )
+                    if status != libeasel.eslOK:
+                        raise UnexpectedError(status, "esl_sq_FormatName")
+                # Generate random sequences and traces
+                for i in range(N):
+                    status = libhmmer.emit.p7_CoreEmit(
+                        rng._rng, 
+                        self._hmm, 
+                        sequences[i], 
+                        traces[i]
+                    )
+                    if status == libeasel.eslECORRUPT:
+                        raise RuntimeError("illegal state reached")
+                    elif status == libeasel.eslEMEM:
+                        raise AllocationError("ESL_SQ", sizeof(ESL_SQ))
+                    elif status != libeasel.eslOK:
+                        raise UnexpectedError(status, "p7_CoreEmit")
+                # Align sequences
+                status = libhmmer.tracealign.p7_tracealign_Seqs(
+                    sequences,
+                    traces,
+                    N,
+                    self._hmm.M,
+                    libhmmer.p7_ALL_CONSENSUS_COLS,
+                    self._hmm,
+                    &msa._msa
+                )
+                if status != libeasel.eslOK:
+                    raise UnexpectedError(status, "p7_tracealign_Seqs")
+        finally:
+            # Ensure temporary sequences and traces are cleared
+            for i in range(N):
+                if sequences:
+                    libeasel.sq.esl_sq_Destroy(sequences[i])
+                if traces:
+                    libhmmer.p7_trace.p7_trace_Destroy(traces[i])
+            free(sequences)
+            free(traces)
+
+        return msa        
 
     cpdef VectorF match_occupancy(self):
         """Calculate the match occupancy for each match state.
@@ -8006,8 +8134,11 @@ cdef class Profile:
             be created with ``fast=True`` as well.
 
         See Also:
-            `HMM.emit_sequence`, which allows generating random sequences from
-            the core model of the HMM rather than from the a search profile.
+            - `HMM.emit_sequence`, which allows generating random sequences from
+              the core model of the HMM rather than from the a search profile.
+            - `HMM.emit_alignment`, which generates an alignment of random
+              sequences emitted from the core model rather than single 
+              individual sequences.
 
         .. versionadded:: 0.12.1
 
