@@ -6,7 +6,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.12.1...HEAD
+
+
+## [v0.12.1] - 2026-05-12
+[v0.12.1]: https://github.com/althonos/pyhmmer/compare/v0.12.0...v0.12.1
+
+### Added
+- `Sequence.L` property to get the length of a sequence consistently with `HMM.M`.
+- `Matrix.flatten` method to get a `Vector` over the whole C-contiguous buffer of a `Matrix`.
+- `allocM` property to `Profile` and `OptimizedProfile` to get the allocated capacity.
+- `HMM.emit_sequence`, `HMM.emit_alignment` and `Profile.emit_sequence` to generate sequences from a model ([#102](https://github.com/althonos/pyhmmer/issues/102)).
+- Missing type hints for `gap_index`, `gap_symbol` and `type` properties of `Alphabet`.
+
+### Removed
+- `Profile.transition_scores` due to memory leak.
+
+### Fixed
+- `SequenceFile.__init__` crashing on opening SSI indices for gzip-compressed files.
+
 
 ## [v0.12.0] - 2026-01-21
 [v0.12.0]: https://github.com/althonos/pyhmmer/compare/v0.11.4...v0.12.0
@@ -51,6 +69,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Removed
 - Outdated compatibility code for PyPy 3.6.
 - Support for positional arguments other than `alphabet` in `TextMSA`, `DigitalMSA`, `TextSequence` and `DigitalSequence` constructors.
+
 
 ## [v0.11.4] - 2025-12-21
 [v0.11.4]: https://github.com/althonos/pyhmmer/compare/v0.11.3...v0.11.4
