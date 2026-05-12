@@ -3134,9 +3134,7 @@ cdef class HMM:
         return new
 
     cpdef DigitalSequence emit_sequence(self, RandomnessOrSeed randomness = None):
-        """emit_sequence(self, randomness=None)\n--\n
-
-        Emit a sequence from a core HMM.
+        """Emit a sequence from a core HMM.
 
         Arguments:
             randomness (`~pyhmmer.easel.Randomness`, `int` or `None`): The
@@ -3205,9 +3203,7 @@ cdef class HMM:
             raise UnexpectedError(status, "p7_CoreEmit")
 
     cpdef DigitalMSA emit_alignment(self, uint32_t N, RandomnessOrSeed randomness = None):
-        """emit_alignment(self, N, randomness=None)\n--\n
-
-        Emit a sequence from a core HMM.
+        """Emit a sequence from a core HMM.
 
         Arguments:
             N (`int`): The number of sequences (i.e. rows) to generate for
@@ -8106,9 +8102,7 @@ cdef class Profile:
             raise UnexpectedError(status, "p7_profile_Copy")
 
     cpdef DigitalSequence emit_sequence(self, HMM hmm, Background background=None, RandomnessOrSeed randomness=None):
-        """emit_sequence(self, hmm, background=None, randomness=None)\n--\n
-
-        Emit a sequence from the implicit search profile.
+        """Emit a sequence from the implicit search profile.
 
         The core model consists only of the homologous states (between the
         begin and end states of a HMMER Plan7 model). The profile includes the
