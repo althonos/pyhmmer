@@ -2273,6 +2273,15 @@ cdef class HMM:
         Returns:
             `~pyhmmer.plan7.HMM`: A new HMM generated at random.
 
+        Example:
+            Generate a random, ungapped HMM for the DNA alphabet, using a
+            random number generator initialized with a fixed seed, with 100
+            nodes::
+
+                >>> dna = easel.Alphabet.dna()
+                >>> rng = easel.Randomness(42)
+                >>> hmm = HMM.sample(dna, M=100, randomness=rng, ungapped=True)
+
         Hint:
             This constructor is only useful for testing and should not be
             used in production code.
@@ -3125,7 +3134,9 @@ cdef class HMM:
         return new
 
     cpdef DigitalSequence emit_sequence(self, RandomnessOrSeed randomness = None):
-        """Emit a sequence from a core HMM.
+        """emit_sequence(self, randomness=None)\n--\n
+
+        Emit a sequence from a core HMM.
 
         Arguments:
             randomness (`~pyhmmer.easel.Randomness`, `int` or `None`): The
@@ -3164,7 +3175,7 @@ cdef class HMM:
             - `Profile.emit_sequence`, which allows generating random sequences
               from an implicit search profile rather than from the core model.
             - `HMM.emit_alignment`, which generates an alignment of random
-              sequences emitted from the core model rather than single 
+              sequences emitted from the core model rather than single
               individual sequences.
 
         .. versionadded:: 0.12.1
@@ -3194,10 +3205,12 @@ cdef class HMM:
             raise UnexpectedError(status, "p7_CoreEmit")
 
     cpdef DigitalMSA emit_alignment(self, uint32_t N, RandomnessOrSeed randomness = None):
-        """Emit a sequence from a core HMM.
+        """emit_alignment(self, N, randomness=None)\n--\n
+
+        Emit a sequence from a core HMM.
 
         Arguments:
-            N (`int`): The number of sequences (i.e. rows) to generate for 
+            N (`int`): The number of sequences (i.e. rows) to generate for
                 the alignment.
             randomness (`~pyhmmer.easel.Randomness`, `int` or `None`): The
                 random number generator to use for sampling, or a seed to
@@ -3261,7 +3274,7 @@ cdef class HMM:
                     raise AllocationError("ESL_SQ*", sizeof(ESL_SQ*), N)
                 traces = <P7_TRACE**> calloc(sizeof(P7_TRACE*), N)
                 if not traces:
-                    raise AllocationError("P7_TRACE*", sizeof(P7_TRACE*), N) 
+                    raise AllocationError("P7_TRACE*", sizeof(P7_TRACE*), N)
                 # Initialize traces and sequences
                 for i in range(N):
                     sequences[i] = libeasel.sq.esl_sq_CreateDigital(self.alphabet._abc)
@@ -3273,9 +3286,9 @@ cdef class HMM:
                 # Name each row of the alignment from the HMM name
                 for i in range(N):
                     status = libeasel.sq.esl_sq_FormatName(
-                        sequences[i], 
-                        "%s-sample%d", 
-                        self._hmm.name, 
+                        sequences[i],
+                        "%s-sample%d",
+                        self._hmm.name,
                         i+1
                     )
                     if status != libeasel.eslOK:
@@ -3283,9 +3296,9 @@ cdef class HMM:
                 # Generate random sequences and traces
                 for i in range(N):
                     status = libhmmer.emit.p7_CoreEmit(
-                        rng._rng, 
-                        self._hmm, 
-                        sequences[i], 
+                        rng._rng,
+                        self._hmm,
+                        sequences[i],
                         traces[i]
                     )
                     if status == libeasel.eslECORRUPT:
@@ -3316,7 +3329,7 @@ cdef class HMM:
             free(sequences)
             free(traces)
 
-        return msa        
+        return msa
 
     cpdef VectorF match_occupancy(self):
         """Calculate the match occupancy for each match state.
@@ -8093,7 +8106,9 @@ cdef class Profile:
             raise UnexpectedError(status, "p7_profile_Copy")
 
     cpdef DigitalSequence emit_sequence(self, HMM hmm, Background background=None, RandomnessOrSeed randomness=None):
-        """Emit a sequence from the implicit search profile.
+        """emit_sequence(self, hmm, background=None, randomness=None)\n--\n
+
+        Emit a sequence from the implicit search profile.
 
         The core model consists only of the homologous states (between the
         begin and end states of a HMMER Plan7 model). The profile includes the
@@ -8137,7 +8152,7 @@ cdef class Profile:
             - `HMM.emit_sequence`, which allows generating random sequences from
               the core model of the HMM rather than from the a search profile.
             - `HMM.emit_alignment`, which generates an alignment of random
-              sequences emitted from the core model rather than single 
+              sequences emitted from the core model rather than single
               individual sequences.
 
         .. versionadded:: 0.12.1

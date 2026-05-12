@@ -196,7 +196,7 @@ autodoc_typehints = 'none'
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
-    "psutil": ("https://psutil.readthedocs.io/en/latest/", None),
+    "psutil": ("https://psutil.readthedocs.io/latest/", None),
     "biopython": ("https://biopython.org/docs/latest/", None),
     "numpy": ("https://numpy.org/doc/stable/", None)
 }
