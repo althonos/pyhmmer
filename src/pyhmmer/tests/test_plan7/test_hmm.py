@@ -373,4 +373,9 @@ class TestHMM(unittest.TestCase):
         a1 = hmm.emit_alignment(10, randomness=42)
         self.assertEqual(len(a1.sequences), 10)
 
+        # ensure the sequence can be accessed without issue
+        for i in range(len(a1.sequences)):
+            s = [x for x in a1.sequences[i].sequence]
+            r = [x for x in a1.alignment[i] if x != dna.gap_index]
+            self.assertEqual(s, r)
     

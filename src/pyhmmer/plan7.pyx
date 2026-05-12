@@ -3309,7 +3309,7 @@ cdef class HMM:
                     traces,
                     N,
                     self._hmm.M,
-                    libhmmer.p7_ALL_CONSENSUS_COLS,
+                    libhmmer.p7_ALL_CONSENSUS_COLS | libhmmer.p7_DIGITIZE,
                     self._hmm,
                     &msa._msa
                 )
