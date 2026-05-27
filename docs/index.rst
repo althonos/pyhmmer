@@ -59,7 +59,7 @@
 .. |Changelog| image:: https://img.shields.io/badge/keep%20a-changelog-8A0707.svg?maxAge=2678400&style=flat-square
    :target: https://github.com/althonos/pyhmmer/blob/master/CHANGELOG.md
 
-.. |Downloads| image:: https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fpepy.tech%2Fprojects%2Fpyhmmer&search=%5B0-9%5D%2B.%5B0-9%5D%2B(k%7CM)&style=flat-square&label=downloads&color=303f9f&cacheSeconds=86400
+.. |Downloads| image:: https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fpepy.tech%2Fprojects%2Fpyhmmer&search=downloaded%20(%5B0-9%2C.%20kM%5D%2B)%20times&replace=%241&style=flat-square&label=downloads&color=303f9f&cacheSeconds=86400
    :target: https://pepy.tech/project/pyhmmer
 
 .. |Paper| image:: https://img.shields.io/badge/paper-Bioinformatics-teal.svg?style=flat-square&maxAge=3600
