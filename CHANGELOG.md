@@ -6,7 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.12.1...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.12.2...HEAD
+
+
+## [v0.12.2] - 2026-08-13
+[v0.12.2]: https://github.com/althonos/pyhmmer/compare/v0.12.1...v0.12.2
+
+### Fixed
+- Segmentation fault in `HMM.__eq__` for HMMs missing a `creation_time` ([#103](https://github.com/althonos/pyhmmer/issues/103)).
 
 
 ## [v0.12.1] - 2026-05-12
