@@ -14,9 +14,9 @@ jobs:
     strategy:
       matrix:
         include:
-        - python-version: 3.8
-          python-release: v3.8
-          python-impl: CPython
+        #- python-version: 3.8
+        #  python-release: v3.8
+        #  python-impl: CPython
         - python-version: 3.9
           python-release: v3.9
           python-impl: CPython
@@ -35,9 +35,9 @@ jobs:
         - python-version: '3.14'
           python-release: 'v3.14'
           python-impl: CPython
-        - python-version: pypy-3.8
-          python-release: v3.8
-          python-impl: PyPy
+        #- python-version: pypy-3.8
+        #  python-release: v3.8
+        #  python-impl: PyPy
         - python-version: pypy-3.9
           python-release: v3.9
           python-impl: PyPy
@@ -112,9 +112,9 @@ jobs:
     strategy:
       matrix:
         include:
-        - python-version: 3.8
-          python-release: v3.8
-          python-impl: CPython
+        #- python-version: 3.8
+        #  python-release: v3.8
+        #  python-impl: CPython
         - python-version: 3.9
           python-release: v3.9
           python-impl: CPython
@@ -133,9 +133,9 @@ jobs:
         - python-version: '3.14'
           python-release: 'v3.14'
           python-impl: CPython
-        - python-version: pypy-3.8
-          python-release: v3.8
-          python-impl: PyPy
+        #- python-version: pypy-3.8
+        #  python-release: v3.8
+        #  python-impl: PyPy
         - python-version: pypy-3.9
           python-release: v3.9
           python-impl: PyPy
@@ -184,9 +184,9 @@ jobs:
     strategy:
       matrix:
         include:
-        - python-version: 3.8
-          python-release: v3.8
-          python-impl: CPython
+        #- python-version: 3.8
+        #  python-release: v3.8
+        #  python-impl: CPython
         - python-version: 3.9
           python-release: v3.9
           python-impl: CPython
