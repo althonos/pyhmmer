@@ -2425,6 +2425,11 @@ cdef class HMM:
             return NotImplemented
 
         other_ = <HMM> other
+
+        # Fast track in case both object point to the same address
+        if self._hmm == other_._hmm:
+            return True
+
         with nogil:
             status = libhmmer.p7_hmm.p7_hmm_Compare(self._hmm, other_._hmm, 0.0)
         if status == libeasel.eslOK:
