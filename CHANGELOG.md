@@ -6,7 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.12.2...HEAD
+[Unreleased]: https://github.com/althonos/pyhmmer/compare/v0.12.3...HEAD
+
+
+## [v0.12.3] - 2026-08-19
+[v0.12.3]: https://github.com/althonos/pyhmmer/compare/v0.12.2...v0.12.3
+
+### Fixed
+- Syntax error in `plan7.pyi` stubs ([#105](https://github.com/althonos/pyhmmer/pull/105), by [@aretasg](https://github.com/aretasg)).
 
 
 ## [v0.12.2] - 2026-08-13
