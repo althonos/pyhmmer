@@ -3715,13 +3715,13 @@ cdef class HMMFile:
             #     so far; note that we advance without seeking or rewinding.
             fh_.read(4)
 
+        # create the reader
+        self._reader = _FileobjReader(fh_)
+
         # attempt to allocate space for the P7_HMMFILE
         self._hfp = <P7_HMMFILE*> malloc(sizeof(P7_HMMFILE))
         if self._hfp == NULL:
             raise AllocationError("P7_HMMFILE", sizeof(P7_HMMFILE))
-
-        # create the reader
-        self._reader = _FileobjReader(fh_)
 
         # store options
         self._hfp.f            = self._reader.file
