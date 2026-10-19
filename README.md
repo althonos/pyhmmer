@@ -60,6 +60,9 @@ HMMER internals, which has the following advantages over CLI wrappers:
   uses a different parallelisation strategy compared to
   the `hmmsearch` binary from HMMER, which can help getting the most of
   multiple CPUs when annotating smaller sequence databases.
+- **Windows support**: Since `v0.12` PyHMMER experimentally supports Windows 
+  as a target platform, leveraging MinGW to handle the build. Most features 
+  should be supported.
 
 *This library is still a work-in-progress. It follows [semantic-versioning](https://semver.org/),
 so API changes will be documented, but past `v0.10` the API has been more or
@@ -71,14 +74,15 @@ and `hmmalign`.*
 ## 🔧 Installing
 
 `pyhmmer` can be installed from [PyPI](https://pypi.org/project/pyhmmer/),
-which hosts some pre-built CPython wheels for Linux and MacOS on x86-64 and Arm64, as well as the code required to compile from source with Cython:
+which hosts some pre-built CPython wheels for Linux, MacOS and Windows on x86-64
+and Arm64, as well as the code required to compile from source with Cython:
 ```console
 $ pip install pyhmmer
 ```
 
 Compilation for UNIX PowerPC is not tested in CI, but should work out of the
-box. Note than non-UNIX operating systems (such as Windows) are not
-supported by HMMER.
+box. Building from source on Windows requires a working setup of 
+[MinGW](https://www.mingw-w64.org/) on the host machine.
 
 A [Bioconda](https://bioconda.github.io/) package is also available:
 ```console

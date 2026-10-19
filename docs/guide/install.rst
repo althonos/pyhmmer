@@ -3,12 +3,12 @@ Installation
 
 .. caution::
 
-    Windows is not supported by HMMER, so it is not possible to build PyHMMER
-    on Windows as the moment. Consider using a Python install inside the 
-    `Windows Subsystem for Linux <https://learn.microsoft.com/en-us/windows/wsl/install>`_
-    if you need PyHMMER on a Windows computer.
-
-
+    Windows is not supported by HMMER, but PyHMMER provides an experimental
+    build for Windows using `MinGW <https://www.mingw-w64.org/>`_. Most features
+    should be supported, but if you encounter prolonged issues you might prefer
+    using a Python install inside the 
+    `Windows Subsystem for Linux <https://learn.microsoft.com/en-us/windows/wsl/install>`_.
+    
 PyPi
 ^^^^
 
@@ -23,10 +23,10 @@ one is available, or from source after compiling the Cython code :
 
 .. note::
 
-    Wheels are provided for Linux and MacOS on x86-64 and NEON-enabled Arm platforms, 
-    but other machines will have to build the wheel from the source distribution. 
-    Building ``pyhmmer`` involves compiling HMMER3 and Easel, which requires a 
-    C compiler to be available.
+    Wheels are provided for Linux, MacOS and Windows on x86-64 and 
+    NEON-enabled Arm platforms, but other machines will have to build the wheel 
+    from the source distribution. Building ``pyhmmer`` involves compiling HMMER3 
+    and Easel, which requires a C compiler to be available.
 
 
 Conda
